@@ -1,12 +1,16 @@
-amqp==2.2.2
+amqp==1.4.9
+anyjson==0.3.3
 asn1crypto==0.24.0
 attrs==18.1.0
 bcrypt==3.1.4
-billiard==3.5.0.3
-celery==4.1.1
+billiard==3.3.0.23
+celery==3.1.26.post2
+certifi==2018.4.16
 cffi==1.11.5
+chardet==3.0.4
 cryptography==2.2.2
 Django==2.0
+django-celery==3.2.2
 django-cors-headers==2.2.0
 django-ranged-response==0.2.0
 django-simple-captcha==0.5.7
@@ -16,7 +20,7 @@ fabric==2.0.1
 gunicorn==19.8.1
 idna==2.6
 invoke==1.0.0
-kombu==4.2.0
+kombu==3.0.37
 more-itertools==4.1.0
 paramiko==2.4.1
 Pillow==5.1.0
@@ -29,5 +33,7 @@ PyNaCl==1.2.1
 pytest==3.5.1
 pytz==2018.4
 redis==2.10.6
+requests==2.18.4
 six==1.11.0
+urllib3==1.22
 vine==1.1.4

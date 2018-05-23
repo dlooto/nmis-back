@@ -1,4 +1,4 @@
-# NextCloud:  新一代医疗解决方案系统
+# NMIS(The Next Medical Industry Solution):  新一代医疗行业解决方案系统
 
 ## 功能简介
 - 项目管理
