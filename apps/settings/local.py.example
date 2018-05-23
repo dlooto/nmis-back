@@ -1,0 +1,105 @@
+# coding=utf-8
+#
+
+############################################################
+#                   LOCAL DEV SETTINGS
+############################################################
+from .base import *
+
+
+DEBUG = True
+
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+]
+
+
+###########################################################
+#                      重写各种数据库配置
+###########################################################
+
+DATABASES = {
+    "default": {
+        "ENGINE":   'django.db.backends.mysql',
+        "NAME":     'nmis',
+        "USER":     'root',
+        "PASSWORD": 'root',
+        "HOST":     'localhost',
+        "PORT":     '3306',
+        "OPTIONS": {
+            'sql_mode': 'STRICT_TRANS_TABLES',
+        },
+
+        # TestCase DB setup
+        'TEST': {
+            'NAME': 'test_nmis1',
+            'CHARSET': 'utf8',
+            'COLLATION': 'utf8_general_ci',
+        },
+    }
+}
+
+# Redis
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': '127.0.0.1:6379',
+        'OPTIONS': {
+            'DB': 0,
+            # 'PASSWORD': 'root',
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            'CONNECTION_POOL_KWARGS': {'max_connections': 1000}
+        },
+    },
+}
+
+
+###########################################################
+# #跨域请求白名单, 仅白名单中的域名可跨域请求后端服务
+###########################################################
+
+CORS_ORIGIN_WHITELIST = [
+    'localhost:8000',
+    '127.0.0.1:8000',
+    'localhost:3030',
+]
+
+INSTALLED_APPS += [
+    'gunicorn',
+]
+
+
+###########################################################
+#                       日志系统配置
+###########################################################
+
+LOGGING_SETTINGS = {
+    'log_file_root':    os.path.join(os.path.dirname(__file__), '../../logs'),
+    'log_file_path':    'nmis-back/server.log',
+    'log_sql_in_file':  True,      # 是否将debug级别的SQL语句输出写入日志文件
+    'sql_log_level':    'INFO',     # 该设置决定是否输出SQL语句, django框架的SQL语句仅在DEBUG级才能输出. 默认仅输出到console
+    'django_log_level': 'INFO',    # 该设置决定django框架自身的日志输出
+    'business_log_level':'DEBUG',   # 业务模块日志级别
+}
+
+LOGGING = configure_logging_params(**LOGGING_SETTINGS)
+
+
+###########################################################
+#                   Celery SETTING
+###########################################################
+
+EMAIL_CELERY_BROKER_URL = 'redis://127.0.0.1:6379/1'
+EMAIL_CELERY_BACKEND_URL = EMAIL_CELERY_BROKER_URL
+
+# 需要为该celery实例启动对应的worker
+email_celery_app = Celery(
+    'email_celery_app',
+    broker=EMAIL_CELERY_BROKER_URL,
+    backend=EMAIL_CELERY_BACKEND_URL,
+    include=[
+        'emails.tasks',
+    ]
+)
+email_celery_app.config_from_object(config)
