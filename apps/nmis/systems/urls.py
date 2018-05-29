@@ -13,8 +13,6 @@ logs = logging.getLogger(__name__)
 
 from django.conf.urls import url
 
-import views
-
 
 urlpatterns = [
     # 刷新渠道职位类别缓存

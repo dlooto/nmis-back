@@ -15,6 +15,11 @@ logs = logging.getLogger(__name__)
 def is_login(request):
     return request.user and request.user.is_authenticated
 
+def check_organ_any_permissions(request, view):
+    staff = request.user.get_profile() if hasattr(request.user, 'get_profile') else None
+    view.check_object_any_permissions(request, getattr(staff, 'organ', None))
+    return staff
+
 
 class _Permission(BasePermission):
     operator = None

@@ -22,7 +22,7 @@ from rest_framework.authtoken.models import Token
 
 from base.models import BaseModel
 from users.managers import UserManager
-from utils import eggs, times
+from utils import eggs, images
 
 logs = logging.getLogger(__name__)
 
