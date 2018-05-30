@@ -100,13 +100,4 @@ class StaffManager(BaseManager):
                 obj.cache()
         return objs
 
-    # def update(self, data, *args, **kwargs):
-    #     try:
-    #         self.update(**data)
-    #         return True
-    #     except Exception as e:
-    #         logs.exception(e)
-    #         return False
-
-
 

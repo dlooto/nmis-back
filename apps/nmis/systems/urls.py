@@ -11,11 +11,11 @@ import logging
 
 logs = logging.getLogger(__name__)
 
-from django.conf.urls import url
+from django.urls import path
 
 
 urlpatterns = [
     # 刷新渠道职位类别缓存
-    # url(r'^flush_data$',  views.FlushDataView.as_view(), ),
+    # path('flush_data',  views.FlushDataView.as_view(), ),
 
 ]

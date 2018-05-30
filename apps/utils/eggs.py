@@ -9,7 +9,6 @@ import settings
 import base64
 from math import sin
 import uuid, random, re, hashlib, importlib, time, string, inspect
-from urlparse import urljoin
 
 from django.core.paginator import Paginator, EmptyPage, Page
 
@@ -204,15 +203,6 @@ def get_email_host_url(email, prefix='http://'):
     return fallback()
 
 
-def urljoin_with_request(request, url):
-    """
-    根据请求域名和url生成新url
-    """
-    # base = request.build_absolute_uri('/')
-    base = settings.LOCAL_DOMAIN_URL
-    return urljoin(base, url)
-
-
 def b64encode(s):
     """当 s 最后一位为空格时不能使用"""
     s += (3 - len(s) % 3) * ' '
@@ -254,6 +244,7 @@ def to_bool(value):
             return True
     raise Exception(u'Bool值转换异常: %s' % value)
 
+
 def check_day(day):
     """
     检查日期格式是否正确
@@ -262,12 +253,6 @@ def check_day(day):
     pattern = re.compile(r'\d{4}-\d{2}-\d{2}$')
     return True if day and re.match(pattern, day) else False
 
-
-# base64签名
-# from django.core.signing import TimestampSigner
-# signer = TimestampSigner()
-# sign = lambda string: base64.b64encode(signer.sign(string))
-# unsign = lambda signed: signer.unsign(base64.b64decode(signed))
 
 def included_in(a, b):
     """

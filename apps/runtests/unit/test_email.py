@@ -9,7 +9,7 @@ from emails.email import MailHelper
 from runtests import BaseTestCase
 
 
-class SendEmailTestCase(DjangoTestCase):
+class SendEmailTestCase(BaseTestCase):
     def setUp(self):
         self.email_body = {
             'to_email': self.FROM_EMAIL_FOR_TEST,

@@ -1,21 +1,14 @@
-#coding=utf-8
+# coding=utf-8
 #
 # Created by junn, on 2016-11-25
 #
 
-"""
-
-"""
-
-import logging
-
-from django.apps.config import AppConfig
-
-logs = logging.getLogger(__name__)
+from django.apps import AppConfig
 
 
 class UsersConfig(AppConfig):
     name = 'users'
     verbose_name = '用户管理'
 
-default_app_config = 'users.UsersConfig'
+
+# print('hello==>', settings.AUTH_USER_MODEL)

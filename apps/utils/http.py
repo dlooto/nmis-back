@@ -1,13 +1,12 @@
-#coding=utf-8
+# coding=utf-8
 #
 # Created on Apr 23, 2014, by Junn
 # 
 #
 
 import urllib
-import httplib
+from http import client
 import requests, json
-from urlparse import urljoin
 
 from django.utils.functional import cached_property
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -94,10 +93,10 @@ def send_request(host, send_url, protocol='http', method='GET', port=80, params=
         return None
 
     if protocol == "http":
-        conn = httplib.HTTPConnection(host, port=port, timeout=timeout)
+        conn = client.HTTPConnection(host, port=port, timeout=timeout)
     else:
         port = 443  # 支持https协议(443端口)
-        conn = httplib.HTTPSConnection(host, port=port, timeout=timeout)
+        conn = client.HTTPSConnection(host, port=port, timeout=timeout)
 
     conn.request(method, send_url, encoded_params, headers)
     response = conn.getresponse()

@@ -12,12 +12,12 @@ import datetime
 import logging
 
 from django.conf import settings
-from django.contrib.auth import get_user_model, login
-from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth import login
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, User
 from django.core.signing import TimestampSigner
 from django.db import models
 from django.utils.timezone import now
+
 from rest_framework.authtoken.models import Token
 
 from base.models import BaseModel
@@ -29,6 +29,7 @@ logs = logging.getLogger(__name__)
 signer = TimestampSigner()
 sign = lambda string: base64.b64encode(signer.sign(string))
 unsign = lambda signed: signer.unsign(base64.b64decode(signed))
+
 
 ACCT_TYPE_CHOICES = (
     ('E', u'显式注册'),  # 正常流程注册
@@ -73,7 +74,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     USERNAME_FIELD = 'email'
     VALID_AUTH_FIELDS = ['phone', 'email']  # 允许的可用于注册/登录的有效属性字段
-    backend = 'users.models.CustomizedModelBackend'
+    backend = 'users.backends.CustomizedModelBackend'
 
     objects = UserManager()
 
@@ -165,7 +166,7 @@ class UserSecureRecord(BaseModel):
     """
     针对一些特殊的未注册或账号未激活的权限请求, 增加该抽象模型类
     """
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     key = models.CharField(max_length=128)
     expire_datetime = models.DateTimeField()
     is_used = models.BooleanField(default=False)
@@ -197,25 +198,6 @@ class UserSecureRecord(BaseModel):
 class ResetRecord(UserSecureRecord):
     """帐号重置key相关信息"""
     pass
-
-
-class CustomizedModelBackend(ModelBackend):
-    """
-    重写authenticate方法, 使得可以使用phone/email/username任一账号类型登录
-    """
-
-    def authenticate(self, password=None, **kwargs):
-        user_model = get_user_model()
-        auth_key = kwargs.get('auth_key')
-        if auth_key not in user_model.VALID_AUTH_FIELDS:
-            return None
-
-        try:
-            user = user_model._default_manager.get(**{auth_key: kwargs.get(auth_key)})
-            if user.check_password(password):
-                return user
-        except user_model.DoesNotExist:
-            return None
 
 
 class CustomToken(Token):

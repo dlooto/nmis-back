@@ -1,4 +1,4 @@
-#coding=utf-8
+# coding=utf-8
 #
 # Created by junn, on 2018-5-29
 #
@@ -10,14 +10,11 @@
 import logging
 import re
 
-from django.db import transaction
-
 from utils import eggs
 from base.forms import BaseForm
 from users.forms import UserLoginForm
 from users.models import User
 
-from .models import Organ
 
 logs = logging.getLogger(__name__)
 
@@ -33,7 +30,6 @@ class OrganSignupForm(BaseForm):
     ERR_CODES = {
         'invalid_email':        u'无效的Email',
         'user_existed':         u'Email已注册',
-        'email_existed':        u'您所在的企业已在使用"行云HR",请联系管理员将您加入团队，或者您也可以申请独立试用系统',
         'err_password':         u"密码只能为6-18位英文字符或下划线组合",
 
         'err_organ_name':       u'企业名称错误',
@@ -61,54 +57,6 @@ class OrganSignupForm(BaseForm):
         return valid_email and valid_organ_name \
             and valid_organ_scale and valid_contact_name \
             and valid_contact_phone and valid_contact_title
-
-    def save(self):
-        email = self.data.get('email')
-
-        organ_name = self.data.get('organ_name')
-        organ_scale = self.data.get('organ_scale')
-
-        contact_name = self.data.get('contact_name')
-        contact_phone = self.data.get('contact_phone')
-        contact_title = self.data.get('contact_title')
-
-        with transaction.atomic():  # 事务原子操作
-            creator = User.objects.create_param_user(('email', email),
-                is_active=False
-            )
-
-            # create organ
-            new_organ = Organ.objects.create_organ(**{
-                'creator':       creator,
-                'organ_name':    organ_name,
-                'organ_scale':   int(organ_scale) if organ_scale else 1,
-                'contact_name':  contact_name,
-                'contact_phone': contact_phone,
-                'contact_title': contact_title
-            })
-
-            new_organ.init_default_groups()
-
-            # create admin staff for the new organ
-            staff = Organ.objects.create_staff(**{
-                'user': creator,
-                'organ': new_organ,
-
-                'name': contact_name,
-                'title': contact_title,
-                'contact': contact_phone,
-                'email': email,
-                'group': new_organ.get_admin_group()
-            })
-            # Folder.objects.get_or_create_system_folder(organ=new_organ) # 依赖错误!!!
-
-            # create default department
-            Organ.objects.create_department(**{  # TODO: create method考虑放到organ对象中...
-                'organ':    new_organ,
-                'name':     u'默认'
-            })
-
-            return new_organ
 
     def check_email(self):
         """ 检查注册Email
@@ -174,6 +122,9 @@ class OrganSignupForm(BaseForm):
             )
             return False
         return True
+
+    def save(self):
+        return None
 
 
 class OrganLoginForm(UserLoginForm):

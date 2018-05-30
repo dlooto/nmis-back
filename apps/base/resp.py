@@ -14,7 +14,7 @@ from django.shortcuts import render_to_response
 from django.template.context import RequestContext
 from rest_framework.response import Response as RestResponse
 
-import codes
+from . import codes
 from utils.eggs import make_instance
 
 logs = logging.getLogger(__name__)

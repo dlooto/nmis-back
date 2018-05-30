@@ -9,7 +9,7 @@
 
 import logging
 
-from django.conf.urls import url
+from django.urls import path
 
 from . import views
 
@@ -17,5 +17,10 @@ logs = logging.getLogger(__name__)
 
 
 urlpatterns = [
-    url(r"^(\d+)$",         views.HospitalHomeView.as_view()),
+    # 医疗机构注册/登录/验证邮箱/邮箱后缀已存在
+    path("signup",       views.HospitalSignupView.as_view(), ),
+
+    # 单个企业get/update/delete
+    path("<hid>$",         views.HospitalView.as_view(), ),
+
 ]

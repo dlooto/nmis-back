@@ -28,10 +28,11 @@ ALLOWED_HOSTS = [
 
 
 AUTH_USER_MODEL = 'users.User'
-USER_PROFILE = 'staff'                  # user profile, it's a nmis.organs.Staff object
+USER_PROFILE = 'staff'                  # user profile, it's a nmis.hospitals.Staff object
+
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',  # 默认backend
-    'users.models.CustomizedModelBackend',        # 各backend依次进行验证, 直到某一个验证通过
+    # 'django.contrib.auth.backends.ModelBackend',  # 默认backend
+    'users.backends.CustomizedModelBackend',        # 各backend依次进行验证, 直到某一个验证通过
 )
 
 # use this later
@@ -52,7 +53,7 @@ AUTHENTICATION_BACKENDS = (
 
 
 TIME_ZONE = 'Asia/Shanghai'
-LANGUAGE_CODE = 'zh-cn'
+LANGUAGE_CODE = 'zh-Hans'
 
 SITE_ID = 1
 
@@ -169,23 +170,24 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'rest_framework.authtoken',
-    'rest_framework_mongoengine',
     'corsheaders',
     'captcha',
     'djcelery',
-    'emoji',
 
     'utils',
     'base',
     'users',
 
-    'runtests',
+    # 'organs',
+    #
+    # 'runtests',
 ]
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
-        'users.models.CustomizedModelBackend',
+        'users.backends.CustomizedModelBackend',
     ),
 
     # API接口默认访问权限配置, 默认需要登录
