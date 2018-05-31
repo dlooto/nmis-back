@@ -32,6 +32,7 @@ PyMySQL==0.8.1
 PyNaCl==1.2.1
 pytest==3.5.1
 pytz==2018.4
+raven==6.8.0
 redis==2.10.6
 requests==2.18.4
 six==1.11.0
