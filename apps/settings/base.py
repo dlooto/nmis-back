@@ -32,7 +32,7 @@ USER_PROFILE = 'staff'                  # user profile, it's a nmis.hospitals.St
 
 AUTHENTICATION_BACKENDS = (
     # 'django.contrib.auth.backends.ModelBackend',  # 默认backend
-    'users.backends.CustomizedModelBackend',        # 各backend依次进行验证, 直到某一个验证通过
+    'base.backends.CustomizedModelBackend',        # 各backend依次进行验证, 直到某一个验证通过
 )
 
 # use this later
@@ -177,17 +177,16 @@ INSTALLED_APPS = [
     'utils',
     'base',
     'users',
+    'organs',
 
-    # 'organs',
-    #
-    # 'runtests',
+    'runtests',
 ]
 
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
-        'users.backends.CustomizedModelBackend',
+        'base.backends.CustomizedModelBackend',
     ),
 
     # API接口默认访问权限配置, 默认需要登录

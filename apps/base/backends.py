@@ -10,6 +10,7 @@ import logging
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 
+
 logs = logging.getLogger(__name__)
 
 
@@ -30,3 +31,4 @@ class CustomizedModelBackend(ModelBackend):
                 return user
         except user_model.DoesNotExist:
             return None
+

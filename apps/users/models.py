@@ -11,6 +11,7 @@ import base64
 import datetime
 import logging
 
+from base.models import BaseModel
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, User
@@ -18,11 +19,9 @@ from django.core.signing import TimestampSigner
 from django.db import models
 from django.utils.timezone import now
 
-from rest_framework.authtoken.models import Token
-
-from base.models import BaseModel
-from users.managers import UserManager
 from utils import eggs, images
+from base.authtoken import CustomToken
+from users.managers import UserManager
 
 logs = logging.getLogger(__name__)
 
@@ -74,7 +73,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     USERNAME_FIELD = 'email'
     VALID_AUTH_FIELDS = ['phone', 'email']  # 允许的可用于注册/登录的有效属性字段
-    backend = 'users.backends.CustomizedModelBackend'
+    backend = 'base.backends.CustomizedModelBackend'
 
     objects = UserManager()
 
@@ -166,7 +165,7 @@ class UserSecureRecord(BaseModel):
     """
     针对一些特殊的未注册或账号未激活的权限请求, 增加该抽象模型类
     """
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
     key = models.CharField(max_length=128)
     expire_datetime = models.DateTimeField()
     is_used = models.BooleanField(default=False)
@@ -199,27 +198,6 @@ class ResetRecord(UserSecureRecord):
     """帐号重置key相关信息"""
     pass
 
-
-class CustomToken(Token):
-    """
-    自定义Token模型: 代理DRF框架的Token模型, 添加额外的方法和属性
-    """
-    expired_day = 30    # Token默认超时天数
-
-    class Meta:
-        proxy = True
-
-    def is_expired(self):
-        """ token是否过期 """
-        return self.created + datetime.timedelta(days=self.expired_day) < self.created.now()
-
-    @staticmethod
-    def refresh(token):
-        assert isinstance(token, Token)
-        user = token.user
-        token.delete()
-        new_token = CustomToken.objects.create(user=user)
-        return new_token
 
 
 

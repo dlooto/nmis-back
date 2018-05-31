@@ -11,6 +11,7 @@ import logging
 
 from django.db import models, transaction
 
+import settings
 from utils import times
 from base.models import BaseModel
 from users.models import UserSecureRecord
@@ -49,7 +50,7 @@ class BaseOrgan(BaseModel):
     default_timeout = 60 * 60  # 默认在redis中缓存60分钟
 
     # 企业注册时的创建者. 创建者不可变并唯一, 企业管理员可以变化
-    creator = models.OneToOneField('users.User', verbose_name=u'创建者')
+    creator = models.OneToOneField(settings.AUTH_USER_MODEL, verbose_name=u'创建者', on_delete=models.CASCADE)
 
     organ_name = models.CharField(u'企业/组织名称', max_length=100, default='')
     organ_scale = models.SmallIntegerField(u'企业规模', choices=SCALE_CHOICES, null=True, blank=True, default=1)
@@ -212,7 +213,7 @@ class BaseDepartment(BaseModel):
     企业的部门数据模型
     """
 
-    organ = models.ForeignKey(BaseOrgan, verbose_name=u'所属医疗机构')
+    organ = models.ForeignKey(BaseOrgan, verbose_name=u'所属医疗机构', on_delete=models.CASCADE)
     name = models.CharField(u'部门名称', max_length=100, default='')
     contact = models.CharField(u'联系电话', max_length=20, null=True, blank=True, default='')
     desc = models.TextField(u'描述', null=True, blank=True, default='')
@@ -237,9 +238,9 @@ class BaseStaff(BaseModel):
 
     default_timeout = 60 * 60  # 默认在redis中缓存60分钟
 
-    user = models.OneToOneField('users.User', verbose_name=u'用户账号')
-    organ = models.ForeignKey(BaseOrgan, verbose_name=u'所属机构', null=True, blank=True)
-    dept = models.ForeignKey(BaseDepartment, verbose_name=u'所属部门', null=True, blank=True)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, verbose_name=u'用户账号', on_delete=models.CASCADE)
+    organ = models.ForeignKey(BaseOrgan, verbose_name=u'所属机构', null=True, blank=True, on_delete=models.CASCADE)
+    dept = models.ForeignKey(BaseDepartment, verbose_name=u'所属部门', null=True, blank=True, on_delete=models.SET_NULL)
 
     name = models.CharField(u'名字', max_length=40, null=True, blank=True, default='')
     title = models.CharField(u'职位名称', max_length=40, null=True, blank=True, default='') # 后续或可考虑扩展成对象
@@ -247,7 +248,7 @@ class BaseStaff(BaseModel):
     email = models.EmailField(u'Email', null=True, blank=True, default='')  # 非账号email
 
     # 一个staff仅可以加入一个权限group
-    group = models.ForeignKey('organs.Group', verbose_name=u'权限组', null=True, blank=True)
+    group = models.ForeignKey('organs.Group', verbose_name=u'权限组', null=True, blank=True, on_delete=models.SET_NULL)
 
     status = models.CharField(u'员工状态', max_length=1, default=NORMAL_STATUS)
 
@@ -373,7 +374,7 @@ class BaseGroup(BaseModel):
     GROUP_CATE_CHOICES = ()
     GROUP_CATE_DICT = dict(GROUP_CATE_CHOICES)
 
-    organ = models.ForeignKey('organs.BaseOrgan', verbose_name=u'所属企业', null=True, blank=True)
+    organ = models.ForeignKey('organs.BaseOrgan', verbose_name=u'所属企业', null=True, blank=True, on_delete=models.CASCADE)
     name = models.CharField(u'权限组名', max_length=40)
     cate = models.CharField(u'权限组类别', max_length=4, choices=GROUP_CATE_CHOICES, null=True, blank=True)
     is_admin = models.BooleanField(u'管理员组', default=False)

@@ -9,20 +9,18 @@ Users view
 
 import logging
 
-from django.contrib.auth import logout as system_logout
-
 from rest_framework.permissions import AllowAny
 
-from base import resp
 from base import codes
+from base import resp
+from base.authtoken import CustomToken
+from base.common.decorators import check_not_null
 from base.resp import LeanResponse
 from base.views import BaseAPIView
-
-from utils.eggs import get_email_host_url
+from django.contrib.auth import logout as system_logout
 from users.forms import UserSignupForm, UserLoginForm, CheckEmailForm
 from users.models import User, ResetRecord
-from users.models import CustomToken
-from base.common.decorators import check_not_null
+from utils.eggs import get_email_host_url
 
 logs = logging.getLogger(__name__)
 
