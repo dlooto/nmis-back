@@ -5,21 +5,6 @@ import settings
 from base import resp
 
 
-# def login_required(response_type='redirect', redirect_to_view=None, sign_in_redirect_msg=None):
-#     def _decorator(func):
-#         @wraps(func)
-#         def _wrapped_func(request, *args, **kwargs):
-#             if not request.user or not request.user.is_authenticated():
-#                 if request.is_ajax():
-#                     context = {}
-#                     context.update(codes.get('login_required'))
-#                     return resp.LeanResponse(context)
-#                 return redirect('%s?next=%s' % (reverse('login'), request.get_full_path()))
-#             return func(request, *args, **kwargs)
-#         return _wrapped_func
-#     return _decorator
-
-
 def debug_allowed(func):
     def _debug_allowed(obj, req, *args, **kwargs):
         if settings.DEBUG:

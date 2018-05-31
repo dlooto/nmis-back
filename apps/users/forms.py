@@ -7,14 +7,14 @@
 
 """
 
-import logging
 import re
+import logging
 
 from django.contrib.auth import authenticate, get_user_model
 
+from utils import eggs
 from base.forms import BaseForm
 from users.models import User
-from utils import eggs
 
 logs = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ from django.urls import reverse
 from users.forms import is_valid_password
 
 from runtests import BaseTestCase
-from users.models import CustomToken
+from base.authtoken import CustomToken
 import datetime
 
 

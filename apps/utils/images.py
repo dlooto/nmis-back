@@ -13,7 +13,7 @@ import copy, logging
 from PIL import Image
 from PIL import ImageFile
 
-import files, eggs
+from . import files, eggs
 import settings
 
 logs = logging.getLogger('django')
@@ -44,34 +44,6 @@ def save_image(file, dest_filename, create_thumb=False, thumb_size=settings.DEFA
         ImageIO.save(image, '%s/%s' % (settings.MEDIA_ROOT, dirs['thumb']), dest_filename)  # save thumbnail image
     
     return dest_filename   # TODO: 后续修改该函数, 返回True or False.
-
-
-# 和上面一个函数唯一的不同在于此函数在此传递的是Image对象，而上面一个是File对象
-def save_image_(image, dest_filename, create_thumb=False, thumb_size=settings.DEFAULT_THUMB_SIZE, cate=''):
-    '''保存图片
-    @param: file 传入的文件参数, request.FILES中获取的数据对象
-    @param: dest_filename 文件数据将保存的目标文件名
-    @param: create_thumb  是否生成缩略图
-    @param: thumb_size    缩略图尺寸
-    @param: cate          要保存的图片类型, avatar-头像, 否则为其他
-    '''
-
-    if not file:
-        return ''
-
-    dirs = settings.IMG_DIR
-    if cate == 'avatar':
-        dirs = settings.USER_AVATAR_DIR
-
-    image = image
-
-    ImageIO.save(image, '%s/%s' % (settings.MEDIA_ROOT, dirs['original']), dest_filename)  # save original image
-
-    if create_thumb and thumb_size:
-        image.thumbnail(thumb_size, Image.ANTIALIAS)
-        ImageIO.save(image, '%s/%s' % (settings.MEDIA_ROOT, dirs['thumb']), dest_filename)  # save thumbnail image
-
-    return dest_filename
 
 
 def save_original(file, original_path):
@@ -119,7 +91,7 @@ class ImageIO(object):
             parser = ImageFile.Parser()
             for chunk in file.chunks():
                 parser.feed(chunk)
-        except Exception, e:
+        except Exception as e:
             logs.error('%s' % e)       
         finally:
             image = parser.close()
@@ -457,7 +429,7 @@ class GenericImageParser(BaseImageParser):
         try:
             for file in self.files:
                 self.parsed.append(ImageIO.parse(file))
-        except Exception, e:
+        except Exception as e:
             self.error = u'图片解析失败'
             self.sys_error = 'Error in parsing image:', str(e)
             return False
@@ -501,7 +473,7 @@ class ManualCropParser(GenericImageParser):
 
             try:
                 self.parsed.append(Image.open(path))
-            except Exception, e:
+            except Exception as e:
                 self.error = u'含有无效的文件'
                 self.sys_error = str(e)
 
@@ -513,7 +485,7 @@ class ManualCropParser(GenericImageParser):
             for image in self.parsed:
                 croped.append(ImageTrimTools.crop(image, self.xy))
             self.parsed = croped
-        except Exception, e:
+        except Exception as e:
             self.sys_error = str(e)
             return False
         return True

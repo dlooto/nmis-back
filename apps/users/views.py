@@ -9,33 +9,20 @@ Users view
 
 import logging
 
-from django.contrib.auth import logout as system_logout
-
 from rest_framework.permissions import AllowAny
 
-from base import resp
 from base import codes
+from base import resp
+from base.authtoken import CustomToken
+from base.common.decorators import check_not_null
 from base.resp import LeanResponse
 from base.views import BaseAPIView
-
-import settings
-from utils.eggs import get_email_host_url
-from emails.tasks import send_reset_password_mail
+from django.contrib.auth import logout as system_logout
 from users.forms import UserSignupForm, UserLoginForm, CheckEmailForm
 from users.models import User, ResetRecord
-from users.models import CustomToken
-from nmis.common.decorators import check_not_null
+from utils.eggs import get_email_host_url
 
 logs = logging.getLogger(__name__)
-
-
-class ObtainAuthtokenView(BaseAPIView):
-    """
-    获取authtoken
-    """
-
-    def post(self, req):
-        pass
 
 
 class RefreshAuthtokenView(BaseAPIView):
@@ -175,11 +162,6 @@ class RequestResetPasswordView(BaseAPIView):
             user = User.objects.filter(email=email).first()
             if user:
                 reset_record = user.generate_reset_record()
-                send_reset_password_mail(
-                    user=user, key=reset_record.key,
-                    # base_url=request.build_absolute_uri('/'),
-                    base_url=settings.LOCAL_DOMAIN_URL
-                )
                 return resp.ok(data={'data': {'email_host_url': get_email_host_url(email)}})
         errors['email'] = '邮箱不存在'
         return resp.form_err(errors)

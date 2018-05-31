@@ -1,11 +1,9 @@
 # coding=utf-8
 #
-# Created by junn, on 16/11/25
+# Created by junn, on 2018/5/30
 #
 
-"""
-工具包
-"""
+# 
 
 import logging
 

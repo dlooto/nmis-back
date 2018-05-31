@@ -17,7 +17,7 @@ LOGGING_SETTINGS = {
 }
 
 # 本模板中相关注释代码请勿删 !!!
-# `pytest` automatically calls this function once when tests are run.
+# `pytest` automatically calls this function once when runtests are run.
 def pytest_configure():
     # settings.DEBUG = False
 

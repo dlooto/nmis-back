@@ -13,8 +13,6 @@ from django.conf import settings
 
 from utils.eggs import included_in
 
-SKIP_EMAIL_LOGIN_TEST = True
-
 
 class TestCaseDataUtils(object):
     BASE_URL = 'http://b.nmis.com'

@@ -6,7 +6,7 @@ from email.parser import FeedParser
 from poplib import POP3, POP3_SSL, error_proto
 from re import compile
 
-import DNS
+# import DNS
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('django')
@@ -36,22 +36,22 @@ def get_pop3_by_mx(mx):
     return None
 
 
-def get_pop3_by_email(email):
-    """
-    通过邮件地址得到POP3服务器地址
-    """
-    if not email or '@' not in email:
-        return None
-
-    host = email.split('@')[-1]
-    try:
-        mx_list = MX_DNS_CACHE.setdefault(host, DNS.mxlookup(host))  # 对查询过的mx记录进行缓存
-    except DNS.ServerError:
-        return None
-    mx = mx_list[0][1]
-    pop3 = get_pop3_by_mx(mx)
-    logger.info('email: {} mx: {} pop3: {}'.format(email, mx_list, pop3))
-    return pop3
+# def get_pop3_by_email(email):
+#     """
+#     通过邮件地址得到POP3服务器地址
+#     """
+#     if not email or '@' not in email:
+#         return None
+#
+#     host = email.split('@')[-1]
+#     try:
+#         mx_list = MX_DNS_CACHE.setdefault(host, DNS.mxlookup(host))  # 对查询过的mx记录进行缓存
+#     except DNS.ServerError:
+#         return None
+#     mx = mx_list[0][1]
+#     pop3 = get_pop3_by_mx(mx)
+#     logger.info('email: {} mx: {} pop3: {}'.format(email, mx_list, pop3))
+#     return pop3
 
 
 def feed_decode(body):
@@ -135,8 +135,8 @@ class Mailbox(object):
         self._username = username
         self._password = password
 
-        if server is None:
-            server = get_pop3_by_email(username)
+        # if server is None:
+        #     server = get_pop3_by_email(username)
 
         self._server = server
         self._client = None

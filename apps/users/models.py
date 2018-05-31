@@ -11,24 +11,24 @@ import base64
 import datetime
 import logging
 
+from base.models import BaseModel
 from django.conf import settings
-from django.contrib.auth import get_user_model, login
-from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth import login
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, User
 from django.core.signing import TimestampSigner
 from django.db import models
 from django.utils.timezone import now
-from rest_framework.authtoken.models import Token
 
-from base.models import BaseModel
+from utils import eggs, images
+from base.authtoken import CustomToken
 from users.managers import UserManager
-from utils import eggs, times
 
 logs = logging.getLogger(__name__)
 
 signer = TimestampSigner()
 sign = lambda string: base64.b64encode(signer.sign(string))
 unsign = lambda signed: signer.unsign(base64.b64decode(signed))
+
 
 ACCT_TYPE_CHOICES = (
     ('E', u'显式注册'),  # 正常流程注册
@@ -73,7 +73,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     USERNAME_FIELD = 'email'
     VALID_AUTH_FIELDS = ['phone', 'email']  # 允许的可用于注册/登录的有效属性字段
-    backend = 'users.models.CustomizedModelBackend'
+    backend = 'base.backends.CustomizedModelBackend'
 
     objects = UserManager()
 
@@ -165,7 +165,7 @@ class UserSecureRecord(BaseModel):
     """
     针对一些特殊的未注册或账号未激活的权限请求, 增加该抽象模型类
     """
-    user = models.ForeignKey(User)
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
     key = models.CharField(max_length=128)
     expire_datetime = models.DateTimeField()
     is_used = models.BooleanField(default=False)
@@ -198,46 +198,6 @@ class ResetRecord(UserSecureRecord):
     """帐号重置key相关信息"""
     pass
 
-
-class CustomizedModelBackend(ModelBackend):
-    """
-    重写authenticate方法, 使得可以使用phone/email/username任一账号类型登录
-    """
-
-    def authenticate(self, password=None, **kwargs):
-        user_model = get_user_model()
-        auth_key = kwargs.get('auth_key')
-        if auth_key not in user_model.VALID_AUTH_FIELDS:
-            return None
-
-        try:
-            user = user_model._default_manager.get(**{auth_key: kwargs.get(auth_key)})
-            if user.check_password(password):
-                return user
-        except user_model.DoesNotExist:
-            return None
-
-
-class CustomToken(Token):
-    """
-    自定义Token模型: 代理DRF框架的Token模型, 添加额外的方法和属性
-    """
-    expired_day = 30    # Token默认超时天数
-
-    class Meta:
-        proxy = True
-
-    def is_expired(self):
-        """ token是否过期 """
-        return self.created + datetime.timedelta(days=self.expired_day) < self.created.now()
-
-    @staticmethod
-    def refresh(token):
-        assert isinstance(token, Token)
-        user = token.user
-        token.delete()
-        new_token = CustomToken.objects.create(user=user)
-        return new_token
 
 
 

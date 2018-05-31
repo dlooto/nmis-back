@@ -39,7 +39,7 @@ DATABASES = {
         "HOST":     MYSQL_DB['host'],
         "PORT":     MYSQL_DB['port'],
         "OPTIONS": {
-            'sql_mode': 'STRICT_TRANS_TABLES',
+            'sql_mode': 'traditional', # 'STRICT_TRANS_TABLES',
         },
 
         # TestCase DB setup
