@@ -31,7 +31,7 @@ AUTH_USER_MODEL = 'users.User'
 USER_PROFILE = 'staff'                  # user profile, it's a nmis.hospitals.Staff object
 
 AUTHENTICATION_BACKENDS = (
-    # 'django.contrib.auth.backends.ModelBackend',  # 默认backend
+    'django.contrib.auth.backends.ModelBackend',  # 默认backend
     'base.backends.CustomizedModelBackend',        # 各backend依次进行验证, 直到某一个验证通过
 )
 

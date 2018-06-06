@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
 
+from settings import create_superuser, USERS_MIGRATION_INIT_SQL
+
 
 class Migration(migrations.Migration):
 
@@ -59,4 +61,11 @@ class Migration(migrations.Migration):
                 'abstract': False,
             },
         ),
+
+        # ############################# added by junn   #############################
+        migrations.RunSQL(  # id自增从设定的值开始
+            USERS_MIGRATION_INIT_SQL,
+        ),
+
+        migrations.RunPython(create_superuser),  # create superuser for sys_admin
     ]

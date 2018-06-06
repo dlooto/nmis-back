@@ -72,7 +72,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     last_login_ip = models.GenericIPAddressField(u'最后登录IP', null=True, blank=True)
 
     USERNAME_FIELD = 'email'
-    VALID_AUTH_FIELDS = ['phone', 'email']  # 允许的可用于注册/登录的有效属性字段
+    VALID_AUTH_FIELDS = ['phone', 'email', 'username']  # 允许的可用于注册/登录的有效属性字段
     backend = 'base.backends.CustomizedModelBackend'
 
     objects = UserManager()
