@@ -44,8 +44,14 @@ class _Permission(BasePermission):
 
 
 class OrPermission(_Permission):
+    """
+    权限"或"操作
+    """
     operator = any
 
 
 class AndPermission(_Permission):
+    """
+    权限"与"操作
+    """
     operator = all

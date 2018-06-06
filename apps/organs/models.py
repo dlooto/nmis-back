@@ -17,7 +17,7 @@ from base.models import BaseModel
 from users.models import UserSecureRecord
 
 from .groups import GROUPS
-from .managers import OrganManager, PermissionManager, GroupManager, StaffManager
+from .managers import OrganManager, PermissionManager, StaffManager
 
 logs = logging.getLogger(__name__)
 
@@ -176,6 +176,14 @@ class BaseOrgan(BaseModel):
         """返回企业的所有权限组"""
         return BaseGroup.objects.filter(organ=self)
 
+    def get_specified_group(self, group_key):
+        """
+        通过权限组关键字获取指定的权限组
+        :param group_key: 权限组关键字, 对应group模型中的cate, 字符串类型
+        :return: 对应的权限组对象, Group object
+        """
+        return self.get_all_groups().filter(cate=group_key).first()
+
     def get_admin_group(self):
         """
         返回企业管理员组. 每个企业当且仅有一个admin组
@@ -271,23 +279,22 @@ class BaseStaff(BaseModel):
         return self.organ == organ and self.is_organ_admin()
 
     def set_group(self, group):
+        """
+        给员工设置权限组
+        :param group: Group object
+        """
         self.group = group
         self.save()
 
     def has_group_perm(self, group):
         """
-        员工是否在企业的某个权限组
+        员工是否拥有所属企业指定某权限组的权限
         :return:
         """
-        return group == self.group
+        if not group.organ == self.organ:
+            return False
 
-    def has_hr_group_perm(self):
-        """
-        是否有HR权限
-        :param hr_group:
-        :return:
-        """
-        return self.is_organ_admin() or self.has_group_perm(self.organ.get_hr_group())
+        return self.is_organ_admin() or group == self.group
 
     def get_group_permissions(self, obj=None):  # TODO: 权限组及权限可以考虑从cache中读取
         """
@@ -372,7 +379,6 @@ class BaseGroup(BaseModel):
     """
 
     GROUP_CATE_CHOICES = ()
-    GROUP_CATE_DICT = dict(GROUP_CATE_CHOICES)
 
     organ = models.ForeignKey('organs.BaseOrgan', verbose_name=u'所属企业', null=True, blank=True, on_delete=models.CASCADE)
     name = models.CharField(u'权限组名', max_length=40)
@@ -381,8 +387,6 @@ class BaseGroup(BaseModel):
 
     permissions = models.ManyToManyField(Permission, verbose_name=u'权限集', blank=True)
     desc = models.CharField(u'描述', max_length=100, null=True, blank=True, default='')
-
-    objects = GroupManager()
 
     class Meta:
         abstract = True
