@@ -26,22 +26,6 @@ class PermissionManager(BaseManager):
         return self.all()
 
 
-class GroupManager(BaseManager):
-    """
-    The manager for the auth's Group model.
-    """
-    use_in_migrations = True
-
-    def get_by_key(self, name):
-        return self.get(name=name)
-
-    def create_group(self, organ, commit=True, **kwargs):
-        group = self.model(organ=organ, **kwargs)
-        if commit:
-            group.save()
-        return group
-
-
 class OrganManager(BaseManager):
 
     def create_organ(self, **kwargs):

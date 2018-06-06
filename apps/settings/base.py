@@ -178,6 +178,9 @@ INSTALLED_APPS = [
     'base',
     'users',
     'organs',
+    'nmis.hospitals',
+    'nmis.devices',
+    'nmis.projects',
 
     'runtests',
 ]
