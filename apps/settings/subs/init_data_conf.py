@@ -9,10 +9,10 @@ from django.contrib.auth import get_user_model
 
 # 默认起始业务ID设置
 
-USER_ID_AUTO_START = 20161225       # 用户id自增起始值
+USER_ID_AUTO_START = 20101211       # 用户id自增起始值
 
 superuser_email = 'admin@nmis.com'
-superuser_password = 'xxxxxx'
+superuser_password = 'Nmis1345a'
 
 # 该方法在migration中被使用
 def create_superuser(apps, schema_editor):

@@ -1,0 +1,15 @@
+[
+  	{
+      "pk": 20101212,
+      "model": "users.user",
+      "fields": {
+        "username": "yulaishini",
+        "email": "contact@nmis.com",
+        "is_staff": false,
+        "is_active": true,
+        "is_superuser": false,
+        "date_joined": "2018-6-6 10:25",
+        "created_time": "2018-6-6 10:25"
+      }
+    }
+]
