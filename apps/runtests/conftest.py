@@ -26,10 +26,4 @@ def pytest_configure():
     #     'django.contrib.auth.hashers.MD5PasswordHasher',
     # )
     settings.LOGGING = configure_logging_params(**LOGGING_SETTINGS)
-
     django.setup()
-
-    # Note: In Django =< 1.6 you'll need to run this instead
-    # settings.configure(
-    #     LOGGING=configure_logging_params(**LOGGING_SETTINGS),
-    # )

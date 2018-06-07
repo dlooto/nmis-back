@@ -44,14 +44,14 @@ class UserSignupForm(BaseForm):
         self.req = req
 
     def is_valid(self):
-        auth_key = self.data.get('auth_key')  # 取值为 'phone', 'username', or 'email'
-        if auth_key not in ('phone', 'username', 'email'):
-            self.err_msg = u'未知的auth_key类型: %s' % auth_key
+        authkey = self.data.get('authkey')  # 取值为 'phone', 'username', or 'email'
+        if authkey not in ('phone', 'username', 'email'):
+            self.err_msg = u'未知的authkey类型: %s' % authkey
             return False
-        if not self.data.get(auth_key):
-            self.err_msg = u'缺少参数值: %s' % auth_key
+        if not self.data.get(authkey):
+            self.err_msg = u'缺少参数值: %s' % authkey
             return False
-        if not getattr(self, 'check_%s' % auth_key)():  # 无效则返回
+        if not getattr(self, 'check_%s' % authkey)():  # 无效则返回
             return False
         if not self.check_password():
             return False
@@ -59,9 +59,9 @@ class UserSignupForm(BaseForm):
         return True
 
     def save(self):
-        auth_key = self.data.get('auth_key')
+        authkey = self.data.get('authkey')
         password = self.data.get('password')
-        return User.objects.create_param_user((auth_key, self.data.get(auth_key)),
+        return User.objects.create_param_user((authkey, self.data.get(authkey)),
                                               password=password, is_active=True)
 
     def check_username(self):
@@ -101,9 +101,9 @@ class UserSignupForm(BaseForm):
 
         return True
 
-    def _check_auth_name(self, auth_key):
-        if User.objects.is_exist({auth_key: self.data.get(auth_key)}):
-            self.err_msg = u'%s已被注册' % auth_key
+    def _check_auth_name(self, authkey):
+        if User.objects.is_exist({authkey: self.data.get(authkey)}):
+            self.err_msg = u'%s已被注册' % authkey
             return False
         return True
 
@@ -114,12 +114,12 @@ class UserLoginForm(BaseForm):
     """
 
     ERR_CODES = {
-        'params_lack':          u'参数缺乏',
+        'params_lack':          u'参数缺乏或参数为空',
         'user_not_activated':   u'账号未激活',
         'user_not_found':       u'账号不存在',
         'user_or_passwd_err':   u'用户名或密码错误',
         'no_passwd':            u'未设置密码',
-        'unknown_auth_key':     u'未知的auth_key类型'
+        'unknown_auth_key':     u'未知的authkey类型'
     }
 
     def __init__(self, req, data=None, *args, **kwargs):
@@ -128,14 +128,14 @@ class UserLoginForm(BaseForm):
         self.user_cache = None
 
     def is_valid(self):
-        auth_key = self.data.get('auth_key', '').strip()  # 取值为 'phone', 'username', or 'email'
-        if auth_key not in ('phone', 'username', 'email'):
-            self.update_errors('auth_key', 'unknown_auth_key', )
+        authkey = self.data.get('authkey', '').strip()  # 取值为 'phone', 'username', or 'email'
+        if authkey not in ('phone', 'username', 'email'):
+            self.update_errors('authkey', 'unknown_auth_key', )
             return False
 
-        auth_value = self.data.get(auth_key)
+        auth_value = self.data.get(authkey)
         if not auth_value:
-            self.update_errors('auth_key', 'params_lack')
+            self.update_errors(authkey, 'params_lack')
             return False
 
         password = self.data.get('password')
@@ -143,33 +143,34 @@ class UserLoginForm(BaseForm):
             self.update_errors('password', 'no_passwd')
             return False
 
+        user_model = get_user_model()
         try:
-            if auth_key == 'username':  # username时需要精确匹配, 区分大小写
+            if authkey == 'username':  # username时需要精确匹配, 区分大小写
                 # user = User.objects.get(username__exact=auth_value)  # DB层面大小写无法区分, 所以换用以下语句...
-                query_set = User.objects.extra(where=["binary username = '%s'" % auth_value])
+                query_set = user_model.objects.extra(where=["binary username = '%s'" % auth_value])
                 if not query_set:
-                    self.update_errors('username', 'user_not_found')
+                    self.update_errors(authkey, 'user_not_found')
                     return False
                 user = query_set[0]
             else:
-                user = get_user_model().objects.get(**{auth_key: auth_value})
+                user = user_model.objects.get(**{authkey: auth_value})
 
             if not user.is_active:
-                self.update_errors('email', 'user_not_activated')
+                self.update_errors(authkey, 'user_not_activated')
                 return False
             if not user.has_usable_password():
                 self.update_errors('password', 'no_passwd')
                 return False
-        except get_user_model().DoesNotExist:
-            self.update_errors('email', 'user_not_found')
+        except user_model.DoesNotExist:
+            self.update_errors(authkey, 'user_not_found')
             return False
         except Exception as e:
             logs.exception(e)
-            self.update_errors('email', 'user_not_found')
+            self.update_errors(authkey, 'user_not_found')
             return False
 
         try:
-            self.user_cache = authenticate(**{'auth_key': auth_key, auth_key: auth_value, u'password': password, })     # 传入auth_key以标识验证登录类型
+            self.user_cache = authenticate(**{'authkey': authkey, authkey: auth_value, u'password': password, })     # 传入authkey以标识验证登录类型
         except Exception as e:
             logs.exception(e)
             self.update_errors('password', 'user_or_passwd_err')

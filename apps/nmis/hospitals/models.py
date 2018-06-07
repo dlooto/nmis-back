@@ -9,7 +9,7 @@
 
 import logging
 
-from django.db import models
+from django.db import models, transaction
 
 from base.models import BaseModel
 from nmis.hospitals.managers import GroupManager
@@ -36,6 +36,53 @@ class Hospital(BaseOrgan):
         verbose_name = u'A 医疗机构'
         verbose_name_plural = u'A 医疗机构'
         db_table = 'hosp_hospital'
+
+    def save(self, *args, **kwargs):  # 重写save函数，当admin后台保存表单后，更新缓存
+        super(self.__class__, self).save(*args, **kwargs)
+        self.cache()
+
+    ################################################
+    #                  权限组操作
+    ################################################
+
+    def get_all_groups(self):
+        """返回企业的所有权限组"""
+        return Group.objects.filter(organ=self)
+
+    def create_group(self, **kwargs):
+        """
+        创建权限组
+        :param kwargs: 输入参数
+        :return:
+        """
+        return Group.objects.create_group(self, **kwargs)
+
+    def init_default_groups(self):
+        """
+        机构初建时初始化默认权限组
+        :return:
+        """
+
+        group_list = []
+        for k in GROUP_CATE_DICT.keys():
+            group_data = {'is_admin': False, 'commit': False}
+            group_data.update(GROUPS.get(k))
+            group_list.append(
+                self.create_group(**group_data)
+            )
+        with transaction.atomic():
+            self.create_admin_group()
+            Group.objects.bulk_create(group_list)
+
+    def create_admin_group(self):
+        """创建管理员组"""
+        if self.get_admin_group():
+            logs.warn('Create Error: admin group existed for organ: %s' % self.id)
+            return
+
+        group_data = {'is_admin': True}
+        group_data.update(GROUPS.get('admin'))
+        return self.create_group(**group_data)
 
 
 class Department(BaseDepartment):
@@ -93,9 +140,11 @@ class Group(BaseGroup):
     """
     机构权限组数据模型. 每个权限组有一个归属的企业
     """
+    group_cate_choices = GROUP_CATE_CHOICES
 
     organ = models.ForeignKey(Hospital, verbose_name=u'所属医院', on_delete=models.CASCADE, null=True, blank=True)
-
+    cate = models.CharField(u'权限组类别', max_length=4, choices=GROUP_CATE_CHOICES,
+                            null=True, blank=True)
     objects = GroupManager()
 
     class Meta:

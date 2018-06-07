@@ -20,17 +20,53 @@ class TestCaseDataUtils(object):
     EMAIL_PASSWORD = 'xxxx_123456'
     EMAIL_HOST = 'pop.exmail.qq.com'
 
-    def create_user(self, email=None, password=None, active=False):
+    def create_user(self, email=None, password=None, active=False, **kwargs):
         from users.models import User
         email = email or 'test_{}@nmis.com'.format(self.get_random_suffix())
         password = password or self.generate_password()
         user = User.objects.create_param_user(
             ('email', email),
             is_active=active,
-            password=password
+            password=password,
+            **kwargs
         )
         user.raw_password = password
         return user
+
+    def create_user_with_username(self, username=None, password=None, active=False, **kwargs):
+        username = username or 'test_{}'.format(self.get_random_suffix())
+        password = password or self.generate_password()
+
+        from users.models import User
+        user = User.objects.create_param_user(
+            ('username', username), is_active=active, password=password, **kwargs
+        )
+        user.raw_password = password
+        return user
+
+    def create_organ(self, user, organ_name='测试机构'):
+        from nmis.hospitals.models import Hospital
+        hospital = Hospital.objects.create(creator=user, auth_status=2, organ_name=organ_name)
+        return hospital
+
+    def create_staff(self, user, organ, name=u'测试员工', **kwargs):
+        from nmis.hospitals.models import Staff
+        return Staff.objects.create(user=user, organ=organ, name=name, **kwargs)
+
+    def create_completed_organ(self):
+        """
+        创建完整的企业数据: 包括企业创建者, 企业对象, 创建者关联的staff对象, 企业权限组等
+        :return:
+        """
+        user = self.create_user_with_username(
+            'test_admin123', 'x111111', active=True,
+            email='test_{}'.format(self.get_random_suffix())
+        )
+        organ = self.create_organ(user)
+        organ.init_default_groups()
+        staff = self.create_staff(user, organ)
+        staff.set_group(organ.get_admin_group())
+        return organ
 
     def get_random_suffix(self):
         return str(uuid.uuid4()).split('-')[-1]
@@ -48,19 +84,25 @@ class BaseTestCase(TestCase, TestCaseDataUtils):
 
     def setUp(self):
         """ 初始化管理员及其他成员 """
-        self.user = self.create_user()
-        # pass
+        self.organ = self.create_completed_organ()
+        self.user = self.organ.creator
+        self.admin_staff = self.user.get_profile()
 
     def tearDown(self):
+        self.organ.clear_cache()
         self.user.clear_cache()
+        self.admin_staff.clear_cache()
 
     def login(self, user):
-        return self.request_login(user.email, user.raw_password)
+        return self.request_login('email', user.email, user.raw_password)
 
-    def request_login(self, email, password):
+    def login_with_username(self, user):
+        return self.request_login('username', user.username, user.raw_password)
+
+    def request_login(self, authkey, authvalue, password):
         response = self.post(
             reverse('users_login'),
-            data={'email': email, 'password': password, "auth_key": "email"}
+            data={authkey: authvalue, 'password': password, "authkey": authkey}
         )
         self.client.defaults['HTTP_AUTHORIZATION'] = 'Token {}'.format(response.get('authtoken'))
         return response

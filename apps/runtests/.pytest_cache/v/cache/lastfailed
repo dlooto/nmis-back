@@ -1,0 +1,9 @@
+{
+  "integration/_users/test_user.py::TokenTestCase::test_custom_token": true,
+  "integration/_users/test_user.py::TokenTestCase::test_verify": true,
+  "integration/_users/test_user.py::UserTestCase::test_activate_user": true,
+  "integration/_users/test_user.py::UserTestCase::test_is_valid_password": true,
+  "integration/_users/test_user.py::UserTestCase::test_request_reset_password": true,
+  "integration/_users/test_user.py::UserTestCase::test_reset_password": true,
+  "integration/_users/test_user.py::UserTestCase::test_verify_key": true
+}

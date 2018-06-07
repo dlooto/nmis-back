@@ -1,0 +1,3 @@
+[
+  "integration/_users/test_user.py::UserTestCase::test_login"
+]

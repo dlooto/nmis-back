@@ -78,10 +78,6 @@ class BaseOrgan(BaseModel):
     def __unicode__(self):
         return u'%s %s' % (self.id, self.organ_name)
 
-    def save(self, *args, **kwargs):  # 重写save函数，当admin后台保存表单后，更新缓存
-        super(self.__class__, self).save(*args, **kwargs)
-        self.cache()
-
     def is_authed(self):
         """
         是否已审核通过
@@ -137,44 +133,8 @@ class BaseOrgan(BaseModel):
     #                  权限组操作
     ################################################
 
-    def init_default_groups(self):
-        """
-        企业初建时初始化默认权限组
-        :return:
-        """
-
-        group_list = []
-        for k in BaseGroup.GROUP_CATE_DICT.keys():
-            group_data = {'is_admin': False, 'commit': False}
-            group_data.update(GROUPS.get(k))
-            group_list.append(
-                self.create_group(**group_data)
-            )
-        with transaction.atomic():
-            self.create_admin_group()
-            BaseGroup.objects.bulk_create(group_list)
-
-    def create_group(self, **kwargs):
-        """
-        创建权限组
-        :param kwargs: 输入参数
-        :return:
-        """
-        return BaseGroup.objects.create_group(self, **kwargs)
-
-    def create_admin_group(self):
-        """创建企业管理员组"""
-        if self.get_admin_group():
-            logs.warn('Create Error: admin group existed for organ: %s' % self.id)
-            return
-
-        group_data = {'is_admin': True}
-        group_data.update(GROUPS.get('ADMIN'))
-        return self.create_group(**group_data)
-
     def get_all_groups(self):
-        """返回企业的所有权限组"""
-        return BaseGroup.objects.filter(organ=self)
+        pass
 
     def get_specified_group(self, group_key):
         """

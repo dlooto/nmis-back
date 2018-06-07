@@ -2,10 +2,6 @@
 .idea
 .settings
 
-apps/settings/local.py
-apps/settings/__init__.py
-
-apps/build
 media
 logs
 env
@@ -21,4 +17,8 @@ dump.rdb
 .env
 *.rdb
 
-/apps/celerybeat-schedule.db
+apps/settings/local.py
+apps/settings/__init__.py
+apps/runtests/.pytest_cache
+apps/build
+apps/celerybeat-schedule.db

@@ -32,11 +32,13 @@ HOSP_GRADE_CHOICES = (
 DPT_ATTRI_MEDICAL = 'ME'
 DPT_ATTRI_SUPPORT = 'SU'
 DPT_ATTRI_OFFICE = 'OF'
+DPT_ATTRI_OTHER = 'OT'
 
 DPT_ATTRI_CHOICES = (
     (DPT_ATTRI_MEDICAL, '医技'),
     (DPT_ATTRI_SUPPORT, '后勤'),
     (DPT_ATTRI_OFFICE,  '行政'),
+    (DPT_ATTRI_OTHER,   '其他'),
 )
 
 
@@ -54,15 +56,33 @@ DOCTOR_TITLE_CHOICES = (
 )
 
 
-# 医疗机构权限组分类标识(即权限组key)
-GROUP_CATE_PROJECT_APPROVER = 'gp_project_approver'  # 项目分配者权限组key
-GROUP_CATE_NORMAL_STAFF = 'gp_normal_staff'      # 普通员工权限组key
+# 权限组: 医疗机构权限组分类标识(即权限组key)
+GROUP_CATE_PROJECT_APPROVER = 'GPA'  # 项目分配者权限组key
+GROUP_CATE_NORMAL_STAFF = 'GNS'      # 普通员工权限组key
 
 GROUP_CATE_CHOICES = (
     (GROUP_CATE_PROJECT_APPROVER, '项目分配人'),
     (GROUP_CATE_NORMAL_STAFF,     '普通员工'),
 )
 GROUP_CATE_DICT = dict(GROUP_CATE_CHOICES)
+
+GROUPS = {
+    'admin': {
+        'name': u'管理员',
+        'cate': '',
+        'desc': '* 管理系统所有功能及信息'
+    },
+    GROUP_CATE_PROJECT_APPROVER:   {
+        'name': u'项目分配人',
+        'cate': GROUP_CATE_PROJECT_APPROVER,
+        'desc': u'为申请的项目指定责任人'
+    },
+    GROUP_CATE_NORMAL_STAFF: {
+        'name': u'普通员工',
+        'cate': GROUP_CATE_NORMAL_STAFF,
+        'desc': u'机构普通员工'
+    },
+}
 
 
 
