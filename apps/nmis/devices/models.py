@@ -19,7 +19,7 @@ class Device(BaseModel):
     一般设备/器械基础模型
     """
     name = models.CharField('设备名称', max_length=30)
-    cate = models.CharField('设备类别', max_length=10, null=True, blank=True)
+    cate = models.CharField('设备类型', max_length=10, null=True, blank=True)
     producer = models.CharField('设备生产者', max_length=30, null=True, blank=True)
 
     class Meta:
@@ -30,6 +30,9 @@ class OrderedDevice(Device):
     """
     申购的医疗设备, 一般作为申请项目里的设备明细条目
     """
+    project = models.ForeignKey(
+        'projects.ProjectPlan', verbose_name='所属项目', on_delete=models.CASCADE, null=True, blank=True
+    )
     planned_price = models.FloatField('预算单价', default=0.00)
     real_price = models.FloatField('实际单价', default=0.00, null=True, blank=True)
     num = models.IntegerField('预购数量', default=1)

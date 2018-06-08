@@ -44,8 +44,8 @@ class ProjectPlan(BaseModel):
     objects = ProjectPlanManager()
 
     class Meta:
-        verbose_name = u'采购申请/项目计划'
-        verbose_name_plural = u'采购申请'
+        verbose_name = 'A 项目申请'
+        verbose_name_plural = 'A 项目申请'
         db_table = 'projects_project_plan'
 
     def __str__(self):
@@ -65,8 +65,8 @@ class ProjectFlow(BaseModel):
     objects = ProjectFlowManager()
 
     class Meta:
-        verbose_name = u'项目流程'
-        verbose_name_plural = u'项目流程'
+        verbose_name = 'B 项目流程'
+        verbose_name_plural = 'B 项目流程'
         db_table = 'projects_project_flow'
 
     def __str__(self):
@@ -83,8 +83,8 @@ class Milestone(BaseModel):
     desc = models.CharField('描述', max_length=20, default='')
 
     class Meta:
-        verbose_name = u'里程碑项'
-        verbose_name_plural = u'里程碑项'
+        verbose_name = '里程碑项'
+        verbose_name_plural = '里程碑项'
         db_table = 'projects_milestone'
 
     def __str__(self):

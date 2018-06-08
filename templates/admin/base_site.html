@@ -1,0 +1,69 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+{% block title %} NMIS管理后台 | Admin {% endblock %}
+
+{% block extrahead %}
+<link rel="icon" href="{{ STATIC_URL }}nmis/img/logo_s.png" />
+
+<style type="text/css">
+.prompt-text {
+    font-size: 11px;
+    color:     #999999;
+}
+</style>
+
+<script type="text/javascript" src="{{STATIC_URL}}admin/js/verify.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}admin/js/jquery.cookie.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){
+
+});
+</script>
+
+{% block extjs %}{% endblock %}
+{% block extcss %}{% endblock %}
+
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">NMIS管理后台</h1>
+{% endblock %}
+
+{% block userlinks %}
+    {% url 'django-admindocs-docroot' as docsroot %}
+    {% if docsroot %}
+        <a href="{{ docsroot }}">{% trans 'Documentation' %}</a> /
+    {% endif %}
+    
+    {% if user.is_superuser and user.has_usable_password %}
+    <a href="{% url 'admin:password_change' %}">{% trans 'Change password' %}</a> /
+    <a href="{% url 'admin:logout' %}">{% trans 'Log out' %}</a>
+    {% endif %}
+    
+{% endblock %}
+
+{% block header_time %} {% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block footer %}
+  {% if not is_popup %}
+  <div id="footer" class="footer">
+    <div class="content">
+      <div class="tools">
+        {% block footer_links %}
+
+        {% endblock %}
+      </div>
+
+      <div class="copyright">
+        {% block copyright %}
+          &copy;2016 <a href="http://nmis.com" target="_blank">NMIS</a>
+        {% endblock %}
+      </div>
+
+    </div>
+  </div>
+  {% endif %}
+{% endblock %}
