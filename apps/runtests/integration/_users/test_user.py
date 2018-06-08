@@ -132,22 +132,22 @@ class TokenTestCase(BaseTestCase):
         response = self.login(self.user)
         self.token = response.get('authtoken')
 
-    # def test_refresh(self):
-    #     """
-    #     刷新用户Token
-    #     :return:
-    #     """
-    #     url = reverse('token_refresh')
-    #     token = self.token
-    #     for i in xrange(3):
-    #         response = self.post(url, data={'old_token': token})
-    #         self.assert_response_success(response)
-    #         self.assertNotEqual(response.get('token'), token)
-    #         token = response.get('token')
-    #         self.client.defaults['HTTP_AUTHORIZATION'] = 'Token {}'.format(token)
-    #     response = self.post(url, data={'old_token': self.token})
-    #     self.assert_response_failure(response)
-    #     self.token = token
+    def test_refresh(self):
+        """
+        刷新用户Token
+        :return:
+        """
+        url = reverse('token_refresh')
+        token = self.token
+        for i in xrange(3):
+            response = self.post(url, data={'old_token': token})
+            self.assert_response_success(response)
+            self.assertNotEqual(response.get('token'), token)
+            token = response.get('token')
+            self.client.defaults['HTTP_AUTHORIZATION'] = 'Token {}'.format(token)
+        response = self.post(url, data={'old_token': self.token})
+        self.assert_response_failure(response)
+        self.token = token
 
     def test_verify(self):
         """

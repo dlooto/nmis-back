@@ -14,7 +14,8 @@ urlpatterns = [
     path('admin/',        admin.site.urls),
 
     # API
-    path('api/v1/users/',  include('users.urls')),
+    path('api/v1/users/',       include('users.urls')),
+    path('api/v1/projects/',    include('nmis.projects.urls')),
 ]
 
 if settings.DEBUG:
