@@ -14,7 +14,9 @@ from rest_framework.permissions import AllowAny
 
 from base import resp
 from base.views import BaseAPIView
-from nmis.hospitals.models import Hospital
+from nmis.hospitals.models import Hospital, Staff, Doctor
+from nmis.hospitals.serializers import HospitalSerializer
+from nmis.hospitals.forms import StaffSignupForm
 
 from .forms import HospitalSignupForm
 
@@ -57,11 +59,12 @@ class HospitalSignupView(BaseAPIView):
         response.data.update({'authtoken': token})
         return response
 
-
 class HospitalView(BaseAPIView):
     """
     单个企业的get/update/delete操作
     """
+    serializer_class = HospitalSerializer
+    permission_classes = (AllowAny,)
 
     def get(self, req, hid):
         organ = self.get_object_or_404(hid, Hospital)
@@ -87,6 +90,55 @@ class HospitalView(BaseAPIView):
         # if opt_type == 'xxxx_option':
         #   do something...
         return resp.failed()
+
+
+class StaffSignupView(BaseAPIView):
+    """
+    添加员工
+    """
+    permission_classes = (AllowAny)
+
+    def post(self, req):
+        form = StaffSignupForm(self, req.data)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+
+        staff = None
+
+        try:
+            staff = form.save()
+        except Exception as e:
+            logs.exception(e)
+            return resp.failed(u'操作异常')
+
+
+
+
+class StaffView(BaseAPIView):
+    """
+    单个员工删、查、改操作
+    """
+    permission_classes = (AllowAny,)
+
+    def get(self, req, hid, dept_id, staff_id,):
+        staff = self.get_object_or_404(staff_id, Staff)
+        return resp.serialize_response(staff, results_name='staff')
+
+    def put(self, req, staff_id):
+        staff = self.get_object_or_404(staff_id, Staff)
+        if not staff:
+            return resp.object_not_found()
+        staff.update(self,req.data)
+        return resp.serialize_response(staff)
+
+    def delete(self, req, staff_id):
+        staff = self.get_object_or_404(staff_id, Staff,)
+        if not staff:
+            return resp.object_not_found()
+        staff.delete()
+
+
 
 
 

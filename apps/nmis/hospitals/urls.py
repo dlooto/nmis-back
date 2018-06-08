@@ -18,9 +18,11 @@ logs = logging.getLogger(__name__)
 
 urlpatterns = [
     # 医疗机构注册/登录/验证邮箱/邮箱后缀已存在
-    path("signup",       views.HospitalSignupView.as_view(), ),
+    path("signup", views.HospitalSignupView.as_view(), ),
 
     # 单个企业get/update/delete
-    path("<hid>$",         views.HospitalView.as_view(), ),
+    path("<hid>", views.HospitalView.as_view(), ),
+
+    path("<hid>/departments/<dept_id>/staffs/<staff_id>", views.StaffView.as_view(), ),
 
 ]

@@ -15,6 +15,8 @@ urlpatterns = [
 
     # API
     path('users/',  include('users.urls')),
+    path('hospitals/',  include('nmis.hospitals.urls')),
+
 ]
 
 if settings.DEBUG:
