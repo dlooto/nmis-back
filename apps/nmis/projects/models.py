@@ -10,6 +10,7 @@ import logging
 from django.db import models
 
 from base.models import BaseModel
+from nmis.devices.models import OrderedDevice
 from .managers import ProjectPlanManager, ProjectFlowManager
 from .consts import *
 
@@ -50,6 +51,12 @@ class ProjectPlan(BaseModel):
 
     def __str__(self):
         return self.title
+
+    def get_ordered_devices(self):
+        """
+        返回项目中包含的所有设备列表
+        """
+        return OrderedDevice.objects.filter(project=self)
 
 
 class ProjectFlow(BaseModel):

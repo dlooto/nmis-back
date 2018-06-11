@@ -84,7 +84,9 @@ class ProjectPlanCreateView(BaseAPIView):
         if not project:
             return resp.failed('项目申请提交异常')
 
-        return resp.serialize_response(project, results_name='project')
+        return resp.serialize_response(
+            project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
+        )
 
 
 class ProjectPlanView(BaseAPIView):

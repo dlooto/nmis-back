@@ -152,6 +152,8 @@ def serialize_response(items, results_name='data', app_name=None, srl_cls_name=N
 
     :param results_name: 数据结果集名称, 默认为'data'
     :param app_name:    为防止module_name被默认转换成 django.serializers, 传入该参数以确保类类型正确.
+    :param srl_cls_name: XxxSerializer类名, 若传入则序列化基于该类进行,
+                    否则自动判断数据对象的Serializer类类型. 该参数为字符串类型
 
     :return:
         Response object, 如下:

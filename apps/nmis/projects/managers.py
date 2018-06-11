@@ -27,7 +27,7 @@ class ProjectPlanManager(BaseManager):
                 ordered_device_list = []
                 for device_data in ordered_devices:
                     ordered_device_list.append(
-                        OrderedDevice(**device_data)
+                        OrderedDevice(project=project, **device_data)
                     )
                 OrderedDevice.objects.bulk_create(ordered_device_list)
         except Exception as e:
