@@ -33,6 +33,7 @@ def check_objects_exist(request, pkkey_cls_dict):
 
     return results
 
+
 def check_object_exist(obj_id, model):
     """
     检查对象是否存在

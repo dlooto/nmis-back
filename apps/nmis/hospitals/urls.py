@@ -21,6 +21,8 @@ urlpatterns = [
     path("signup",       views.HospitalSignupView.as_view(), ),
 
     # 单个企业get/update/delete
-    path("<hid>$",         views.HospitalView.as_view(), ),
+    path("<hid>",         views.HospitalView.as_view(), ),
 
+    # 医院科室post/update/delete
+    path("<hid>/departments/<dept_id>", views.DepartView.as_view(), ),
 ]

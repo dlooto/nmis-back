@@ -11,12 +11,14 @@ import logging
 
 from django.conf import settings
 from rest_framework.permissions import AllowAny
+from rest_framework import status
+from rest_framework.response import Response
 
 from base import resp
 from base.views import BaseAPIView
-from nmis.hospitals.models import Hospital
+from nmis.hospitals.models import Hospital, Department
 
-from .forms import HospitalSignupForm
+from .forms import HospitalSignupForm, DepartmentUpdateFrom
 
 logs = logging.getLogger(__name__)
 
@@ -62,6 +64,7 @@ class HospitalView(BaseAPIView):
     """
     单个企业的get/update/delete操作
     """
+    permission_classes = (AllowAny,)
 
     def get(self, req, hid):
         organ = self.get_object_or_404(hid, Hospital)
@@ -89,10 +92,61 @@ class HospitalView(BaseAPIView):
         return resp.failed()
 
 
+class DepartView(BaseAPIView):
+    """
+    单个科室/部门的get/update/delete
+    """
+    permission_classes = (AllowAny,)
 
+    def get(self, req, hid, dept_id):
+        """
+        查询单个科室详细信息
+        :param req:
+        :param hid: 科室id
+        :return: 科室存在：返回科室详细信息，不存在科室：返回404
+        """
+        dept = self.get_object_or_404(dept_id, Department)
+        return resp.serialize_response(dept, results_name='dept')
 
+    def put(self, req, hid, dept_id,):
+        """
+        修改单个科室详细信息
+        参数格式示例如下:
+        {
+            "name": "设备科",
+            "contact": "18999999999",
+            "attri": "SU",
+            "desc": "负责医院设备采购，维修，"
+        }
+        :param req:
+        :param hid:
+        :param dept_id: 科室ID
+        :return:
+        """
 
+        data = req.data
+        if not data:
+            return resp.string_response('参数为null')
+        form = DepartmentUpdateFrom(data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        form.save()
+        dept = Department.objects.get(id=dept_id)
+        return resp.serialize_response(dept, results_name='dept')
 
-
-
+    def delete(self, req, hid, dept_id):
+        """
+        删除科室，操作成功返回如下json格式
+        {
+            "code": 10000,
+            "msg":  "ok"
+        }
+        :param req:
+        :param hid: 医院ID
+        :param dept_id: 科室ID
+        :return:
+        """
+        dept = Department.objects.get(pk=dept_id)
+        dept.delete()
+        return resp.ok()
 

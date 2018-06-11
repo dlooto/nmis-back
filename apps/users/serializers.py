@@ -13,7 +13,7 @@ class UserSerializer(BaseModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'username','email', 'phone', 'gender', 'acct_type', 'login_count',
+            'id', 'username', 'email', 'phone', 'gender', 'acct_type', 'login_count',
         )
         
 
