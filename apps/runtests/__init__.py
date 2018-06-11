@@ -49,6 +49,15 @@ class TestCaseDataUtils(object):
         hospital = Hospital.objects.create(creator=user, auth_status=2, organ_name=organ_name)
         return hospital
 
+    def create_department(self, organ, dept_name='测试科室'):
+        return organ.create_department(**{
+            'organ': organ,
+            'name': dept_name,
+            'contact': '13500001111',
+            'attri': 'OT',
+            'desc': 'test'
+        })
+
     def create_staff(self, user, organ, name=u'测试员工', **kwargs):
         from nmis.hospitals.models import Staff
         return Staff.objects.create(user=user, organ=organ, name=name, **kwargs)
@@ -64,7 +73,10 @@ class TestCaseDataUtils(object):
         )
         organ = self.create_organ(user)
         organ.init_default_groups()
-        staff = self.create_staff(user, organ)
+        dept = self.create_department(
+            organ, dept_name="测试科室_{}".format(self.get_random_suffix())
+        )
+        staff = self.create_staff(user, organ, dept=dept)
         staff.set_group(organ.get_admin_group())
         return organ
 

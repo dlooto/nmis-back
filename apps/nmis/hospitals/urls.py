@@ -21,8 +21,21 @@ urlpatterns = [
     path("signup",       views.HospitalSignupView.as_view(), ),
 
     # 单个企业get/update/delete
-    path("<hid>",         views.HospitalView.as_view(), ),
+    path("<hid>", views.HospitalView.as_view(), ),
 
     # 医院科室post/update/delete
-    path("<hid>/departments/<dept_id>", views.DepartView.as_view(), ),
+    path("<hid>/departments/<dept_id>", views.DepartmentView.as_view(), ),
+
+    path("<hid>/departments/create", views.DepartmentCreateView.as_view(), ),
+    path("<hid>/departments",        views.DepartmentListView.as_view(), ),   # 科室列表操作
+
+    # 单个员工查、删、改
+    path("<hid>/staffs/<staff_id>", views.StaffView.as_view(), ),
+
+    # 添加员工、
+    path("<hid>/staffs/create",     views.StaffCreateView.as_view(), ),
+
+    # 查询员工列表
+    path("<hid>/staffs",            views.StaffListView.as_view(), ),
+
 ]

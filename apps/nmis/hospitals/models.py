@@ -84,6 +84,9 @@ class Hospital(BaseOrgan):
         group_data.update(GROUPS.get('admin'))
         return self.create_group(**group_data)
 
+    def create_department(self, **dept_data):
+        return Department.objects.create(**dept_data)
+
 
 class Department(BaseDepartment):
     """
@@ -97,6 +100,10 @@ class Department(BaseDepartment):
         verbose_name = u'B 科室/部门'
         verbose_name_plural = u'B 科室/部门'
         db_table = 'hosp_department'
+
+    VALID_ATTRS = [
+        'name', 'contact', 'attri', 'desc'
+    ]
 
     def __str__(self):
         return u'%s' % self.name

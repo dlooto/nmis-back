@@ -9,6 +9,7 @@
 
 import logging
 
+from base.common.decorators import check_params_not_all_null, check_params_not_null
 from django.conf import settings
 from rest_framework.permissions import AllowAny
 from rest_framework import status
@@ -16,9 +17,9 @@ from rest_framework.response import Response
 
 from base import resp
 from base.views import BaseAPIView
-from nmis.hospitals.models import Hospital, Department
-
-from .forms import HospitalSignupForm, DepartmentUpdateFrom
+from nmis.hospitals.models import Hospital, Department, Staff, Doctor
+from nmis.hospitals.serializers import HospitalSerializer, StaffSerializer
+from .forms import HospitalSignupForm, DepartmentUpdateFrom, StaffSignupForm
 
 logs = logging.getLogger(__name__)
 
@@ -92,47 +93,114 @@ class HospitalView(BaseAPIView):
         return resp.failed()
 
 
-class DepartView(BaseAPIView):
+class StaffCreateView(BaseAPIView):
+    """
+    添加员工, 同时会为员工注册账号
+    """
+    permission_classes = (AllowAny, )
+
+    @check_params_not_null(['username', 'password', 'staff_name', 'dept_id', 'staff_title'])
+    def post(self, req, hid):
+        """
+        添加员工步骤:
+            1. 创建user对象: 判断username无重复, 密码正确, ...
+                先ceate user object, 再user.set_password(raw_password)
+            2. 创建staff对象: 先赋值user, 再staff.save()
+            3. 返回staff结果
+
+        以下字段不能为空:
+            usrname, password, staff_name, hid, dept_id,
+
+        """
+
+        objects = self.get_objects_or_404({'hid': Hospital, 'dept_id': Department})
+        form = StaffSignupForm(objects['hid'], objects['dept_id'], req.data)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+
+        staff = form.save()
+        if not staff:
+            return resp.failed('添加员工失败')
+        return resp.serialize_response(staff, result_name='staff')
+
+
+class StaffView(BaseAPIView):
+    """
+    单个员工删、查、改操作
+    """
+    permission_classes = (AllowAny,)    # TODO: replaceed with IsHospitalAdmin...
+
+    def get(self, req, hid, staff_id):
+        staff = self.get_object_or_404(staff_id, Staff)
+        return resp.serialize_response(staff, results_name='staff')
+
+    def put(self, req, hid, staff_id):
+        staff = self.get_object_or_404(staff_id, Staff)
+        staff.update(self, req.data)
+        return resp.serialize_response(staff)
+
+    def delete(self, req, hid, staff_id):
+        staff = self.get_object_or_404(staff_id, Staff)
+        staff.delete()
+        return resp.ok('删除成功')
+
+
+class StaffListView(BaseAPIView):
+
+    def get(self, req, hid):
+        pass
+
+class DepartmentCreateView(BaseAPIView):
+
+    def post(self, req):
+        """
+        创建科室
+        """
+        pass
+
+
+class DepartmentListView(BaseAPIView):
+
+    def get(self, req):
+        pass
+
+
+class DepartmentView(BaseAPIView):
     """
     单个科室/部门的get/update/delete
     """
-    permission_classes = (AllowAny,)
+    # permission_classes = (AllowAny, )  # TODO: 替换为IsHospitalAdmin
 
     def get(self, req, hid, dept_id):
         """
         查询单个科室详细信息
         :param req:
-        :param hid: 科室id
+        :param hid: hospital_id
         :return: 科室存在：返回科室详细信息，不存在科室：返回404
         """
         dept = self.get_object_or_404(dept_id, Department)
         return resp.serialize_response(dept, results_name='dept')
 
+    @check_params_not_all_null(['name', 'contact', 'attri', 'desc'])
     def put(self, req, hid, dept_id,):
         """
         修改单个科室详细信息
         参数格式示例如下:
         {
-            "name": "设备科",
+            "name": "设备科", # 科室名称
             "contact": "18999999999",
             "attri": "SU",
             "desc": "负责医院设备采购，维修，"
         }
-        :param req:
-        :param hid:
-        :param dept_id: 科室ID
-        :return:
         """
 
-        data = req.data
-        if not data:
-            return resp.string_response('参数为null')
-        form = DepartmentUpdateFrom(data)
+        dept = self.get_object_or_404(dept_id, Department)
+        form = DepartmentUpdateFrom(dept, req.data)
         if not form.is_valid():
             return resp.form_err(form.errors)
-        form.save()
-        dept = Department.objects.get(id=dept_id)
-        return resp.serialize_response(dept, results_name='dept')
+        updated_dept = form.save()
+        return resp.serialize_response(updated_dept, results_name='dept')
 
     def delete(self, req, hid, dept_id):
         """
@@ -146,7 +214,16 @@ class DepartView(BaseAPIView):
         :param dept_id: 科室ID
         :return:
         """
-        dept = Department.objects.get(pk=dept_id)
+        # dept = Department.objects.get_by_id(dept_id)
+        # dept.delete()
+        dept = self.get_object_or_404(dept_id, Department)
         dept.delete()
-        return resp.ok()
+        return resp.ok('操作成功')
+
+
+
+
+
+
+
 

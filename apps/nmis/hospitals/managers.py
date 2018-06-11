@@ -6,6 +6,10 @@
 # 
 
 import logging
+from django.db import transaction
+
+
+from users.models import User
 
 from base.models import BaseManager
 
@@ -17,7 +21,20 @@ class HospitalManager(BaseManager):
 
 
 class StaffManager(BaseManager):
-    pass
+
+    def create_staff(self, hospital, dept, **data):
+        try:
+            with transaction.atomic():
+                # TODO: create user objectd first ...
+                # ###
+                user = None
+
+                password = data['password']
+                user = User.objects.create_param_user(('username', data.get('username')), password, is_active=True)
+                return self.create(hospital=hospital, dept=dept, user=user, **data)
+        except Exception as e:
+            logging.exception(e)
+            return None
 
 
 class GroupManager(BaseManager):

@@ -3,7 +3,7 @@
 # Created by junn, on 2018/6/7
 #
 
-# 
+#
 
 import logging
 
@@ -33,7 +33,6 @@ class StaffSerializer(BaseModelSerializer):
     # group_name = serializers.CharField(source='group.name')
     # group_cate = serializers.CharField(source='group.cate')
     # is_admin = serializers.CharField(source='group.is_admin')
-
     group_name = serializers.SerializerMethodField('_get_group_name')
     group_cate = serializers.SerializerMethodField('_get_group_cate')
     is_admin = serializers.SerializerMethodField('_is_admin')
