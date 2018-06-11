@@ -15,7 +15,7 @@ from rest_framework.permissions import AllowAny
 from base import resp
 from base.views import BaseAPIView
 from nmis.hospitals.models import Hospital, Staff, Doctor
-from nmis.hospitals.serializers import HospitalSerializer
+from nmis.hospitals.serializers import HospitalSerializer, StaffSerializer
 from nmis.hospitals.forms import StaffSignupForm
 
 from .forms import HospitalSignupForm
@@ -96,30 +96,33 @@ class StaffSignupView(BaseAPIView):
     """
     添加员工
     """
-    permission_classes = (AllowAny)
+    permission_classes = (AllowAny,)
+    serializer_class = StaffSerializer
 
-    def post(self, req):
+
+    def post(self, req, hid, dept_id):
         form = StaffSignupForm(self, req.data)
 
         if not form.is_valid():
             return resp.form_err(form.errors)
 
         staff = None
-
         try:
             staff = form.save()
         except Exception as e:
             logs.exception(e)
             return resp.failed(u'操作异常')
+        if not staff:
+            return resp.form_err("添加员工失败")
 
-
-
+        return resp.serialize_response(staff, result_name='staff')
 
 class StaffView(BaseAPIView):
     """
     单个员工删、查、改操作
     """
     permission_classes = (AllowAny,)
+    serializer_class = StaffSerializer
 
     def get(self, req, hid, dept_id, staff_id,):
         staff = self.get_object_or_404(staff_id, Staff)

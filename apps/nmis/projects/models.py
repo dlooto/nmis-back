@@ -31,7 +31,7 @@ class ProjectPlan(BaseModel):
         'hospitals.Department', verbose_name='申请科室',
         on_delete=models.SET_NULL, null=True, blank=True
     )
-    performer = models.ForeignKey(# 项目新建后为空
+    performer = models.ForeignKey(  # 项目新建后为空
         'hospitals.Staff', related_name='performed_projects', verbose_name='项目负责人/执行人',
         null=True, blank=True, on_delete=models.SET_NULL
     )

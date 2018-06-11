@@ -12,7 +12,7 @@ import re
 
 from django.db import transaction
 from utils import  eggs
-from nmis.hospitals.models import Hospital
+from nmis.hospitals.models import Hospital, Staff, Doctor
 from organs.forms import OrganSignupForm
 from base.forms import  BaseForm
 
@@ -97,7 +97,7 @@ class StaffSignupForm(BaseForm):
         self.errors = {}
 
     def is_valid(self):
-        pass
+        return True
 
     def check_username(self):
         """校验用户名/账号
@@ -157,20 +157,22 @@ class StaffSignupForm(BaseForm):
             return False
 
     def save(self):
-        username = self.data.get('username')
-        name = self.data.get('name')
-        title = self.data.get('title')
-        contact = self.data.get('contact')
-        email = self.data.get('email')
-        organ_id = self.data.get('organ_id')
-        dept_id = self.data.get('dept_id')
-        group_id = self.data.get('group_id')
+        data = {
+            'username': self.data.get('username'),
+            'name': self.data.get('name'),
+            'title': self.data.get('title'),
+            'contact': self.data.get('contact'),
+            'email': self.data.get('email'),
+            'organ_id':  self.data.get('organ_id'),
+            'dept_id': self.data.get('dept_id'),
+            'group_id': self.data.get('group_id'),
+            #设置默认初始密码为123456
+            'password': '123456'
+        }
         medical_title = self.data.get('medical_title')
-
-
-        return None
-
-
-
- #'id', 'organ_id', 'dept_id', 'group_id', 'user_id', 'name', 'title','contact', 'email', 'status', 'created_time',
+        if not medical_title:
+            data['medical_title'] = medical_title
+            return Staff.objects.create_staff(**data)
+        else:
+            return Doctor.objects.create_staff(**data)
 

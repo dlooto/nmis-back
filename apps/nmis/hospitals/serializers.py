@@ -1,28 +1,58 @@
 # coding=utf-8
 #
-# Created on 2018-5-29, by Junn
+# Created by junn, on 2018/6/7
 #
+
+#
+
+import logging
+
 
 from rest_framework import serializers
 
 from base.serializers import BaseModelSerializer
-from nmis.hospitals.models import  Hospital, Staff
+from nmis.hospitals.models import Department, Hospital, Staff
+
+logs = logging.getLogger(__name__)
 
 
 class HospitalSerializer(BaseModelSerializer):
-    # avatar = serializers.SerializerMethodField('get_avatar')
-
     class Meta:
         model = Hospital
-        fields = (
-            'id', 'organ_name',
-        )
+        fields = '__all__'
+
+
+class DepartmentSerializer(BaseModelSerializer):
+
+    class Meta:
+        model = Department
+        fields = '__all__'
 
 
 class StaffSerializer(BaseModelSerializer):
-    class  Meta:
+    # group_name = serializers.CharField(source='group.name')
+    # group_cate = serializers.CharField(source='group.cate')
+    # is_admin = serializers.CharField(source='group.is_admin')
+    group_name = serializers.SerializerMethodField('_get_group_name')
+    group_cate = serializers.SerializerMethodField('_get_group_cate')
+    is_admin = serializers.SerializerMethodField('_is_admin')
+
+    class Meta:
         model = Staff
         fields = (
-            'id', 'organ_id', 'dept_id', 'group_id', 'user_id', 'name', 'title',
-            'contact', 'email', 'status', 'created_time',
+            'id', 'user', 'dept', 'name', 'title',
+            'is_admin', 'organ',
+            'group', 'group_name', 'group_cate',
+            'contact', 'email', 'created_time',
         )
+
+    def _get_group_name(self, obj):
+        return '' if not obj.group else obj.group.name
+
+    def _get_group_cate(self, obj):
+        return '' if not obj.group else obj.group.cate
+
+    def _is_admin(self, obj):
+        return False if not obj.group else obj.group.is_admin
+
+

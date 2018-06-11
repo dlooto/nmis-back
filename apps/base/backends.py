@@ -21,12 +21,12 @@ class CustomizedModelBackend(ModelBackend):
 
     def authenticate(self, password=None, **kwargs):
         user_model = get_user_model()
-        auth_key = kwargs.get('auth_key')
-        if auth_key not in user_model.VALID_AUTH_FIELDS:
+        authkey = kwargs.get('authkey')
+        if authkey not in user_model.VALID_AUTH_FIELDS:
             return None
 
         try:
-            user = user_model._default_manager.get(**{auth_key: kwargs.get(auth_key)})
+            user = user_model._default_manager.get(**{authkey: kwargs.get(authkey)})
             if user.check_password(password):
                 return user
         except user_model.DoesNotExist:

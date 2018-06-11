@@ -14,8 +14,9 @@ urlpatterns = [
     path('admin/',        admin.site.urls),
 
     # API
-    path('users/',  include('users.urls')),
-    path('hospitals/',  include('nmis.hospitals.urls')),
+    path('api/v1/users/',       include('users.urls')),
+    path('api/v1/projects/',    include('nmis.projects.urls')),
+    path('api/v1/hospitals/',    include('nmis.hospitals.urls')),
 
 ]
 

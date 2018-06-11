@@ -109,7 +109,7 @@ class UserManager(BaseUserManager, BaseManager):
                 reset_record.set_invalid()
             response = resp.serialize_response(user, results_name='user')
 
-            # 登录用户
+            # 处理用户登录
             if login_user and request:
                 logs.info('logging in user {}'.format(user))
                 user.handle_login(request)

@@ -23,16 +23,22 @@ class UserTestCase(BaseTestCase):
         """
         登录测试
         """
-        account = {'email': 'abc@qq.com', 'password': 'x111111'}
-        user = self.create_user(active=True, **account)
+        account = {
+            'username': 'abc_test123', 'password': 'x111111',
+            'email': 'test_email@nmis.com'
+        }
+        user = self.create_user_with_username(active=True, **account)
         a_staff = self.create_staff(user, self.organ)
+        a_staff.set_group(self.organ.get_admin_group())
 
         data = deepcopy(account)
-        data.update({'auth_key': 'email'})
+        data.update({'authkey': 'username'})
         resp = self.post(self.login_api, data=data)
+
         self.assert_response_success(resp)
         self.assertIsNotNone(resp.get('user'))
         self.assertIsNotNone(resp.get('staff'))
+        self.assertIsNotNone(resp.get('authtoken'))
 
         data.update({'password': 'x222222'})
         resp = self.post(self.login_api, data=data)
@@ -126,22 +132,22 @@ class TokenTestCase(BaseTestCase):
         response = self.login(self.user)
         self.token = response.get('authtoken')
 
-    # def test_refresh(self):
-    #     """
-    #     刷新用户Token
-    #     :return:
-    #     """
-    #     url = reverse('token_refresh')
-    #     token = self.token
-    #     for i in xrange(3):
-    #         response = self.post(url, data={'old_token': token})
-    #         self.assert_response_success(response)
-    #         self.assertNotEqual(response.get('token'), token)
-    #         token = response.get('token')
-    #         self.client.defaults['HTTP_AUTHORIZATION'] = 'Token {}'.format(token)
-    #     response = self.post(url, data={'old_token': self.token})
-    #     self.assert_response_failure(response)
-    #     self.token = token
+    def test_refresh(self):
+        """
+        刷新用户Token
+        :return:
+        """
+        url = reverse('token_refresh')
+        token = self.token
+        for i in xrange(3):
+            response = self.post(url, data={'old_token': token})
+            self.assert_response_success(response)
+            self.assertNotEqual(response.get('token'), token)
+            token = response.get('token')
+            self.client.defaults['HTTP_AUTHORIZATION'] = 'Token {}'.format(token)
+        response = self.post(url, data={'old_token': self.token})
+        self.assert_response_failure(response)
+        self.token = token
 
     def test_verify(self):
         """

@@ -57,11 +57,11 @@ class StaffAdmin(admin.ModelAdmin):
 #     # actions = (,)
 
 
-# class GroupAdmin(admin.ModelAdmin):
-#     list_display = ('id', 'name', 'organ', 'cate', 'is_admin', 'desc')
-#     search_fields = ('name', 'organ__organ_name')
-#     list_display_links = ('name', )
-#     list_filter = ('is_admin', 'cate')
+class GroupAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'organ', 'cate', 'is_admin', 'desc')
+    search_fields = ('name', 'organ__organ_name')
+    list_display_links = ('name', )
+    list_filter = ('is_admin', 'cate')
 #     # actions = (,)
 #
 #     inlines = [
@@ -73,7 +73,7 @@ class StaffAdmin(admin.ModelAdmin):
 admin.site.register(Hospital, HospitalAdmin)
 admin.site.register(Staff, StaffAdmin)
 admin.site.register(Department, DepartmentAdmin)
-# admin.site.register(Group, GroupAdmin)
+admin.site.register(Group, GroupAdmin)
 
 from django.contrib.auth.models import Group as _Group
 from django.contrib.sites.models import Site as _Site

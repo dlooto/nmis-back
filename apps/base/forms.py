@@ -33,7 +33,7 @@ class BaseForm():
     def update_errors(self, field_name, err_key):
         """
         更新验证错误信息字典
-        :param field: 返回的错误字典中字段名
+        :param field_name: 返回的错误字典中字段名
         :param err_key: 错误信息key值
         """
         self.errors.update({field_name: self.get_err_msg(err_key)})

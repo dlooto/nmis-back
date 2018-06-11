@@ -22,7 +22,9 @@ urlpatterns = [
 
     # 单个企业get/update/delete
     path("<hid>", views.HospitalView.as_view(), ),
-
+    # 单个员工查、删、改
     path("<hid>/departments/<dept_id>/staffs/<staff_id>", views.StaffView.as_view(), ),
+    # 添加员工、查询员工列表
+    path("<hid>/departments/<dept_id>/staffs",views.StaffSignupView.as_view(), ),
 
 ]

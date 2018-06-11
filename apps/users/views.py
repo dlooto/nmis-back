@@ -100,6 +100,9 @@ class LoginView(BaseAPIView):
         response = resp.serialize_response(user, results_name='user')
         return append_extra_info(user, req, response)
 
+    def get(self, req):
+        return resp.lean_response('method_not_allowed')
+
 
 class PasswordChangeView(BaseAPIView):
     """ 登录用户修改密码 """
@@ -250,7 +253,7 @@ class CheckEmailView(BaseAPIView):
         return resp.ok('ok')
 
 
-def append_extra_info(user, request, response):  # TODO: 后续考虑重构该方法, 提取到view
+def append_extra_info(user, request, response):
     """
     用户登录成功后在 ``Response`` 中添加token, profile等其它数据
 
@@ -262,17 +265,11 @@ def append_extra_info(user, request, response):  # TODO: 后续考虑重构该�
         return resp.lean_response('authtoken_error')
     response.data.update({'authtoken': token})
 
-    # 获取用户profile
+    # 获取user.profile
     profile = user.get_profile()
     if not profile:
-        return resp.failed(u'账号不存在，有问题请联系企业管理员')
+        return resp.failed(u'员工信息不存在，请联系管理员')
     response.data.update({'staff': resp.serialize_data(profile)})
-
-    if profile and hasattr(profile, 'organ'):
-        # 返回organ_id, 临时处理方式(后续重构). organ相关逻辑已侵入user模块
-        response.data.update({'attach_id': profile.organ_id})
-    else:
-        response.data.update({'attach_id': ''})
 
     # 设置登录成功后的跳转页面, 默认到index页
     response.data.update({'next': request.data.get('next', 'index')})

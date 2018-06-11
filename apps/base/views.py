@@ -54,7 +54,7 @@ class BaseAPIView(GenericAPIView):
 
         :param pk_key_cls_dict: 字典类型
         Sample:
-            objects = get_objects_or_404(req, {
+            objects = get_objects_or_404({
                 'organ_id': Organ, 'candidate_id': Candidate
             })
 
