@@ -6,9 +6,8 @@
 from django.apps import AppConfig
 
 
-class UsersConfig(AppConfig):
+class UsersAppConfig(AppConfig):
     name = 'users'
     verbose_name = '用户管理'
 
-
-# print('hello==>', settings.AUTH_USER_MODEL)
+default_app_config = 'users.UsersAppConfig'

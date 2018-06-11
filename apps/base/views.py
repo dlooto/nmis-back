@@ -136,7 +136,7 @@ class BaseAPIView(GenericAPIView):
             if exc.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR:
                 return Response(codes.get('server_error'), status=exc.status_code, exception=True)
 
-        raise
+        raise Exception
 
 
 def csrf_failure(request, reason=''):

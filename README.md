@@ -69,7 +69,6 @@ pytest apps/runtests/integration/_users/test_user.py::UserTestCase::test_login  
 ```        
 
 ## 单元测试代码规范
-* 考虑每个主要的招聘流程步骤单独建立一个测试模块, 如转发简历, 则有 test_forward_resumes.py. 
-  流程相关接口较多, 分开有利于维护.各模块间若有公用的逻辑, 可提取出来.
+* 各模块间若有公用的逻辑, 可提取出来.
 * 一个py测试模块内, 尽量将对model的测试和对api接口的测试分开为不同的TestCase
 * 当请求参数为json时, 必须传入参数content_type='application/json', 且参数必须用json.dumps处理过  

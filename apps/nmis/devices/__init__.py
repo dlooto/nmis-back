@@ -7,4 +7,13 @@
 
 import logging
 
+from django.apps import AppConfig
+
 logs = logging.getLogger(__name__)
+
+
+class DevicesAppConfig(AppConfig):
+    name = 'nmis.devices'
+    verbose_name = "设备管理"
+
+default_app_config = 'nmis.devices.DevicesAppConfig'

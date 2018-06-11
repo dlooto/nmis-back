@@ -94,8 +94,8 @@ class Department(BaseDepartment):
     attri = models.CharField('科室/部门属性', choices=DPT_ATTRI_CHOICES, max_length=2, null=True, blank=True)
 
     class Meta:
-        verbose_name = u'A 科室/部门'
-        verbose_name_plural = u'A 科室/部门'
+        verbose_name = u'B 科室/部门'
+        verbose_name_plural = u'B 科室/部门'
         db_table = 'hosp_department'
 
     def __str__(self):
@@ -115,8 +115,8 @@ class Staff(BaseStaff):
     objects = StaffManager()
 
     class Meta:
-        verbose_name = 'B 员工'
-        verbose_name_plural = 'B 员工'
+        verbose_name = 'C 员工'
+        verbose_name_plural = 'C 员工'
         db_table = 'hosp_staff'
 
     def has_project_approver_group_perm(self, ):
