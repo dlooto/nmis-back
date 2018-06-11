@@ -53,7 +53,7 @@ class HospitalStaffPermission(BasePermission):
         if not is_login(request):
             return False
         staff = request.user.get_profile()
-        return staff.organ == obj
+        return staff.organ == obj if staff else False
 
 class ProjectApproverPermission(BasePermission):
     """

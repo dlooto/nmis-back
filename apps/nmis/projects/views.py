@@ -32,7 +32,7 @@ class ProjectPlanCreateView(BaseAPIView):
     """
 
     """
-    permission_classes = [AllowAny, ]  # [HospitalStaffPermission, ]
+    permission_classes = [HospitalStaffPermission, ]
 
     @check_id_list(["hospital_id", "creator_id", "related_dept_id"])
     @check_params_not_null(['project_title', 'ordered_devices'])
@@ -71,6 +71,8 @@ class ProjectPlanCreateView(BaseAPIView):
             "creator_id":       Staff,
             "related_dept_id":  Department
         })
+
+        self.check_object_permissions(req, objects['hospital_id'])
 
         form = ProjectPlanCreateForm(
             objects['creator_id'], objects['related_dept_id'],
