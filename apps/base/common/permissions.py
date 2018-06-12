@@ -34,8 +34,12 @@ class _Permission(BasePermission):
         return self
 
     def has_permission(self, request, view):
-
         return self.operator([permission_class().has_permission(request, view) for permission_class in self.perms])
+
+    def has_object_permission(self, request, view, obj):
+        return self.operator(
+            [permission_class().has_object_permission(request, view, obj) for permission_class in self.perms]
+        )
 
     def __unicode__(self):
         return u'<OrPermission {0} initialed: {1}>'.format(self.perms, self.initialed)

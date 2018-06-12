@@ -42,7 +42,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2')}
+            'fields': ('username', 'password1', 'password2')}
         ),
     )
 
@@ -54,7 +54,7 @@ class UserAdmin(BaseUserAdmin):
     list_display_links = ('id', 'email', 'nickname', 'username', )
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups',)
     search_fields = ('id', 'username', 'nickname', 'email', 'phone')
-    ordering = ('email',)
+    ordering = ('email', 'username')
     filter_horizontal = ('groups', 'user_permissions',)
     add_form_template = 'admin/auth/user/add_form.html'
 
@@ -90,21 +90,6 @@ class UserAdmin(BaseUserAdmin):
     def save_model(self, request, obj, form, change):
         super(UserAdmin, self).save_model(request, obj, form, change)
         obj.clear_cache()
-
-    def response_add(self, request, obj, post_url_continue=None):
-        """
-        Determines the HttpResponse for the add_view stage. It mostly defers to
-        its superclass implementation but is customized because the User model
-        has a slightly different workflow.
-        """
-        # We should allow further modification of the user just added i.e. the
-        # 'Save' button should behave like the 'Save and continue editing'
-        # button except in two scenarios:
-        # * The user has pressed the 'Save and add another' button
-        # * We are adding a user in a popup
-        if '_addanother' not in request.POST and '_popup' not in request.POST:
-            request.POST['_continue'] = 1
-        return super(UserAdmin, self).response_add(request, obj, post_url_continue)
 
 
 admin.site.register(User, UserAdmin)

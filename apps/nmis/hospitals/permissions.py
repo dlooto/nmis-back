@@ -12,6 +12,12 @@ import urllib
 
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
+from restfw_composed_permissions.base import (BaseComposedPermission, And, Or,
+                                              BasePermissionComponent)
+from restfw_composed_permissions.generic.components import (
+    AllowAll, AllowOnlyAuthenticated, AllowOnlySafeHttpMethod,
+    ObjectAttrEqualToObjectAttr)
+
 from base.common.permissions import is_login
 
 logs = logging.getLogger(__name__)
@@ -30,12 +36,16 @@ class IsHospitalAdmin(BasePermission):
 
     message = u'仅医院管理员可操作'
 
+    def has_permission(self, request, view):
+        return is_login(request)
+
     def has_object_permission(self, request, view, obj):
         """
         :param obj: organ object
         """
-        if not is_login(request):
+        if not request.user.get_profile():
             return False
+
         return request.user.get_profile().is_admin_for_organ(obj)
 
 
@@ -48,12 +58,13 @@ class HospitalStaffPermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         """
-        :param obj: hospital对象
+        :param obj: organ对象
         """
         if not is_login(request):
             return False
         staff = request.user.get_profile()
         return staff.organ == obj if staff else False
+
 
 class ProjectApproverPermission(BasePermission):
     """
@@ -62,13 +73,56 @@ class ProjectApproverPermission(BasePermission):
 
     message = u'仅允许项目分配者进行操作'
 
+    def has_permission(self, request, view):
+        return is_login(request)
+
     def has_object_permission(self, request, view, obj):
-        if not is_login(request):
-            return False
+        """
+        :param obj: organ对象
+        """
         staff = request.user.get_profile()
         if staff.is_admin_for_organ(obj):
             return True
         return staff.organ == obj and staff.has_project_approver_group_perm()
+
+
+class ProjectCreatorPermission(BasePermission):
+    """
+    项目申请提交者权限
+    """
+    message = '仅允许项目申请提交者进行操作'
+
+    def has_permission(self, request, view):
+        return is_login(request)
+
+    def has_object_permission(self, request, view, obj):
+        """
+        :param obj: 为project object
+        """
+        staff = request.user.get_profile()
+        return obj.creator == staff if staff else False
+
+
+# class ProjectAdminPermission(BaseComposedPermission):
+#     """
+#     医院项目管理者权限
+#
+#     Example:
+#         ```
+#         def global_permission_set(self):
+#             return Or(AllowOnlyAuthenticated, And(AllowAll, AllowOnlySafeHttpMethod))
+#
+#         def object_permission_set(self):
+#             return AllowAll
+#         ```
+#     """
+#     message = '仅允许项目管理者操作'
+#
+#     def global_permission_set(self):
+#         return AllowOnlyAuthenticated
+#
+#     def object_permission_set(self):
+#         return Or(IsHospitalAdmin, ProjectApproverPermission)
 
 
 class IsOwnerOrReadOnly(BasePermission):
