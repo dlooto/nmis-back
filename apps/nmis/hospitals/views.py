@@ -188,7 +188,7 @@ class StaffListView(BaseAPIView):
 
 class DepartmentCreateView(BaseAPIView):
 
-    permission_classes = (AllowAny, )
+    permission_classes = (IsHospitalAdmin, )
 
     @check_params_not_null(['name', 'attri'])
     def post(self, req, hid):
@@ -206,24 +206,33 @@ class DepartmentCreateView(BaseAPIView):
 
         hospital = self.get_object_or_404(hid, Hospital)
 
+        self.check_object_permissions(req, hospital)    # 验证权限
+
         form = DepartmentCreateForm(req.data, hospital)
-        if not form.is_valid():
-            return resp.form_err(form.errors)
-        new_dept = form.save()
-        if not new_dept:
-            return resp.failed('操作失败')
-        return resp.serialize_response(new_dept, results_name='dept')
+        try:
+            dept = Department.objects.get(name=req.data.get('name'))
+            if dept:
+                return resp.failed('相关科室已存在')
+        except Department.DoesNotExist as e:
+            logs.info(e)
+            if not form.is_valid():
+                return resp.form_err(form.errors)
+            new_dept = form.save()
+            if not new_dept:
+                return resp.failed('操作失败')
+            return resp.serialize_response(new_dept, results_name='dept')
 
 
 class DepartmentListView(BaseAPIView):
 
-    permission_classes = (AllowAny, )
+    permission_classes = (IsHospitalAdmin, )
 
     def get(self, req, hid):
         """
         科室列表操作
         """
-
+        hospital = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, hospital)
         dept_list = Department.objects.get_queryset()
         return resp.serialize_response(dept_list, results_name='dept')
 
@@ -232,7 +241,7 @@ class DepartmentView(BaseAPIView):
     """
     单个科室/部门的get/update/delete
     """
-    permission_classes = (AllowAny, )  # TODO: 替换为IsHospitalAdmin
+    permission_classes = (IsHospitalAdmin, )
 
     def get(self, req, hid, dept_id):
         """
@@ -242,6 +251,10 @@ class DepartmentView(BaseAPIView):
         :return: 科室存在：返回科室详细信息，不存在科室：返回404
         """
         dept = self.get_object_or_404(dept_id, Department)
+
+        hospital = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, hospital)
+
         return resp.serialize_response(dept, results_name='dept')
 
     @check_params_not_all_null(['name', 'contact', 'attri', 'desc'])
@@ -256,6 +269,8 @@ class DepartmentView(BaseAPIView):
             "desc": "负责医院设备采购，维修，"
         }
         """
+        hospital = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, hospital)
 
         dept = self.get_object_or_404(dept_id, Department)
         form = DepartmentUpdateFrom(dept, req.data)
@@ -272,6 +287,9 @@ class DepartmentView(BaseAPIView):
             "msg":  "ok"
         }
         """
+        hospital = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, hospital)
+
         dept = self.get_object_or_404(dept_id, Department)
         dept.clear_cache()  # 清除缓存
         dept.delete()

@@ -50,7 +50,7 @@ class DepartmentApiTestCase(BaseTestCase):
             "name": "测试科室",
             "contact": "15884948954",
             "desc": "用于测试",
-            "attri": "ME",
+            "attri": "SU",
             "organ": self.organ
         }
         response = self.raw_post(
