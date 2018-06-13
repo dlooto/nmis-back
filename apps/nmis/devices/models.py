@@ -45,6 +45,9 @@ class OrderedDevice(Device):
         verbose_name_plural = u'申购的设备'
         db_table = 'devices_ordered_device'
 
+    def __str__(self):
+        return self.name
+
 
 # class MedicalDevice(Device):
 #     """

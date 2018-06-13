@@ -17,7 +17,7 @@ class DepartmentApiTestCase(BaseTestCase):
 
     dept_update_api = '/api/v1/hospitals/{0}/departments/{1}'
     dept_create_api = '/api/v1/hospitals/{0}/departments/create'
-    dept_info_api = '/api/v1/hospitals/{0}/departments/{1}'
+    dept_detail_api = '/api/v1/hospitals/{0}/departments/{1}'
     dept_delete_api = '/api/v1/hospitals/{0}/departments/{1}'
 
     def test_department_update(self):
@@ -60,7 +60,7 @@ class DepartmentApiTestCase(BaseTestCase):
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('dept'))
 
-    def test_department_info(self):
+    def test_department_detail(self):
         """
         测试获取科室详细信息api
         """

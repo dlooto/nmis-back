@@ -127,7 +127,7 @@ class BaseAPIView(GenericAPIView):
             return Response(codes.get('throttled'), status=exc.status_code, exception=True)
 
         elif isinstance(exc, (Http404, NotFound)):
-            return Response(codes.get('not_found'), status=status.HTTP_404_NOT_FOUND, exception=True)
+            return Response(codes.get('object_not_found'), status=status.HTTP_404_NOT_FOUND, exception=True)
 
         elif isinstance(exc, exceptions.PermissionDenied):
             return Response(codes.get('permission_denied'), status=status.HTTP_403_FORBIDDEN, exception=True)

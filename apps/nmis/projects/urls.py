@@ -24,6 +24,6 @@ urlpatterns = [
     path('create',            views.ProjectPlanCreateView.as_view(), ),
 
     # 单个项目操作 get/update/delete
-    path('<project_id>',      views.ProjectPlanView.as_view(), ),
+    path('<int:project_id>',      views.ProjectPlanView.as_view(), ),
 
 ]

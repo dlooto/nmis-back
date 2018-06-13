@@ -282,7 +282,6 @@ class DepartmentCreateForm(BaseForm):
 
         # 验证科室属性是否存在DPT_ATTRI_CHOICES中
         for index in range(len(DPT_ATTRI_CHOICES)):
-            logs.info(DPT_ATTRI_CHOICES[index])
             if attri in DPT_ATTRI_CHOICES[index]:
                 return True
             else:

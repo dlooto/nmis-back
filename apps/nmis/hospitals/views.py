@@ -169,6 +169,7 @@ class DepartmentCreateView(BaseAPIView):
         """
 
         hospital = self.get_object_or_404(hid, Hospital)
+
         form = DepartmentCreateForm(req.data, hospital)
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -180,14 +181,14 @@ class DepartmentCreateView(BaseAPIView):
 
 class DepartmentListView(BaseAPIView):
 
-    permission_classes = (AllowAny,)
+    permission_classes = (AllowAny, )
 
     def get(self, req, hid):
         """
         科室列表操作
         """
 
-        dept_list = Department.objects.all()
+        dept_list = Department.objects.get_queryset()
         return resp.serialize_response(dept_list, results_name='dept')
 
 
@@ -236,7 +237,7 @@ class DepartmentView(BaseAPIView):
         }
         """
         dept = self.get_object_or_404(dept_id, Department)
-        dept.clear_cache()
+        dept.clear_cache()  # 清除缓存
         dept.delete()
         return resp.ok('操作成功')
 

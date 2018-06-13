@@ -16,7 +16,7 @@ from .models import OrderedDevice
 logs = logging.getLogger(__name__)
 
 
-class OrderedSerializer(BaseModelSerializer):
+class OrderedDeviceSerializer(BaseModelSerializer):
     class Meta:
         model = OrderedDevice
         fields = '__all__'
