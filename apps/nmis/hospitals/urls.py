@@ -26,7 +26,8 @@ urlpatterns = [
     # 医院科室post/update/delete
     path("<int:hid>/departments/<int:dept_id>", views.DepartmentView.as_view(), ),
 
-    path("<int:hid>/departments/create", views.DepartmentCreateView.as_view(), ),
+    path("<int:hid>/departments/create", views.DepartmentCreateView.as_view(), ),  # 创建单个科室
+
     path("<int:hid>/departments",        views.DepartmentListView.as_view(), ),   # 科室列表操作
 
     # 单个员工查、删、改

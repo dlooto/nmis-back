@@ -16,12 +16,14 @@ logs = logging.getLogger(__name__)
 class DepartmentApiTestCase(BaseTestCase):
 
     dept_update_api = '/api/v1/hospitals/{0}/departments/{1}'
+    dept_create_api = '/api/v1/hospitals/{0}/departments/create'
+    dept_detail_api = '/api/v1/hospitals/{0}/departments/{1}'
+    dept_delete_api = '/api/v1/hospitals/{0}/departments/{1}'
 
     def test_department_update(self):
         """
         测试科室信息修改api
         """
-
         self.login_with_username(self.user)
 
         dept_data = {
@@ -30,7 +32,6 @@ class DepartmentApiTestCase(BaseTestCase):
             "desc": "这是个新的科室",
             "attri": "ME"
         }
-
         response = self.put(
             self.dept_update_api.format(self.organ.id, self.admin_staff.dept_id),
             data=dept_data
@@ -38,6 +39,52 @@ class DepartmentApiTestCase(BaseTestCase):
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('dept'))
         self.assertEquals(dept_data['name'], response.get('dept').get('name'))
+
+    def test_department_create(self):
+        """
+        测试创建科室api
+        """
+        self.login_with_username(self.user)
+
+        dept_data = {
+            "name": "测试科室",
+            "contact": "15884948954",
+            "desc": "用于测试",
+            "attri": "ME",
+            "organ": self.organ
+        }
+        response = self.raw_post(
+            self.dept_create_api.format(self.organ.id),
+            data=dept_data
+        )
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('dept'))
+
+    def test_department_detail(self):
+        """
+        测试获取科室详细信息api
+        """
+        self.login_with_username(self.user)
+
+        response = self.get(
+            self.dept_detail_api.format(self.organ.id, self.admin_staff.dept_id),
+        )
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('dept'))
+
+    def test_department_del(self):
+        """
+        测试删除科室api
+        """
+
+        self.login_with_username(self.user)
+
+        resp = self.delete(
+            self.dept_delete_api.format(self.organ.id, self.admin_staff.dept_id)
+        )
+
+        self.assert_response_success(resp)
+        self.assertIsNone(resp.get('dept'))
 
 
 class StaffCreateTestCase(BaseTestCase):

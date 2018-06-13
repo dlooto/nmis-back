@@ -13,17 +13,17 @@ from base.common.decorators import check_params_not_all_null, check_params_not_n
 from base.common.param_utils import get_id_list
 from django.conf import settings
 from rest_framework.permissions import AllowAny
-from rest_framework import status
-from rest_framework.response import Response
 
 from base import resp
 from base.views import BaseAPIView
-from nmis.hospitals.models import Hospital, Department, Staff, Doctor, Group
 from nmis.hospitals.permissions import IsHospitalAdmin
-from nmis.hospitals.models import Hospital, Department, Staff, Doctor, Group
-from users.models import User
-from nmis.hospitals.serializers import HospitalSerializer, StaffSerializer
-from .forms import HospitalSignupForm, DepartmentUpdateFrom, StaffSignupForm,StaffUpdateForm
+from nmis.hospitals.models import Hospital, Department, Staff, Group
+from .forms import (
+    HospitalSignupForm,
+    DepartmentUpdateFrom,
+    StaffSignupForm,
+    DepartmentCreateForm
+)
 
 
 logs = logging.getLogger(__name__)
@@ -185,26 +185,54 @@ class StaffListView(BaseAPIView):
     def get(self, req, hid):
         pass
 
+
 class DepartmentCreateView(BaseAPIView):
 
-    def post(self, req):
+    permission_classes = (AllowAny, )
+
+    @check_params_not_null(['name', 'attri'])
+    def post(self, req, hid):
         """
         创建科室
+        参数格式示例如下:
+        {
+            "name": "妇产科",  # 科室名称
+            "contact": "18999999998",  # 科室电话
+            "attri": "SU",  # 科室属性
+            "desc": "负责产科和妇科相关医疗工作"    # 科室描述
+            "organ": 20180606 # 医院ID
+        }
         """
-        pass
+
+        hospital = self.get_object_or_404(hid, Hospital)
+
+        form = DepartmentCreateForm(req.data, hospital)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        new_dept = form.save()
+        if not new_dept:
+            return resp.failed('操作失败')
+        return resp.serialize_response(new_dept, results_name='dept')
 
 
 class DepartmentListView(BaseAPIView):
 
-    def get(self, req):
-        pass
+    permission_classes = (AllowAny, )
+
+    def get(self, req, hid):
+        """
+        科室列表操作
+        """
+
+        dept_list = Department.objects.get_queryset()
+        return resp.serialize_response(dept_list, results_name='dept')
 
 
 class DepartmentView(BaseAPIView):
     """
     单个科室/部门的get/update/delete
     """
-    # permission_classes = (AllowAny, )  # TODO: 替换为IsHospitalAdmin
+    permission_classes = (AllowAny, )  # TODO: 替换为IsHospitalAdmin
 
     def get(self, req, hid, dept_id):
         """
@@ -243,14 +271,9 @@ class DepartmentView(BaseAPIView):
             "code": 10000,
             "msg":  "ok"
         }
-        :param req:
-        :param hid: 医院ID
-        :param dept_id: 科室ID
-        :return:
         """
-        # dept = Department.objects.get_by_id(dept_id)
-        # dept.delete()
         dept = self.get_object_or_404(dept_id, Department)
+        dept.clear_cache()  # 清除缓存
         dept.delete()
         return resp.ok('操作成功')
 

@@ -16,7 +16,7 @@ from utils import eggs
 from nmis.hospitals.models import Hospital, Department, Staff, Doctor, Group
 from organs.forms import OrganSignupForm
 from base.forms import BaseForm
-
+from nmis.hospitals.consts import DPT_ATTRI_CHOICES
 
 
 from users.models import User
@@ -96,7 +96,7 @@ class StaffSignupForm(BaseForm):
 
     def __init__(self, hospital, dept, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
-        self.organ = hospital
+        self.hospital = hospital
         self.dept = dept
 
     def is_valid(self):
@@ -163,14 +163,16 @@ class StaffSignupForm(BaseForm):
 
     def save(self):
         data = {
-            'name': self.data.get('staff_name', '').strip(),
-            'title': self.data.get('staff_title', '').strip(),
-            'contact': self.data.get('contact_phone', '').strip(),
+            'username': self.data.get('username', '').strip(),
+            'name': self.data.get('name', '').strip(),
+            'title': self.data.get('title', '').strip(),
+            'contact': self.data.get('contact', '').strip(),
             'email': self.data.get('email', '').strip(),
-        }
-        user_data = {
-            "username": self.data.get('username', '').strip(),
-            "password": self.data.get('password', '').strip()
+            'organ_id':  self.data.get('organ_id'),
+            'dept_id': self.data.get('dept_id'),
+
+            'group_id': self.data.get('group_id'),
+            'password': self.data.get('password', ''),
         }
 
         # 对权限组进行判断
@@ -197,8 +199,6 @@ class StaffUpdateForm(BaseForm):
         update_staff = self.staff.update(self.data)
         update_staff.cache()
         return update_staff
-
-
 
 
 class DepartmentUpdateFrom(BaseForm):
@@ -229,7 +229,7 @@ class DepartmentUpdateFrom(BaseForm):
             return True
 
         if not eggs.is_phone_valid(contact):
-            self.errors.update({'contact': self.ERR_CODES['dept_contact_err']})
+            self.update_errors('dept_contact', 'err_dept_contact')
             return False
 
         return True
@@ -262,3 +262,69 @@ class DepartmentUpdateFrom(BaseForm):
         updated_dept = self.dept.update(data)
         updated_dept.cache()
         return updated_dept
+
+
+class DepartmentCreateForm(BaseForm):
+    def __init__(self, data, hospital, *args, **kwargs):
+        BaseForm.__init__(self, hospital, data, *args, **kwargs)
+        self.hospital = hospital
+        self.data = data
+
+        self.ERR_CODES.update({
+            'err_dept_name': '科室名字不符合要求',
+            'err_dept_contact': '科室电话号码格式错误',
+            'err_dept_attri': '科室属性错误',
+            'err_dept_desc': '科室描述存在敏感字符',
+        })
+
+    def is_valid(self):
+        if not self.check_contact() or not self.check_name() or not self.check_attri() or \
+                not self.check_desc():
+            return False
+        return True
+
+    def check_contact(self):
+        contact = self.data.get('contact')
+        if not contact:
+            return True
+        if not eggs.is_phone_valid(contact):
+            self.update_errors('dept_contact', 'err_dept_contact')
+            return False
+        return True
+
+    def check_name(self):
+        name = self.data.get('name')
+        return True
+
+    def check_desc(self):
+        desc = self.data.get('desc')
+        return True
+
+    def check_attri(self):
+        attri = self.data.get('attri')
+
+        # 验证科室属性是否存在DPT_ATTRI_CHOICES中
+        for index in range(len(DPT_ATTRI_CHOICES)):
+            if attri in DPT_ATTRI_CHOICES[index]:
+                return True
+            else:
+                self.update_errors('dept_attri', 'err_dept_attri')
+                return False
+        return True
+
+    def save(self):
+
+        dept_data = {
+            'name': self.data.get('name', '').strip(),
+            'contact': self.data.get('contact', '').strip(),
+            'desc': self.data.get('desc').strip(),
+            'attri': self.data.get('attri').strip(),
+        }
+
+        try:
+            new_dept = self.hospital.create_department(self.hospital, **dept_data)
+            new_dept.cache()
+            return new_dept
+        except Exception as e:
+            logging.exception(e)
+            return None
