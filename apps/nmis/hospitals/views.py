@@ -1,4 +1,4 @@
-# coding=utf-8
+#coding=utf-8
 #
 # Created by junn, on 2018-5-29
 #
@@ -20,8 +20,11 @@ from base import resp
 from base.views import BaseAPIView
 from nmis.hospitals.models import Hospital, Department, Staff, Doctor, Group
 from nmis.hospitals.permissions import IsHospitalAdmin
+from nmis.hospitals.models import Hospital, Department, Staff, Doctor, Group
+from users.models import User
 from nmis.hospitals.serializers import HospitalSerializer, StaffSerializer
-from .forms import HospitalSignupForm, DepartmentUpdateFrom, StaffSignupForm
+from .forms import HospitalSignupForm, DepartmentUpdateFrom, StaffSignupForm,StaffUpdateForm
+
 
 logs = logging.getLogger(__name__)
 

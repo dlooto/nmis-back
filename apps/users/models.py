@@ -53,8 +53,8 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
         (UNKNOWN, u'未知'),
     )
 
-    username = models.CharField(u'用户名', max_length=255, blank=True, null=True, default='')
-    email = models.EmailField(u'Email', blank=True, unique=True, null=True, default='')
+    username = models.CharField(u'用户名', max_length=255, blank=True, unique=True, null=True, default='')
+    email = models.EmailField(u'Email', blank=True, null=True, default='')
     phone = models.CharField(u'手机号', max_length=25, blank=True, null=True, default='')
 
     is_staff = models.BooleanField(u'职员状态', default=False)

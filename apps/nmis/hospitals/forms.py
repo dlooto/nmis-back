@@ -11,10 +11,12 @@ import logging
 import re
 
 from django.db import transaction
+from rest_framework.exceptions import NotFound
 from utils import eggs
-from nmis.hospitals.models import Hospital, Department, Staff, Doctor
+from nmis.hospitals.models import Hospital, Department, Staff, Doctor, Group
 from organs.forms import OrganSignupForm
 from base.forms import BaseForm
+
 
 
 from users.models import User
@@ -94,7 +96,7 @@ class StaffSignupForm(BaseForm):
 
     def __init__(self, hospital, dept, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
-        self.hospital = hospital
+        self.organ = hospital
         self.dept = dept
 
     def is_valid(self):
@@ -161,21 +163,41 @@ class StaffSignupForm(BaseForm):
 
     def save(self):
         data = {
-            'username': self.data.get('username', '').strip(),
-            'name': self.data.get('name', '').strip(),
-            'title': self.data.get('title', '').strip(),
-            'contact': self.data.get('contact', '').strip(),
+            'name': self.data.get('staff_name', '').strip(),
+            'title': self.data.get('staff_title', '').strip(),
+            'contact': self.data.get('contact_phone', '').strip(),
             'email': self.data.get('email', '').strip(),
-            'organ_id':  self.data.get('organ_id'),
-            'dept_id': self.data.get('dept_id'),
-
-            'group_id': self.data.get('group_id'),
-            'password': self.data.get('password', ''),
+        }
+        user_data = {
+            "username": self.data.get('username', '').strip(),
+            "password": self.data.get('password', '').strip()
         }
 
-        # group = Group.objects.get_by_id(group_id)  # TODO...
+        # 对权限组进行判断
+        group_id = self.data.get('group_id')
+        if group_id:
+            group = Group.objects.get_by_id(group_id)
+            if not group:
+                raise NotFound('Object Not Found: %s %s' % (type(Group), group_id))
+            data.update({'group': group})
 
-        return Staff.objects.create_staff(self.hospital, self.dept, **data)
+        return Staff.objects.create_staff(self.organ, self.dept, user_data, **data)
+
+
+class StaffUpdateForm(BaseForm):
+
+    def __init__(self, staff, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, ** kwargs)
+        self.staff = staff
+
+    def is_valid(self):
+        return True
+
+    def save(self):
+        update_staff = self.staff.update(self.data)
+        update_staff.cache()
+        return update_staff
+
 
 
 

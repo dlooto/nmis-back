@@ -22,16 +22,21 @@ class HospitalManager(BaseManager):
 
 class StaffManager(BaseManager):
 
-    def create_staff(self, hospital, dept, **data):
+    def create_staff(self, organ, dept, user_data, **data):
+        """
+        创建员工
+        :param organ: 机构对象
+        :param dept: 科室对象
+        :param user_data: 用于创建user账号的dict数据
+        :param data: 员工数据
+        :return:
+        """
         try:
             with transaction.atomic():
-                # TODO: create user objectd first ...
-                # ###
-                user = None
-
-                password = data['password']
-                user = User.objects.create_param_user(('username', data.get('username')), password, is_active=True)
-                return self.create(hospital=hospital, dept=dept, user=user, **data)
+                user = User.objects.create_param_user(
+                    ('username', user_data.get('username')), user_data.get('password'), is_active=True,
+                )
+                return self.create(organ=organ, dept=dept, user=user, **data)
         except Exception as e:
             logging.exception(e)
             return None
