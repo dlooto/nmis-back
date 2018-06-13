@@ -22,11 +22,14 @@ class ProjectPlanCreateForm(BaseForm):
         self.creator = creator
         self.related_dept = related_dept
 
+        self.init_err_codes()
+
+    def init_err_codes(self):
         self.ERR_CODES.update({
             'project_title_error': '项目名称输入错误',
-            'devices_empty':       '设备列表不能为空或数据错误',
-            'device_name_error':   '设备名为空或格式错误',
-            'device_num_error':    '设备购买数量为空或格式错误',
+            'devices_empty': '设备列表不能为空或数据错误',
+            'device_name_error': '设备名为空或格式错误',
+            'device_num_error': '设备购买数量为空或格式错误',
             'device_planned_price_error': '设备预购价格输入错误',
         })
 
@@ -82,5 +85,20 @@ class ProjectPlanCreateForm(BaseForm):
         }
         return ProjectPlan.objects.create_project(self.data.get('ordered_devices'), **data)
 
+
+class ProjectPlanUpdateForm(ProjectPlanCreateForm):
+
+    def __init__(self, old_project, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.old_project = old_project
+        self.init_err_codes()
+
+    def save(self):
+        data = {
+            'title': self.data.get('project_title'),
+            'purpose': self.data.get('purpose'),
+            'ordered_devices': self.data.get('ordered_devices')
+        }
+        return self.old_project.update(data)
 
 

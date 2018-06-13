@@ -7,7 +7,7 @@
 
 import logging
 
-from django.db import models
+from django.db import models, transaction
 
 from base.models import BaseModel
 from nmis.devices.models import OrderedDevice
@@ -49,6 +49,10 @@ class ProjectPlan(BaseModel):
         verbose_name_plural = 'A 项目申请'
         db_table = 'projects_project_plan'
 
+    VALID_ATTRS = [
+        'title', 'purpose'
+    ]
+
     def __str__(self):
         return self.title
 
@@ -57,6 +61,25 @@ class ProjectPlan(BaseModel):
         返回项目中包含的所有设备列表
         """
         return OrderedDevice.objects.filter(project=self)
+
+    def is_unstarted(self):
+        """ 项目是否未启动 """
+        return self.status == PRO_STATUS_PENDING
+
+    def update(self, data):
+        try:
+            with transaction.atomic():
+                super(BaseModel, self).update(data)
+                self.clear_cache()
+                if not data.get('ordered_devices'):
+                    return
+
+                devices = [OrderedDevice(**device) for device in data.get('ordered_devices')]
+                OrderedDevice.objects.bulk_create(devices)
+                return self
+        except Exception as e:
+            logs.exception(e)
+            return None
 
 
 class ProjectFlow(BaseModel):

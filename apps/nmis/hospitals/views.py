@@ -1,4 +1,4 @@
-#coding=utf-8
+# coding=utf-8
 #
 # Created by junn, on 2018-5-29
 #
@@ -10,6 +10,7 @@
 import logging
 
 from base.common.decorators import check_params_not_all_null, check_params_not_null
+from base.common.param_utils import get_id_list
 from django.conf import settings
 from rest_framework.permissions import AllowAny
 from rest_framework import status
@@ -17,7 +18,8 @@ from rest_framework.response import Response
 
 from base import resp
 from base.views import BaseAPIView
-from nmis.hospitals.models import Hospital, Department, Staff, Doctor
+from nmis.hospitals.models import Hospital, Department, Staff, Doctor, Group
+from nmis.hospitals.permissions import IsHospitalAdmin
 from nmis.hospitals.serializers import HospitalSerializer, StaffSerializer
 from .forms import HospitalSignupForm, DepartmentUpdateFrom, StaffSignupForm
 
@@ -123,6 +125,35 @@ class StaffCreateView(BaseAPIView):
         if not staff:
             return resp.failed('添加员工失败')
         return resp.serialize_response(staff, result_name='staff')
+
+
+class StaffsPermChangeView(BaseAPIView):
+    """
+    同时修改多个职员的权限为新设的某一种权限
+    """
+    permission_classes = (IsHospitalAdmin, )
+
+    @check_params_not_null(['perm_group_id', 'staffs'])
+    def put(self, req, hid):
+        """
+
+        the request param Example:
+        {
+            "perm_group_id": 1001,
+            "staffs": "2001,2002,2003"
+        }
+
+        """
+        hospital = self.get_object_or_404(hid)
+        self.check_object_permissions(req, hospital)
+        perm_group = self.get_objects_or_404({'perm_group_id': Group})['perm_group_id']
+
+        staff_id_list = get_id_list(req.data.get('staffs'))
+        if Staff.objects.filter(id__in=staff_id_list).count() < len(staff_id_list):
+            return resp.failed('请确认是否有不存在的员工信息')
+
+        Staff.objects.filter(id__in=staff_id_list).update(group=perm_group)
+        return resp.ok('修改员工权限成功')
 
 
 class StaffView(BaseAPIView):

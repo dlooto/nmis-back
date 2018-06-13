@@ -67,12 +67,6 @@ class BaseAPIView(GenericAPIView):
 
         return results
 
-    def get_param_or_error(self, param_key):
-        param_value = self.request.data.get(param_key) or self.request.GET.get(param_key)
-        if param_value:
-            return param_value
-        raise ParamsError
-
     def get_paginated_stuff(self):
         """
         传递paginator的get_paginated_stuff结果

@@ -83,7 +83,7 @@ class ProjectApproverPermission(BasePermission):
         staff = request.user.get_profile()
         if staff.is_admin_for_organ(obj):
             return True
-        return staff.organ == obj and staff.has_project_approver_group_perm()
+        return staff.organ == obj and staff.has_project_approver_perm()
 
 
 class ProjectCreatorPermission(BasePermission):

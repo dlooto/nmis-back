@@ -35,6 +35,9 @@ urlpatterns = [
     # 添加员工、
     path("<hid>/staffs/create",     views.StaffCreateView.as_view(), ),
 
+    # 批量修改员工权限
+    path("<int:hid>/staffs/change_permission",     views.StaffsPermChangeView.as_view(), ),
+
     # 查询员工列表
     path("<hid>/staffs",            views.StaffListView.as_view(), ),
 

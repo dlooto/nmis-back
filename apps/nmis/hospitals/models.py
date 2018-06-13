@@ -42,6 +42,47 @@ class Hospital(BaseOrgan):
         self.cache()
 
     ################################################
+    #                   科室与员工管理
+    ################################################
+    def add_dept(self, dept):
+        """
+        添加科室
+        :param dept:
+        :return:
+        """
+        pass
+
+    def create_dept(self, **dept_data):
+        """
+        创建新科室
+        :param dept_data: dict data
+        :return:
+        """
+        pass
+
+    def delete_dept(self):
+        pass
+
+    def add_staff_to_dept(self, staff, dept):
+        """
+        添加某员工到指定科室
+        :param staff:
+        :param dept:
+        :return:
+        """
+        pass
+
+    def create_staff(self, dept, **staff_data):
+        """
+        创建新员工
+        :param staff: dict data
+        :param dept:
+        :return:
+        """
+        return Staff.objects.create_staff(self, dept, **staff_data)
+
+
+    ################################################
     #                  权限组操作
     ################################################
 
@@ -126,7 +167,7 @@ class Staff(BaseStaff):
         verbose_name_plural = 'C 员工'
         db_table = 'hosp_staff'
 
-    def has_project_approver_group_perm(self, ):
+    def has_project_approver_perm(self, ):
         group = self.organ.get_specified_group(GROUP_CATE_PROJECT_APPROVER)
         return self.has_group_perm(group)
 

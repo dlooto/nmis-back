@@ -10,13 +10,14 @@ import logging
 from rest_framework.permissions import AllowAny
 
 from base import resp
-from base.common.decorators import check_id, check_id_list, check_params_not_null
+from base.common.decorators import check_id, check_id_list, check_params_not_null, \
+    check_params_not_all_null
 from base.common.permissions import OrPermission
 from base.views import BaseAPIView
 from nmis.hospitals.models import Hospital, Staff, Department
 from nmis.hospitals.permissions import HospitalStaffPermission,  \
     IsHospitalAdmin, ProjectApproverPermission
-from nmis.projects.forms import ProjectPlanCreateForm
+from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm
 from nmis.projects.models import ProjectPlan
 
 logs = logging.getLogger(__name__)
@@ -101,6 +102,9 @@ class ProjectPlanView(BaseAPIView):
 
     @check_id('hospital_id')
     def get(self, req, project_id):     # 项目详情
+        """
+        需要项目管理员权限或者项目为提交者自己的项目
+        """
         project = ProjectPlan.objects.get_by_id(project_id)
         hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
         if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
@@ -110,8 +114,25 @@ class ProjectPlanView(BaseAPIView):
             project, results_name="project", srl_cls_name='ChunkProjectPlanSerializer'
         )
 
+    @check_id('hospital_id')
+    @check_params_not_all_null(['project_title', 'purpose', 'ordered_devices'])
     def put(self, req, project_id):     # 修改项目
-        pass
+        hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        old_project = ProjectPlan.objects.get_by_id(project_id)
+        if not (req.user.get_profile() == old_project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
+            self.check_object_any_permissions(req, hospital)
+
+        if not old_project.is_unstarted():
+            return resp.failed('项目已启动或已完成, 无法修改')
+
+        form = ProjectPlanUpdateForm(old_project, data=req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        new_project = form.save()
+        if not new_project:
+            return resp.failed('项目修改失败')
+        return resp.serialize_response(new_project, srl_cls_name='ChunkProjectPlanSerializer',
+                                       results_name='project')
 
     def delete(self, req, project_id):  # 删除项目
         raise NotImplementedError()

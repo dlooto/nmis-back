@@ -18,6 +18,13 @@ logger = logging.getLogger(__name__)
 class ProjectPlanManager(BaseManager):
 
     def create_project(self, ordered_devices, **data):
+        """
+        创建项目项目
+
+        :param ordered_devices: 设备明细, 列表数据, 列表元素类型为dict
+        :param data: 字典型参数
+        :return:
+        """
         try:
             with transaction.atomic():
                 project = self.model(**data)

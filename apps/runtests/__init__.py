@@ -58,9 +58,18 @@ class TestCaseDataUtils(object):
             'desc': 'test'
         })
 
-    def create_staff(self, user, organ, name=u'测试员工', **kwargs):
+    def create_staff(self, user, organ, dept, name=u'测试员工', **kwargs):
         from nmis.hospitals.models import Staff
-        return Staff.objects.create(user=user, organ=organ, name=name, **kwargs)
+        return Staff.objects.create(user=user, organ=organ, dept=dept, name=name, **kwargs)
+
+    def create_completed_staff(self, organ, dept, name="员工名字", **kwargs):
+        """
+        创建staff时同时创建一个user账号, 根据传入的organ和dept参数
+        :return:
+        """
+        user = self.create_user_with_username()
+        return self.create_staff(user, organ, dept, name, **kwargs)
+
 
     def create_completed_organ(self):
         """
@@ -96,9 +105,14 @@ class BaseTestCase(TestCase, TestCaseDataUtils):
 
     def setUp(self):
         """ 初始化管理员及其他成员 """
+
+        # 创建机构信息
         self.organ = self.create_completed_organ()
-        self.user = self.organ.creator
-        self.admin_staff = self.user.get_profile()
+
+        # 得到机构管理员信息
+        self.user = self.organ.creator              # 管理员user账号
+        self.admin_staff = self.user.get_profile()  # 管理员staff
+        self.dept = self.admin_staff.dept           # 管理员所在科室
 
     def tearDown(self):
         self.organ.clear_cache()
