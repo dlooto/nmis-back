@@ -17,7 +17,8 @@ from base.views import BaseAPIView
 from nmis.hospitals.models import Hospital, Staff, Department
 from nmis.hospitals.permissions import HospitalStaffPermission,  \
     IsHospitalAdmin, ProjectApproverPermission
-from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm
+from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm, \
+    OrderedDeviceCreateForm, OrderedDeviceUpdateForm
 from nmis.projects.models import ProjectPlan
 
 logs = logging.getLogger(__name__)
@@ -137,4 +138,48 @@ class ProjectPlanView(BaseAPIView):
     def delete(self, req, project_id):  # 删除项目
         raise NotImplementedError()
 
+
+class ProjectDeviceCreateView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, ProjectApproverPermission)
+
+    def post(self, req, project_id):
+        """ 添加设备 """
+        project = self.get_object_or_404(project_id)
+        form = OrderedDeviceCreateForm(project, data=req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        new_device = form.save()
+        return resp.serialize_response(new_device, results_name="device")
+
+
+class ProjectDeviceView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, ProjectApproverPermission)
+
+    def put(self, req, project_id, device_id):
+        """ 修改设备信息 """
+
+        project = self.get_object_or_404(project_id)
+        device = self.get_object_or_404(device_id)
+        form = OrderedDeviceUpdateForm(device, data=req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        updated_device = form.save()
+        return resp.serialize_response(updated_device, results_name="device")
+
+    def delete(self, req, project_id, device_id):
+        """ 删除存在的设备 """
+
+        project = self.get_object_or_404(project_id)
+        hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
+            self.check_object_any_permissions(req, hospital)
+
+        device = self.get_object_or_404(device_id)
+        try:
+            device.delete()
+            return resp.ok("操作成功")
+        except Exception as e:
+            logs.exception(e)
+            return resp.failed("操作失败")
 

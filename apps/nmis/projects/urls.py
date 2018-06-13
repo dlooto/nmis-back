@@ -26,4 +26,11 @@ urlpatterns = [
     # 单个项目操作 get/update/delete
     path('<int:project_id>',      views.ProjectPlanView.as_view(), ),
 
+    # 为指定项目添加新设备
+    path('<int:project_id>/devices/create',      views.ProjectDeviceCreateView.as_view(), ),
+
+    # 项目具体的某个设备get/update/delete操作
+    path('<int:project_id>/devices/<int:device_id>',      views.ProjectDeviceView.as_view(), ),
+
+
 ]

@@ -45,6 +45,11 @@ class OrderedDevice(Device):
         verbose_name_plural = u'申购的设备'
         db_table = 'devices_ordered_device'
 
+    VALID_ATTRS = [
+        'name', 'cate', 'producer', "num", "planned_price", "measure",
+        "type_spec", "purpose"
+    ]
+
     def __str__(self):
         return self.name
 

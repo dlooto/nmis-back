@@ -69,7 +69,7 @@ class ProjectPlan(BaseModel):
     def update(self, data):
         try:
             with transaction.atomic():
-                super(BaseModel, self).update(data)
+                super(self.__class__, self).update(data)
                 self.clear_cache()
                 if not data.get('ordered_devices'):
                     return
@@ -80,6 +80,9 @@ class ProjectPlan(BaseModel):
         except Exception as e:
             logs.exception(e)
             return None
+
+    def create_device(self, **device_data):
+        return OrderedDevice.objects.create(project=self, **device_data)
 
 
 class ProjectFlow(BaseModel):
