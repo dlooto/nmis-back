@@ -84,8 +84,8 @@ class Hospital(BaseOrgan):
         group_data.update(GROUPS.get('admin'))
         return self.create_group(**group_data)
 
-    def create_department(self, **dept_data):
-        return Department.objects.create(**dept_data)
+    def create_department(self, organ, **dept_data):
+        return Department.objects.create(organ=organ, **dept_data)
 
 
 class Department(BaseDepartment):
