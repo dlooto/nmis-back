@@ -15,7 +15,7 @@ from utils import eggs
 from nmis.hospitals.models import Hospital, Department, Staff, Doctor
 from organs.forms import OrganSignupForm
 from base.forms import BaseForm
-
+from nmis.hospitals.consts import DPT_ATTRI_CHOICES
 
 from users.models import User
 
@@ -174,12 +174,10 @@ class StaffSignupForm(BaseForm):
         }
 
         # group = Group.objects.get_by_id(group_id)  # TODO...
-
         return Staff.objects.create_staff(self.hospital, self.dept, **data)
 
 
-
-class DepartmentUpdateFrom(BaseForm):
+class DepartmentUpdateForm(BaseForm):
     """
     对修改科室信息进行表单验证
     """
@@ -189,10 +187,10 @@ class DepartmentUpdateFrom(BaseForm):
         self.data = data
 
         self.ERR_CODES.update({
-            'dept_name_err':        '科室名字不符合要求',
-            'dept_contact_err':   '科室电话号码格式错误',
-            'dept_attri_err':       '科室属性错误',
-            'dept_desc_err':        '科室描述存在敏感字符',
+            'err_dept_name':        '科室名字不符合要求',
+            'err_dept_contact':   '科室电话号码格式错误',
+            'err_dept_attri':       '科室属性错误',
+            'err_dept_desc':        '科室描述存在敏感字符',
         })
 
     def is_valid(self):
@@ -207,12 +205,13 @@ class DepartmentUpdateFrom(BaseForm):
             return True
 
         if not eggs.is_phone_valid(contact):
-            self.errors.update({'contact': self.ERR_CODES['dept_contact_err']})
+            self.update_errors('dept_contact', 'err_dept_contact')
             return False
 
         return True
 
     def check_name(self):
+
         return True
 
     def check_desc(self):
@@ -240,3 +239,70 @@ class DepartmentUpdateFrom(BaseForm):
         updated_dept = self.dept.update(data)
         updated_dept.cache()
         return updated_dept
+
+
+class DepartmentCreateForm(BaseForm):
+    def __init__(self, data, hospital, *args, **kwargs):
+        BaseForm.__init__(self, hospital, data, *args, **kwargs)
+        self.hospital = hospital
+        self.data = data
+
+        self.ERR_CODES.update({
+            'err_dept_name': '科室名字不符合要求',
+            'err_dept_contact': '科室电话号码格式错误',
+            'err_dept_attri': '科室属性错误',
+            'err_dept_desc': '科室描述存在敏感字符',
+        })
+
+    def is_valid(self):
+        if not self.check_contact() or not self.check_name() or not self.check_attri() or \
+                not self.check_desc():
+            return False
+        return True
+
+    def check_contact(self):
+        contact = self.data.get('contact')
+        if not contact:
+            return True
+        if not eggs.is_phone_valid(contact):
+            self.update_errors('dept_contact', 'err_dept_contact')
+            return False
+        return True
+
+    def check_name(self):
+        name = self.data.get('name')
+        return True
+
+    def check_desc(self):
+        desc = self.data.get('desc')
+        return True
+
+    def check_attri(self):
+        attri = self.data.get('attri')
+
+        # 验证科室属性是否存在DPT_ATTRI_CHOICES中
+        for index in range(len(DPT_ATTRI_CHOICES)):
+            logs.info(DPT_ATTRI_CHOICES[index])
+            if attri in DPT_ATTRI_CHOICES[index]:
+                return True
+            else:
+                self.update_errors('dept_attri', 'err_dept_attri')
+                return False
+        return True
+
+    def save(self):
+
+        dept_data = {
+            'name': self.data.get('name', '').strip(),
+            'contact': self.data.get('contact', '').strip(),
+            'desc': self.data.get('desc').strip(),
+            'attri': self.data.get('attri').strip(),
+        }
+
+        try:
+            new_dept = self.hospital.create_department(self.hospital, **dept_data)
+            new_dept.cache()
+            return new_dept
+        except Exception as e:
+            logging.exception(e)
+            return None
