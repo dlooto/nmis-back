@@ -3,11 +3,10 @@
 # Created by junn, on 2018/6/11
 #
 
-# 
-
 import logging
 from unittest import skip
 
+from nmis.hospitals.models import Staff
 from runtests import BaseTestCase
 
 logs = logging.getLogger(__name__)
@@ -35,12 +34,13 @@ class DepartmentApiTestCase(BaseTestCase):
             self.dept_update_api.format(self.organ.id, self.admin_staff.dept_id),
             data=dept_data
         )
+        logs.info(response)
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('dept'))
         self.assertEquals(dept_data['name'], response.get('dept').get('name'))
 
 
-class StaffCreateTestCase(BaseTestCase):
+class StaffAPITestCase(BaseTestCase):
 
     staff_create_api = '/api/v1/hospitals/{0}/staffs/create'
     staff_update_get_delete_api = '/api/v1/hospitals/{0}/staffs/{1}'
@@ -56,70 +56,83 @@ class StaffCreateTestCase(BaseTestCase):
             'username': 'add_user_test001',
             'password': '123456',
             'staff_name': 'add_zhangsan_test001',
-            'staff_title': '主任医师',
+            'staff_title': 'zhuzhiyishi',
             'contact_phone': '19822012220',
             'email': 'zhangshang@test.com',
             'dept_id': self.admin_staff.dept_id,
-            'group_id': self.organ.get_admin_group.id,
+            'group_id': '',
         }
 
         response = self.post(
-            self.staff_create_api(self.organ.id),
+            self.staff_create_api.format(self.organ.id),
             data=new_staff_data
         )
         self.assert_response_success(response)
-        self.assertIsNone(response.get('user.id'))
-        self.assertIsNone(response.get("staff_name"))
-        self.assertEquals(new_staff_data['staff_name'], response.get('staff_name'))
+        # self.assert_response_failure(response)  #暴露数据
+        self.assertIsNotNone(response.get("staff"))
+        self.assertIsNotNone(response.get("staff").get('staff_name'))
+        self.assertEquals(response.get('staff').get('staff_name'), new_staff_data['staff_name'])
 
-    @skip
     def test_staff_get(self):
         """
         测试获取员工详细信息
         :return:
         """
-        pass
+        self.login_with_username(self.user)
+        # new_staff = self.create_completed_staff(self.organ, self.dept, 'test001')
+        response = self.get(
+            self.staff_update_get_delete_api.format(
+                self.organ.id,
+                self.admin_staff.id,
+            )
+        )
+        self.assert_response_success(response)
+        #self.assert_response_failure(response)
+        self.assertIsNotNone(response.get('staff'), '没获取到员工信息')
+        self.assertIsNotNone(response.get('staff').get('staff_name'), '没获取到员工姓名')
+        self.assertEquals(response.get('staff').get('staff_name'), self.admin_staff.name)
 
-    @skip
     def test_staff_update(self):
         """
         测试更新员工信息
         :return:
         """
-        pass
+        self.login_with_username(self.user)
 
-    @skip
+        update_staff_data = {
+            'username': 'add_user_test001',
+            'password': '123456',
+            'staff_name': 'add_zhangsan_test001',
+            'staff_title': 'zhuzhiyishi',
+            'contact_phone': '19822012220',
+            'email': 'zhangshang@test.com',
+            'dept_id': self.admin_staff.id,
+            'group_id': '',
+        }
+        response = self.put(
+            self.staff_update_get_delete_api.format(
+                self.organ.id,
+                self.admin_staff.id,
+            )
+        )
+        self.assert_response_success(response)
+        #self.assert_response_failure(response)
+        self.assertIsNotNone(response.get('staff'), '没获取到修改后的员工信息')
+        self.assertIsNotNone(response.get('staff').get('staff_name'), '没有获取到修改后的员工姓名')
+        self.assertEqual(response.get('staff').get('staff_name'), self.admin_staff.name)
+
     def test_staff_delete(self):
         """
         测试删除员工信息
         :return:
         """
-        pass
 
+        self.login_with_username(self.user)
+        response = self.delete(
+            self.staff_update_get_delete_api.format(self.organ.id, self.admin_staff.id)
+        )
 
-class StaffUpdateTestCase(BaseTestCase):
+        self.assert_response_success(response)
+        #self.assert_response_failure()
 
-    staff_update_api = '/api/v1/hospitals/{0}/staffs/{1}'
-
-    @skip
-    def test_staff_update(self):
-        """
-        测试员工信息修改
-        """
-        data = {
-            'username': 'abc_test123', 'password': 'x111111',
-            'email': 'test_email@nmis.com'
-        }
-
-        a_staff = self.create_staff(None, self.organ)
-        a_staff.set_group(self.organ.get_admin_group())
-
-        data.update({'authkey': 'username'})
-        resp = self.post(self.login_api, data=data)
-
-        self.assert_response_success(resp)
-
-    @skip
-    def test_staff_get(self):
-        pass
 
