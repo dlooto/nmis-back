@@ -22,16 +22,17 @@ class HospitalManager(BaseManager):
 
 class StaffManager(BaseManager):
 
-    def create_staff(self, hospital, dept, **data):
+    def create_staff(self, organ, dept, user, **data):
         try:
             with transaction.atomic():
-                # TODO: create user objectd first ...
-                # ###
-                user = None
-
-                password = data['password']
-                user = User.objects.create_param_user(('username', data.get('username')), password, is_active=True)
-                return self.create(hospital=hospital, dept=dept, user=user, **data)
+                # create User object first ...
+                # TODO: 待模型修改后，去掉email参数
+                user = User.objects.create_param_user(
+                    ('username', user.get_username()), user.password, is_active=True,
+                    email='zhangsan04@example.com'
+                )
+                user.set_password(user.password)
+                return self.create(organ=organ, dept=dept, user=user, **data)
         except Exception as e:
             logging.exception(e)
             return None

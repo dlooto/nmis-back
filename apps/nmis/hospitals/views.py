@@ -17,9 +17,11 @@ from rest_framework.response import Response
 
 from base import resp
 from base.views import BaseAPIView
-from nmis.hospitals.models import Hospital, Department, Staff, Doctor
+from nmis.hospitals.models import Hospital, Department, Staff, Doctor, Group
+from users.models import User
 from nmis.hospitals.serializers import HospitalSerializer, StaffSerializer
-from .forms import HospitalSignupForm, DepartmentUpdateFrom, StaffSignupForm
+from .forms import HospitalSignupForm, DepartmentUpdateFrom, StaffSignupForm,StaffUpdateForm
+
 
 logs = logging.getLogger(__name__)
 
@@ -112,9 +114,19 @@ class StaffCreateView(BaseAPIView):
             usrname, password, staff_name, hid, dept_id,
 
         """
+        # 判断医院、部门是否存在，查询出赋值，没查到直接抛出异常
+        hospital = self.get_object_or_404(hid, Hospital)
+        dept = self.get_object_or_404(req.data["dept_id"], Department)
 
-        objects = self.get_objects_or_404({'hid': Hospital, 'dept_id': Department})
-        form = StaffSignupForm(objects['hid'], objects['dept_id'], req.data)
+        # TODO : 处理用户名已被注册的情况
+        # try:
+        #     user = User.objects.get_by_natural_key(req.data.get("username"))
+        #     if user:
+        #         resp.failed("该用户名已注册");
+        # except ObjectDoesNotExist:
+
+        #判断用户名是否存在，如果存在，返回信息，不再继续。
+        form = StaffSignupForm(hospital, dept, req.data)
 
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -122,7 +134,7 @@ class StaffCreateView(BaseAPIView):
         staff = form.save()
         if not staff:
             return resp.failed('添加员工失败')
-        return resp.serialize_response(staff, result_name='staff')
+        return resp.serialize_response(staff)
 
 
 class StaffView(BaseAPIView):
@@ -136,9 +148,36 @@ class StaffView(BaseAPIView):
         return resp.serialize_response(staff, results_name='staff')
 
     def put(self, req, hid, staff_id):
+        data = {}
+        # 判断变更的员工是否存在；
         staff = self.get_object_or_404(staff_id, Staff)
-        staff.update(self, req.data)
-        return resp.serialize_response(staff)
+        # 判断参数是否存在，如果存在则封装到字典中
+        if 'hospital_id' in req.data:
+            hospital = self.get_object_or_404(req.data.get('hospital_id'), Hospital)
+            data.update({'organ': hospital})
+        if 'dept_id' in req.data:
+            dept = self.get_object_or_404(req.data.get('dept_id'), Department)
+            data.update({'dept': dept})
+        if 'group_id' in req.data:
+            group = self.get_object_or_404(req.data.get('group_id'), Group)
+            data.update({'group': group})
+        if 'staff_name' in req.data:
+            data.update({'name': req.data.get('staff_name', '').strip()})
+        if 'staff_title' in req.data:
+            data.update({'title': req.data.get('staff_title', '').strip()})
+        if 'contact_phone' in req.data:
+            data.update({'contact':req.data.get('contact_phone','').strip()})
+        if 'email' in req.data:
+            data.update({'email': req.data.get('email', '').strip()})
+        if 'status' in req.data:
+            data.update({'status': req.data.get('status', '').strip()})
+
+        form = StaffUpdateForm(staff, data)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        updated_staff = form.save()
+        return resp.serialize_response(updated_staff, results_name='staff')
 
     def delete(self, req, hid, staff_id):
         staff = self.get_object_or_404(staff_id, Staff)
@@ -150,6 +189,7 @@ class StaffListView(BaseAPIView):
 
     def get(self, req, hid):
         pass
+
 
 class DepartmentCreateView(BaseAPIView):
 

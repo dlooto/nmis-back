@@ -40,6 +40,63 @@ class DepartmentApiTestCase(BaseTestCase):
         self.assertEquals(dept_data['name'], response.get('dept').get('name'))
 
 
+class StaffCreateTestCase(BaseTestCase):
+
+    staff_create_api = '/api/v1/hospitals/{0}/staffs/create'
+    staff_update_get_delete_api = '/api/v1/hospitals/{0}/staffs/{1}'
+
+    def test_staff_create(self):
+        """
+        测试新增员工信息
+        :return:
+        """
+        self.login_with_username(self.user)
+
+        new_staff_data = {
+            'username': 'add_user_test001',
+            'password': '123456',
+            'staff_name': 'add_zhangsan_test001',
+            'staff_title': '主任医师',
+            'contact_phone': '19822012220',
+            'email': 'zhangshang@test.com',
+            'dept_id': self.admin_staff.dept_id,
+            'group_id': self.organ.get_admin_group.id,
+        }
+
+        response = self.post(
+            self.staff_create_api(self.organ.id),
+            data=new_staff_data
+        )
+        self.assert_response_success(response)
+        self.assertIsNone(response.get('user.id'))
+        self.assertIsNone(response.get("staff_name"))
+        self.assertEquals(new_staff_data['staff_name'], response.get('staff_name'))
+
+    @skip
+    def test_staff_get(self):
+        """
+        测试获取员工详细信息
+        :return:
+        """
+        pass
+
+    @skip
+    def test_staff_update(self):
+        """
+        测试更新员工信息
+        :return:
+        """
+        pass
+
+    @skip
+    def test_staff_delete(self):
+        """
+        测试删除员工信息
+        :return:
+        """
+        pass
+
+
 class StaffUpdateTestCase(BaseTestCase):
 
     staff_update_api = '/api/v1/hospitals/{0}/staffs/{1}'

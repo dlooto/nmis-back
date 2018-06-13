@@ -1,5 +1,5 @@
 # coding=utf-8
-#
+#djcelery_periodictasks
 # Created by Junn, on 2018-5-29
 # 
 #

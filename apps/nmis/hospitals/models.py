@@ -121,6 +121,10 @@ class Staff(BaseStaff):
 
     objects = StaffManager()
 
+    VALID_ATTRS = [
+        'name', 'title', 'organ', 'dept', 'contact', 'email', 'group', 'status'
+    ]
+
     class Meta:
         verbose_name = 'C 员工'
         verbose_name_plural = 'C 员工'
