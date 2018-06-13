@@ -242,17 +242,4 @@ class BaseTestCase(TestCase, TestCaseDataUtils):
         with self.assertRaises(AssertionError):
             self.assert_object_in_results(data, result_list)
 
-    def assert_dict_in_results(self, keyword, data, result_dict):
-        """
-        :param keyword: 需要查看数据的关键字名称
-        :param data: 字典类型, 期望的结果数据, 如 {"name": "qq"}
-        :param result_dict: 结果数据字典
-        :return:
-        """
-        dict_data = result_dict.get(keyword)
-        for k,v in dict_data.items():
-            if data == {k: v}:
-                logging.info('{}--->{}'.format(k, v))
-                return
-        raise self.failureException(
-            u"数据不在结果列表中\n data: %s \n result_list: %s" % (data, dict_data))
+

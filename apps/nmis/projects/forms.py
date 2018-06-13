@@ -93,12 +93,67 @@ class ProjectPlanUpdateForm(ProjectPlanCreateForm):
         self.old_project = old_project
         self.init_err_codes()
 
+    def check_devices(self):
+        return True
+
     def save(self):
         data = {
-            'title': self.data.get('project_title'),
-            'purpose': self.data.get('purpose'),
-            'ordered_devices': self.data.get('ordered_devices')
+            'title': self.data.get('project_title', '').strip(),
+            'purpose': self.data.get('purpose', '').strip(),
         }
         return self.old_project.update(data)
+
+
+class BaseOrderedDeviceForm(BaseForm):
+
+    def __init__(self, project, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.project = project
+
+    def is_valid(self):
+        return True
+
+    def save(self):
+        pass
+
+
+class OrderedDeviceCreateForm(BaseOrderedDeviceForm):
+
+    def save(self):
+        data = {
+            "name": self.data.get("name", '').strip(),
+            "planned_price": self.data.get("planned_price"),
+            "num": self.data.get("num"),
+            "type_spec": self.data.get("type_spec", '').strip(),
+            "measure": self.data.get("measure", "").strip(),
+            "purpose": self.data.get("purpose", '').strip(),
+        }
+        return self.project.create_device(**data)
+
+
+class OrderedDeviceUpdateForm(BaseOrderedDeviceForm):
+
+    def __init__(self, device, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.device = device
+
+    def save(self):
+        data = {
+            "name": self.data.get('name').strip(),
+            "num": self.data.get("num"),
+        }
+        if self.data.get('name', ''):
+            data["name"] = self.data.get('name', '').strip()
+        if self.data.get('num'):
+            data["num"] = self.data.get('num')
+        if self.data.get('planned_price'):
+            data["planned_price"] = self.data.get('planned_price')
+        if self.data.get('purpose'):
+            data["purpose"] = self.data.get('purpose', '').strip()
+        if self.data.get('type_spec'):
+            data["type_spec"] = self.data.get('type_spec', '').strip()
+
+        self.device.update(data)
+        return self.device
 
 

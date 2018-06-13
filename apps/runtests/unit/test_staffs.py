@@ -16,6 +16,10 @@ logs = logging.getLogger(__name__)
 class StaffCreateTestCase(BaseTestCase):
 
     def test_staff_create(self):
+        """
+        测试员工创建的manager方法
+        :return:
+        """
         user_data = {
             'username': 'staff_name_%s' % self.get_random_suffix(),
             'password': '111111'
