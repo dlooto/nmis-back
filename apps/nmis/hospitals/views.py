@@ -17,6 +17,7 @@ from rest_framework.permissions import AllowAny
 
 from base import resp
 from base.views import BaseAPIView
+from nmis.hospitals.forms import StaffUpdateForm
 from nmis.hospitals.permissions import IsHospitalAdmin
 from nmis.hospitals.models import Hospital, Department, Staff, Group
 from .forms import (
@@ -105,7 +106,7 @@ class StaffCreateView(BaseAPIView):
     """
     permission_classes = (AllowAny, )
 
-    @check_params_not_null(['username', 'password', 'staff_name', 'hid', 'dept_id'])
+    @check_params_not_null(['username', 'password', 'staff_name', 'dept_id'])
     def post(self, req, hid):
         """
         添加员工步骤:

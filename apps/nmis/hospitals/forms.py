@@ -99,7 +99,7 @@ class StaffSignupForm(BaseForm):
 
     def __init__(self, hospital, dept, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
-        self.hospital = hospital
+        self.organ = hospital
         self.dept = dept
 
     def is_valid(self):
@@ -166,16 +166,15 @@ class StaffSignupForm(BaseForm):
 
     def save(self):
         data = {
-            'username': self.data.get('username', '').strip(),
-            'name': self.data.get('name', '').strip(),
-            'title': self.data.get('title', '').strip(),
-            'contact': self.data.get('contact', '').strip(),
+            'name': self.data.get('staff_name', '').strip(),
+            'title': self.data.get('staff_title', '').strip(),
+            'contact': self.data.get('contact_phone', '').strip(),
             'email': self.data.get('email', '').strip(),
-            'organ_id':  self.data.get('organ_id'),
-            'dept_id': self.data.get('dept_id'),
+        }
 
-            'group_id': self.data.get('group_id'),
-            'password': self.data.get('password', ''),
+        user_data = {
+            "username": self.data.get('username', '').strip(),
+            "password": self.data.get('password', '').strip()
         }
 
         # 对权限组进行判断
