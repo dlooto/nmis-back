@@ -275,10 +275,10 @@ class DepartmentCreateForm(BaseForm):
     def __init__(self, data, hospital, *args, **kwargs):
         BaseForm.__init__(self, hospital, data, *args, **kwargs)
         self.hospital = hospital
-        self.data = data
 
         self.ERR_CODES.update({
             'err_dept_name': '科室名字不符合要求',
+            'dept_exist':     '同名科室已存在',
             'err_dept_contact': '科室电话号码格式错误',
             'err_dept_attri': '科室属性错误',
             'err_dept_desc': '科室描述存在敏感字符',
@@ -300,6 +300,7 @@ class DepartmentCreateForm(BaseForm):
         return True
 
     def check_name(self):
+        # TODO:...
         name = self.data.get('name')
         return True
 

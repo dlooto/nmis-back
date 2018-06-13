@@ -44,6 +44,11 @@ class Hospital(BaseOrgan):
     ################################################
     #                   科室与员工管理
     ################################################
+
+    def get_all_depts(self):
+        """ 返回医院的所有科室 """
+        return Department.objects.filter(organ=self)
+
     def add_dept(self, dept):
         """
         添加科室
