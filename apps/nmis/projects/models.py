@@ -54,7 +54,7 @@ class ProjectPlan(BaseModel):
     ]
 
     def __str__(self):
-        return self.title
+        return '%s %s' % (self.id, self.title)
 
     def get_ordered_devices(self):
         """
@@ -67,15 +67,15 @@ class ProjectPlan(BaseModel):
         return self.status == PRO_STATUS_PENDING
 
     def update(self, data):
+        """
+        仅更新项目本身的属性信息, 不修改项目内含的设备明细
+        :param data:
+        :return:
+        """
         try:
             with transaction.atomic():
                 super(self.__class__, self).update(data)
                 self.clear_cache()
-                if not data.get('ordered_devices'):
-                    return
-
-                devices = [OrderedDevice(**device) for device in data.get('ordered_devices')]
-                OrderedDevice.objects.bulk_create(devices)
                 return self
         except Exception as e:
             logs.exception(e)

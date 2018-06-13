@@ -14,6 +14,7 @@ from base.common.decorators import check_id, check_id_list, check_params_not_nul
     check_params_not_all_null
 from base.common.permissions import OrPermission
 from base.views import BaseAPIView
+from nmis.devices.models import OrderedDevice
 from nmis.hospitals.models import Hospital, Staff, Department
 from nmis.hospitals.permissions import HospitalStaffPermission,  \
     IsHospitalAdmin, ProjectApproverPermission
@@ -116,8 +117,12 @@ class ProjectPlanView(BaseAPIView):
         )
 
     @check_id('hospital_id')
-    @check_params_not_all_null(['project_title', 'purpose', 'ordered_devices'])
-    def put(self, req, project_id):     # 修改项目
+    @check_params_not_all_null(['project_title', 'purpose'])
+    def put(self, req, project_id):
+        """
+        修改项目. 该接口仅可以修改项目本身的属性, 若修改设备明细, 需要调用其他接口对设备逐个进行修改.
+        """
+
         hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
         old_project = ProjectPlan.objects.get_by_id(project_id)
         if not (req.user.get_profile() == old_project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
@@ -132,6 +137,7 @@ class ProjectPlanView(BaseAPIView):
         new_project = form.save()
         if not new_project:
             return resp.failed('项目修改失败')
+
         return resp.serialize_response(new_project, srl_cls_name='ChunkProjectPlanSerializer',
                                        results_name='project')
 
@@ -144,7 +150,10 @@ class ProjectDeviceCreateView(BaseAPIView):
 
     def post(self, req, project_id):
         """ 添加设备 """
-        project = self.get_object_or_404(project_id)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        if not project.is_unstarted():
+            return resp.failed('项目已启动或已完成, 无法修改')
+
         form = OrderedDeviceCreateForm(project, data=req.data)
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -159,8 +168,11 @@ class ProjectDeviceView(BaseAPIView):
     def put(self, req, project_id, device_id):
         """ 修改设备信息 """
 
-        project = self.get_object_or_404(project_id)
-        device = self.get_object_or_404(device_id)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        if not project.is_unstarted():
+            return resp.failed('项目已启动或已完成, 无法修改')
+
+        device = self.get_object_or_404(device_id, OrderedDevice)
         form = OrderedDeviceUpdateForm(device, data=req.data)
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -170,12 +182,14 @@ class ProjectDeviceView(BaseAPIView):
     def delete(self, req, project_id, device_id):
         """ 删除存在的设备 """
 
-        project = self.get_object_or_404(project_id)
-        hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        project = self.get_object_or_404(project_id, ProjectPlan)
         if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
-            self.check_object_any_permissions(req, hospital)
+            self.check_object_any_permissions(req, project.creator.organ)
 
-        device = self.get_object_or_404(device_id)
+        if not project.is_unstarted():
+            return resp.failed('项目已启动或已完成, 无法修改')
+
+        device = self.get_object_or_404(device_id, OrderedDevice)
         try:
             device.delete()
             return resp.ok("操作成功")

@@ -10,30 +10,12 @@ from unittest import skip
 
 from nmis.projects.models import ProjectPlan
 from runtests import BaseTestCase
+from runtests.integration.nmis.mixins import ProjectPlanMixin
 
 logs = logging.getLogger(__name__)
 
 
-ORDERED_DEVICES = [
-    {
-        "name": "胎心仪",
-        "type_spec": "PE29-1389",
-        "num": 2,
-        "measure": "台",
-        "purpose": "用来测胎儿心电",
-        "planned_price": 15000.0
-    },
-    {
-        "name": "理疗仪",
-        "type_spec": "ST19-1399",
-        "num": 5,
-        "measure": "台",
-        "purpose": "心理科室需要",
-        "planned_price": 25000.0
-    }
-]
-
-class ProjectApiTestCase(BaseTestCase):
+class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
     """
     项目管理相关APi测试
     """
@@ -51,7 +33,7 @@ class ProjectApiTestCase(BaseTestCase):
         data = {
             "hospital_id": self.organ.id,
         }
-        project = self._create_project(self.admin_staff, self.dept, title="新项目")
+        project = self.create_project(self.admin_staff, self.dept, title="新项目")
         response = self.get(self.single_project_api.format(project.id), data=data)
         self.assert_response_success(response)
         self.assertIsNotNone(response.get("project"))
@@ -66,46 +48,20 @@ class ProjectApiTestCase(BaseTestCase):
 
         self.login_with_username(self.user)
 
-        old_project = self._create_project(self.admin_staff, self.dept, title="旧项目名")
-        old_device_count = len(old_project.get_ordered_devices())
+        old_project = self.create_project(self.admin_staff, self.dept, title="旧项目名")
         old_device = old_project.get_ordered_devices()[0]
-
-        device1_data = {
-            "id": old_device.id,
-            "name": "理疗仪_{}".format(self.get_random_suffix()),
-            "type_spec": "ST19-1399",
-            "num": 5,
-            "measure": "台",
-            "purpose": "心理科室需要",
-            "planned_price": 25000.0
-        }
-        device2_data = {
-            "name": "新增加的设备_{}".format(self.get_random_suffix()),
-            "type_spec": "ST19-1399",
-            "num": 5,
-            "measure": "台",
-            "purpose": "心理科室需要",
-            "planned_price": 25000.0
-        }
 
         project_data = {
             "hospital_id": self.organ.id,
             "project_title": "新的项目名称",
             "purpose": "修改后的用途说明",
-            "ordered_devices": [device1_data, device2_data]
         }
 
-        # 接口调用后, 验证如下数据:
-        # 1. project本身属性被修改
-        # 2. 有新增设备
-        # 3. 对已有设备有修改
         response = self.put(self.single_project_api.format(old_project.id), data=project_data)
         self.assert_response_success(response)
         new_project = response.get('project')
         self.assertIsNotNone(new_project)
-        self.assertEquals(new_project.title, project_data['project_title'])
-        self.assertEquals(len(new_project.get('ordered_devices')), old_device_count+1)
-        self.assert_object_in_results(device1_data, new_project.get('ordered_devices'))
+        self.assertEquals(new_project.get('title'), project_data['project_title'])
 
     def test_project_create(self):
         """
@@ -152,17 +108,4 @@ class ProjectApiTestCase(BaseTestCase):
         self.assert_object_in_results(project_data.get('ordered_devices')[0],
                                       result_project.get('ordered_devices'))
 
-    def _create_project(self, creator, dept, title="设备采购",
-                        ordered_devices=ORDERED_DEVICES):
-        """
-        :param creator:  项目创建者, staff object
-        :param dept: 申请科室
-        """
-        project_data = {
-            'title':    title,
-            'purpose':  "设备老旧换新",
-            'creator':  creator,
-            'related_dept': dept,
-        }
-        return ProjectPlan.objects.create_project(ordered_devices, **project_data)
 

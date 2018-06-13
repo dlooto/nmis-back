@@ -241,3 +241,5 @@ class BaseTestCase(TestCase, TestCaseDataUtils):
         """
         with self.assertRaises(AssertionError):
             self.assert_object_in_results(data, result_list)
+
+
