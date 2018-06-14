@@ -300,7 +300,6 @@ class DepartmentCreateForm(BaseForm):
 
     def check_name(self):
         dept = Department.objects.filter(name=self.data.get('name'))
-        logs.info(dept)
         if dept:
             self.update_errors('dept_name', 'dept_exist')
             return False
