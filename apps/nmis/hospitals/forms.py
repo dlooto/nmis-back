@@ -206,7 +206,7 @@ class StaffUpdateForm(BaseForm):
     def is_valid(self):
         is_valid = True
         if 'staff_name' in self.data:
-            is_valid =  self.check_staff_name()
+            is_valid = self.check_staff_name()
         if 'email' in self.data:
             is_valid = self.check_email()
         if 'contact_phone' in self.data:
