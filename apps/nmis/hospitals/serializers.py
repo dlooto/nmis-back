@@ -35,6 +35,8 @@ class StaffSerializer(BaseModelSerializer):
     # is_admin = serializers.CharField(source='group.is_admin')
     hospital = serializers.IntegerField(source='organ.id')
     hospital_name = serializers.CharField(source='organ.organ_name')
+    dept = serializers.IntegerField(source='dept.id')
+    dept_name = serializers.CharField(source='dept.name')
     staff_name = serializers.CharField(source='name')
     staff_title = serializers.CharField(source='title')
     username = serializers.CharField(source='user.username')
@@ -47,7 +49,8 @@ class StaffSerializer(BaseModelSerializer):
         model = Staff
         fields = (
             'id', 'hospital', 'hospital_name',
-            'dept', 'staff_name', 'staff_title',
+            'dept', 'dept_name',
+            'staff_name', 'staff_title',
             'user', 'username', 'is_admin',
             'group', 'group_name', 'group_cate',
             'contact_phone', 'email', 'created_time',
