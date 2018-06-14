@@ -84,95 +84,97 @@ class HospitalSignupForm(OrganSignupForm):
 
 class StaffSignupForm(BaseForm):
     """
-    员工表单数据验证
+    新增员工表单数据验证
     """
     ERR_CODES = {
-        'err_contact_phone':        '联系电话错误',
-        'err_email':                '无效邮箱',
-        'err_name_not_null':        '员工姓名不能为空',
-        'err_username':             '用户账号名错误',
-        'err_staff_name':           '员工姓名错误',
+        'err_username': '用户名为空或格式错误',
+        'err_password': '密码为空或格式错误',
+        'err_staff_name': '员工姓名错误',
+        'err_contact_phone':        '联系电话格式错误',
+        'err_email':                 '无效邮箱',
+        'err_hospital':              '医院信息错误',
+        'err_dept':                   '科室信息错误',
+        'err_staff_title': '职位名为空或格式错误'
     }
 
     def __init__(self, hospital, dept, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
-        self.hospital = hospital
+        self.organ = hospital
         self.dept = dept
 
     def is_valid(self):
-        return True
+        is_valid = True
+        # 校验必输项
+        if not self.check_username() and not self.check_password() and not self.check_staff_name():
+            is_valid = True
+        # 校验非必输项
+        if 'email' in self.data:
+            is_valid = self.check_email()
+        if 'contact_phone' in self.data:
+            is_valid = self.check_contact_phone()
+        return is_valid
 
     def check_username(self):
         """校验用户名/账号
-        1.非空校验
-        2.格式校验
-        3.用户名是否已经注册
-
-        :return:
         """
-        pass
+        username = self.data.get('username', '').strip()
+        if not username:
+            self.update_errors('username', 'err_username')
+            return False
+        return True
+
+    def check_password(self):
+        """校验密码"""
+        password = self.data.get('password', '').strip()
+        if not password:
+            self.update_errors('password', 'err_password')
+            return False
+        return True
 
     def check_staff_name(self):
         """校验员工名称
-        1.非空校验
-        2.格式校验
-        :return:
         """
-
         staff_name = self.data.get('staff_name', '').strip()
         if not staff_name:
-            self.errors.update({'staff_name': self.ERR_CODES['err_name_not_null']})
+            self.update_errors('staff_name', 'err_staff_name')
             return False
         return True
 
     def check_email(self):
         """校验邮箱
-
-        1.非空校验
-        2.格式校验
-        3.系统是否已经存在相同邮箱账号
-
-        :return:
         """
-        pass
+        email = self.data.get('email', '').strip()
+        if not eggs.is_email_valid(email):
+            self.update_errors('email', 'err_email')
+            return False
+        return True
 
     def check_contact_phone(self):
         """校验手机号
-
-        1.非空校验
-        2.格式校验
-        3.手机号是否已经被其他用户绑定
-
-        :return:
         """
-
-        contact_phone = self.data.get('contact','').strip()
-        if not contact_phone:
-            self.errors.update(     # TODO: 替换为最新的方法调用 ...
-                {'contact': self.ERR_CODES['err_contact_not_null']}
-            )
-            return False
-
+        contact_phone = self.data.get('contact_phone', '').strip()
         if not eggs.is_phone_valid(contact_phone):
-            self.errors.update(
-                {'contact': self.ERR_CODES['err_contact_format']}
-            )
+            self.update_errors('contact_phone', 'err_contact_phone')
             return False
-
         return True
+
+    def check_staff_title(self):
+        """校验职位名称"""
+        staff_title = self.data.get('staff_title', '').strip()
+        if not staff_title:
+            self.update_errors('staff_title', 'err_staff_title')
 
     def save(self):
         data = {
-            'username': self.data.get('username', '').strip(),
-            'name': self.data.get('name', '').strip(),
-            'title': self.data.get('title', '').strip(),
-            'contact': self.data.get('contact', '').strip(),
+            'name': self.data.get('staff_name', '').strip(),
+            'title': self.data.get('staff_title', '').strip(),
+            'contact': self.data.get('contact_phone', '').strip(),
             'email': self.data.get('email', '').strip(),
-            'organ_id':  self.data.get('organ_id'),
-            'dept_id': self.data.get('dept_id'),
+        }
 
-            'group_id': self.data.get('group_id'),
-            'password': self.data.get('password', ''),
+        user_data = {
+            "username": self.data.get('username', '').strip(),
+            "password": self.data.get('password', '').strip()
         }
 
         # 对权限组进行判断
@@ -188,12 +190,61 @@ class StaffSignupForm(BaseForm):
 
 class StaffUpdateForm(BaseForm):
 
+    ERR_CODES = {
+        'err_staff_name': '员工姓名错误',
+        'err_contact_phone':        '联系电话格式错误',
+        'err_email':                 '无效邮箱',
+        'err_hospital':              '医院信息错误',
+        'err_dept':                   '科室信息错误',
+        'err_staff_title': '职位名为空或格式错误'
+    }
+
     def __init__(self, staff, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, ** kwargs)
         self.staff = staff
 
     def is_valid(self):
+        is_valid = True
+        if 'staff_name' in self.data:
+            is_valid =  self.check_staff_name()
+        if 'email' in self.data:
+            is_valid = self.check_email()
+        if 'contact_phone' in self.data:
+            is_valid = self.check_contact_phone()
+        return is_valid
+
+    def check_staff_name(self):
+        """校验员工名称
+        """
+        staff_name = self.data.get('staff_name', '').strip()
+        if not staff_name:
+            self.update_errors('staff_name', 'err_staff_name')
+            return False
         return True
+
+    def check_email(self):
+        """校验邮箱
+        """
+        email = self.data.get('email', '').strip()
+        if not eggs.is_email_valid(email):
+            self.update_errors('email', 'err_email')
+            return False
+        return True
+
+    def check_contact_phone(self):
+        """校验手机号
+        """
+        contact_phone = self.data.get('contact_phone', '').strip()
+        if not eggs.is_phone_valid(contact_phone):
+            self.update_errors('contact_phone', 'err_contact_phone')
+            return False
+        return True
+
+    def check_staff_title(self):
+        """校验职位名称"""
+        staff_title = self.data.get('staff_title', '').strip()
+        if not staff_title:
+            self.update_errors('staff_title', 'err_staff_title')
 
     def save(self):
         update_staff = self.staff.update(self.data)

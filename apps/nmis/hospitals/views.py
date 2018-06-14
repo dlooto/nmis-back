@@ -12,10 +12,12 @@ import logging
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from base.common.param_utils import get_id_list
 from django.conf import settings
+from django.db import transaction
 from rest_framework.permissions import AllowAny
 
 from base import resp
 from base.views import BaseAPIView
+from nmis.hospitals.forms import StaffUpdateForm
 from nmis.hospitals.permissions import IsHospitalAdmin
 from nmis.hospitals.models import Hospital, Department, Staff, Group
 from .forms import (
@@ -104,7 +106,7 @@ class StaffCreateView(BaseAPIView):
     """
     permission_classes = (AllowAny, )
 
-    @check_params_not_null(['username', 'password', 'staff_name', 'dept_id', 'staff_title'])
+    @check_params_not_null(['username', 'password', 'staff_name', 'dept_id'])
     def post(self, req, hid):
         """
         添加员工步骤:
@@ -114,12 +116,13 @@ class StaffCreateView(BaseAPIView):
             3. 返回staff结果
 
         以下字段不能为空:
-            usrname, password, staff_name, hid, dept_id,
+            username, password, staff_name, hid, dept_id,
 
         """
 
-        objects = self.get_objects_or_404({'hid': Hospital, 'dept_id': Department})
-        form = StaffSignupForm(objects['hid'], objects['dept_id'], req.data)
+        hospital = self.get_object_or_404(hid, Hospital)
+        dept = self.get_object_or_404(req.data["dept_id"], Department)
+        form = StaffSignupForm(hospital, dept, req.data)
 
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -127,7 +130,7 @@ class StaffCreateView(BaseAPIView):
         staff = form.save()
         if not staff:
             return resp.failed('添加员工失败')
-        return resp.serialize_response(staff, result_name='staff')
+        return resp.serialize_response(staff, results_name='staff')
 
 
 class StaffsPermChangeView(BaseAPIView):
@@ -170,14 +173,57 @@ class StaffView(BaseAPIView):
         return resp.serialize_response(staff, results_name='staff')
 
     def put(self, req, hid, staff_id):
+        """
+        变更员工信息
+        """
+        data = {}
+        # 判断变更的员工是否存在；
         staff = self.get_object_or_404(staff_id, Staff)
-        staff.update(self, req.data)
-        return resp.serialize_response(staff)
+
+        # 判断参数是否存在，如果存在，则封装到字典中
+        if 'hospital_id' in req.data:
+            data.update({'organ': self.get_object_or_404(req.data.get('hospital_id'), Hospital)})
+        if 'dept_id' in req.data:
+            data.update({'dept': self.get_object_or_404(req.data.get('dept_id'), Department)})
+        if 'group_id' in req.data:
+            data.update({'group': self.get_object_or_404(req.data.get('group_id'), Group)})
+        if 'staff_name' in req.data:
+            data.update({'name': req.data.get('staff_name', '').strip()})
+        if 'staff_title' in req.data:
+            data.update({'title': req.data.get('staff_title', '').strip()})
+        if 'contact_phone' in req.data:
+            data.update({'contact': req.data.get('contact_phone', '').strip()})
+        if 'email' in req.data:
+            data.update({'email': req.data.get('email', '').strip()})
+        if 'status' in req.data:
+            data.update({'status': req.data.get('status', '').strip()})
+
+        form = StaffUpdateForm(staff, data)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        updated_staff = form.save()
+        return resp.serialize_response(updated_staff, results_name='staff')
 
     def delete(self, req, hid, staff_id):
+        """
+        删除员工，同时删除用户账号信息
+        如果存在其他关联数据导致删除失败，目前直接返回删除失败
+        :param req: http请求
+        :param hid: hospital_id即organ_id
+        :param staff_id:
+        :return:
+        """
         staff = self.get_object_or_404(staff_id, Staff)
-        staff.delete()
-        return resp.ok('删除成功')
+        user = staff.user
+        try:
+            with transaction.atomic():
+                staff.delete()
+                user.delete()
+                return resp.ok('删除成功')
+        except Exception as e:
+            logging.exception(e)
+            return None
 
 
 class StaffListView(BaseAPIView):
