@@ -104,7 +104,7 @@ class StaffCreateView(BaseAPIView):
     """
     添加员工, 同时会为员工注册账号
     """
-    permission_classes = (AllowAny, )
+    permission_classes = (IsHospitalAdmin, )
 
     @check_params_not_null(['username', 'password', 'staff_name', 'dept_id'])
     def post(self, req, hid):
@@ -119,7 +119,6 @@ class StaffCreateView(BaseAPIView):
             username, password, staff_name, hid, dept_id,
 
         """
-
         hospital = self.get_object_or_404(hid, Hospital)
         dept = self.get_object_or_404(req.data["dept_id"], Department)
         form = StaffSignupForm(hospital, dept, req.data)
@@ -166,13 +165,19 @@ class StaffView(BaseAPIView):
     """
     单个员工删、查、改操作
     """
-    permission_classes = (AllowAny,)    # TODO: replaceed with IsHospitalAdmin...
+    permission_classes = (IsHospitalAdmin,)
 
     def get(self, req, hid, staff_id):
+        hospital = self.get_object_or_404(hid)
+        self.check_object_permissions(req, hospital)
         staff = self.get_object_or_404(staff_id, Staff)
         return resp.serialize_response(staff, results_name='staff')
 
     def put(self, req, hid, staff_id):
+
+        hospital = self.get_object_or_404(hid)
+        self.check_object_permissions(req, hospital)
+
         """
         变更员工信息
         """
@@ -228,8 +233,16 @@ class StaffView(BaseAPIView):
 
 class StaffListView(BaseAPIView):
 
+    permission_classes = (IsHospitalAdmin, )
+
     def get(self, req, hid):
-        pass
+        """
+        查询某机构下员工列表
+        """
+        hospital = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, hospital)
+        staff_list = Staff.objects.filter(organ=hospital)
+        return resp.serialize_response(staff_list, results_name='staff')
 
 
 class DepartmentCreateView(BaseAPIView):
