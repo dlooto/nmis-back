@@ -206,23 +206,13 @@ class DepartmentCreateView(BaseAPIView):
 
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)    # 验证权限
-
         form = DepartmentCreateForm(req.data, hospital)
-
-        # TODO:...
-        try:
-            dept = Department.objects.filter(name=req.data.get('name'))
-            if dept:
-                return resp.failed('相关科室已存在')
-
-        except Department.DoesNotExist as e:
-            logs.info(e)
-            if not form.is_valid():
-                return resp.form_err(form.errors)
-            new_dept = form.save()
-            if not new_dept:
-                return resp.failed('操作失败')
-            return resp.serialize_response(new_dept, results_name='dept')
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        new_dept = form.save()
+        if not new_dept:
+            return resp.failed('操作失败')
+        return resp.serialize_response(new_dept, results_name='dept')
 
 
 class DepartmentListView(BaseAPIView):

@@ -208,7 +208,6 @@ class DepartmentUpdateFrom(BaseForm):
     def __init__(self, dept, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.dept = dept
-        self.data = data
 
         self.ERR_CODES.update({
             'dept_name_err':        '科室名字不符合要求',
@@ -273,7 +272,7 @@ class DepartmentUpdateFrom(BaseForm):
 
 class DepartmentCreateForm(BaseForm):
     def __init__(self, data, hospital, *args, **kwargs):
-        BaseForm.__init__(self, hospital, data, *args, **kwargs)
+        BaseForm.__init__(self, data, hospital, *args, **kwargs)
         self.hospital = hospital
 
         self.ERR_CODES.update({
@@ -300,8 +299,11 @@ class DepartmentCreateForm(BaseForm):
         return True
 
     def check_name(self):
-        # TODO:...
-        name = self.data.get('name')
+        dept = Department.objects.filter(name=self.data.get('name'))
+        logs.info(dept)
+        if dept:
+            self.update_errors('dept_name', 'dept_exist')
+            return False
         return True
 
     def check_desc(self):
