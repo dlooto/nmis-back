@@ -294,13 +294,10 @@ class DepartmentUpdateFrom(BaseForm):
 
     def check_attri(self):
         attri = self.data.get('attri')
+
         if not attri in dict(DPT_ATTRI_CHOICES).keys():
             self.update_errors('attri', 'err_dept_attri')
             return False
-        # for index in range(len(DPT_ATTRI_CHOICES)):
-        #     if attri in DPT_ATTRI_CHOICES[index]:
-        #         self.update_errors('attri', 'err_dept_attri')
-        #         return True
         return True
 
     def save(self):
@@ -369,11 +366,10 @@ class DepartmentCreateForm(BaseForm):
         # 验证科室属性是否存在DPT_ATTRI_CHOICES中
         # attri dict(DPT_ATTRI_CHOICES)
 
-        for index in range(len(DPT_ATTRI_CHOICES)):
-            if attri in DPT_ATTRI_CHOICES[index]:
-                self.update_errors('dept_attri', 'err_dept_attri')
-                return True
-        return False
+        if not attri in dict(DPT_ATTRI_CHOICES).keys():
+            self.update_errors('attri', 'err_dept_attri')
+            return False
+        return True
 
     def save(self):
 

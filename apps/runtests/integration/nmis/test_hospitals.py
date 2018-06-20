@@ -4,6 +4,7 @@
 #
 
 import logging
+import random
 from unittest import skip
 
 from nmis.hospitals.models import Staff
@@ -13,11 +14,14 @@ logs = logging.getLogger(__name__)
 
 
 class DepartmentApiTestCase(BaseTestCase):
+    """
+    科室相关测试API
+    """
 
-    dept_update_api = '/api/v1/hospitals/{0}/departments/{1}'
     dept_create_api = '/api/v1/hospitals/{0}/departments/create'
-    dept_detail_api = '/api/v1/hospitals/{0}/departments/{1}'
-    dept_delete_api = '/api/v1/hospitals/{0}/departments/{1}'
+    # 单个科室增删查API
+    dept_single_operation_api = '/api/v1/hospitals/{0}/departments/{1}'
+    dept_list = '/api/v1/hospitals/{0}/departments'
 
     def test_department_update(self):
         """
@@ -32,10 +36,9 @@ class DepartmentApiTestCase(BaseTestCase):
             "attri": "ME"
         }
         response = self.put(
-            self.dept_update_api.format(self.organ.id, self.admin_staff.dept_id),
+            self.dept_single_operation_api.format(self.organ.id, self.admin_staff.dept_id),
             data=dept_data
         )
-        logs.info(response)
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('dept'))
         self.assertEquals(dept_data['name'], response.get('dept').get('name'))
@@ -67,7 +70,7 @@ class DepartmentApiTestCase(BaseTestCase):
         self.login_with_username(self.user)
 
         response = self.get(
-            self.dept_detail_api.format(self.organ.id, self.admin_staff.dept_id),
+            self.dept_single_operation_api.format(self.organ.id, self.admin_staff.dept_id),
         )
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('dept'))
@@ -80,11 +83,82 @@ class DepartmentApiTestCase(BaseTestCase):
         self.login_with_username(self.user)
 
         resp = self.delete(
-            self.dept_delete_api.format(self.organ.id, self.admin_staff.dept_id)
+            self.dept_single_operation_api.format(self.organ.id, self.admin_staff.dept_id)
         )
 
         self.assert_response_success(resp)
         self.assertIsNone(resp.get('dept'))
+        # self.assertNotEquals(resp.get('msg'), '操作成功')
+
+    def test_departments_list(self):
+        """
+        测试科室列表
+        """
+        self.login_with_username(self.user)
+
+        response = self.get(
+            self.dept_list.format(self.organ.id)
+        )
+
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('dept'))
+
+
+class StaffsPermChangeTestCase(BaseTestCase):
+    """
+    测试staff权限分配相关API
+    """
+    staffs_permChange_api = '/api/v1/hospitals/{0}/staffs/change_permission'
+    staffs_list_api = '/api/v1/hospitals/{0}/staffs'
+    group_list_api = "/api/v1/hospitals/{0}/groups"
+
+    def test_staffs_permChange(self):
+        """
+        测试管理员给员工非配权限
+        """
+
+        self.login_with_username(self.user)
+        # 初始化staff相应数据
+        data = {
+            'title': '主治医师',
+            'contact': '19822012220',
+            'email': 'ceshi01@test.com',
+        }
+        # 创建部门
+        dept = self.create_department(self.organ)
+        # 创建员工同时创建一个用户账号
+        self.create_completed_staff(self.organ, dept, '测试01', **data)
+        response = self.get(
+            self.staffs_list_api.format(self.organ.id)
+        )
+        resp = self.get(
+            self.group_list_api.format(self.organ.id)
+        )
+        # self.assertIsNone(self)
+        if not self.assert_response_success(response) and \
+                not self.assert_response_success(resp):
+            staffs_list = response.get('staff')
+            group_list = resp.get('group')
+            staffs_id_list = []
+            group_id_list = []
+            for index in range(len(staffs_list)):
+                staffs_id_list.append(staffs_list[index].get('id'))
+            for index in range(len(group_list)):
+                group_id_list.append(group_list[index].get('id'))
+            group_id = random.sample(group_id_list, 1)[0]
+            staffs_id_str = ",".join('%s' % staff_id for staff_id in staffs_id_list)
+            data = {
+                'perm_group_id': group_id,
+                'staffs': staffs_id_str
+            }
+
+            # self.assertIsNone(staffs_list)
+            response = self.put(
+                self.staffs_permChange_api.format(self.organ.id),
+                data=data
+            )
+
+            self.assert_response_success(response)
 
 
 class StaffAPITestCase(BaseTestCase):
@@ -104,7 +178,7 @@ class StaffAPITestCase(BaseTestCase):
             'password': '123456',
             'staff_name': 'add_zhangsan_test001',
             'staff_title': 'zhuzhiyishi',
-            'contact_phone': '19822012220',
+            'contact_phone': '15822012220',
             'email': 'zhangshang@test.com',
             'dept_id': self.admin_staff.dept_id,
             'group_id': '',
@@ -180,6 +254,6 @@ class StaffAPITestCase(BaseTestCase):
         )
 
         self.assert_response_success(response)
-        #self.assert_response_failure()
+        self.assert_response_failure()
 
 
