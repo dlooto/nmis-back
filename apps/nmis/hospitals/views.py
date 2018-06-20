@@ -120,6 +120,7 @@ class StaffCreateView(BaseAPIView):
 
         """
         hospital = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, hospital)
         dept = self.get_object_or_404(req.data["dept_id"], Department)
         form = StaffSignupForm(hospital, dept, req.data)
 
@@ -165,33 +166,31 @@ class StaffView(BaseAPIView):
     """
     单个员工删、查、改操作
     """
-    permission_classes = (IsHospitalAdmin,)
+    permission_classes = (IsHospitalAdmin, )
 
     def get(self, req, hid, staff_id):
-        hospital = self.get_object_or_404(hid)
+        hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
         staff = self.get_object_or_404(staff_id, Staff)
         return resp.serialize_response(staff, results_name='staff')
 
     def put(self, req, hid, staff_id):
-
-        hospital = self.get_object_or_404(hid)
-        self.check_object_permissions(req, hospital)
-
         """
         变更员工信息
         """
+
+        hospital = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, hospital)
+
         data = {}
-        # 判断变更的员工是否存在；
-        staff = self.get_object_or_404(staff_id, Staff)
+        staff = self.get_object_or_404(staff_id, Staff)  # 判断变更的员工是否存在；
 
         # 判断参数是否存在，如果存在，则封装到字典中
-        if 'hospital_id' in req.data:
-            data.update({'organ': self.get_object_or_404(req.data.get('hospital_id'), Hospital)})
-        if 'dept_id' in req.data:
+        # self.get_objects_or_404({})
+        if 'dept_id' in req.data:   #  TODO:  req.data.get('dept_id') 可以改良...
             data.update({'dept': self.get_object_or_404(req.data.get('dept_id'), Department)})
-        if 'group_id' in req.data:
-            data.update({'group': self.get_object_or_404(req.data.get('group_id'), Group)})
+
+        # TODO: 以下参数验证可考虑放入form,
         if 'staff_name' in req.data:
             data.update({'name': req.data.get('staff_name', '').strip()})
         if 'staff_title' in req.data:
@@ -219,6 +218,7 @@ class StaffView(BaseAPIView):
         :param staff_id:
         :return:
         """
+        # TODO: 加上权限处理, 管理员可以操作
         staff = self.get_object_or_404(staff_id, Staff)
         user = staff.user
         try:
@@ -228,7 +228,7 @@ class StaffView(BaseAPIView):
                 return resp.ok('删除成功')
         except Exception as e:
             logging.exception(e)
-            return None
+            return resp.failed("删除失败")
 
 
 class StaffListView(BaseAPIView):
@@ -241,8 +241,8 @@ class StaffListView(BaseAPIView):
         """
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
-        staff_list = Staff.objects.filter(organ=hospital)
-        return resp.serialize_response(staff_list, results_name='staff')
+        staff_list = hospital.get_staffs()
+        return resp.serialize_response(staff_list, results_name='staffs')
 
 
 class DepartmentCreateView(BaseAPIView):
@@ -265,7 +265,7 @@ class DepartmentCreateView(BaseAPIView):
 
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)    # 验证权限
-        form = DepartmentCreateForm(req.data, hospital)
+        form = DepartmentCreateForm(hospital, data=req.data)
         if not form.is_valid():
             return resp.form_err(form.errors)
         new_dept = form.save()

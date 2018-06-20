@@ -34,7 +34,7 @@ CODES = {
     'account_not_activated':    {'code': 11002, 'msg': "Account not activated"},
     'invalid_page_or_count':    {'code': 11004, 'msg': "invalid page or count"},
     'params_error':             {'code': 11005, 'msg': "parameters input error"},
-    'object_not_found':         {'code': 11006, 'msg': "object not found"},
+    'object_not_found':         {'code': 11006, 'msg': "object not found: {}"},
     'operate_duplicated':       {'code': 11008, 'msg': "duplicate operation"},
     'form_errors':              {'code': 11009, 'msg': "form errors"},
 

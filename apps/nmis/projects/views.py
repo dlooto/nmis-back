@@ -29,6 +29,10 @@ class ProjectPlanListView(BaseAPIView):
     """
     项目列表操作
     """
+
+    permission_classes = (IsHospitalAdmin, ProjectApproverPermission)
+
+    @check_params_not_null(['hospital_id'])
     def get(self, req):
         pass
 
