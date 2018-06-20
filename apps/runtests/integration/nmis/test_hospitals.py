@@ -108,57 +108,41 @@ class StaffsPermChangeTestCase(BaseTestCase):
     """
     测试staff权限分配相关API
     """
-    staffs_permChange_api = '/api/v1/hospitals/{0}/staffs/change_permission'
+    staffs_perm_change_api = '/api/v1/hospitals/{0}/staffs/change-permission'
     staffs_list_api = '/api/v1/hospitals/{0}/staffs'
     group_list_api = "/api/v1/hospitals/{0}/groups"
 
-    def test_staffs_permChange(self):
+    def test_staffs_perm_change(self):
         """
         测试管理员给员工非配权限
         """
 
         self.login_with_username(self.user)
+
         # 初始化staff相应数据
-        data = {
+        staff_data = {
             'title': '主治医师',
             'contact': '19822012220',
             'email': 'ceshi01@test.com',
         }
-        # 创建部门
-        dept = self.create_department(self.organ)
-        # 创建员工同时创建一个用户账号
-        self.create_completed_staff(self.organ, dept, '测试01', **data)
-        response = self.get(
-            self.staffs_list_api.format(self.organ.id)
-        )
-        resp = self.get(
-            self.group_list_api.format(self.organ.id)
-        )
-        # self.assertIsNone(self)
-        if not self.assert_response_success(response) and \
-                not self.assert_response_success(resp):
-            staffs_list = response.get('staff')
-            group_list = resp.get('group')
-            staffs_id_list = []
-            group_id_list = []
-            for index in range(len(staffs_list)):
-                staffs_id_list.append(staffs_list[index].get('id'))
-            for index in range(len(group_list)):
-                group_id_list.append(group_list[index].get('id'))
-            group_id = random.sample(group_id_list, 1)[0]
-            staffs_id_str = ",".join('%s' % staff_id for staff_id in staffs_id_list)
-            data = {
-                'perm_group_id': group_id,
-                'staffs': staffs_id_str
-            }
+        self.create_completed_staff(self.organ, self.dept, name='测试01', **staff_data)
 
-            # self.assertIsNone(staffs_list)
-            response = self.put(
-                self.staffs_permChange_api.format(self.organ.id),
-                data=data
-            )
+        staffs = self.organ.get_staffs()
+        groups = self.organ.get_all_groups()
+        staff_id_list = [staff.id for staff in staffs]
+        group_id_list = [g.id for g in groups]
 
-            self.assert_response_success(response)
+        data = {
+            'perm_group_id': random.sample(group_id_list, 1)[0],
+            'staffs':        ','.join([str(id) for id in staff_id_list])
+        }
+
+        response = self.put(
+            self.staffs_perm_change_api.format(self.organ.id),
+            data=data
+        )
+
+        self.assert_response_success(response)
 
 
 class StaffAPITestCase(BaseTestCase):

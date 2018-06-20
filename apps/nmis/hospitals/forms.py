@@ -74,11 +74,7 @@ class HospitalSignupForm(OrganSignupForm):
             # Folder.objects.get_or_create_system_folder(organ=new_organ) # 依赖错误!!!
 
             # create default department
-            Hospital.objects.create_department(**{  # TODO: create method考虑放到organ对象中...
-                'organ':    new_organ,
-                'name':     u'默认'
-            })
-
+            new_organ.create_department(name='默认')
             return new_organ
 
 

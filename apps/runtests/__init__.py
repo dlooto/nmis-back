@@ -51,7 +51,6 @@ class TestCaseDataUtils(object):
 
     def create_department(self, organ, dept_name='测试科室'):
         return organ.create_department(**{
-            'organ': organ,
             'name': dept_name,
             'contact': '13500001111',
             'attri': 'OT',
@@ -69,7 +68,6 @@ class TestCaseDataUtils(object):
         """
         user = self.create_user_with_username()
         return self.create_staff(user, organ, dept, name, **kwargs)
-
 
     def create_completed_organ(self):
         """

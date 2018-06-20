@@ -135,7 +135,7 @@ class StaffCreateView(BaseAPIView):
 
 class StaffsPermChangeView(BaseAPIView):
     """
-    同时修改多个职员的权限为新设的某一种权限
+    同时修改多个职员的权限为新的一种权限
     """
     permission_classes = (IsHospitalAdmin, )
 
@@ -159,7 +159,7 @@ class StaffsPermChangeView(BaseAPIView):
             return resp.failed('请确认是否有不存在的员工信息')
 
         Staff.objects.filter(id__in=staff_id_list).update(group=perm_group)
-        return resp.ok('修改员工权限成功')
+        return resp.ok('员工权限已修改')
 
 
 class StaffView(BaseAPIView):
