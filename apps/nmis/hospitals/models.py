@@ -86,6 +86,14 @@ class Hospital(BaseOrgan):
         """
         return Staff.objects.create_staff(self, dept, **staff_data)
 
+    def get_staffs(self, dept=None):
+        """
+        返回机构的员工列表
+        :param dept: 科室, Department object
+        """
+        staffs_queryset = Staff.objects.filter(organ=self)
+        return staffs_queryset.filter(dept=dept) if dept else staffs_queryset
+
 
     ################################################
     #                  权限组操作
@@ -130,8 +138,8 @@ class Hospital(BaseOrgan):
         group_data.update(GROUPS.get('admin'))
         return self.create_group(**group_data)
 
-    def create_department(self, organ, **dept_data):
-        return Department.objects.create(organ=organ, **dept_data)
+    def create_department(self, **dept_data):
+        return Department.objects.create(organ=self, **dept_data)
 
 
 class Department(BaseDepartment):

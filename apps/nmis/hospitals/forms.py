@@ -114,7 +114,7 @@ class StaffSignupForm(BaseForm):
             is_valid = self.check_contact_phone()
         return is_valid
 
-    def check_username(self):
+    def check_username(self):  # TODO: 用户是否存在, 通过username...
         """校验用户名/账号
         """
         username = self.data.get('username', '').strip()
@@ -180,7 +180,7 @@ class StaffSignupForm(BaseForm):
         # 对权限组进行判断
         group_id = self.data.get('group_id')
         if group_id:
-            group = Group.objects.get_by_id(group_id)
+            group = Group.objects.get_by_id(group_id)  # TODO: group验证可提到is_valid()
             if not group:
                 raise NotFound('Object Not Found: %s %s' % (type(Group), group_id))
             data.update({'group': group})
@@ -262,7 +262,7 @@ class DepartmentUpdateFrom(BaseForm):
 
         self.ERR_CODES.update({
             'dept_name_err':        '科室名字不符合要求',
-            'dept_contact_err':   '科室电话号码格式错误',
+            'dept_contact_err':     '科室电话号码格式错误',
             'dept_attri_err':       '科室属性错误',
             'dept_desc_err':        '科室描述存在敏感字符',
         })
@@ -294,11 +294,14 @@ class DepartmentUpdateFrom(BaseForm):
 
     def check_attri(self):
         attri = self.data.get('attri')
-        for index in range(len(DPT_ATTRI_CHOICES)):
-            if attri in DPT_ATTRI_CHOICES[index]:
-                self.update_errors('attri', 'err_dept_attri')
-                return True
-        return False
+        if not attri in dict(DPT_ATTRI_CHOICES).keys():
+            self.update_errors('attri', 'err_dept_attri')
+            return False
+        # for index in range(len(DPT_ATTRI_CHOICES)):
+        #     if attri in DPT_ATTRI_CHOICES[index]:
+        #         self.update_errors('attri', 'err_dept_attri')
+        #         return True
+        return True
 
     def save(self):
         data = {}
@@ -322,7 +325,7 @@ class DepartmentUpdateFrom(BaseForm):
 
 
 class DepartmentCreateForm(BaseForm):
-    def __init__(self, data, hospital, *args, **kwargs):
+    def __init__(self, hospital, data, *args, **kwargs):
         BaseForm.__init__(self, data, hospital, *args, **kwargs)
         self.hospital = hospital
 
@@ -357,13 +360,15 @@ class DepartmentCreateForm(BaseForm):
         return True
 
     def check_desc(self):
-        desc = self.data.get('desc')
+        # desc = self.data.get('desc')
         return True
 
     def check_attri(self):
         attri = self.data.get('attri')
 
         # 验证科室属性是否存在DPT_ATTRI_CHOICES中
+        # attri dict(DPT_ATTRI_CHOICES)
+
         for index in range(len(DPT_ATTRI_CHOICES)):
             if attri in DPT_ATTRI_CHOICES[index]:
                 self.update_errors('dept_attri', 'err_dept_attri')
@@ -380,7 +385,7 @@ class DepartmentCreateForm(BaseForm):
         }
 
         try:
-            new_dept = self.hospital.create_department(self.hospital, **dept_data)
+            new_dept = self.hospital.create_department(**dept_data)
             new_dept.cache()
             return new_dept
         except Exception as e:

@@ -46,7 +46,7 @@ class BaseAPIView(GenericAPIView):
             obj = model.objects.get_by_id(obj_id)
         if obj:
             return obj
-        raise NotFound('Object Not Found: %s %s' % (type(model), obj_id))
+        raise NotFound('Object Not Found:%s %s' % (type(model), obj_id))
 
     def get_objects_or_404(self, pk_key_cls_dict, use_cache=True):
         """
@@ -74,7 +74,8 @@ class BaseAPIView(GenericAPIView):
         return self.paginator.get_paginated_stuff()
 
     def handle_exception(self, exc):
-        """ 重写异常处理方法
+        """
+        重写异常处理方法
         Handle any exception that occurs, by returning an appropriate response,
         or re-raising the error.
         """
