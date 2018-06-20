@@ -22,6 +22,7 @@ urlpatterns = [
 
     # 单个企业get/update/delete
     path("<int:hid>", views.HospitalView.as_view(), ),
+    path("<int:hid>/global-data", views.HospitalGlobalDataView.as_view(), ),  # 医院全局初始化数据
 
     # 医院科室post/update/delete
     path("<int:hid>/departments/<int:dept_id>", views.DepartmentView.as_view(), ),

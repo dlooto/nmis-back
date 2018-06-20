@@ -41,6 +41,10 @@ class Hospital(BaseOrgan):
         super(self.__class__, self).save(*args, **kwargs)
         self.cache()
 
+    def get_all_flows(self):
+        from nmis.projects.models import ProjectFlow
+        return ProjectFlow.objects.filter(hospital=self)
+
     ################################################
     #                   科室与员工管理
     ################################################

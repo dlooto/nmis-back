@@ -18,7 +18,7 @@ from rest_framework.permissions import AllowAny
 from base import resp
 from base.views import BaseAPIView
 from nmis.hospitals.forms import StaffUpdateForm
-from nmis.hospitals.permissions import IsHospitalAdmin
+from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission
 from nmis.hospitals.models import Hospital, Department, Staff, Group
 from .forms import (
     HospitalSignupForm,
@@ -98,6 +98,31 @@ class HospitalView(BaseAPIView):
         # if opt_type == 'xxxx_option':
         #   do something...
         return resp.failed()
+
+
+class HospitalGlobalDataView(BaseAPIView):
+
+    permission_classes = [HospitalStaffPermission, ]
+
+    def get(self, req, hid):
+        hospital = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, hospital)
+
+        # 医院所有科室
+        depts = hospital.get_all_depts()
+        response = resp.serialize_response(depts, results_name='depts')
+
+        # 医院所有项目流程
+        flows = hospital.get_all_flows()
+        response.data.update({"flows": resp.serialize_data(flows)})
+
+        # 权限组
+        perm_groups = hospital.get_all_groups()
+        response.data.update({"perm_groups": resp.serialize_data(perm_groups)})
+
+        #
+
+        return response
 
 
 class StaffCreateView(BaseAPIView):
