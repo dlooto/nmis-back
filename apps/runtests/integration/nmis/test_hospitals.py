@@ -149,6 +149,7 @@ class StaffAPITestCase(BaseTestCase):
 
     staff_create_api = '/api/v1/hospitals/{0}/staffs/create'
     staff_update_get_delete_api = '/api/v1/hospitals/{0}/staffs/{1}'
+    staff_get_list_apt = '/api/v1/hospitals/{0}/staffs'
 
     def test_staff_create(self):
         """
@@ -162,7 +163,7 @@ class StaffAPITestCase(BaseTestCase):
             'password': '123456',
             'staff_name': 'add_zhangsan_test001',
             'staff_title': 'zhuzhiyishi',
-            'contact_phone': '15822012220',
+            'contact_phone': '13822012220',
             'email': 'zhangshang@test.com',
             'dept_id': self.admin_staff.dept_id,
             'group_id': '',
@@ -192,7 +193,7 @@ class StaffAPITestCase(BaseTestCase):
             )
         )
         self.assert_response_success(response)
-        #self.assert_response_failure(response)
+        # self.assert_response_failure(response)
         self.assertIsNotNone(response.get('staff'), '没获取到员工信息')
         self.assertIsNotNone(response.get('staff').get('staff_name'), '没获取到员工姓名')
         self.assertEquals(response.get('staff').get('staff_name'), self.admin_staff.name)
@@ -209,7 +210,7 @@ class StaffAPITestCase(BaseTestCase):
             'password': '123456',
             'staff_name': 'add_zhangsan_test001',
             'staff_title': 'zhuzhiyishi',
-            'contact_phone': '19822012220',
+            'contact_phone': '13822012220',
             'email': 'zhangshang@test.com',
             'dept_id': self.admin_staff.id,
             'group_id': '',
@@ -221,7 +222,7 @@ class StaffAPITestCase(BaseTestCase):
             )
         )
         self.assert_response_success(response)
-        #self.assert_response_failure(response)
+        # self.assert_response_failure(response)
         self.assertIsNotNone(response.get('staff'), '没获取到修改后的员工信息')
         self.assertIsNotNone(response.get('staff').get('staff_name'), '没有获取到修改后的员工姓名')
         self.assertEqual(response.get('staff').get('staff_name'), self.admin_staff.name)
@@ -238,6 +239,24 @@ class StaffAPITestCase(BaseTestCase):
         )
 
         self.assert_response_success(response)
-        self.assert_response_failure()
+        # self.assert_response_failure(response)
+
+    def test_staff_list(self):
+        """
+        测试获取员工列表
+        :return:
+        """
+        self.create_completed_staff(self.organ, self.dept, 'test001')
+        self.create_completed_staff(self.organ, self.dept, 'test002')
+        self.login_with_username(self.user)
+        response = self.get(
+            self.staff_get_list_apt.format(self.organ.id),
+            dept_id=self.dept.id,
+
+        )
+        self.assert_response_success(response)
+        #self.assert_response_failure(response)
+        self.assertIsNotNone(response.get('staffs'))
+        self.assertEqual(len(response.get('staffs')), 3)
 
 
