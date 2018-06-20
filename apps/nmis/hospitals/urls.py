@@ -42,4 +42,6 @@ urlpatterns = [
     # 查询员工列表
     path("<int:hid>/staffs",            views.StaffListView.as_view(), ),
 
+    # 权限组API列表接口
+    path("<int:hid>/groups",             views.GroupListView.as_view(), )
 ]

@@ -11,7 +11,7 @@ import logging
 from rest_framework import serializers
 
 from base.serializers import BaseModelSerializer
-from nmis.hospitals.models import Department, Hospital, Staff
+from nmis.hospitals.models import Department, Hospital, Staff, Group
 
 logs = logging.getLogger(__name__)
 
@@ -66,6 +66,9 @@ class StaffSerializer(BaseModelSerializer):
         return False if not obj.group else obj.group.is_admin
 
 
-
+class GroupSerializer(BaseModelSerializer):
+    class Meta:
+        model = Group
+        fields = '__all__'
 
 
