@@ -17,9 +17,9 @@ from base.views import BaseAPIView
 from nmis.devices.models import OrderedDevice
 from nmis.hospitals.models import Hospital, Staff, Department
 from nmis.hospitals.permissions import HospitalStaffPermission,  \
-    IsHospitalAdmin, ProjectApproverPermission
+    IsHospitalAdmin, ProjectApproverPermission, IsOwnerOrReadOnly
 from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm, \
-    OrderedDeviceCreateForm, OrderedDeviceUpdateForm
+    OrderedDeviceCreateForm, OrderedDeviceUpdateForm, ProjectFlowCreateForm
 from nmis.projects.models import ProjectPlan
 
 logs = logging.getLogger(__name__)
@@ -200,4 +200,104 @@ class ProjectDeviceView(BaseAPIView):
         except Exception as e:
             logs.exception(e)
             return resp.failed("操作失败")
+
+
+class ProjectFlowCreateView(BaseAPIView):
+    """
+    创建项目流程对象
+    """
+
+    permission_classes = (IsHospitalAdmin, )
+
+    @check_id('hospital_id')
+    @check_params_not_null(['flow_title', 'milestones'])
+    def post(self, req):
+        """
+
+        参数Example:
+        {
+            "hospital_id": 10001,
+            "flow_title":       "项目标准流程",
+            "milestones": [
+                {
+                    "title": "前期准备",
+                    "index": 1
+                },
+                {
+                    "title": "进入实施",
+                    "index": 2
+                }
+            ]
+        }
+        """
+        hosp = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        self.check_object_permissions(req, hosp)
+
+        form = ProjectFlowCreateForm(hosp, req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        flow = form.save()
+        return resp.serialize_response(flow, results_name="flow") if flow else resp.failed("操作失败")
+
+
+class ProjectFlowListView(BaseAPIView):
+
+    def get(self, req):
+        """ 返回流程列表 """
+        pass
+
+
+class ProjectFlowView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, )
+
+    def get(self, req, flow_id):
+        """
+        流程详情. 允许所有员工查看
+        """
+        pass
+
+    def put(self, req, flow_id):
+        """
+        修改流程名称及其他属性信息, 修改不包括添加/删除/修改流程内的里程碑项(已提取到单独的接口)
+        仅允许管理员操作
+        """
+        pass
+
+    def delete(self, req, flow_id):
+        """
+        删除流程. 仅允许管理员操作
+        """
+        pass
+
+
+class MilestoneCreateView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin,)
+
+    def post(self, req, flow_id):
+        """
+        为指定流程添加里程碑项
+        """
+        pass
+
+
+class MilestoneView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, )
+
+    def put(self, req, flow_id, mid):
+        """ 修改里程碑项 """
+        pass
+
+    def delete(self, req, flow_id, mid):
+        """ 删除里程碑项 """
+        pass
+
+
+
+
+
+
+
 

@@ -137,3 +137,13 @@ class IsOwnerOrReadOnly(BasePermission):
             return True
         # Instance must have an attribute named `owner`.
         return obj == request.user.get_profile()
+
+class IsReadOnly(BasePermission):
+    """
+    View-level permission to only allow Read operation
+    """
+    def has_permission(self, request, view):
+        # Read permissions are allowed to any request,
+        # so we'll always allow GET, HEAD or OPTIONS requests.
+        if request.method in SAFE_METHODS:
+            return True

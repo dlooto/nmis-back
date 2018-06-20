@@ -8,7 +8,7 @@
 import logging
 
 from base.forms import BaseForm
-from nmis.projects.models import ProjectPlan
+from nmis.projects.models import ProjectPlan, ProjectFlow
 
 logs = logging.getLogger(__name__)
 
@@ -155,5 +155,39 @@ class OrderedDeviceUpdateForm(BaseOrderedDeviceForm):
 
         self.device.update(data)
         return self.device
+
+
+class ProjectFlowCreateForm(BaseForm):
+
+    def __init__(self, hospital, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.hospital = hospital
+
+        self.ERR_CODES.update({
+            "err_flow_title":       "流程标题错误",
+            "err_milestone_title":  "里程碑项标题错误",
+        })
+
+    def is_valid(self):
+        return True
+
+    def check_flow_title(self):
+        title = self.data.get('flow_title', '').strip()
+        if not title:
+            self.update_errors('flow_title', 'err_flow_title')
+            return False
+        return True
+
+    def check_milestones(self):
+        milestones = self.data.get("milestones")
+        return True
+
+    def save(self):
+        data = {
+            "title": self.data.get("flow_title", '').strip(),
+            "hospital": self.hospital,
+        }
+
+        return ProjectFlow.objects.create_flow(self.data.get("milestones"), **data)
 
 

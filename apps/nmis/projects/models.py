@@ -92,7 +92,7 @@ class ProjectFlow(BaseModel):
     hospital = models.ForeignKey('hospitals.Hospital', verbose_name='所属医院',
                                 on_delete=models.CASCADE)
     title = models.CharField('流程名称', max_length=30, default='默认')
-    type = models.CharField('流程类型', max_length=3, null=True, blank=True,default='')
+    type = models.CharField('流程类型', max_length=3, null=True, blank=True, default='')
     pre_defined = models.BooleanField('是否预定义', default=False) # 机构初始创建时, 为机构默认生成预定义的流程
 
     objects = ProjectFlowManager()
@@ -104,6 +104,10 @@ class ProjectFlow(BaseModel):
 
     def __str__(self):
         return self.title
+
+    def get_milestones(self):
+        """ 流程内含的里程碑列表 """
+        return self.milestone_set.all()
 
 
 class Milestone(BaseModel):

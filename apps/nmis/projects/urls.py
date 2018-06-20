@@ -32,5 +32,12 @@ urlpatterns = [
     # 项目具体的某个设备get/update/delete操作
     path('<int:project_id>/devices/<int:device_id>',      views.ProjectDeviceView.as_view(), ),
 
+    # 项目流程接口
+    path('flows',               views.ProjectFlowListView.as_view(), ),     # List
+    path('flows/create',        views.ProjectFlowCreateView.as_view(), ),   # create
+    path('flows/<int:flow_id>', views.ProjectFlowView.as_view(), ),         # get/put/delete
+
+    path('flows/<int:flow_id>/milestones/create',   views.MilestoneCreateView.as_view(), ),   # Create
+    path('flows/<int:flow_id>/milestones/<int:mid>',views.MilestoneView.as_view(), ),         # put/delete
 
 ]

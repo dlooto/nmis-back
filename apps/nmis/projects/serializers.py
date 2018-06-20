@@ -42,9 +42,17 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
 
 
 class ProjectFlowSerializer(BaseModelSerializer):
+
+    milestones = serializers.SerializerMethodField('_get_milestones')
+
     class Meta:
         model = ProjectFlow
-        fields = '__all__'
+        fields = (
+            'id', 'hospital', 'title', 'type', 'pre_defined', 'milestones'
+        )
+
+    def _get_milestones(self, obj):
+        return resp.serialize_data(obj.get_milestones()) if obj else []
 
 
 class MilestoneSerializer(BaseModelSerializer):

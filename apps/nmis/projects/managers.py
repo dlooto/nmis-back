@@ -12,6 +12,7 @@ from django.db import transaction
 from base.models import BaseManager
 from nmis.devices.models import OrderedDevice
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,4 +46,27 @@ class ProjectPlanManager(BaseManager):
 
 
 class ProjectFlowManager(BaseManager):
-    pass
+
+    def create_flow(self, milestones, **data):
+        """
+        创建项目流程
+        :param milestones:
+        :param data:
+        :return:
+        """
+        from .models import Milestone
+
+        try:
+            with transaction.atomic():
+                flow = self.model(**data)
+                flow.save()
+
+                milestone_list = []
+                for ms in milestones:
+                    milestone_list.append(Milestone(flow=flow, **ms))
+                Milestone.objects.bulk_create(milestone_list)
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+        return flow
