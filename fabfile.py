@@ -1,11 +1,10 @@
 # coding=utf-8
+#
+# Created by junn, on 2018/6/21
+#
 
-"""
-The env varibles in fabfile
+# 
 
-"""
+import logging
 
-import re
-import time
-
-
+logs = logging.getLogger(__name__)

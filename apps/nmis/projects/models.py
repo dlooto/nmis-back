@@ -41,6 +41,8 @@ class ProjectPlan(BaseModel):
         null=True, blank=True, on_delete=models.SET_NULL
     )
     status = models.CharField('项目状态', max_length=2, choices=PROJECT_STATUS_CHOICES, default=PRO_STATUS_PENDING)
+    startup_time = models.DateTimeField(u'项目启动时间', null=True, blank=True)  # 项目分配负责人的时刻即为启动时间
+    expired_time = models.DateTimeField(u'项目截止时间', null=True, blank=True)
 
     objects = ProjectPlanManager()
 
