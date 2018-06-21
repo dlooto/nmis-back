@@ -84,13 +84,14 @@ class StaffSignupForm(BaseForm):
     """
     ERR_CODES = {
         'err_username': '用户名为空或格式错误',
+        'err_username_existed': '用户名已存在',
         'err_password': '密码为空或格式错误',
         'err_staff_name': '员工姓名错误',
         'err_contact_phone':        '联系电话格式错误',
         'err_email':                 '无效邮箱',
-        'err_hospital':              '医院信息错误',
-        'err_dept':                   '科室信息错误',
-        'err_staff_title': '职位名为空或格式错误'
+        'err_staff_title': '职位名为空或格式错误',
+        'err_group_is_null': '权限组为空或数据错误',
+        'err_group_not_exist': '权限组不存在',
     }
 
     def __init__(self, hospital, dept, data, *args, **kwargs):
@@ -101,22 +102,33 @@ class StaffSignupForm(BaseForm):
     def is_valid(self):
         is_valid = True
         # 校验必输项
-        if not self.check_username() and not self.check_password() and not self.check_staff_name():
-            is_valid = True
+        if not self.check_username() or not self.check_password() or not self.check_staff_name():
+            is_valid = False
+
         # 校验非必输项
-        if 'email' in self.data:
-            is_valid = self.check_email()
-        if 'contact_phone' in self.data:
-            is_valid = self.check_contact_phone()
+        if self.data.get('email') and not self.check_email():
+            is_valid = False
+
+        if self.data.get('contact_phone') and not self.check_contact_phone():
+            is_valid = False
+
+        if self.data.get('group_id') and not self.check_group():
+            is_valid = False
+
         return is_valid
 
-    def check_username(self):  # TODO: 用户是否存在, 通过username...
+    def check_username(self):
         """校验用户名/账号
         """
         username = self.data.get('username', '').strip()
         if not username:
             self.update_errors('username', 'err_username')
             return False
+
+        if User.objects.filter(username=username):
+            self.update_errors('username', 'err_username_existed')
+            return False
+
         return True
 
     def check_password(self):
@@ -159,6 +171,22 @@ class StaffSignupForm(BaseForm):
         staff_title = self.data.get('staff_title', '').strip()
         if not staff_title:
             self.update_errors('staff_title', 'err_staff_title')
+            return False
+
+        return True
+
+    def check_group(self):
+        group_id = self.data.get('group_id')
+        if not group_id:
+            self.update_errors('group_id', 'err_group_is_null')
+            return False
+        group = Group.objects.get_by_id(group_id)
+        if not group:
+            self.update_errors('group_id', 'err_group_not_exist')
+            return False
+        self.data.update({'group': group})
+
+        return True
 
     def save(self):
         data = {
@@ -172,14 +200,6 @@ class StaffSignupForm(BaseForm):
             "username": self.data.get('username', '').strip(),
             "password": self.data.get('password', '').strip()
         }
-
-        # 对权限组进行判断
-        group_id = self.data.get('group_id')
-        if group_id:
-            group = Group.objects.get_by_id(group_id)  # TODO: group验证可提到is_valid()
-            if not group:
-                raise NotFound('Object Not Found: %s %s' % (type(Group), group_id))
-            data.update({'group': group})
 
         return Staff.objects.create_staff(self.organ, self.dept, user_data, **data)
 
@@ -198,15 +218,24 @@ class StaffUpdateForm(BaseForm):
     def __init__(self, staff, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, ** kwargs)
         self.staff = staff
+        if data.get('staff_name'):
+            self.data.update({'name': data.get('staff_name', '').strip()})
+        if data.get('staff_title'):
+            self.data.update({'title': data.get('staff_title', '').strip()})
+        if data.get('contact_phone'):
+            self.data.update({'contact': data.get('contact_phone', '').strip()})
+        if data.get('email'):
+            self.data.update({'email': data.get('email', '').strip()})
 
     def is_valid(self):
         is_valid = True
-        if 'staff_name' in self.data:
-            is_valid = self.check_staff_name()
-        if 'email' in self.data:
-            is_valid = self.check_email()
-        if 'contact_phone' in self.data:
-            is_valid = self.check_contact_phone()
+        if self.data.get('staff_name') and not self.check_staff_name():
+            is_valid = False
+        if self.data.get('email') and not self.check_email():
+            is_valid = False
+        if self.data.get('contact_phone') and not self.check_contact_phone():
+            is_valid = False
+
         return is_valid
 
     def check_staff_name(self):
@@ -241,6 +270,9 @@ class StaffUpdateForm(BaseForm):
         staff_title = self.data.get('staff_title', '').strip()
         if not staff_title:
             self.update_errors('staff_title', 'err_staff_title')
+            return False
+
+        return True
 
     def save(self):
         update_staff = self.staff.update(self.data)
