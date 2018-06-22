@@ -78,13 +78,14 @@ from fabenv import *
 #         _load_init_data()
 #
 @task
-def runtests(c, test_suite='', test_module=''):
+def runtests(test_suite='', test_module=''):
     """
-    运行测试用例: 示例 fab h156 runtests:integration,test_api.py
-    :param test_suite: 要运行的测试包, 如fab h104 runtests:_organs 将运行_organs下的所有测试模块
-    :param test_module: 要运行具体测试模块, 如fab h104 runtests:_organs,test_api.py, 将
-                运行runtests/_organs/test_api.py里的所有测试用例
+    运行测试用例: 示例 fab h156 runtests:suite_name,module_name. 默认运行所有测试用例
+    :param test_suite: 要运行的测试包, 如fab h156 runtests:units 将运行units下的所有测试模块
+    :param test_module: 要运行具体测试模块, 如fab h104 runtests:units,test_utils.py, 将
+                运行runtests/units/test_utils.py里的所有测试用例
     """
+    c = get_connection()
     with c.cd(CODE_ROOT):
         if not test_suite:  # run all testcases
             c.run('pytest %s' % TEST_CASE_ROOT)

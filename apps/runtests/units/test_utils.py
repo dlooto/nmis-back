@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # encoding: utf-8
-import unittest
+
+
+###############################
+# 工具类及函数测试
+##############################
+
 from utils import eggs
 
 
@@ -28,6 +33,6 @@ def incr_month_day(year, month, day):
 def expired_on(year, month, day):
     tmp = month + 1
     if tmp > 12:
-        return (year + 1, 1, incr_month_day(year+1, 1, day) )
+        return year + 1, 1, incr_month_day(year+1, 1, day)
 
-    return (year, tmp, incr_month_day(year, tmp, day) )
+    return year, tmp, incr_month_day(year, tmp, day)

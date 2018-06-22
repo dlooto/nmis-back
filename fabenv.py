@@ -25,8 +25,8 @@ NGX_LOG_DIR = os.path.join(LOGS_DIR, 'nginx')    # nginx访问日志
 
 PROCESS_NAME = 'nmis'  # 程序在supervisor中的进程名
 PROJECT_NAME = 'nmis-back'
-CODE_ROOT   = os.path.join(PROD_DIR, PROJECT_NAME)
-ENV_ROOT    = os.path.join(USER_ROOT, '.virtualenvs/nmis')
+CODE_ROOT   = os.path.join(PROD_DIR, PROJECT_NAME)          # 后端代码根目录
+ENV_ROOT    = os.path.join(USER_ROOT, '.virtualenvs/nmis')  #
 LOGS_ROOT   = os.path.join(LOGS_DIR, PROJECT_NAME)
 
 TEST_CASE_ROOT = os.path.join(CODE_ROOT, 'apps/runtests')
@@ -66,12 +66,11 @@ INIT_JSON_DATA = [
 def h156(ctx):
     """ 前置Task: 主机156 """
     env.host = '192.168.1.156'
-    env.ssh_config_path = '/home/deploy/.ssh/config'
 
     env.redis_user = None
     env.redis_host = '127.0.0.1'
     env.redis_auth = 'root'
-    env.password = 'Td@80-ply'
+    env.sudo_password = 'Td@80-ply'
 
     # return Connection(env.host, user=USER)
 
@@ -86,6 +85,6 @@ def h_prod(ctx):
 
 def get_connection():
     config = Config(
-        overrides={'sudo': {'password': env.password}, },
+        overrides={'sudo': {'password': env.sudo_password}, },
     )
     return Connection(env.host, user=USER, config=config)
