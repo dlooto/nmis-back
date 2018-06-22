@@ -109,8 +109,6 @@ class StaffsPermChangeTestCase(BaseTestCase):
     测试staff权限分配相关API
     """
     staffs_perm_change_api = '/api/v1/hospitals/{0}/staffs/change-permission'
-    staffs_list_api = '/api/v1/hospitals/{0}/staffs'
-    group_list_api = "/api/v1/hospitals/{0}/groups"
 
     def test_staffs_perm_change(self):
         """
@@ -143,6 +141,7 @@ class StaffsPermChangeTestCase(BaseTestCase):
         )
 
         self.assert_response_success(response)
+        self.assertEquals(response.get('msg'), '员工权限已修改')
 
 
 class StaffAPITestCase(BaseTestCase):

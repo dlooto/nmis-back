@@ -9,7 +9,8 @@ import logging
 
 from base.forms import BaseForm
 from nmis.projects.models import ProjectPlan, ProjectFlow
-
+from nmis.projects.consts import PROJECT_STATUS_CHOICES
+from nmis.hospitals.models import Staff
 logs = logging.getLogger(__name__)
 
 
@@ -191,3 +192,67 @@ class ProjectFlowCreateForm(BaseForm):
         return ProjectFlow.objects.create_flow(self.data.get("milestones"), **data)
 
 
+class ProjectPlanListForm(BaseForm):
+    def __init__(self, req, *args, **kwargs):
+        BaseForm.__init__(self, req, *args, **kwargs)
+
+        self.req = req
+
+        self.ERR_CODES.update({
+            "err_expired_date": "截止时间必须为一个时间段",
+            "err_status": "项目状态错误"
+        })
+
+    def is_valid(self):
+        return self.check_expired_date() and self.check_status()
+
+    def check_expired_date(self):
+
+        # 如果时间段不存在，直接返回true
+        if not self.req.GET.get('upper_expired_date') and \
+                not self.req.GET.get('lower_expired_date'):
+            return True
+
+        # 时间段中只存在一个时间，直接返回false
+        if not self.req.GET.get('upper_expired_date') or \
+                not self.req.GET.get('lower_expired_date'):
+            self.update_errors('expired_date', 'err_expired_date')
+            return False
+        return True
+
+    def check_status(self):
+        status = self.req.GET.get('pro_status')
+
+        # 项目状态不为必须传入参数，如果为None时直接返回Ture
+        if not status:
+            return True
+
+        # 判断项目状态status是否存在PROJECT_STATUS_CHOICES，不存在返回False
+        if not status in dict(PROJECT_STATUS_CHOICES).keys():
+            self.update_errors('status', 'err_status')
+            return False
+        return True
+
+    def created_date(self):
+
+        data = {}
+
+        if self.req.GET.get('pro_status', ''):
+            data['status'] = self.req.GET.get('pro_status', '').strip()
+        else:
+            data['status__in'] = dict(PROJECT_STATUS_CHOICES).keys()
+
+        if self.req.GET.get('creator_id', ''):
+            data['creator_id'] = self.req.GET.get('creator_id', '').strip()
+
+        if self.req.GET.get('performer_id', ''):
+            data['performer_id'] = self.req.GET.get('performer_id', '').strip()
+
+        if self.req.GET.get('current_stone_id', ''):
+            data['current_stone_id'] = self.req.GET.get('current_stone_id').strip()
+
+        if self.req.GET.get('upper_expired_date', '').strip() and \
+                self.req.GET.get('lower_expired_date', '').strip():
+            data['created_time__gte'] = self.req.GET.get('upper_expired_date', '').strip()
+            data['created_time__lte'] = self.req.GET.get('lower_expired_date', '').strip()
+        return data

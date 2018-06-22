@@ -98,6 +98,13 @@ class Hospital(BaseOrgan):
         staffs_queryset = Staff.objects.filter(organ=self)
         return staffs_queryset.filter(dept=dept) if dept else staffs_queryset
 
+    def get_staffs_by_name(self, staff_name):
+        """
+        通过名字模糊查询返回员工列表
+        :param staff_name: 员工姓名
+        :return:
+        """
+        return Staff.objects.filter(name__contains=staff_name)
 
     ################################################
     #                  权限组操作

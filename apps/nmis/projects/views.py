@@ -10,6 +10,7 @@ import logging
 from rest_framework.permissions import AllowAny
 
 from base import resp
+from utils import times
 from base.common.decorators import check_id, check_id_list, check_params_not_null, \
     check_params_not_all_null
 from base.common.permissions import OrPermission
@@ -19,7 +20,8 @@ from nmis.hospitals.models import Hospital, Staff, Department
 from nmis.hospitals.permissions import HospitalStaffPermission,  \
     IsHospitalAdmin, ProjectApproverPermission, IsOwnerOrReadOnly
 from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm, \
-    OrderedDeviceCreateForm, OrderedDeviceUpdateForm, ProjectFlowCreateForm
+    OrderedDeviceCreateForm, OrderedDeviceUpdateForm, ProjectFlowCreateForm, \
+    ProjectPlanListForm
 from nmis.projects.models import ProjectPlan
 
 logs = logging.getLogger(__name__)
@@ -295,9 +297,46 @@ class MilestoneView(BaseAPIView):
         pass
 
 
+class ProjectListView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, ProjectApproverPermission, )
 
+    @check_id('hospital_id')
+    def get(self, req):
+        """
+        获取项目列表，带筛选
+        参数列表：
+            hospital_id	int		当前医院ID
+            upper_expired_date	string		截止时间1（2018-06-01）
+            lower_expired_date	string		截止时间2（2018-06-19）
+            pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）
+            total_projetcs	int		项目总数
+            pro_title	string		项目名称
+            pro_leader	string		项目负责人名称
+            creator_id	int		申请人ID（此ID为当前登录用户ID），筛选我申请的项目
+            performer_id int	项目负责人ID（此ID为当前登录用户ID），筛选我负责的项目
 
+        """
+        hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        self.check_object_permissions(req, hospital)
 
+        # 判断是否存在项目名和项目负责人关键字
+        if req.GET.get('pro_title_leader', '').strip():
+            projects = ProjectPlan.objects.filter(
+                title__contains=req.GET.get('pro_title_leader', '').strip()
+            )
 
+            if not projects:
+                staffs = hospital.get_staffs_by_name(
+                    req.GET.get('pro_title_leader', '').strip()
+                )
+                staff_id_list = [staff.id for staff in staffs]
+                projects_plan = ProjectPlan.objects.filter(performer_id__in=staff_id_list)
 
-
+                form = ProjectPlanListForm(req)
+                if not form.is_valid():
+                    return resp.form_err(form.errors)
+                print(form.created_date())
+                projects = projects_plan.filter(**form.created_date())
+                return resp.serialize_response(
+                    projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+                )
