@@ -6,6 +6,8 @@ used for file process
 
 import os, logging
 import settings
+from openpyxl import Workbook, load_workbook
+
 
 logs = logging.getLogger('django')
 
@@ -47,3 +49,74 @@ def save_file(file, base_dir, file_name):
         dest.close()
 
     return file_name
+
+
+def read_sheet_with_header(ws, header_dict: dict):
+    """
+    读取单个sheet数据，带表头
+    :param ws: Worksheet对象
+    :param header_dict: 表头字典，K:键，一般为model属性；V:对应表头单元格数据
+    :return: 返回一个List对象，该List对象由一组Dictionary对象构成
+    """
+    sheet_data = list()
+    if ws:
+        ws_rows_len = ws.max_row
+        ws_column_len = len(header_dict)
+
+        # 读取首行数据
+        header_data = list()
+        for col in range(1, ws_column_len+1):
+            header_data.append(ws.cell(1, col).value)
+
+        header_keys = list() # 表头顺序对应的关键字列表
+        # 判断首行数据是否和指定的标准一致，如果一致，按顺序封装表头关键字；否则抛出异常
+        for item in header_dict.items():
+            for hdata in header_data:
+                if item[1] == hdata:
+                    header_keys.append(item[0])
+                    break
+
+        if len(header_keys) != len(header_dict):
+            print(header_keys)
+            raise Exception('表单的表头数据和指定的标准不一致，请检查')
+
+        # 读取业务数据
+        for row in range(2, ws_rows_len+1):
+            row_data = {}
+            for col in range(1,ws_column_len+1):
+                key = header_keys[col-1]
+                value = ws.cell(row=row, column=col).value
+                row_data[key]= value
+            sheet_data.append(row_data)
+
+    return sheet_data
+
+
+def read_excel_with_header(wb: Workbook, header_dict: dict):
+    """
+    读取单个excel文件数据，带表头
+    :param wb: Workbook对象
+    :param header_dict: 表头字典，K:键，一般为model属性；V:对应表头单元格数据
+    :return:
+    """
+    excel_data = list()
+    for sheet_name in wb.sheetnames:
+        sheet_data = read_sheet_with_header(wb[sheet_name], header_dict)
+        if sheet_data:
+            excel_data.append(sheet_data)
+    return excel_data
+
+
+def read_excel_with_header_path(path, header_dict: dict):
+    """
+    :param path: the path to open or a file-like object
+    :type path: string or a file-like object open in binary mode c.f., :class:`zipfile.ZipFile`
+    :param header_dict:
+    :return:
+    """
+    wb = load_workbook(path)
+    excel_data = list()
+    if path:
+        excel_data = read_excel_with_header(wb, header_dict)
+
+    return excel_data

@@ -165,7 +165,7 @@ class StaffAPITestCase(BaseTestCase):
             'staff_title': 'zhuzhiyishi',
             'contact_phone': '13822012220',
             'email': 'zhangshang@test.com',
-            'dept_id': self.admin_staff.dept_id,
+            'dept_id': self.dept.id,
             'group_id': '',
         }
 
@@ -206,26 +206,23 @@ class StaffAPITestCase(BaseTestCase):
         self.login_with_username(self.user)
 
         update_staff_data = {
-            'username': 'add_user_test001',
-            'password': '123456',
             'staff_name': 'add_zhangsan_test001',
             'staff_title': 'zhuzhiyishi',
             'contact_phone': '13822012220',
             'email': 'zhangshang@test.com',
-            'dept_id': self.admin_staff.id,
-            'group_id': '',
+            'dept_id': self.dept.id,
         }
         response = self.put(
             self.staff_update_get_delete_api.format(
                 self.organ.id,
                 self.admin_staff.id,
-            )
+            ), data=update_staff_data
         )
         self.assert_response_success(response)
-        # self.assert_response_failure(response)
+        #self.assert_response_failure(response)
         self.assertIsNotNone(response.get('staff'), '没获取到修改后的员工信息')
         self.assertIsNotNone(response.get('staff').get('staff_name'), '没有获取到修改后的员工姓名')
-        self.assertEqual(response.get('staff').get('staff_name'), self.admin_staff.name)
+        self.assertEqual(response.get('staff').get('staff_name'), update_staff_data['staff_name'])
 
     def test_staff_delete(self):
         """

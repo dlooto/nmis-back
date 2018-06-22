@@ -9,11 +9,17 @@
 
 import logging
 
+from django.core.files.uploadedfile import UploadedFile
+
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from base.common.param_utils import get_id_list
 from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
+
+from nmis.hospitals.managers import StaffManager
+from users.models import User
+from utils import files
 
 from base import resp
 from base.views import BaseAPIView
@@ -144,10 +150,10 @@ class StaffCreateView(BaseAPIView):
             username, password, staff_name, hid, dept_id,
 
         """
-        hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
+        organ = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, organ)
         dept = self.get_object_or_404(req.data.get('dept_id'), Department)
-        form = StaffSignupForm(hospital, dept, req.data)
+        form = StaffSignupForm(organ, dept, req.data)
 
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -194,8 +200,8 @@ class StaffView(BaseAPIView):
     permission_classes = (IsHospitalAdmin, )
 
     def get(self, req, hid, staff_id):
-        hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
+        organ = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, organ)
 
         staff = self.get_object_or_404(staff_id, Staff)
         return resp.serialize_response(staff, results_name='staff')
@@ -205,17 +211,19 @@ class StaffView(BaseAPIView):
         变更员工信息
         """
 
-        hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
+        organ = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, organ)
 
-        data = {}
         # 判断变更的员工是否存在；
+        print(req.data.get('dept_id'))
+
         staff = self.get_object_or_404(staff_id, Staff)
+        print(req.data.get('dept_id'))
 
         if req.data.get('dept_id'):
             req.data.update({'dept': self.get_object_or_404(req.data.get('dept_id'), Department)})
 
-        form = StaffUpdateForm(staff, data)
+        form = StaffUpdateForm(staff, req.data)
 
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -227,12 +235,12 @@ class StaffView(BaseAPIView):
         删除员工，同时删除用户账号信息
         如果存在其他关联数据导致删除失败，目前直接返回删除失败
         :param req: http请求
-        :param hid: hospital_id即organ_id
+        :param hid: organ_id 机构ID
         :param staff_id:
         :return:
         """
-        hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
+        organ = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, organ)
 
         staff = self.get_object_or_404(staff_id, Staff)
         user = staff.user
@@ -256,11 +264,85 @@ class StaffListView(BaseAPIView):
         """
         查询某机构下员工列表
         """
-        hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
+        organ = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, organ)
 
-        staff_list = Staff.objects.filter(organ=hospital)
+        staff_list = Staff.objects.filter(organ=organ)
         return resp.serialize_response(staff_list, results_name='staffs')
+
+
+class StaffsBatchImportView(BaseAPIView):
+
+    permission_classes = (AllowAny,)
+
+    def post(self, req, hid):
+        """
+        批量导入某机构的员工信息
+        :param req:
+        :param hid:
+        :return:
+        TODO：先实现文件上传解析功能，再补充校验
+        检查文件格式，目前仅支持xlsx格式
+        检查医疗机构是否存在
+        检查科室列表是否存在
+        检查excel文档中员工用户名是否有重复数据
+        检查excel文档中存在同名员工，给出提示
+        检查员工用户名是否存在
+
+        """
+        organ = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, organ)
+
+        file_obj = req.FILES.get('staff_excel_file')
+        file_obj.read()
+        file_name = file_obj.name
+        file_size = file_obj.size
+
+        # 将文件存放到服务器
+        # import os
+        # file_server_path = open(os.path.join('/media/', '', file_obj.name), 'wb')
+        # file = open('file_server_path', 'wb')
+
+        head_dict = {'username': '用户名', 'staff_name': '员工姓名', 'email': '邮箱', 'contact_phone': '联系电话', 'dept_name': '所属科室'}
+        excel_data = files.read_excel_with_header_path(file_obj, head_dict)
+        staff_data = list()
+        print(excel_data)
+        print(excel_data[0])
+        if excel_data[0] and excel_data[0][0]:
+            sheet_data = excel_data[0]
+            for s in range(len(sheet_data)):
+                # 封装科室
+                print(sheet_data[s].get('dept_name'))
+                dept = Department.objects.filter(name=sheet_data[s].get('dept_name'))[0]
+                staff_data.append({
+                    'username': sheet_data[s].get('username'),
+                    'staff_name': sheet_data[s].get('email'),
+                    'contact_phone': sheet_data[s].get('contact_phone'),
+                    'email': sheet_data[s].get('email'),
+                    'dept': dept,
+                    'organ': organ,
+                })
+
+            # 循环添加
+            for i in range(len(staff_data)):
+                try:
+                    with transaction.atomic():
+                        user = User.objects.create_param_user(
+                            ('username', staff_data[i].get('username')), password='111111', is_active=True,
+                        )
+                        Staff.objects.create(
+                            organ=staff_data[i].get('organ'),
+                            dept=staff_data[i].get('dept'),
+                            user=user,
+                            name=staff_data[i].get('staff_name'),
+                            contact=staff_data[i].get('contact_phone'),
+                            email=staff_data[i].get('email')
+                        )
+                except Exception as e:
+                    logging.exception(e)
+                    return resp.failed('操作失败')
+            return resp.ok('操作成功')
+        return resp.failed('文件不能为空')
 
 
 class DepartmentCreateView(BaseAPIView):

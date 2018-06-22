@@ -30,16 +30,12 @@ class DepartmentSerializer(BaseModelSerializer):
 
 
 class StaffSerializer(BaseModelSerializer):
-    # group_name = serializers.CharField(source='group.name')
-    # group_cate = serializers.CharField(source='group.cate')
-    # is_admin = serializers.CharField(source='group.is_admin')
-    hospital = serializers.IntegerField(source='organ.id')
-    hospital_name = serializers.CharField(source='organ.organ_name')
-    dept = serializers.IntegerField(source='dept.id')
-    dept_name = serializers.CharField(source='dept.name')
+
+    organ_name = serializers.SerializerMethodField('_get_organ_name')
+    dept_name = serializers.SerializerMethodField('_get_dept_name')
     staff_name = serializers.CharField(source='name')
     staff_title = serializers.CharField(source='title')
-    username = serializers.CharField(source='user.username')
+    username = serializers.SerializerMethodField('_get_user_username')
     is_admin = serializers.SerializerMethodField('_is_admin')
     group_name = serializers.SerializerMethodField('_get_group_name')
     group_cate = serializers.SerializerMethodField('_get_group_cate')
@@ -48,11 +44,11 @@ class StaffSerializer(BaseModelSerializer):
     class Meta:
         model = Staff
         fields = (
-            'id', 'hospital', 'hospital_name',
-            'dept', 'dept_name',
+            'id', 'organ_id', 'organ_name',
+            'dept_id', 'dept_name',
             'staff_name', 'staff_title',
-            'user', 'username', 'is_admin',
-            'group', 'group_name', 'group_cate',
+            'user_id', 'username', 'is_admin',
+            'group_id', 'group_name', 'group_cate',
             'contact_phone', 'email', 'created_time',
         )
 
@@ -64,6 +60,15 @@ class StaffSerializer(BaseModelSerializer):
 
     def _is_admin(self, obj):
         return False if not obj.group else obj.group.is_admin
+
+    def _get_user_username(self, obj):
+        return '' if not obj.user else obj.user.username
+
+    def _get_organ_name(self, obj):
+        return '' if not obj.organ else obj.organ.organ_name
+
+    def _get_dept_name(self, obj):
+        return '' if not obj.dept else obj.dept.name
 
 
 class GroupSerializer(BaseModelSerializer):
