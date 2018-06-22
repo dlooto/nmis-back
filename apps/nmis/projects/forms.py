@@ -6,7 +6,7 @@
 # 
 
 import logging
-
+from itertools import chain
 from base.forms import BaseForm
 from nmis.projects.models import ProjectPlan, ProjectFlow
 from nmis.projects.consts import PROJECT_STATUS_CHOICES
@@ -233,7 +233,7 @@ class ProjectPlanListForm(BaseForm):
             return False
         return True
 
-    def created_date(self):
+    def my_projects_plan(self):
 
         data = {}
 
@@ -255,4 +255,21 @@ class ProjectPlanListForm(BaseForm):
                 self.req.GET.get('lower_expired_date', '').strip():
             data['created_time__gte'] = self.req.GET.get('upper_expired_date', '').strip()
             data['created_time__lte'] = self.req.GET.get('lower_expired_date', '').strip()
-        return data
+
+        # 判断是否存在项目名和项目负责人关键字
+        if self.req.GET.get('pro_title_leader', '').strip():
+            projects_title = ProjectPlan.objects.get_projects_by_title(
+                title=self.req.GET.get('pro_title_leader', '').strip()
+            )
+
+            staffs = Staff.objects.get_staffs_by_name(
+                staff_name=self.req.GET.get('pro_title_leader', '').strip()
+            )
+            staff_id_list = [staff.id for staff in staffs]
+            projects_staffs = ProjectPlan.objects.get_projects_by_performer(
+                staff_id_list=staff_id_list
+            )
+            return (projects_title | projects_staffs).filter(**data)
+
+        return ProjectPlan.objects.filter(**data)
+

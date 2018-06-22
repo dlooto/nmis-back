@@ -308,10 +308,8 @@ class MyProjectListView(BaseAPIView):
             hospital_id	int		当前医院ID
             upper_expired_date	string		截止时间1（2018-06-01）
             lower_expired_date	string		截止时间2（2018-06-19）
-            pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）
-            total_projetcs	int		项目总数
-            pro_title	string		项目名称
-            pro_leader	string		项目负责人名称
+            pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
+            pro_title_leader	string		项目名称/项目负责人
             creator_id	int		申请人ID（此ID为当前登录用户ID），筛选我申请的项目
             performer_id int	项目负责人ID（此ID为当前登录用户ID），筛选我负责的项目
 
@@ -321,29 +319,9 @@ class MyProjectListView(BaseAPIView):
         form = ProjectPlanListForm(req)
         if not form.is_valid():
             return resp.form_err(form.errors)
-        # 判断是否存在项目名和项目负责人关键字
-        if req.GET.get('pro_title_leader', '').strip():
-            projects = ProjectPlan().get_projects_by_title(
-                title=req.GET.get('pro_title_leader', '').strip()
-            )
-
-            if not projects:
-                staffs = hospital.get_staffs_by_name(
-                    req.GET.get('pro_title_leader', '').strip()
-                )
-                staff_id_list = [staff.id for staff in staffs]
-                projects_plan = ProjectPlan().get_projects_by_performer(staff_id_list=staff_id_list)
-
-                project_plan_list = projects_plan.filter(**form.created_date())
-
-                return resp.serialize_response(
-                    project_plan_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
-                )
-
-            project_plan_list = projects.filter(**form.created_date())
-            return resp.serialize_response(
-                project_plan_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
-            )
+        return resp.serialize_response(
+            form.my_projects_plan(), srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+        )
 
 
 class AllotProjectListView(BaseAPIView):
@@ -351,9 +329,12 @@ class AllotProjectListView(BaseAPIView):
 
     @check_id('hospital_id')
     def get(self, req):
+        """
+        获取所有待分配的项目列表
+        """
         hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
         self.check_object_permissions(req, hospital)
-        allot_project_list = ProjectPlan().get_allot_projects()
+        allot_project_list = ProjectPlan.objects.get_allot_projects()
         return resp.serialize_response(
-            allot_project_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+            allot_project_list, srl_cls_name='MChunkProjectPlanSerializer', results_name='projects'
         )
