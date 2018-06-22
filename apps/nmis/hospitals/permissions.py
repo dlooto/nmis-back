@@ -66,7 +66,7 @@ class HospitalStaffPermission(BasePermission):
         return staff.organ == obj if staff else False
 
 
-class ProjectApproverPermission(BasePermission):
+class ProjectDispatcherPermission(BasePermission):
     """
     项目分配者权限对象
     """

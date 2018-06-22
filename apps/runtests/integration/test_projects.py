@@ -6,11 +6,9 @@
 # 
 
 import logging
-from unittest import skip
 
-from nmis.projects.models import ProjectPlan
 from runtests import BaseTestCase
-from runtests.integration.nmis.mixins import ProjectPlanMixin
+from runtests.integration.mixins import ProjectPlanMixin
 
 logs = logging.getLogger(__name__)
 
