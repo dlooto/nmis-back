@@ -77,27 +77,26 @@ from fabenv import *
 #         _migrate_data()
 #         _load_init_data()
 #
+
 @task
-def runtests(test_suite='', test_module=''):
+def runtests(ctx, test_suite='', test_module=''):
     """
-    运行测试用例: 示例 fab h156 runtests:suite_name,module_name. 默认运行所有测试用例
+    运行测试用例: 示例 fab h156 runtests 默认运行所有测试用例
+
+    :param c: c 参数默认为本地localhost连接
     :param test_suite: 要运行的测试包, 如fab h156 runtests:units 将运行units下的所有测试模块
     :param test_module: 要运行具体测试模块, 如fab h104 runtests:units,test_utils.py, 将
                 运行runtests/units/test_utils.py里的所有测试用例
+
+    :注: Fabric2.x版本中, the first param c is default exist when the method is task-method.
+        test_suite, test_module等参数在命令行如何传递??
     """
     c = get_connection()
-    with c.cd(CODE_ROOT):
-        if not test_suite:  # run all testcases
-            c.run('pytest %s' % TEST_CASE_ROOT)
-            return
-        if not test_module:
-            c.run('pytest %s/%s' % (TEST_CASE_ROOT, test_suite))
-            return
-        c.run('pytest %s/%s/%s' % (TEST_CASE_ROOT, test_suite, test_module))
+    _runtests(c, test_suite, test_module)
 
 
 @task
-def deploy(remote='origin', branch='master'):
+def deploy(ctx, remote='origin', branch='master'):
     """
     发布更新: fab h156 deploy <==发布更新到指定hosts
     :param remote: 远程仓库名称, 默认为 origin
@@ -112,32 +111,29 @@ def deploy(remote='origin', branch='master'):
 
     _flush_redis(c, env.redis_host, env.redis_auth)
     _restart_server(c)
+    _runtests(c)
 
 
 @task
-def lean_deploy(remote="origin", branch="master"):
+def lean_deploy(ctx, remote="origin", branch="master"):
     """
     轻量部署: 更新后端代码并重启gunicorn服务. 用法: fab h156 lean_deploy
     :param remote: 远程代码仓库名, 默认origin
     :param branch: 远程代码仓库分支, 默认master
-    :return:
+
+    :注: remote, branch等参数该如何通过命令行传入??
     """
     c = get_connection()
     with c.cd(CODE_ROOT):
-        c.run('git checkout %s' % branch)
-        c.run('git stash save')
-        c.run('git pull')
-        c.run('git stash pop')
+        _update_code(c, remote, branch)
 
     _flush_redis(c, env.redis_host, env.redis_auth)
-    print("redis flushed")
-    c.sudo('supervisorctl %s %s' % ("restart", PROCESS_NAME))
-    c.sudo('service nginx restart')
-    print("Nginx restarted.")
+    _restart_server(c)
+    _runtests(c)
 
 
 @task
-def supervisor(command='restart', program='all'):
+def supervisor(ctx, command='restart', program='all'):
     """
     执行supervisor 命令 示例: fab h156 supervisor:restart,nmis (default: restart all)
     @param command: ('start', 'restart', 'stop', 'status')
@@ -149,7 +145,25 @@ def supervisor(command='restart', program='all'):
         return
     if command == 'status':
         program = ''
-    c.run('sudo supervisorctl %s %s' % (command, program))
+    c.sudo('supervisorctl %s %s' % (command, program))
+
+
+def _runtests(c, test_suite='', test_module=''):
+    """
+    运行单元测试. test_suite和test_module默认为空时执行所有测试用例
+    :param c: Connection对象
+    :param test_suite: 测试集包名, 如integration
+    :param test_module: 测试模块名, 如test_users.py
+    :return:
+    """
+    with c.prefix("source %s" % ACTIVATE_PATH):
+        if not test_suite:  # run all testcases
+            c.run('pytest %s' % TEST_CASE_ROOT)
+            return
+        if not test_module:
+            c.run('pytest %s' % os.path.join(TEST_CASE_ROOT, test_suite))
+            return
+        c.run('pytest %s' % os.path.join(TEST_CASE_ROOT, test_suite, test_module))
 
 
 def _flush_redis(c, redis_host, auth):
@@ -161,13 +175,21 @@ def _flush_redis(c, redis_host, auth):
 
 
 def _update_code(c, remote, branch):
-    c.run('git checkout %s' % branch)
+    """
+    fetch并更新指定分支代码
+    :param c:  Connection object
+    :param remote: 远程仓库别名, 如 origin
+    :param branch: 代码分支名, 如 test
+    :return:
+    """
+    c.run('git checkout master')
     c.run('git stash save')
-    # c.run('git pull %s master' % remote)   # TODO: I don't know why this not works...
-    c.run('git pull ')
+    c.run('git pull %s master' % remote)
     c.run('git stash pop')
-    # c.run('git fetch %s %s:%s' % (remote, branch, branch))
-    # c.run('git checkout %s' % branch)
+
+    if not branch == 'master':
+        c.run('git fetch %s %s:%s' % (remote, branch, branch))
+        c.run('git checkout %s' % branch)
 
 
 def _install_env_libs(c):
