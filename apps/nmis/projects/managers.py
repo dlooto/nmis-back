@@ -12,6 +12,7 @@ from django.db import transaction
 from base.models import BaseManager
 from nmis.devices.models import OrderedDevice
 
+from nmis.projects.models import ProjectPlan
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,14 @@ class ProjectPlanManager(BaseManager):
 
         return project
 
+    def get_allot_projects(self):
+        return ProjectPlan.objects.filter(performer=None)
+
+    def get_projects_by_performer(self, staff_id_list):
+        return ProjectPlan.objects.filter(performer__in=staff_id_list)
+
+    def get_projects_by_title(self, title):
+        return ProjectPlan.objects.filter(title__contains=title)
 
 class ProjectFlowManager(BaseManager):
 

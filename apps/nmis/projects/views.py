@@ -297,13 +297,13 @@ class MilestoneView(BaseAPIView):
         pass
 
 
-class ProjectListView(BaseAPIView):
-    permission_classes = (IsHospitalAdmin, ProjectApproverPermission, )
+class MyProjectListView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, )
 
     @check_id('hospital_id')
     def get(self, req):
         """
-        获取项目列表，带筛选
+        我的项目列表，带筛选
         参数列表：
             hospital_id	int		当前医院ID
             upper_expired_date	string		截止时间1（2018-06-01）
@@ -318,11 +318,13 @@ class ProjectListView(BaseAPIView):
         """
         hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
         self.check_object_permissions(req, hospital)
-
+        form = ProjectPlanListForm(req)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
         # 判断是否存在项目名和项目负责人关键字
         if req.GET.get('pro_title_leader', '').strip():
-            projects = ProjectPlan.objects.filter(
-                title__contains=req.GET.get('pro_title_leader', '').strip()
+            projects = ProjectPlan().get_projects_by_title(
+                title=req.GET.get('pro_title_leader', '').strip()
             )
 
             if not projects:
@@ -330,13 +332,28 @@ class ProjectListView(BaseAPIView):
                     req.GET.get('pro_title_leader', '').strip()
                 )
                 staff_id_list = [staff.id for staff in staffs]
-                projects_plan = ProjectPlan.objects.filter(performer_id__in=staff_id_list)
+                projects_plan = ProjectPlan().get_projects_by_performer(staff_id_list=staff_id_list)
 
-                form = ProjectPlanListForm(req)
-                if not form.is_valid():
-                    return resp.form_err(form.errors)
-                print(form.created_date())
-                projects = projects_plan.filter(**form.created_date())
+                project_plan_list = projects_plan.filter(**form.created_date())
+
                 return resp.serialize_response(
-                    projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+                    project_plan_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
                 )
+
+            project_plan_list = projects.filter(**form.created_date())
+            return resp.serialize_response(
+                project_plan_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+            )
+
+
+class AllotProjectListView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, ProjectApproverPermission, )
+
+    @check_id('hospital_id')
+    def get(self, req):
+        hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        self.check_object_permissions(req, hospital)
+        allot_project_list = ProjectPlan().get_allot_projects()
+        return resp.serialize_response(
+            allot_project_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+        )
