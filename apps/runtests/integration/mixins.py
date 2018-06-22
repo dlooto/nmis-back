@@ -3,7 +3,7 @@
 # Created by junn, on 2018/6/13
 #
 
-# 
+# 测试中使用的基础数据及工具类
 
 import logging
 
