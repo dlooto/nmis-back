@@ -19,5 +19,8 @@ logs = logging.getLogger(__name__)
 class OrderedDeviceSerializer(BaseModelSerializer):
     class Meta:
         model = OrderedDevice
-        fields = '__all__'
+        fields = (
+            'id', 'name', 'cate', 'type_spec', 'purpose', 'project_id',
+            'measure', 'num', 'planned_price', 'real_price', 'created_time',
+        )
 

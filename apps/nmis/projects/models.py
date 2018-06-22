@@ -9,8 +9,10 @@ import logging
 
 from django.db import models, transaction
 
+from utils import times
 from base.models import BaseModel
 from nmis.devices.models import OrderedDevice
+
 from .managers import ProjectPlanManager, ProjectFlowManager
 from .consts import *
 
@@ -36,7 +38,12 @@ class ProjectPlan(BaseModel):
         'hospitals.Staff', related_name='performed_projects', verbose_name='项目负责人/执行人',
         null=True, blank=True, on_delete=models.SET_NULL
     )
-    current_stone = models.ForeignKey( # 项目当前的里程碑结点
+
+    attached_flow = models.ForeignKey(
+        "projects.ProjectFlow", verbose_name="项目使用的流程",
+        null=True, blank=True, on_delete=models.SET_NULL
+    )
+    current_stone = models.ForeignKey(  # 项目当前的里程碑结点
         'projects.MileStone', verbose_name='项目里程碑结点',
         null=True, blank=True, on_delete=models.SET_NULL
     )
@@ -52,7 +59,7 @@ class ProjectPlan(BaseModel):
         db_table = 'projects_project_plan'
 
     VALID_ATTRS = [
-        'title', 'purpose'
+        'title', 'purpose',
     ]
 
     def __str__(self):
@@ -86,13 +93,32 @@ class ProjectPlan(BaseModel):
     def create_device(self, **device_data):
         return OrderedDevice.objects.create(project=self, **device_data)
 
+    def dispatch(self, performer, **data):
+        """
+        分派项目给某个员工作为责任人
+        :param performer:  要分派的责任人, staff object
+        :param data: dict parameters
+        :return: True or False
+        """
+        try:
+            self.performer = performer
+            self.attached_flow = data.pop("flow")
+            self.current_stone = self.attached_flow.get_first_milestone()
+            self.expired_time = data.pop("expired_time")
+            self.status = PRO_STATUS_STARTED
+            self.startup_time = times.now()
+            self.save()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
+
 
 class ProjectFlow(BaseModel):
     """
     项目流程
     """
-    hospital = models.ForeignKey('hospitals.Hospital', verbose_name='所属医院',
-                                on_delete=models.CASCADE)
+    organ = models.ForeignKey('hospitals.Hospital', verbose_name='所属医院', on_delete=models.CASCADE)
     title = models.CharField('流程名称', max_length=30, default='默认')
     type = models.CharField('流程类型', max_length=3, null=True, blank=True, default='')
     pre_defined = models.BooleanField('是否预定义', default=False) # 机构初始创建时, 为机构默认生成预定义的流程
@@ -105,11 +131,17 @@ class ProjectFlow(BaseModel):
         db_table = 'projects_project_flow'
 
     def __str__(self):
-        return self.title
+        return "%s %s" % (self.id, self.title)
 
     def get_milestones(self):
         """ 流程内含的里程碑列表 """
         return self.milestone_set.all()
+
+    def get_first_milestone(self):
+        return self.get_milestones().order_by('index')[:1][0]
+
+    def get_last_milestone(self):
+        pass
 
 
 class Milestone(BaseModel):
@@ -118,13 +150,16 @@ class Milestone(BaseModel):
     """
     flow = models.ForeignKey('projects.ProjectFlow', verbose_name='归属流程', on_delete=models.CASCADE)
     title = models.CharField('里程碑标题', max_length=10, )
-    index = models.SmallIntegerField('索引顺序', default=1) # 用于决定里程碑项在流程中的顺序
+
+    # 用于决定里程碑项在流程中的顺序. index值小的排在前面
+    index = models.SmallIntegerField('索引顺序', default=1)
     desc = models.CharField('描述', max_length=20, default='')
 
     class Meta:
         verbose_name = '里程碑项'
         verbose_name_plural = '里程碑项'
         db_table = 'projects_milestone'
+        ordering = ['index']
 
     def __str__(self):
         return self.title

@@ -117,7 +117,7 @@ def deploy(ctx, remote='origin', branch='master'):
 @task
 def lean_deploy(ctx, remote="origin", branch="master"):
     """
-    轻量部署: 更新后端代码并重启gunicorn服务. 用法: fab h156 lean_deploy
+    轻量部署: 更新后端代码并重启gunicorn, nginx服务. 用法: fab h156 lean-deploy
     :param remote: 远程代码仓库名, 默认origin
     :param branch: 远程代码仓库分支, 默认master
 
