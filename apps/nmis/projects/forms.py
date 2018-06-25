@@ -253,8 +253,8 @@ class ProjectPlanListForm(BaseForm):
 
         if self.req.GET.get('upper_expired_date', '').strip() and \
                 self.req.GET.get('lower_expired_date', '').strip():
-            data['created_time__gte'] = self.req.GET.get('upper_expired_date', '').strip()
-            data['created_time__lte'] = self.req.GET.get('lower_expired_date', '').strip()
+            data['created_time__lte'] = self.req.GET.get('upper_expired_date', '').strip()
+            data['created_time__gte'] = self.req.GET.get('lower_expired_date', '').strip()
 
         # 判断是否存在项目名和项目负责人关键字
         if self.req.GET.get('pro_title_leader', '').strip():
