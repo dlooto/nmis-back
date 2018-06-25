@@ -94,9 +94,9 @@ class StaffSignupForm(BaseForm):
         'err_group_not_exist': '权限组不存在',
     }
 
-    def __init__(self, hospital, dept, data, *args, **kwargs):
+    def __init__(self, organ, dept, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
-        self.organ = hospital
+        self.organ = organ
         self.dept = dept
 
     def is_valid(self):
@@ -210,7 +210,6 @@ class StaffUpdateForm(BaseForm):
         'err_staff_name': '员工姓名错误',
         'err_contact_phone':        '联系电话格式错误',
         'err_email':                 '无效邮箱',
-        'err_hospital':              '医院信息错误',
         'err_dept':                   '科室信息错误',
         'err_staff_title': '职位名为空或格式错误'
     }

@@ -14,11 +14,11 @@ env
 dump.rdb
 
 .cache
+.pytest_cache
 .env
 *.rdb
 
 apps/settings/local.py
 apps/settings/__init__.py
-apps/runtests/.pytest_cache
 apps/build
 apps/celerybeat-schedule.db

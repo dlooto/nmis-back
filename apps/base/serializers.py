@@ -25,7 +25,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
         """
         if isinstance(time_obj, str):
             return time_obj
-        return time_obj.strftime('%Y-%m-%d %H:%M:%S')
+        return time_obj.strftime('%Y-%m-%d %H:%M:%S') if time_obj else ''
 
 
 class PlugPageNumberPagination(PageNumberPagination):

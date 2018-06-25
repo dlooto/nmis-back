@@ -7,22 +7,19 @@
 
 import logging
 
-from rest_framework.permissions import AllowAny
-
 from base import resp
-from utils import times
 from base.common.decorators import check_id, check_id_list, check_params_not_null, \
     check_params_not_all_null
-from base.common.permissions import OrPermission
 from base.views import BaseAPIView
 from nmis.devices.models import OrderedDevice
 from nmis.hospitals.models import Hospital, Staff, Department
 from nmis.hospitals.permissions import HospitalStaffPermission,  \
-    IsHospitalAdmin, ProjectApproverPermission, IsOwnerOrReadOnly
+    IsHospitalAdmin, ProjectDispatcherPermission
 from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm, \
     OrderedDeviceCreateForm, OrderedDeviceUpdateForm, ProjectFlowCreateForm, \
     ProjectPlanListForm
-from nmis.projects.models import ProjectPlan
+
+from nmis.projects.models import ProjectPlan, ProjectFlow
 
 logs = logging.getLogger(__name__)
 
@@ -32,7 +29,7 @@ class ProjectPlanListView(BaseAPIView):
     项目列表操作
     """
 
-    permission_classes = (IsHospitalAdmin, ProjectApproverPermission)
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
     @check_params_not_null(['hospital_id'])
     def get(self, req):
@@ -106,7 +103,7 @@ class ProjectPlanView(BaseAPIView):
     单个项目操作
     """
 
-    permission_classes = (IsHospitalAdmin, ProjectApproverPermission)
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
     @check_id('hospital_id')
     def get(self, req, project_id):     # 项目详情
@@ -151,8 +148,37 @@ class ProjectPlanView(BaseAPIView):
         raise NotImplementedError()
 
 
+class ProjectPlanDispatchView(BaseAPIView):
+    """
+    项目分配责任人
+    """
+
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+
+    @check_id_list(['performer_id', 'flow_id'])
+    @check_params_not_null(['expired_time'])
+    def post(self, req, project_id):
+        self.check_object_permissions(req, req.user.get_profile().organ)  # 检查操作者权限
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        objects = self.get_objects_or_404({'performer_id': Staff, 'flow_id': ProjectFlow})
+        success = project.dispatch(
+            objects.get('performer_id'), flow=objects.get('flow_id'), expired_time=req.data.get('expired_time')
+        )
+        return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
+
+
+class ProjectPlanChangeMilestoneView(BaseAPIView):
+    """
+    变更项目里程碑状态
+    """
+
+    def post(self, req, project_id):
+        pass
+
+
 class ProjectDeviceCreateView(BaseAPIView):
-    permission_classes = (IsHospitalAdmin, ProjectApproverPermission)
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
     def post(self, req, project_id):
         """ 添加设备 """
@@ -169,7 +195,7 @@ class ProjectDeviceCreateView(BaseAPIView):
 
 class ProjectDeviceView(BaseAPIView):
 
-    permission_classes = (IsHospitalAdmin, ProjectApproverPermission)
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
     def put(self, req, project_id, device_id):
         """ 修改设备信息 """
@@ -325,7 +351,7 @@ class MyProjectListView(BaseAPIView):
 
 
 class AllotProjectListView(BaseAPIView):
-    permission_classes = (IsHospitalAdmin, ProjectApproverPermission, )
+    permission_classes = (IsHospitalAdmin, )
 
     @check_id('hospital_id')
     def get(self, req):
@@ -336,5 +362,5 @@ class AllotProjectListView(BaseAPIView):
         self.check_object_permissions(req, hospital)
         allot_project_list = ProjectPlan.objects.get_allot_projects()
         return resp.serialize_response(
-            allot_project_list, srl_cls_name='MChunkProjectPlanSerializer', results_name='projects'
+            allot_project_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
         )
