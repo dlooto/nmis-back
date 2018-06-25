@@ -11,7 +11,7 @@ import logging
 import settings
 
 from django.contrib import admin
-from nmis.projects.models import ProjectFlow
+from nmis.projects.models import ProjectFlow, ProjectMilestoneRecord
 
 from .models import ProjectPlan, Milestone
 
@@ -31,7 +31,11 @@ class ProjectFlowAdmin(admin.ModelAdmin):
 class MilestoneAdmin(admin.ModelAdmin):
     list_display = ('id', 'flow', 'title', 'index', 'created_time')
 
+class ProjectMilestoneRecordAdmin(admin.ModelAdmin):
+    list_display = ('id', 'project', 'milestone', 'created_time')
+
 
 admin.site.register(ProjectPlan, ProjectPlanAdmin)
 admin.site.register(ProjectFlow, ProjectFlowAdmin)
 admin.site.register(Milestone, MilestoneAdmin)
+admin.site.register(ProjectMilestoneRecord, ProjectMilestoneRecordAdmin)

@@ -8,7 +8,7 @@
 import logging
 
 from runtests import BaseTestCase
-from runtests.integration.mixins import ProjectPlanMixin
+from runtests.common.mixins import ProjectPlanMixin
 
 logs = logging.getLogger(__name__)
 
