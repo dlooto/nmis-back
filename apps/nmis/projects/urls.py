@@ -38,6 +38,12 @@ urlpatterns = [
     # 项目具体的某个设备get/update/delete操作
     path('<int:project_id>/devices/<int:device_id>',      views.ProjectDeviceView.as_view(), ),
 
+    # 我的项目列表，带筛选条件
+    path('my-projects',      views.MyProjectListView.as_view()),
+
+    # 所有待分配项目列表
+    path('allot-projects',   views.AllotProjectListView.as_view()),
+
     # 项目流程接口
     path('flows',               views.ProjectFlowListView.as_view(), ),     # List
     path('flows/create',        views.ProjectFlowCreateView.as_view(), ),   # create

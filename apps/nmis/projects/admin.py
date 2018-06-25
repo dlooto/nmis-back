@@ -28,6 +28,7 @@ class ProjectPlanAdmin(admin.ModelAdmin):
 class ProjectFlowAdmin(admin.ModelAdmin):
     list_display = ('id', 'organ', 'title', 'type', 'pre_defined', 'created_time')
 
+
 class MilestoneAdmin(admin.ModelAdmin):
     list_display = ('id', 'flow', 'title', 'index', 'created_time')
 
