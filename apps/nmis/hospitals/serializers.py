@@ -24,9 +24,15 @@ class HospitalSerializer(BaseModelSerializer):
 
 class DepartmentSerializer(BaseModelSerializer):
 
+    organ_name = serializers.SerializerMethodField('_get_organ_name')
+
     class Meta:
         model = Department
-        fields = '__all__'
+        fields = ('id', 'created_time', 'name', 'contact', 'desc', 'attri', 'organ_id',
+                  'organ_name')
+
+    def _get_organ_name(self, obj):
+        return '' if not obj.organ else obj.organ.organ_name
 
 
 class StaffSerializer(BaseModelSerializer):
@@ -72,8 +78,13 @@ class StaffSerializer(BaseModelSerializer):
 
 
 class GroupSerializer(BaseModelSerializer):
+
+    organ_name = serializers.SerializerMethodField('_get_organ_name')
+
     class Meta:
         model = Group
-        fields = '__all__'
+        fields = ('id', 'created_time', 'name', 'is_admin', 'desc', 'cate', 'organ_id',
+                  'organ_name', 'permissions')
 
-
+    def _get_organ_name(self, obj):
+        return '' if not obj.organ else obj.organ.organ_name

@@ -7,19 +7,18 @@
 
 import logging
 
-from rest_framework.permissions import AllowAny
-
 from base import resp
 from base.common.decorators import check_id, check_id_list, check_params_not_null, \
     check_params_not_all_null
-from base.common.permissions import OrPermission
 from base.views import BaseAPIView
 from nmis.devices.models import OrderedDevice
 from nmis.hospitals.models import Hospital, Staff, Department
 from nmis.hospitals.permissions import HospitalStaffPermission,  \
-    IsHospitalAdmin, ProjectDispatcherPermission, IsOwnerOrReadOnly
+    IsHospitalAdmin, ProjectDispatcherPermission
 from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm, \
-    OrderedDeviceCreateForm, OrderedDeviceUpdateForm, ProjectFlowCreateForm
+    OrderedDeviceCreateForm, OrderedDeviceUpdateForm, ProjectFlowCreateForm, \
+    ProjectPlanListForm
+
 from nmis.projects.models import ProjectPlan, ProjectFlow
 
 logs = logging.getLogger(__name__)
@@ -324,9 +323,44 @@ class MilestoneView(BaseAPIView):
         pass
 
 
+class MyProjectListView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, )
+
+    @check_id('hospital_id')
+    def get(self, req):
+        """
+        我的项目列表，带筛选
+        参数列表：
+            hospital_id	int		当前医院ID
+            upper_expired_date	string		截止时间1（2018-06-01）
+            lower_expired_date	string		截止时间2（2018-06-19）
+            pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
+            pro_title_leader	string		项目名称/项目负责人
+            creator_id	int		申请人ID（此ID为当前登录用户ID），筛选我申请的项目
+            performer_id int	项目负责人ID（此ID为当前登录用户ID），筛选我负责的项目
+
+        """
+        hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        self.check_object_permissions(req, hospital)
+        form = ProjectPlanListForm(req)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        return resp.serialize_response(
+            form.my_projects_plan(), srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+        )
 
 
+class AllotProjectListView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, )
 
-
-
-
+    @check_id('hospital_id')
+    def get(self, req):
+        """
+        获取所有待分配的项目列表
+        """
+        hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        self.check_object_permissions(req, hospital)
+        allot_project_list = ProjectPlan.objects.get_allot_projects()
+        return resp.serialize_response(
+            allot_project_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+        )

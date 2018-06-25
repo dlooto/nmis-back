@@ -98,7 +98,6 @@ class Hospital(BaseOrgan):
         staffs_queryset = Staff.objects.filter(organ=self)
         return staffs_queryset.filter(dept=dept) if dept else staffs_queryset
 
-
     ################################################
     #                  权限组操作
     ################################################

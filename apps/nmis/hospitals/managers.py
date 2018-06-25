@@ -41,6 +41,14 @@ class StaffManager(BaseManager):
             logging.exception(e)
             return None
 
+    def get_staffs_by_name(self, staff_name):
+        """
+        通过名字模糊查询返回员工列表
+        :param staff_name: 员工姓名
+        :return:
+        """
+        return self.filter(name__contains=staff_name)
+
 
 class GroupManager(BaseManager):
 
