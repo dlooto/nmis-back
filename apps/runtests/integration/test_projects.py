@@ -9,7 +9,7 @@ import logging
 
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
-from utils.times import now, yesterday
+from utils.times import now, yesterday, tomorrow
 
 logs = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         api = "/api/v1/projects/my-projects"
 
         self.login_with_username(self.user)
-        for index in range(1, 5):
+        for index in range(0, 5):
             project = self.create_project(self.admin_staff, self.dept,
                                           title='测试项目_{}'.format(self.get_random_suffix()))
 
@@ -126,14 +126,18 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             'pro_status': 'PE',
             'pro_title_leader': '测试',
             'creator_id': self.admin_staff.id,
-            'current_stone_id': ''
+            'current_stone_id': '',
+            'type': 'my_projects'
         }
 
         response = self.get(api, data=project_data)
         self.assert_response_success(response)
 
         self.assertIsNotNone(response.get('projects'))
-        self.assert_object_in_results({'creator_id': self.admin_staff.id}, response.get('projects'))
+        self.assertEquals(len(response.get('projects')), 5)
+        self.assert_object_in_results(
+            {'creator_id': self.admin_staff.id}, response.get('projects')
+        )
 
     def test_undispatched_project_list(self):
         """
@@ -147,7 +151,8 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         project2 = self.create_project(self.admin_staff, self.dept, title='我是待分配项目2')
 
         project_data = {
-           'organ_id': self.organ.id
+            'organ_id': self.organ.id,
+            'type': 'undispatch'
         }
         response = self.get(api, data=project_data)
 
@@ -161,4 +166,23 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         """
         API测试：分配项目给负责人接口测试
         """
-        pass
+        api = '/api/v1/projects/{}/dispatch'
+        self.login_with_username(self.user)
+        # 创建项目
+        project_plan = self.create_project(self.admin_staff, self.dept, title='待分配项目')
+
+        # 创建项目流程
+        project_flow = self.create_flow(self.organ)
+
+        data = {
+            'performer_id': self.admin_staff.id,
+            'flow_id': project_flow.id,
+            'expired_time': str(tomorrow())
+        }
+
+        response = self.post(api.format(project_plan.id), data=data)
+        self.assert_response_success(response)
+        project = response.get('project')
+        self.assertIsNotNone(project.get('performer_id'))
+        self.assertIsNotNone(project.get('attached_flow_id'))
+        self.assertEquals(project_plan.id, project.get('id'))
