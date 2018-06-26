@@ -46,8 +46,8 @@ class ProjectPlanManager(BaseManager):
     def get_allot_projects(self):
         return self.filter(performer=None)
 
-    def get_projects_by_performer(self, staff_id_list):
-        return self.filter(performer__in=staff_id_list)
+    def get_projects_by_performer(self, staffs):
+        return self.filter(performer__in=staffs)
 
     def get_projects_by_title(self, title):
         return self.filter(title__contains=title)

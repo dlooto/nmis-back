@@ -9,7 +9,7 @@ import logging
 
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
-from utils import times
+from utils.times import now, yesterday
 
 logs = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
     project_create_api = '/api/v1/projects/create'  # 项目创建
     single_project_api = '/api/v1/projects/{}'      # 单个项目操作API接口
+    project_milestone_change_api = '/api/v1/projects/{}/change-milestone'
 
     def test_project_detail(self):
         """
@@ -107,3 +108,61 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_object_in_results(project_data.get('ordered_devices')[0],
                                       result_project.get('ordered_devices'))
 
+    def test_my_project_list(self):
+        """
+        api测试：我的项目列表(带筛选)api接口测试
+        """
+        self.login_with_username(self.user)
+        for index in range(1, 5):
+            project = self.create_project(self.admin_staff, self.dept,
+                                          title='测试项目_{}'.format(self.get_random_suffix()))
+
+        project_data = {
+            'organ_id': self.organ.id,
+            'lower_expired_date': yesterday(),
+            'upper_expired_date': now(),
+            'pro_status': 'PE',
+            'pro_title_leader': '测试',
+            'creator_id': self.admin_staff.id,
+            'current_stone_id': ''
+        }
+
+        response = self.get(
+            self.my_project_list_api,
+            data=project_data
+        )
+        self.assert_response_success(response)
+
+        self.assertIsNotNone(response.get('projects'))
+        self.assert_object_in_results({'creator_id': self.admin_staff.id}, response.get('projects'))
+
+    def test_allot_project_list(self):
+        """
+        api测试：待分配项目api接口测试
+        """
+        self.login_with_username(self.user)
+        # 创建一个待分配项目
+        project = self.create_project(self.admin_staff, self.dept, title='我是待分配项目')
+
+        project_data = {
+           'organ_id': self.organ.id
+        }
+        response = self.get(
+            self.allot_project_list_api,
+            data=project_data
+        )
+
+        self.assert_response_success(response)
+        results = response.get('projects')
+        self.assertIsNone(results)
+        self.assert_object_in_results({'title': project.title}, results)
+
+    def test_project_milestone_change(self):
+        # project_milestone_change_api
+        pass
+
+    def test_project_dispatch(self):
+        """
+        API测试：分配项目给负责人接口测试
+        """
+        pass
