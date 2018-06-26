@@ -395,7 +395,7 @@ class DepartmentView(BaseAPIView):
         """
         查询单个科室详细信息
         :param req:
-        :param hid: hospital_id
+        :param hid: organ_id
         :return: 科室存在：返回科室详细信息，不存在科室：返回404
         """
         dept = self.get_object_or_404(dept_id, Department)

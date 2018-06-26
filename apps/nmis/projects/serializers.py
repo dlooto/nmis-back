@@ -132,4 +132,6 @@ class ProjectFlowSerializer(BaseModelSerializer):
 class MilestoneSerializer(BaseModelSerializer):
     class Meta:
         model = Milestone
-        fields = '__all__'
+        fields = (
+            'id', 'title', 'index', 'flow_id', 'desc', 'created_time',
+        )

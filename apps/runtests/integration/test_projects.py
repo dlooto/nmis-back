@@ -31,7 +31,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         # 仅项目管理者(医院管理员, 项目分配者)及项目提交者可以查看项目详情
         data = {
-            "hospital_id": self.organ.id,
+            "organ_id": self.organ.id,
         }
         project = self.create_project(self.admin_staff, self.dept, title="新项目")
         response = self.get(self.single_project_api.format(project.id), data=data)
@@ -52,7 +52,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         old_device = old_project.get_ordered_devices()[0]
 
         project_data = {
-            "hospital_id": self.organ.id,
+            "organ_id": self.organ.id,
             "project_title": "新的项目名称",
             "purpose": "修改后的用途说明",
         }

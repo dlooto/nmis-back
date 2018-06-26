@@ -113,13 +113,13 @@ class ProjectPlanView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
-    @check_id('hospital_id')
+    @check_id('organ_id')
     def get(self, req, project_id):     # 项目详情
         """
         需要项目管理员权限或者项目为提交者自己的项目
         """
         project = ProjectPlan.objects.get_by_id(project_id)
-        hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
         if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
             self.check_object_any_permissions(req, hospital)
 
@@ -127,14 +127,14 @@ class ProjectPlanView(BaseAPIView):
             project, results_name="project", srl_cls_name='ChunkProjectPlanSerializer'
         )
 
-    @check_id('hospital_id')
+    @check_id('organ_id')
     @check_params_not_all_null(['project_title', 'purpose'])
     def put(self, req, project_id):
         """
         修改项目. 该接口仅可以修改项目本身的属性, 若修改设备明细, 需要调用其他接口对设备逐个进行修改.
         """
 
-        hospital = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
         old_project = ProjectPlan.objects.get_by_id(project_id)
         if not (req.user.get_profile() == old_project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
             self.check_object_any_permissions(req, hospital)
@@ -352,7 +352,7 @@ class MyProjectListView(BaseAPIView):
         """
         我的项目列表，带筛选
         参数列表：
-            hospital_id	int		当前医院ID
+            organ_id	int		当前医院ID
             upper_expired_date	string		截止时间2（2018-06-01）
             lower_expired_date	string		截止时间1（2018-06-19）
             pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
