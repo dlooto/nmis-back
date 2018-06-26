@@ -95,13 +95,15 @@ class DepartmentApiTestCase(BaseTestCase):
         测试科室列表
         """
         self.login_with_username(self.user)
-
+        dept = self.create_department(self.organ,
+                                      dept_name='测试科室_{}'.format(self.get_random_suffix()))
         response = self.get(
             self.dept_list.format(self.organ.id)
         )
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('dept'))
+        self.assert_object_in_results({'name': dept.name}, response.get('dept'))
 
 
 class StaffsPermChangeTestCase(BaseTestCase):

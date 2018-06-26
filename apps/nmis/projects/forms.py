@@ -265,9 +265,8 @@ class ProjectPlanListForm(BaseForm):
             staffs = Staff.objects.get_staffs_by_name(
                 staff_name=self.req.GET.get('pro_title_leader', '').strip()
             )
-            staff_id_list = [staff.id for staff in staffs]
             projects_staffs = ProjectPlan.objects.get_projects_by_performer(
-                staff_id_list=staff_id_list
+                staffs=staffs
             )
             return (projects_title | projects_staffs).filter(**data)
 
