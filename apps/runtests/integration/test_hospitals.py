@@ -235,7 +235,6 @@ class StaffAPITestCase(BaseTestCase):
             ), data=update_staff_data
         )
         self.assert_response_success(response)
-        #self.assert_response_failure(response)
         self.assertIsNotNone(response.get('staff'), '没获取到修改后的员工信息')
         self.assertIsNotNone(response.get('staff').get('staff_name'), '没有获取到修改后的员工姓名')
         self.assertEqual(response.get('staff').get('staff_name'), update_staff_data['staff_name'])

@@ -61,7 +61,7 @@ class HospitalSignupForm(OrganSignupForm):
             new_organ.init_default_groups()
 
             # create admin staff for the new organ
-            staff = Hospital.objects.create_staff(**{
+            staff = new_organ.create_staff(**{
                 'user': creator,
                 'organ': new_organ,
 

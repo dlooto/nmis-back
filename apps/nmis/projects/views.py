@@ -7,21 +7,25 @@
 
 import logging
 
-from rest_framework.permissions import AllowAny
-
 from base import resp
-from base.common.decorators import check_id, check_id_list, check_params_not_null, \
-    check_params_not_all_null
-from base.common.permissions import OrPermission
+from base.common.decorators import (
+    check_id, check_id_list, check_params_not_null, check_params_not_all_null
+)
 from base.views import BaseAPIView
 
 from nmis.devices.models import OrderedDevice
 from nmis.hospitals.models import Hospital, Staff, Department
-from nmis.hospitals.permissions import HospitalStaffPermission,  \
-    IsHospitalAdmin, ProjectDispatcherPermission, IsOwnerOrReadOnly
-from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm, \
-    OrderedDeviceCreateForm, OrderedDeviceUpdateForm, ProjectFlowCreateForm, \
+from nmis.hospitals.permissions import (
+    HospitalStaffPermission, IsHospitalAdmin, ProjectDispatcherPermission
+)
+from nmis.projects.forms import (
+    ProjectPlanCreateForm,
+    ProjectPlanUpdateForm,
+    OrderedDeviceCreateForm,
+    OrderedDeviceUpdateForm,
+    ProjectFlowCreateForm,
     ProjectPlanListForm
+)
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
 from nmis.projects.permissions import ProjectPerformerPermission
 
@@ -35,7 +39,7 @@ class ProjectPlanListView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
-    @check_params_not_null(['hospital_id'])
+    @check_params_not_null(['organ_id'])
     def get(self, req):
         pass
 
@@ -343,7 +347,7 @@ class MilestoneView(BaseAPIView):
 class MyProjectListView(BaseAPIView):
     permission_classes = (IsHospitalAdmin, )
 
-    @check_id('hospital_id')
+    @check_id('organ_id')
     def get(self, req):
         """
         我的项目列表，带筛选

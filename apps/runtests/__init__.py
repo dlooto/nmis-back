@@ -34,6 +34,9 @@ class TestCaseDataUtils(object):
         return user
 
     def create_user_with_username(self, username=None, password=None, active=False, **kwargs):
+        """
+        根据username创建新user对象
+        """
         username = username or 'test_user_{}'.format(self.get_random_suffix())
         password = password or self.generate_password()
 

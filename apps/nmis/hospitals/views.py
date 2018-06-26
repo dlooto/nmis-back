@@ -93,16 +93,12 @@ class HospitalView(BaseAPIView):
         if opt_type not in ('auth_approved', ):
             return resp.failed('请求参数错误')
 
-        organ = Hospital.objects.get_cached(hid)
-        if not organ:
-            return resp.object_not_found()
+        organ = self.get_object_or_404(hid)
 
         if opt_type == 'auth_approved':
             organ.accept()
             return resp.serialize_response(organ)
 
-        # if opt_type == 'xxxx_option':
-        #   do something...
         return resp.failed()
 
 
@@ -267,7 +263,7 @@ class StaffListView(BaseAPIView):
         organ = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, organ)
 
-        staff_list = Staff.objects.filter(organ=organ)
+        staff_list = organ.get_staffs()
         return resp.serialize_response(staff_list, results_name='staffs')
 
 
@@ -281,6 +277,7 @@ class StaffsBatchImportView(BaseAPIView):
         :param req:
         :param hid:
         :return:
+
         TODO：先实现文件上传解析功能，再补充校验
         检查文件格式，目前仅支持xlsx格式
         检查医疗机构是否存在

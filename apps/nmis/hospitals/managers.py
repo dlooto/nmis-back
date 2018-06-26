@@ -17,7 +17,12 @@ logs = logging.getLogger(__name__)
 
 
 class HospitalManager(BaseManager):
-    pass
+
+    def create_hospital(self, **kwargs):
+        """
+         暂未实现
+        """
+        pass
 
 
 class StaffManager(BaseManager):
