@@ -50,7 +50,7 @@ class ProjectPlanCreateView(BaseAPIView):
     """
     permission_classes = [HospitalStaffPermission, ]
 
-    @check_id_list(["hospital_id", "creator_id", "related_dept_id"])
+    @check_id_list(["organ_id", "creator_id", "related_dept_id"])
     @check_params_not_null(['project_title', 'ordered_devices'])
     def post(self, req):
         """
@@ -58,7 +58,7 @@ class ProjectPlanCreateView(BaseAPIView):
 
         Example:
         {
-            "hospital_id": 20180606,
+            "organ_id": 20180606,
             "project_title": "政府要求采购项目",
             "purpose": "本次申请经科室共同研究决定, 响应政府号召",
             "creator_id": 20181001,
@@ -84,12 +84,12 @@ class ProjectPlanCreateView(BaseAPIView):
          }
         """
         objects = self.get_objects_or_404({
-            "hospital_id":      Hospital,
+            "organ_id":      Hospital,
             "creator_id":       Staff,
             "related_dept_id":  Department
         })
 
-        self.check_object_permissions(req, objects['hospital_id'])
+        self.check_object_permissions(req, objects['organ_id'])
 
         form = ProjectPlanCreateForm(
             objects['creator_id'], objects['related_dept_id'],

@@ -71,7 +71,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.login_with_username(self.user)
 
         project_data = {
-            "hospital_id": self.organ.id,
+            "organ_id": self.organ.id,
             "project_title": "牛逼项目1",
             "purpose": "牛逼的不能为外人说道的目标",
             "creator_id": self.admin_staff.id,
