@@ -12,7 +12,7 @@ import logging
 logs = logging.getLogger(__name__)
 
 
-class BaseForm():
+class 及ji():
     """
     Form表单验证基础类. 各子类对该基础类进行重写  :TODO: 待完善...
 
@@ -30,16 +30,18 @@ class BaseForm():
         self.data = data
         self.errors = {}
 
-    def update_errors(self, field_name, err_key):
+    def update_errors(self, field_name, err_key, *args, **kwargs):
         """
         更新验证错误信息字典
         :param field_name: 返回的错误字典中字段名
         :param err_key: 错误信息key值
         """
-        self.errors.update({field_name: self.get_err_msg(err_key)})
+        self.errors.update({field_name: self.get_err_msg(err_key, *args, **kwargs)})
 
-    def get_err_msg(self, err_key):
-        return self.ERR_CODES.get(err_key)
+    def get_err_msg(self, err_key, *args, **kwargs):
+        if not args and not kwargs:
+            return self.ERR_CODES.get(err_key)
+        return self.ERR_CODES.get(err_key).format(*args, **kwargs)
 
     def is_valid(self):
         pass
