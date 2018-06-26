@@ -291,7 +291,9 @@ class StaffAPITestCase(BaseTestCase):
         api = '/api/v1/hospitals/{0}/staffs/batch-upload'
 
         self.login_with_username(self.user)
-        staff_file_obj = open(FIXTURE_DIRS[0]+'/test/staff-normal-test.xlsx', 'rb')
+        import os
+        curr_path = os.path.dirname(__file__)
+        staff_file_obj = open(curr_path+'/data/staff-normal-test.xlsx', 'rb')
         response = self.raw_post(api.format(self.organ.id), {'staff_excel_file': staff_file_obj})
         self.assert_response_success(response)
 
