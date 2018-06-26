@@ -109,5 +109,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
 
     def test_project_milestone_change(self):
+        """
+        api测试: 变更项目里程碑状态
+        """
         # project_milestone_change_api
-        pass
