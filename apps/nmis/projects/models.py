@@ -145,13 +145,27 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return False
 
-    def contains_milestone_record(self, milestone):
+    def get_recorded_milestones(self):
+        """
+        返回已进行到的里程碑节点列表
+        :return:
+        """
+        return self.milestones.all()
+
+    def get_milestone_changed_records(self):
+        """
+        返回项目里程碑变更记录列表
+        :return: ProjectMilestoneRecord object
+        """
+        return ProjectMilestoneRecord.objects.filter(project=self)
+
+    def contains_recorded_milestone(self, milestone):
         """
         判断里程碑状态是否存在项目状态列表记录中
         :param milestone:
         :return:
         """
-        if milestone in self.milestones.all():
+        if milestone in self.get_recorded_milestones():
             return True
         return False
 
@@ -170,7 +184,7 @@ class ProjectPlan(BaseModel):
         if new_milestone == self.current_stone:
             return False, "已处于该状态"
 
-        if new_milestone in self.milestones.all():
+        if new_milestone in self.get_recorded_milestones():
             return False, "里程碑已存在项目状态记录中"
 
         try:
