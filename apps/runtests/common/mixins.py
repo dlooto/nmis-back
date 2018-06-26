@@ -70,11 +70,14 @@ class ProjectPlanMixin(object):
         }
         return ProjectPlan.objects.create_project(ordered_devices, **project_data)
 
-    def create_flow(self, milestones=MILESTONES, **flow_data):
+    def create_flow(self, organ, milestones=MILESTONES):
         """
 
         :param milestones:
         :param flow_data: format like: {"title": "测试流程", "organ": organ}
         :return:
         """
+        flow_data = {
+            "title": "测试流程", "organ": organ
+        }
         return ProjectFlow.objects.create_flow(milestones, **flow_data)

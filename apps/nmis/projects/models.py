@@ -154,6 +154,9 @@ class ProjectPlan(BaseModel):
         :param new_milestone: 新的里程碑状态对象
         :return: True or False
         """
+        if self.is_unstarted():
+            return False, "项目尚未启动"
+
         if not self.attached_flow.contains(new_milestone):
             return False, "里程碑项不属于当前所用流程, 请检查数据是否异常"
 
@@ -247,7 +250,6 @@ class Milestone(BaseModel):
                     return next(it)
             except StopIteration:
                 return None
-
 
     def previous(self):
         """ 上一个里程碑项 """

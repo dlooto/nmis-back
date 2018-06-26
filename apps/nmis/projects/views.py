@@ -254,14 +254,14 @@ class ProjectFlowCreateView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, )
 
-    @check_id('hospital_id')
+    @check_id('organ_id')
     @check_params_not_null(['flow_title', 'milestones'])
     def post(self, req):
         """
 
         参数Example:
         {
-            "hospital_id": 10001,
+            "organ_id": 10001,
             "flow_title":       "项目标准流程",
             "milestones": [
                 {
@@ -275,7 +275,7 @@ class ProjectFlowCreateView(BaseAPIView):
             ]
         }
         """
-        hosp = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        hosp = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
         self.check_object_permissions(req, hosp)
 
         form = ProjectFlowCreateForm(hosp, req.data)

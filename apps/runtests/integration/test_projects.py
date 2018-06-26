@@ -9,6 +9,7 @@ import logging
 
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
+from utils import times
 
 logs = logging.getLogger(__name__)
 
@@ -20,7 +21,6 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
     project_create_api = '/api/v1/projects/create'  # 项目创建
     single_project_api = '/api/v1/projects/{}'      # 单个项目操作API接口
-    project_milestone_change_api = '/api/v1/projects/{}/change-milestone'
 
     def test_project_detail(self):
         """
@@ -107,9 +107,3 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_object_in_results(project_data.get('ordered_devices')[0],
                                       result_project.get('ordered_devices'))
 
-
-    def test_project_milestone_change(self):
-        """
-        api测试: 变更项目里程碑状态
-        """
-        # project_milestone_change_api

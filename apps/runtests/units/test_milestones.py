@@ -21,11 +21,7 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         self.project = self.create_project(self.admin_staff, self.dept)
         self.performer = self.create_completed_staff(self.organ, self.dept, name="项目负责人x")
 
-        flow_data = {
-            "title": "测试流程",
-            "organ": self.organ
-        }
-        self.flow = self.create_flow(**flow_data)
+        self.flow = self.create_flow(self.organ)
 
     def test_project_dispatch(self):
         """
