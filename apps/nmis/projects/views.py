@@ -7,20 +7,27 @@
 
 import logging
 
-from rest_framework.permissions import AllowAny
-
 from base import resp
-from base.common.decorators import check_id, check_id_list, check_params_not_null, \
-    check_params_not_all_null
-from base.common.permissions import OrPermission
+from base.common.decorators import (
+    check_id, check_id_list, check_params_not_null, check_params_not_all_null
+)
 from base.views import BaseAPIView
+
 from nmis.devices.models import OrderedDevice
 from nmis.hospitals.models import Hospital, Staff, Department
-from nmis.hospitals.permissions import HospitalStaffPermission,  \
-    IsHospitalAdmin, ProjectDispatcherPermission, IsOwnerOrReadOnly
-from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm, \
-    OrderedDeviceCreateForm, OrderedDeviceUpdateForm, ProjectFlowCreateForm
-from nmis.projects.models import ProjectPlan, ProjectFlow
+from nmis.hospitals.permissions import (
+    HospitalStaffPermission, IsHospitalAdmin, ProjectDispatcherPermission
+)
+from nmis.projects.forms import (
+    ProjectPlanCreateForm,
+    ProjectPlanUpdateForm,
+    OrderedDeviceCreateForm,
+    OrderedDeviceUpdateForm,
+    ProjectFlowCreateForm,
+    ProjectPlanListForm,
+    ProjectFlowUpdateForm)
+from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
+from nmis.projects.permissions import ProjectPerformerPermission
 
 logs = logging.getLogger(__name__)
 
@@ -32,7 +39,7 @@ class ProjectPlanListView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
-    @check_params_not_null(['hospital_id'])
+    @check_params_not_null(['organ_id'])
     def get(self, req):
         pass
 
@@ -174,8 +181,21 @@ class ProjectPlanChangeMilestoneView(BaseAPIView):
     变更项目里程碑状态
     """
 
+    permission_classes = (ProjectPerformerPermission, )
+
+    @check_id_list(['milestone_id', ])
     def post(self, req, project_id):
-        pass
+        project = self.get_object_or_404(project_id, ProjectPlan, use_cache=False)
+        self.check_object_permissions(req, project)
+
+        new_milestone = self.get_objects_or_404({'milestone_id': Milestone}, use_cache=False)['milestone_id']
+        success, msg = project.change_milestone(new_milestone)
+        if not success:
+            return resp.failed(msg)
+
+        return resp.serialize_response(
+            project, results_name='project', srl_cls_name='ChunkProjectPlanSerializer'
+        )
 
 
 class ProjectDeviceCreateView(BaseAPIView):
@@ -238,14 +258,14 @@ class ProjectFlowCreateView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, )
 
-    @check_id('hospital_id')
+    @check_id('organ_id')
     @check_params_not_null(['flow_title', 'milestones'])
     def post(self, req):
         """
 
         参数Example:
         {
-            "hospital_id": 10001,
+            "organ_id": 10001,
             "flow_title":       "项目标准流程",
             "milestones": [
                 {
@@ -259,7 +279,7 @@ class ProjectFlowCreateView(BaseAPIView):
             ]
         }
         """
-        hosp = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        hosp = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
         self.check_object_permissions(req, hosp)
 
         form = ProjectFlowCreateForm(hosp, req.data)
@@ -286,18 +306,46 @@ class ProjectFlowView(BaseAPIView):
         """
         pass
 
+    @check_id('organ_id')
+    @check_params_not_null('flow_title')
     def put(self, req, flow_id):
         """
         修改流程名称及其他属性信息, 修改不包括添加/删除/修改流程内的里程碑项(已提取到单独的接口)
         仅允许管理员操作
+        TODO： 添加修改限制条件
         """
-        pass
+        objects = self.get_objects_or_404({'organ_id': Hospital, 'flow_id': ProjectFlow})
+        self.check_object_permissions(req, objects.get('organ_id'))
 
+        form = ProjectFlowUpdateForm(objects.get('flow_id'), req.data)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+
+        new_flow = form.save()
+        if not new_flow:
+            return resp.failed('操作失败')
+        return resp.serialize_response(new_flow, result_name='flow')
+
+    @check_id('organ_id')
     def delete(self, req, flow_id):
         """
         删除流程. 仅允许管理员操作
+
+        如果流程已经在使用，不能删除
+        TODO： 添加删除限制条件
         """
-        pass
+        objects = self.get_objects_or_404({'organ_id': Hospital, 'flow_id': ProjectFlow})
+        self.check_object_permissions(req, objects.get('organ_id'))
+
+        flow = objects.get('flow_id')
+        flow.clear_cache()
+        try:
+            flow.delete()
+        except Exception as e:
+            logs.info(e)
+            return resp.failed('操作失败')
+        return resp.failed('操作成功')
 
 
 class MilestoneCreateView(BaseAPIView):
@@ -324,7 +372,48 @@ class MilestoneView(BaseAPIView):
         pass
 
 
+class MyProjectListView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, )
 
+    @check_id('organ_id')
+    def get(self, req):
+        """
+        我的项目列表，带筛选
+        参数列表：
+            hospital_id	int		当前医院ID
+            upper_expired_date	string		截止时间2（2018-06-01）
+            lower_expired_date	string		截止时间1（2018-06-19）
+            pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
+            pro_title_leader	string		项目名称/项目负责人
+            creator_id	int		申请人ID（此ID为当前登录用户ID），筛选我申请的项目
+            performer_id int	项目负责人ID（此ID为当前登录用户ID），筛选我负责的项目
+
+        """
+        hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
+        self.check_object_permissions(req, hospital)
+        form = ProjectPlanListForm(req)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        return resp.serialize_response(
+            form.my_projects_plan(), srl_cls_name='ChunkProjectPlanSerializer',
+            results_name='projects'
+        )
+
+
+class AllotProjectListView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, )
+
+    @check_id('organ_id')
+    def get(self, req):
+        """
+        获取所有待分配的项目列表
+        """
+        hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
+        self.check_object_permissions(req, hospital)
+        allot_project_list = ProjectPlan.objects.get_allot_projects()
+        return resp.serialize_response(
+            allot_project_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+        )
 
 
 

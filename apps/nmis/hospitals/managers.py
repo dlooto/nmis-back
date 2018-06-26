@@ -17,7 +17,12 @@ logs = logging.getLogger(__name__)
 
 
 class HospitalManager(BaseManager):
-    pass
+
+    def create_hospital(self, **kwargs):
+        """
+         暂未实现
+        """
+        pass
 
 
 class StaffManager(BaseManager):
@@ -61,6 +66,14 @@ class StaffManager(BaseManager):
         except Exception as e:
             logging.exception(e)
             return False
+
+    def get_staffs_by_name(self, staff_name):
+        """
+        通过名字模糊查询返回员工列表
+        :param staff_name: 员工姓名
+        :return:
+        """
+        return self.filter(name__contains=staff_name)
 
 
 class GroupManager(BaseManager):

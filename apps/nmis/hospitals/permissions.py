@@ -86,23 +86,6 @@ class ProjectDispatcherPermission(BasePermission):
         return staff.organ == obj and staff.has_project_approver_perm()
 
 
-class ProjectCreatorPermission(BasePermission):
-    """
-    项目申请提交者权限
-    """
-    message = '仅允许项目申请提交者进行操作'
-
-    def has_permission(self, request, view):
-        return is_login(request)
-
-    def has_object_permission(self, request, view, obj):
-        """
-        :param obj: 为project object
-        """
-        staff = request.user.get_profile()
-        return obj.creator == staff if staff else False
-
-
 # class ProjectAdminPermission(BaseComposedPermission):
 #     """
 #     医院项目管理者权限

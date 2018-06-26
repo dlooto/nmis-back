@@ -47,6 +47,14 @@ class ProjectPlan(BaseModel):
         'projects.MileStone', verbose_name='项目里程碑结点',
         null=True, blank=True, on_delete=models.SET_NULL
     )
+
+    # 项目里程碑状态变更记录轨迹, 项目每次变更里程碑状态时添加一条记录数据
+    milestones = models.ManyToManyField(
+        'projects.Milestone', verbose_name=u'里程碑轨迹',
+        through='projects.ProjectMilestoneRecord', through_fields=('project', 'milestone'),
+        related_name="projects", related_query_name="project", blank=True
+    )
+
     status = models.CharField('项目状态', max_length=2, choices=PROJECT_STATUS_CHOICES, default=PRO_STATUS_PENDING)
     startup_time = models.DateTimeField(u'项目启动时间', null=True, blank=True)  # 项目分配负责人的时刻即为启动时间
     expired_time = models.DateTimeField(u'项目截止时间', null=True, blank=True)
@@ -95,23 +103,78 @@ class ProjectPlan(BaseModel):
 
     def dispatch(self, performer, **data):
         """
-        分派项目给某个员工作为责任人
+        分派项目给某个员工作为责任人. 项目分配责任人后即进入启动状态
         :param performer:  要分派的责任人, staff object
-        :param data: dict parameters
+        :param data: dict parameters, 一般情况下需要有flow, expired_time等参数
         :return: True or False
         """
         try:
-            self.performer = performer
-            self.attached_flow = data.pop("flow")
-            self.current_stone = self.attached_flow.get_first_milestone()
-            self.expired_time = data.pop("expired_time")
-            self.status = PRO_STATUS_STARTED
-            self.startup_time = times.now()
-            self.save()
+            with transaction.atomic():
+                self.performer = performer
+                self.attached_flow = data.pop("flow")
+                self.expired_time = data.pop("expired_time")
+                self.status = PRO_STATUS_STARTED
+                self.startup_time = times.now()
+
+                self.current_stone = self.attached_flow.get_first_milestone()
+                self.add_milestone_record(self.current_stone)
+
+                self.save()
             return True
         except Exception as e:
             logs.exception(e)
             return False
+
+    def add_milestone_record(self, milestone):
+        """
+        项目每变更一次里程碑状态, 则添加一条里程碑状态记录
+        :param milestone: Milestone object
+        :return: True or False
+        """
+        try:
+            ProjectMilestoneRecord.objects.create(project=self, milestone=milestone)
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
+
+    def contains_milestone_record(self, milestone):
+        """
+        判断里程碑状态是否存在项目状态列表记录中
+        :param milestone:
+        :return:
+        """
+        if milestone in self.milestones.all():
+            return True
+        return False
+
+    def change_milestone(self, new_milestone):
+        """
+        变更项目里程碑状态
+        :param new_milestone: 新的里程碑状态对象
+        :return: True or False
+        """
+        if self.is_unstarted():
+            return False, "项目尚未启动"
+
+        if not self.attached_flow.contains(new_milestone):
+            return False, "里程碑项不属于当前所用流程, 请检查数据是否异常"
+
+        if new_milestone == self.current_stone:
+            return False, "已处于该状态"
+
+        if new_milestone in self.milestones.all():
+            return False, "里程碑已存在项目状态记录中"
+
+        try:
+            with transaction.atomic():
+                self.add_milestone_record(new_milestone)
+                self.current_stone = new_milestone
+                self.save()
+            return True, "变更成功"
+        except Exception as e:
+            logs.exception(e)
+            return False, "数据异常"
 
 
 class ProjectFlow(BaseModel):
@@ -138,9 +201,19 @@ class ProjectFlow(BaseModel):
         return self.milestone_set.all()
 
     def get_first_milestone(self):
+        """ 返回流程中的第1个里程碑项 """
         return self.get_milestones().order_by('index')[:1][0]
 
+    def contains(self, milestone):
+        """
+        流程中是否包含指定milestone
+        :param milestone:
+        :return:
+        """
+        return milestone in self.get_milestones()
+
     def get_last_milestone(self):
+        """ 返回流程中的最后一个里程碑项 """
         pass
 
 
@@ -162,7 +235,47 @@ class Milestone(BaseModel):
         ordering = ['index']
 
     def __str__(self):
-        return self.title
+        return '%s %s' % (self.id, self.title)
+
+    def next(self, ):
+        """
+        返回当前里程碑项在流程中的下一个里程碑项
+        :return: milestone
+        """
+        it = iter(self.flow.get_milestones().order_by('index')) # 迭代器
+        while True:
+            try:
+                m = next(it)
+                if m == self:
+                    return next(it)
+            except StopIteration:
+                return None
+
+    def previous(self):
+        """ 上一个里程碑项 """
+        pass
+
+
+class ProjectMilestoneRecord(BaseModel):
+    """
+    项目里程碑变更记录. m/m关系: 一个项目的生命周期内, 有多条变更记录存在. 一个里程碑项可被多个项目
+     使用.
+    """
+    project = models.ForeignKey('projects.ProjectPlan', verbose_name='项目', on_delete=models.CASCADE)
+    milestone = models.ForeignKey(
+        'projects.Milestone', verbose_name='里程碑节点', on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+    # doc_list = models.CharField()  # 文档列表
+
+    class Meta:
+        verbose_name = '项目里程碑记录'
+        verbose_name_plural = '项目里程碑记录'
+        db_table = 'projects_project_milestone_record'
+
+    def __str__(self):
+        return self.project_id, self.milestone_id
+
 
 # class Contract(BaseModel):
 #     """

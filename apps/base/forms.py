@@ -12,7 +12,7 @@ import logging
 logs = logging.getLogger(__name__)
 
 
-class 及ji():
+class BaseForm():
     """
     Form表单验证基础类. 各子类对该基础类进行重写  :TODO: 待完善...
 

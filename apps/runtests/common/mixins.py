@@ -7,7 +7,7 @@
 
 import logging
 
-from nmis.projects.models import ProjectPlan
+from nmis.projects.models import ProjectPlan, ProjectFlow
 
 logs = logging.getLogger(__name__)
 
@@ -31,6 +31,26 @@ ORDERED_DEVICES = [
     }
 ]
 
+MILESTONES = [
+    {
+        "title": "前期准备",
+        "index": 1
+    },
+    {
+        "title": "合同签订",
+        "index": 2
+    },
+    {
+        "title": "进入实施",
+        "index": 3
+    },
+    {
+        "title": "已完成",
+        "index": 4
+    }
+
+]
+
 
 class ProjectPlanMixin(object):
     """
@@ -49,3 +69,15 @@ class ProjectPlanMixin(object):
             'related_dept': dept,
         }
         return ProjectPlan.objects.create_project(ordered_devices, **project_data)
+
+    def create_flow(self, organ, milestones=MILESTONES):
+        """
+
+        :param milestones:
+        :param flow_data: format like: {"title": "测试流程", "organ": organ}
+        :return:
+        """
+        flow_data = {
+            "title": "测试流程", "organ": organ
+        }
+        return ProjectFlow.objects.create_flow(milestones, **flow_data)

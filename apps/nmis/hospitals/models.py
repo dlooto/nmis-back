@@ -11,7 +11,6 @@ import logging
 
 from django.db import models, transaction
 
-from base.models import BaseModel
 from nmis.hospitals.managers import GroupManager
 
 from organs.models import BaseOrgan, BaseStaff, BaseDepartment, BaseGroup
@@ -43,7 +42,7 @@ class Hospital(BaseOrgan):
 
     def get_all_flows(self):
         from nmis.projects.models import ProjectFlow
-        return ProjectFlow.objects.filter(hospital=self)
+        return ProjectFlow.objects.filter(organ=self)
 
     ################################################
     #                   科室与员工管理
@@ -97,7 +96,6 @@ class Hospital(BaseOrgan):
         """
         staffs_queryset = Staff.objects.filter(organ=self)
         return staffs_queryset.filter(dept=dept) if dept else staffs_queryset
-
 
     ################################################
     #                  权限组操作

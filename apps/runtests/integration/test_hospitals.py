@@ -24,8 +24,7 @@ class DepartmentApiTestCase(BaseTestCase):
     """
 
     dept_create_api = '/api/v1/hospitals/{0}/departments/create'
-    # 单个科室增删查API
-    dept_single_operation_api = '/api/v1/hospitals/{0}/departments/{1}'
+    dept_single_operation_api = '/api/v1/hospitals/{0}/departments/{1}'  # 单个科室增删查API
     dept_list = '/api/v1/hospitals/{0}/departments'
 
     def test_department_update(self):
@@ -100,13 +99,33 @@ class DepartmentApiTestCase(BaseTestCase):
         测试科室列表
         """
         self.login_with_username(self.user)
-
+        dept = self.create_department(self.organ,
+                                      dept_name='测试科室_{}'.format(self.get_random_suffix()))
         response = self.get(
             self.dept_list.format(self.organ.id)
         )
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('dept'))
+        self.assert_object_in_results({'name': dept.name}, response.get('dept'))
+
+    def test_hospital_global_data(self):
+        """
+        api测试: 返回医院全局数据
+        :return:
+        """
+        API = "/api/v1/hospitals/{}/global-data"
+        staff = self.create_completed_staff(self.organ, self.dept, name="普通员工")
+
+        self.login_with_username(staff.user)
+        response = self.get(API.format(self.organ.id))
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get("depts"))
+        self.assertIsNotNone(response.get("flows"))
+        self.assertIsNotNone(response.get("perm_groups"))
+
+        staff.user.clear_cache()
+        staff.clear_cache()
 
 
 class StaffsPermChangeTestCase(BaseTestCase):
@@ -114,8 +133,6 @@ class StaffsPermChangeTestCase(BaseTestCase):
     测试staff权限分配相关API
     """
     staffs_perm_change_api = '/api/v1/hospitals/{0}/staffs/change-permission'
-    staffs_list_api = '/api/v1/hospitals/{0}/staffs'
-    group_list_api = "/api/v1/hospitals/{0}/groups"
 
     def test_staffs_perm_change(self):
         """
@@ -148,6 +165,7 @@ class StaffsPermChangeTestCase(BaseTestCase):
         )
 
         self.assert_response_success(response)
+        self.assertEquals(response.get('msg'), '员工权限已修改')
 
 
 class StaffAPITestCase(BaseTestCase):
@@ -227,7 +245,6 @@ class StaffAPITestCase(BaseTestCase):
             ), data=update_staff_data
         )
         self.assert_response_success(response)
-        #self.assert_response_failure(response)
         self.assertIsNotNone(response.get('staff'), '没获取到修改后的员工信息')
         self.assertIsNotNone(response.get('staff').get('staff_name'), '没有获取到修改后的员工姓名')
         self.assertEqual(response.get('staff').get('staff_name'), update_staff_data['staff_name'])
