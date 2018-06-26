@@ -184,7 +184,7 @@ class ProjectPlan(BaseModel):
         if new_milestone == self.current_stone:
             return False, "已处于该状态"
 
-        if new_milestone in self.get_all_milestone.all():
+        if new_milestone in self.get_recorded_milestones():
             return False, "里程碑已存在项目状态记录中"
 
         try:
