@@ -34,7 +34,7 @@ class TestCaseDataUtils(object):
         return user
 
     def create_user_with_username(self, username=None, password=None, active=False, **kwargs):
-        username = username or 'test_{}'.format(self.get_random_suffix())
+        username = username or 'test_user_{}'.format(self.get_random_suffix())
         password = password or self.generate_password()
 
         from users.models import User
@@ -66,7 +66,10 @@ class TestCaseDataUtils(object):
         创建staff时同时创建一个user账号, 根据传入的organ和dept参数
         :return:
         """
-        user = self.create_user_with_username()
+        user = self.create_user_with_username(
+            'testuser_{}'.format(self.get_random_suffix()), 'x111111', active=True,
+            email='test_{}'.format(self.get_random_suffix())
+        )
         return self.create_staff(user, organ, dept, name, **kwargs)
 
     def create_completed_organ(self):

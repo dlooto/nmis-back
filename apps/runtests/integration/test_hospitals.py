@@ -19,8 +19,7 @@ class DepartmentApiTestCase(BaseTestCase):
     """
 
     dept_create_api = '/api/v1/hospitals/{0}/departments/create'
-    # 单个科室增删查API
-    dept_single_operation_api = '/api/v1/hospitals/{0}/departments/{1}'
+    dept_single_operation_api = '/api/v1/hospitals/{0}/departments/{1}'  # 单个科室增删查API
     dept_list = '/api/v1/hospitals/{0}/departments'
 
     def test_department_update(self):
@@ -104,6 +103,24 @@ class DepartmentApiTestCase(BaseTestCase):
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('dept'))
         self.assert_object_in_results({'name': dept.name}, response.get('dept'))
+
+    def test_hospital_global_data(self):
+        """
+        api测试: 返回医院全局数据
+        :return:
+        """
+        API = "/api/v1/hospitals/{}/global-data"
+        staff = self.create_completed_staff(self.organ, self.dept, name="普通员工")
+
+        self.login_with_username(staff.user)
+        response = self.get(API.format(self.organ.id))
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get("depts"))
+        self.assertIsNotNone(response.get("flows"))
+        self.assertIsNotNone(response.get("perm_groups"))
+
+        staff.user.clear_cache()
+        staff.clear_cache()
 
 
 class StaffsPermChangeTestCase(BaseTestCase):

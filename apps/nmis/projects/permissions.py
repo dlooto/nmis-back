@@ -26,12 +26,12 @@ class ProjectPerformerPermission(BasePermission):
     def has_permission(self, request, view):
         return is_login(request)
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request, view, project):
         """
         :param obj: 为project object
         """
         staff = request.user.get_profile()
-        return obj.performer == staff if staff else False
+        return project.performer == staff if staff else False
 
 
 class ProjectCreatorPermission(BasePermission):

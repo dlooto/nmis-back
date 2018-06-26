@@ -160,9 +160,9 @@ class OrderedDeviceUpdateForm(BaseOrderedDeviceForm):
 
 class ProjectFlowCreateForm(BaseForm):
 
-    def __init__(self, hospital, data, *args, **kwargs):
+    def __init__(self, organ, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
-        self.hospital = hospital
+        self.organ = organ
 
         self.ERR_CODES.update({
             "err_flow_title":       "流程标题错误",
@@ -186,7 +186,7 @@ class ProjectFlowCreateForm(BaseForm):
     def save(self):
         data = {
             "title": self.data.get("flow_title", '').strip(),
-            "hospital": self.hospital,
+            "organ": self.organ,
         }
 
         return ProjectFlow.objects.create_flow(self.data.get("milestones"), **data)

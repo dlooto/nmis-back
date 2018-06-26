@@ -8,7 +8,7 @@
 import logging
 
 from runtests import BaseTestCase
-from runtests.integration.mixins import ProjectPlanMixin
+from runtests.common.mixins import ProjectPlanMixin
 from utils.times import now, yesterday
 
 logs = logging.getLogger(__name__)
@@ -21,9 +21,6 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
     project_create_api = '/api/v1/projects/create'  # 项目创建
     single_project_api = '/api/v1/projects/{}'      # 单个项目操作API接口
-    my_project_list_api = '/api/v1/projects/my-projects'   # 我的项目api接口，带筛选条件
-    allot_project_list_api = '/api/v1/projects/allot-projects'  # 待分配项目api接口
-    dept_list = '/api/v1/hospitals/{0}/departments'
     project_milestone_change_api = '/api/v1/projects/{}/change-milestone'
 
     def test_project_detail(self):
@@ -162,4 +159,10 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
     def test_project_milestone_change(self):
         # project_milestone_change_api
+        pass
+
+    def test_project_dispatch(self):
+        """
+        API测试：分配项目给负责人接口测试
+        """
         pass

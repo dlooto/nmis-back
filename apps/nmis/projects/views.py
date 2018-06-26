@@ -22,7 +22,8 @@ from nmis.hospitals.permissions import HospitalStaffPermission,  \
 from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm, \
     OrderedDeviceCreateForm, OrderedDeviceUpdateForm, ProjectFlowCreateForm, \
     ProjectPlanListForm
-from nmis.projects.models import ProjectPlan, ProjectFlow
+from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
+from nmis.projects.permissions import ProjectPerformerPermission
 
 logs = logging.getLogger(__name__)
 
@@ -176,8 +177,21 @@ class ProjectPlanChangeMilestoneView(BaseAPIView):
     变更项目里程碑状态
     """
 
+    permission_classes = (ProjectPerformerPermission, )
+
+    @check_id_list(['milestone_id', ])
     def post(self, req, project_id):
-        pass
+        project = self.get_object_or_404(project_id, ProjectPlan, use_cache=False)
+        self.check_object_permissions(req, project)
+
+        new_milestone = self.get_objects_or_404({'milestone_id': Milestone}, use_cache=False)['milestone_id']
+        success, msg = project.change_milestone(new_milestone)
+        if not success:
+            return resp.failed(msg)
+
+        return resp.serialize_response(
+            project, results_name='project', srl_cls_name='ChunkProjectPlanSerializer'
+        )
 
 
 class ProjectDeviceCreateView(BaseAPIView):
@@ -240,14 +254,14 @@ class ProjectFlowCreateView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, )
 
-    @check_id('hospital_id')
+    @check_id('organ_id')
     @check_params_not_null(['flow_title', 'milestones'])
     def post(self, req):
         """
 
         参数Example:
         {
-            "hospital_id": 10001,
+            "organ_id": 10001,
             "flow_title":       "项目标准流程",
             "milestones": [
                 {
@@ -261,7 +275,7 @@ class ProjectFlowCreateView(BaseAPIView):
             ]
         }
         """
-        hosp = self.get_objects_or_404({'hospital_id': Hospital})['hospital_id']
+        hosp = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
         self.check_object_permissions(req, hosp)
 
         form = ProjectFlowCreateForm(hosp, req.data)
