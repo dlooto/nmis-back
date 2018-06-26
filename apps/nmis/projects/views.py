@@ -382,9 +382,10 @@ class AllotProjectListView(BaseAPIView):
         """
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
         self.check_object_permissions(req, hospital)
-        allot_project_list = ProjectPlan.objects.get_allot_projects()
+
+        undispatched_projects = ProjectPlan.objects.get_undispatched_projects(hospital)
         return resp.serialize_response(
-            allot_project_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+            undispatched_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
         )
 
 

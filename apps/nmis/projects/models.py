@@ -83,6 +83,13 @@ class ProjectPlan(BaseModel):
         """ 项目是否未启动 """
         return self.status == PRO_STATUS_PENDING
 
+    def is_undispatched(self):
+        """
+        是否待分配负责人状态
+        :return: True or False
+        """
+        return self.performer is None
+
     def update(self, data):
         """
         仅更新项目本身的属性信息, 不修改项目内含的设备明细
