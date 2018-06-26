@@ -24,6 +24,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
     my_project_list_api = '/api/v1/projects/my-projects'   # 我的项目api接口，带筛选条件
     allot_project_list_api = '/api/v1/projects/allot-projects'  # 待分配项目api接口
     dept_list = '/api/v1/hospitals/{0}/departments'
+    project_milestone_change_api = '/api/v1/projects/{}/change-milestone'
 
     def test_project_detail(self):
         """
@@ -159,3 +160,6 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertIsNone(results)
         self.assert_object_in_results({'title': project.title}, results)
 
+    def test_project_milestone_change(self):
+        # project_milestone_change_api
+        pass

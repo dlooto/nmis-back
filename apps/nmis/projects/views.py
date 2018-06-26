@@ -7,18 +7,21 @@
 
 import logging
 
+from rest_framework.permissions import AllowAny
+
 from base import resp
 from base.common.decorators import check_id, check_id_list, check_params_not_null, \
     check_params_not_all_null
+from base.common.permissions import OrPermission
 from base.views import BaseAPIView
+
 from nmis.devices.models import OrderedDevice
 from nmis.hospitals.models import Hospital, Staff, Department
 from nmis.hospitals.permissions import HospitalStaffPermission,  \
-    IsHospitalAdmin, ProjectDispatcherPermission
+    IsHospitalAdmin, ProjectDispatcherPermission, IsOwnerOrReadOnly
 from nmis.projects.forms import ProjectPlanCreateForm, ProjectPlanUpdateForm, \
     OrderedDeviceCreateForm, OrderedDeviceUpdateForm, ProjectFlowCreateForm, \
     ProjectPlanListForm
-
 from nmis.projects.models import ProjectPlan, ProjectFlow
 
 logs = logging.getLogger(__name__)
@@ -365,3 +368,8 @@ class AllotProjectListView(BaseAPIView):
         return resp.serialize_response(
             allot_project_list, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
         )
+
+
+
+
+
