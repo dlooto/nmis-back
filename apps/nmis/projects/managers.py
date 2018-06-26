@@ -43,8 +43,12 @@ class ProjectPlanManager(BaseManager):
 
         return project
 
-    def get_allot_projects(self):
-        return self.filter(performer=None)
+    # def get_allot_projects(self):
+    #     return self.filter(performer=None)
+
+    def get_undispatched_projects(self, organ):
+        """ 返回机构待分配负责人的项目列表 """
+        return self.filter(related_dept__organ=organ, performer=None)
 
     def get_projects_by_performer(self, staffs):
         return self.filter(performer__in=staffs)

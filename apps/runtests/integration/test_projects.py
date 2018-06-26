@@ -31,7 +31,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         # 仅项目管理者(医院管理员, 项目分配者)及项目提交者可以查看项目详情
         data = {
-            "hospital_id": self.organ.id,
+            "organ_id": self.organ.id,
         }
         project = self.create_project(self.admin_staff, self.dept, title="新项目")
         response = self.get(self.single_project_api.format(project.id), data=data)
@@ -52,7 +52,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         old_device = old_project.get_ordered_devices()[0]
 
         project_data = {
-            "hospital_id": self.organ.id,
+            "organ_id": self.organ.id,
             "project_title": "新的项目名称",
             "purpose": "修改后的用途说明",
         }
@@ -71,7 +71,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.login_with_username(self.user)
 
         project_data = {
-            "hospital_id": self.organ.id,
+            "organ_id": self.organ.id,
             "project_title": "牛逼项目1",
             "purpose": "牛逼的不能为外人说道的目标",
             "creator_id": self.admin_staff.id,
@@ -112,6 +112,8 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         """
         api测试：我的项目列表(带筛选)api接口测试
         """
+        api = "/api/v1/projects/my-projects"
+
         self.login_with_username(self.user)
         for index in range(1, 5):
             project = self.create_project(self.admin_staff, self.dept,
@@ -127,39 +129,33 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             'current_stone_id': ''
         }
 
-        response = self.get(
-            self.my_project_list_api,
-            data=project_data
-        )
+        response = self.get(api, data=project_data)
         self.assert_response_success(response)
 
         self.assertIsNotNone(response.get('projects'))
         self.assert_object_in_results({'creator_id': self.admin_staff.id}, response.get('projects'))
 
-    def test_allot_project_list(self):
+    def test_undispatched_project_list(self):
         """
         api测试：待分配项目api接口测试
         """
+        api = "/api/v1/projects/allot-projects"
+
         self.login_with_username(self.user)
         # 创建一个待分配项目
-        project = self.create_project(self.admin_staff, self.dept, title='我是待分配项目')
+        project1 = self.create_project(self.admin_staff, self.dept, title='我是待分配项目1')
+        project2 = self.create_project(self.admin_staff, self.dept, title='我是待分配项目2')
 
         project_data = {
            'organ_id': self.organ.id
         }
-        response = self.get(
-            self.allot_project_list_api,
-            data=project_data
-        )
+        response = self.get(api, data=project_data)
 
         self.assert_response_success(response)
         results = response.get('projects')
-        self.assertIsNone(results)
-        self.assert_object_in_results({'title': project.title}, results)
-
-    def test_project_milestone_change(self):
-        # project_milestone_change_api
-        pass
+        self.assertIsNotNone(results)
+        self.assertEquals(len(results), 2)
+        self.assert_object_in_results({'title': project1.title}, results)
 
     def test_project_dispatch(self):
         """

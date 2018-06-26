@@ -65,7 +65,7 @@ class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):
 
         result_project = response.get("project")
         self.assertEquals(new_milestone.id, result_project.get("current_stone_id"))
-        self.assertTrue(project.contains_milestone_record(new_milestone))
+        self.assertTrue(project.contains_recorded_milestone(new_milestone))
 
         # clear data
         performer.user.clear_cache()

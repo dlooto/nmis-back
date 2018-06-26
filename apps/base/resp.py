@@ -231,7 +231,9 @@ def serialize_data(items, app_name=None, srl_cls_name=None):
         # module_name = '%s.%s' % ('.'.join(instance.__module__.split('.')[:-1]), SERIALIZABLE_MODULE_NAME)
 
     class_name = '%s%s' % (instance.__class__.__name__, SERIALIZABLE_CLASS_NAME) if not srl_cls_name else srl_cls_name
-    logs.debug('make_instance: module_name=%s class_name=%s items=%s' % (module_name, class_name, items))
+    logs.debug('make_instance: module_name=%s class_name=%s items=' % (module_name, class_name))
+    logs.debug(items)
+
     return make_instance(module_name, class_name, items, many=many).data
 
 

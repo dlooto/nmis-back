@@ -98,7 +98,7 @@ def runtests(ctx, test_suite='', test_module=''):
 @task
 def deploy(ctx, remote='origin', branch='master'):
     """
-    发布更新: fab h156 deploy <==发布更新到指定hosts
+    发布更新: fab h156 deploy (更新代码, 安装lib, migrate, 刷新缓存, 重启server, runtests)
     :param remote: 远程仓库名称, 默认为 origin
     :param branch: 部署发布用到的代码分支
     """
@@ -117,7 +117,7 @@ def deploy(ctx, remote='origin', branch='master'):
 @task
 def lean_deploy(ctx, remote="origin", branch="master"):
     """
-    轻量部署: 更新后端代码并重启gunicorn, nginx服务. 用法: fab h156 lean-deploy
+    轻量部署: fab h156 lean-deploy(更新代码, migrate, 刷新缓存, 重启server, runtests)
     :param remote: 远程代码仓库名, 默认origin
     :param branch: 远程代码仓库分支, 默认master
 
@@ -126,6 +126,7 @@ def lean_deploy(ctx, remote="origin", branch="master"):
     c = get_connection()
     with c.cd(CODE_ROOT):
         _update_code(c, remote, branch)
+        _migrate_data(c)
 
     _flush_redis(c, env.redis_host, env.redis_auth)
     _restart_server(c)
@@ -207,7 +208,8 @@ def _migrate_data(c):
 
 def _load_init_data(c):
     with c.prefix("source %s" % ACTIVATE_PATH):
-        c.run('python apps/manage.py loaddata %s' % ' '.join(INIT_JSON_DATA))
+        with c.cd(CODE_ROOT):
+            c.run('python apps/manage.py loaddata %s' % ' '.join(INIT_JSON_DATA))
 
 def _restart_server(c):
     """ 重启web服务 """
