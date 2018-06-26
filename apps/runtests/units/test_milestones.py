@@ -52,6 +52,6 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         success, msg = self.project.change_milestone(new_milestone)
         self.assertTrue(success)
         self.assertEquals(self.project.current_stone, new_milestone)
-        self.assertTrue(self.project.contains_milestone_record(new_milestone))
+        self.assertTrue(self.project.contains_recorded_milestone(new_milestone))
 
 

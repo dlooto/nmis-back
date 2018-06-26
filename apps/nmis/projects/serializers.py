@@ -13,7 +13,8 @@ from rest_framework import serializers
 from base import resp
 from base.serializers import BaseModelSerializer
 from nmis.hospitals.models import Staff, Department
-from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
+from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
+    ProjectMilestoneRecord
 
 logs = logging.getLogger(__name__)
 
@@ -74,6 +75,8 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     attached_flow = serializers.SerializerMethodField('_get_attached_flow')
     ordered_devices = serializers.SerializerMethodField('_get_ordered_devices')
 
+    milestone_records = serializers.SerializerMethodField('_get_milestone_records')
+
     class Meta:
         model = ProjectPlan
         fields = (
@@ -81,7 +84,7 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
             'creator_id', 'creator_name',
             'related_dept_id', 'related_dept_name',
             'performer_id', 'performer_name', 'current_stone_id',
-            'attached_flow', 'ordered_devices',
+            'attached_flow', 'ordered_devices', 'milestone_records',
             'startup_time', 'expired_time', 'created_time',
         )
 
@@ -114,6 +117,10 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     def _get_ordered_devices(self, obj):
         return resp.serialize_data(obj.get_ordered_devices())
 
+    def _get_milestone_records(self, obj):  # TODO: 需要优化性能...
+        records = obj.get_milestone_changed_records()
+        return resp.serialize_data(records) if records else []
+
 
 class ProjectFlowSerializer(BaseModelSerializer):
 
@@ -135,3 +142,21 @@ class MilestoneSerializer(BaseModelSerializer):
         fields = (
             'id', 'title', 'index', 'flow_id', 'desc', 'created_time',
         )
+
+class ProjectMilestoneRecordSerializer(BaseModelSerializer):
+    milestone_title = serializers.SerializerMethodField('_get_milestone_title')
+    milestone_index = serializers.SerializerMethodField('_get_milestone_index')
+
+    class Meta:
+        model = ProjectMilestoneRecord
+        fields = (
+            'id', 'milestone_id', 'milestone_title', 'milestone_index', 'created_time',
+        )
+
+    def _get_milestone_title(self, obj):
+        stone = Milestone.objects.get_cached(obj.milestone_id)
+        return stone.title if stone else ''
+
+    def _get_milestone_index(self, obj):
+        stone = Milestone.objects.get_cached(obj.milestone_id)
+        return stone.index if stone else -1
