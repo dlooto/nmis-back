@@ -50,11 +50,11 @@ class ProjectPlanManager(BaseManager):
         """ 返回机构待分配负责人的项目列表 """
         return self.filter(related_dept__organ=organ, performer=None)
 
-    def get_projects_by_performer(self, staffs):
-        return self.filter(performer__in=staffs)
+    def get_projects_by_performer(self, organ, staffs):
+        return self.filter(related_dept__organ=organ, performer__in=staffs)
 
-    def get_projects_by_title(self, title):
-        return self.filter(title__contains=title)
+    def get_projects_by_title(self, organ, title):
+        return self.filter(related_dept__organ=organ, title__contains=title)
 
 
 class ProjectFlowManager(BaseManager):
