@@ -70,3 +70,18 @@ class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):
         # clear data
         performer.user.clear_cache()
         performer.clear_cache()
+
+    def test_project_flow_update(self):
+        """
+        api测试：变更项目流程
+        """
+
+        # api = '/api/v1/projects/flows/{}'
+        #
+        # flow = self.create_flow(self.organ)
+        # self.login_with_username(self.user)
+        # response = self.put(
+        #     api.format(flow.id),
+        #     data={'organ_id':self.organ.id, 'flow_title': '流程名称UpdateTest'}
+        # )
+        # self.assert_response_success(response)

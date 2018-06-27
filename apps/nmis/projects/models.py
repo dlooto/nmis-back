@@ -237,6 +237,12 @@ class ProjectFlow(BaseModel):
         """ 返回流程中的最后一个里程碑项 """
         pass
 
+    def is_used(self):
+        query_set = ProjectPlan.objects.filter(attached_flow=self)
+        if not query_set:
+            return False
+        return True
+
 
 class Milestone(BaseModel):
     """
