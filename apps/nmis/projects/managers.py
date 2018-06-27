@@ -50,11 +50,17 @@ class ProjectPlanManager(BaseManager):
         """ 返回机构待分配负责人的项目列表 """
         return self.filter(related_dept__organ=organ, performer=None)
 
-    def get_projects_by_performer(self, organ, staffs):
-        return self.filter(related_dept__organ=organ, performer__in=staffs)
+    def get_projects(self, organ, **data):
+        return self.filter(related_dept__organ=organ, **data)
 
-    def get_projects_by_title(self, organ, title):
-        return self.filter(related_dept__organ=organ, title__contains=title)
+    # 筛选查询项目列表
+    def get_projects_vague(self, organ, title_leader, staffs, **data):
+        from django.db.models import Q
+        return self.filter(
+            Q(related_dept__organ=organ),
+            Q(title__contains=title_leader) |
+            Q(performer__in=staffs)
+        ).filter(**data)
 
 
 class ProjectFlowManager(BaseManager):
