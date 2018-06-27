@@ -279,6 +279,148 @@ class StaffUpdateForm(BaseForm):
         return update_staff
 
 
+class StaffBatchUploadForm(BaseForm):
+
+    ERR_CODES = {
+        'null_username': '第{0}行用户名不能为空',
+        'duplicate_username': '第{0}行和第{1}行用户名重复，请检查',
+        'username_exists': '第{0}行用户名{1}已存在',
+        'null_staff_name': '第{0}行员工姓名不能为空',
+        'err_contact_phone':        '第{0}联系电话格式错误',
+        'err_email':                 '第{0}无效邮箱',
+        'err_dept':                   '第{0}科室为空或不存在',
+    }
+
+    def __init__(self, organ, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.organ = organ
+        self.validate_excel_data = self.init_data()
+
+    def init_data(self):
+        validate_excel_data = {}
+        if self.data and self.data[0] and self.data[0][0]:
+            sheet_data = self.data[0]
+            usernames, staff_names, dept_names, emails, contact_phones, = [], [], [], [], []
+            for i in range(len(sheet_data)):
+                usernames.append(sheet_data[i].get('username', ''))
+            for i in range(len(sheet_data)):
+                staff_names.append(sheet_data[i].get('staff_name', ''))
+            for i in range(len(sheet_data)):
+                dept_names.append(sheet_data[i].get('dept_name', ''))
+            for i in range(len(sheet_data)):
+                emails.append(sheet_data[i].get('email', ''))
+            for i in range(len(sheet_data)):
+                contact_phones.append(sheet_data[i].get('contact_phone', ''))
+        validate_excel_data['usernames'] = usernames
+        validate_excel_data['staff_names'] = staff_names
+        validate_excel_data['dept_names'] = dept_names
+        validate_excel_data['emails'] = emails
+        validate_excel_data['contact_phones'] = contact_phones
+        return validate_excel_data
+
+    def is_valid(self):
+        is_valid = True
+        if not self.check_username():
+            is_valid = False
+
+        return is_valid
+
+    def check_username(self):
+        """
+        校验用户名
+        用户名非空校验
+        用户名重复校验
+        用户名已存在校验
+        """
+        usernames = self.validate_excel_data['usernames']
+        for i in range(len(usernames)):
+            if not usernames[i]:
+                self.update_errors('username', 'null_username', str(i + 2))
+                return False
+
+        for i in range(len(usernames)):
+            usernames_tmp = usernames.copy()
+            for j in range(i + 1, len(usernames_tmp)):
+                if usernames[i] == usernames_tmp[j]:
+                    self.update_errors('username', 'duplicate_username', str(i + 2), str(j + 2))
+                    return False
+
+        for i in range(len(usernames)):
+            user_query_set = User.objects.filter(username=usernames[i])
+            if user_query_set and user_query_set[0]:
+                self.update_errors('username', 'username_exists', str(i+2), usernames[i])
+                return False
+
+        return True
+
+    def check_staff_name(self):
+        """
+        校验员工名称
+        """
+        staff_names = self.validate_excel_data['staff_names']
+        for i in range(len(staff_names)):
+            if not staff_names[i]:
+                self.update_errors('staff_name', 'null_staff_name', str(i+2))
+                return False
+
+        return True
+
+    def check_email(self):
+        """
+        校验邮箱
+        """
+        emails = self.validate_excel_data['emails']
+        for i in range(len(emails)):
+            if not eggs.is_email_valid(emails[i]):
+                self.update_errors('email', 'err_email', str(i+2))
+                return False
+
+        return True
+
+    def check_contact_phone(self):
+        """
+        校验手机号
+        """
+        contact_phones = self.validate_excel_data['contact_phones']
+        for i in range(len(contact_phones)):
+            if not eggs.is_phone_valid(contact_phones[i]):
+                self.update_errors('contact_phone', 'err_contact_phone', str(i+2))
+                return False
+        return True
+
+    def check_dept(self):
+        """校验职位名称"""
+        dept_names = self.validate_excel_data['dept_names']
+
+        for i in range(len(dept_names)):
+            dept_query_set = Department.objects.filter(name=dept_names[i])
+            if not dept_query_set:
+                self.update_errors('dept', 'err_dept', str(i + 2))
+                return False
+        return True
+
+    def save(self):
+        # 封装excel数据
+        staff_data = []
+        if self.data and self.data[0] and self.data[0][0]:
+            sheet_data = self.data[0]
+            for s in range(len(sheet_data)):
+                # 封装科室
+                dept_query_set = Department.objects.filter(name=sheet_data[s].get('dept_name', ''))
+                dept = Department.objects.filter(name=sheet_data[s].get('dept_name', ''))[0]
+                staff_data.append({
+                    'username': sheet_data[s].get('username', ''),
+                    'staff_name': sheet_data[s].get('email', ''),
+                    'contact_phone': sheet_data[s].get('contact_phone', ''),
+                    'email': sheet_data[s].get('email', ''),
+                    'dept': dept,
+                    'organ': self.organ,
+                })
+
+        return Staff.objects.batch_upload_staff(staff_data)
+
+
+
 class DepartmentUpdateFrom(BaseForm):
     """
     对修改科室信息进行表单验证

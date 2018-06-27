@@ -46,6 +46,27 @@ class StaffManager(BaseManager):
             logging.exception(e)
             return None
 
+    def batch_upload_staff(self, staff_data):
+        # TODO: 暂时用如下方式进行批量添加员工信息，后续创建批量添加接口进行优化
+        try:
+            with transaction.atomic():
+                for i in range(len(staff_data)):
+                    user = User.objects.create_param_user(
+                        ('username', staff_data[i].get('username')), password='111111', is_active=True,
+                    )
+                    staff = self.create(
+                        organ=staff_data[i].get('organ'),
+                        dept=staff_data[i].get('dept'),
+                        user=user,
+                        name=staff_data[i].get('staff_name'),
+                        contact=staff_data[i].get('contact_phone'),
+                        email=staff_data[i].get('email')
+                    )
+            return True
+        except Exception as e:
+            logging.exception(e)
+            return False
+
     def get_staffs_by_name(self, staff_name):
         """
         通过名字模糊查询返回员工列表

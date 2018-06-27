@@ -43,8 +43,8 @@ urlpatterns = [
     # 查询员工列表
     path("<int:hid>/staffs",            views.StaffListView.as_view(), ),
 
-    # 批量添加员工信息（以上传excel文件的形式）
-    path("<int:hid>/staffs/create-batch-excel", views.StaffsBatchImportView.as_view(), ),
+    # 批量导入员工信息（以上传excel文件的形式）
+    path("<int:hid>/staffs/batch-upload", views.StaffBatchUploadView.as_view(), ),
 
     # 权限组API列表接口
     path("<int:hid>/groups",             views.GroupListView.as_view(), )
