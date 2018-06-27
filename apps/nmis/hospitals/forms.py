@@ -406,13 +406,16 @@ class StaffBatchUploadForm(BaseForm):
             sheet_data = self.data[0]
             for s in range(len(sheet_data)):
                 # 封装科室
-                dept = Department.objects.filter(name=sheet_data[s].get('dept_name', ''))[0]
+                dept_query_set = Department.objects.filter(name=sheet_data[s].get('dept_name', '').strip())
+                # if not dept_query_set:
+                #     self.update_errors('dept', 'err_dept', str(s + 2))
+                #     return False
                 staff_data.append({
-                    'username': sheet_data[s].get('username', ''),
-                    'staff_name': sheet_data[s].get('email', ''),
+                    'username': sheet_data[s].get('username', '').strip(),
+                    'staff_name': sheet_data[s].get('email', '').strip(),
                     'contact_phone': sheet_data[s].get('contact_phone', ''),
-                    'email': sheet_data[s].get('email', ''),
-                    'dept': dept,
+                    'email': sheet_data[s].get('email', '').strip(),
+                    'dept': dept_query_set[0],
                     'organ': self.organ,
                 })
 

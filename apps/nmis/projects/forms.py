@@ -199,10 +199,13 @@ class ProjectFlowUpdateForm(BaseForm):
         self.old_flow = old_flow
 
         self.ERR_CODES.update({
+            'flow_is_used':    '流程已经在使用在，不能修改',
             "err_flow_title": "流程标题错误",
         })
 
     def is_valid(self):
+        if self.check_flow_used():
+            return
         return self.check_flow_title()
 
     def check_flow_title(self):
@@ -213,7 +216,10 @@ class ProjectFlowUpdateForm(BaseForm):
         return True
 
     def check_flow_used(self):
-        pass
+        if self.old_flow.is_used():
+            self.update_errors('flow_id', 'flow_is_used')
+            return False
+        return True
 
     def save(self):
         data = {
@@ -264,7 +270,7 @@ class ProjectPlanListForm(BaseForm):
             return False
         return True
 
-    def my_projects_plan(self):
+    def my_projects(self):
 
         data = {}
 
@@ -289,17 +295,14 @@ class ProjectPlanListForm(BaseForm):
 
         # 判断是否存在项目名和项目负责人关键字
         if self.req.GET.get('pro_title_leader', '').strip():
-            projects_title = ProjectPlan.objects.get_projects_by_title(
-                self.hospital, self.req.GET.get('pro_title_leader', '').strip()
-            )
 
             staffs = Staff.objects.get_staffs_by_name(
                 self.hospital, self.req.GET.get('pro_title_leader', '').strip()
             )
-            projects_staffs = ProjectPlan.objects.get_projects_by_performer(
-                self.hospital, staffs
-            )
-            return (projects_title | projects_staffs).filter(**data)
 
-        return ProjectPlan.objects.filter(**data)
+            return ProjectPlan.objects.get_projects_vague(
+                self.hospital,
+                self.req.GET.get('pro_title_leader', '').strip(),
+                staffs, **data)
 
+        return ProjectPlan.objects.get_projects(self.hospital, **data)
