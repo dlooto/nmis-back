@@ -406,7 +406,6 @@ class StaffBatchUploadForm(BaseForm):
             sheet_data = self.data[0]
             for s in range(len(sheet_data)):
                 # 封装科室
-                dept_query_set = Department.objects.filter(name=sheet_data[s].get('dept_name', ''))
                 dept = Department.objects.filter(name=sheet_data[s].get('dept_name', ''))[0]
                 staff_data.append({
                     'username': sheet_data[s].get('username', ''),
