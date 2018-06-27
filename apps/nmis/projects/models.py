@@ -305,7 +305,7 @@ class ProjectMilestoneRecord(BaseModel):
         db_table = 'projects_project_milestone_record'
 
     def __str__(self):
-        return self.project_id, self.milestone_id
+        return '%s %s' % (self.project_id, self.milestone_id)
 
 
 # class Contract(BaseModel):

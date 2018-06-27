@@ -288,12 +288,14 @@ class StaffBatchUploadView(BaseAPIView):
         self.check_object_permissions(req, organ)
 
         file_obj = req.FILES.get('staff_excel_file')
-        print(req.FILES)
+        logs.debug(req.FILES)
         if not file_obj:
             return resp.failed('请选择导入文件')
+
         file_extension = get_file_extension(file_obj.name)
         if file_extension != '.xlsx':
             return resp.failed('导入文件不是Excel文件，请检查')
+
         # 将文件存放到服务器
         # import os
         # file_server_path = open(os.path.join('/media/', '', file_obj.name), 'wb')
@@ -306,6 +308,7 @@ class StaffBatchUploadView(BaseAPIView):
             if eq('ExcelHeaderNotMatched', e.args[0]) == 0:
                 return resp.failed('表单的表头数据和指定的标准不一致，请检查')
             return resp.failed('导入失败')
+
         form = StaffBatchUploadForm(organ, excel_data)
         if not form.is_valid():
             return resp.form_err(form.errors)
