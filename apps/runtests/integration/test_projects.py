@@ -112,7 +112,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         """
         api测试：我的项目列表(带筛选)api接口测试
         """
-        api = "/api/v1/projects/my-projects"
+        api = "/api/v1/projects/"
 
         self.login_with_username(self.user)
         for index in range(0, 5):
@@ -143,7 +143,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         """
         api测试：待分配项目api接口测试
         """
-        api = "/api/v1/projects/allot-projects"
+        api = "/api/v1/projects/"
 
         self.login_with_username(self.user)
         # 创建一个待分配项目
