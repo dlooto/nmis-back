@@ -214,6 +214,10 @@ class ProjectFlow(BaseModel):
         verbose_name_plural = 'B 项目流程'
         db_table = 'projects_project_flow'
 
+    VALID_ATTRS = [
+        'title',
+    ]
+
     def __str__(self):
         return "%s %s" % (self.id, self.title)
 

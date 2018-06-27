@@ -199,14 +199,16 @@ class ProjectFlowUpdateForm(BaseForm):
         self.old_flow = old_flow
 
         self.ERR_CODES.update({
-            'flow_is_used':    '流程已经在使用在，不能修改',
-            "err_flow_title": "流程标题错误",
+            "flow_is_used":     "流程已经在使用中，不能修改",
+            "err_flow_title":   "流程标题错误",
         })
 
     def is_valid(self):
-        if self.check_flow_used():
-            return
-        return self.check_flow_title()
+        if not self.check_flow_used():
+            return False
+        if not self.check_flow_title():
+            return False
+        return True
 
     def check_flow_title(self):
         title = self.data.get('flow_title', '').strip()
@@ -225,7 +227,9 @@ class ProjectFlowUpdateForm(BaseForm):
         data = {
             'title': self.data.get('flow_title', '').strip(),
         }
-        return self.old_flow.update(data)
+        new_flow = self.old_flow.update(data)
+        new_flow.cache()
+        return new_flow
 
 
 class ProjectPlanListForm(BaseForm):
