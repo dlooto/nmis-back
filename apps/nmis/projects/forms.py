@@ -223,10 +223,11 @@ class ProjectFlowUpdateForm(BaseForm):
 
 
 class ProjectPlanListForm(BaseForm):
-    def __init__(self, req, *args, **kwargs):
-        BaseForm.__init__(self, req, *args, **kwargs)
+    def __init__(self, req, hospital, *args, **kwargs):
+        BaseForm.__init__(self, req, hospital, *args, **kwargs)
 
         self.req = req
+        self.hospital = hospital
 
         self.ERR_CODES.update({
             "err_expired_date": "截止时间必须为一个时间段",
@@ -289,14 +290,14 @@ class ProjectPlanListForm(BaseForm):
         # 判断是否存在项目名和项目负责人关键字
         if self.req.GET.get('pro_title_leader', '').strip():
             projects_title = ProjectPlan.objects.get_projects_by_title(
-                title=self.req.GET.get('pro_title_leader', '').strip()
+                self.hospital, self.req.GET.get('pro_title_leader', '').strip()
             )
 
             staffs = Staff.objects.get_staffs_by_name(
-                staff_name=self.req.GET.get('pro_title_leader', '').strip()
+                self.hospital, self.req.GET.get('pro_title_leader', '').strip()
             )
             projects_staffs = ProjectPlan.objects.get_projects_by_performer(
-                staffs=staffs
+                self.hospital, staffs
             )
             return (projects_title | projects_staffs).filter(**data)
 

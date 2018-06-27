@@ -39,9 +39,46 @@ class ProjectPlanListView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
-    @check_params_not_null(['organ_id'])
+    @check_params_not_null(['organ_id', 'type'])
     def get(self, req):
-        pass
+        """
+        获取项目列表，包括：我的项目列表（待筛选）、待分配项目列表
+        """
+        hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
+        self.check_object_permissions(req, req.user.get_profile().organ)  # 检查操作者权限
+
+        if req.GET.get('type') == 'undispatch':
+            # 获取所有待分配的项目列表
+            undispatched_projects = ProjectPlan.objects.get_undispatched_projects(
+                hospital)
+            return resp.serialize_response(
+                undispatched_projects, srl_cls_name='ChunkProjectPlanSerializer',
+                results_name='projects'
+            )
+
+        if req.GET.get('type') == 'my_projects':
+            """
+            我的项目列表，带筛选
+            参数列表：
+                organ_id	int		当前医院ID
+                upper_expired_date	string		截止时间2（2018-06-01）
+                lower_expired_date	string		截止时间1（2018-06-19）
+                pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
+                pro_title_leader	string		项目名称/项目负责人
+                creator_id	int		申请人ID（此ID为当前登录用户ID），筛选我申请的项目
+                performer_id int	项目负责人ID（此ID为当前登录用户ID），筛选我负责的项目
+                current_stone_id 里程碑id
+            """
+
+            hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
+            self.check_object_permissions(req, hospital)
+            form = ProjectPlanListForm(req, hospital)
+            if not form.is_valid():
+                return resp.form_err(form.errors)
+            return resp.serialize_response(
+                form.my_projects_plan(), srl_cls_name='ChunkProjectPlanSerializer',
+                results_name='projects'
+            )
 
 
 class ProjectPlanCreateView(BaseAPIView):
@@ -372,49 +409,49 @@ class MilestoneView(BaseAPIView):
         pass
 
 
-class MyProjectListView(BaseAPIView):
-    permission_classes = (IsHospitalAdmin, )
-
-    @check_id('organ_id')
-    def get(self, req):
-        """
-        我的项目列表，带筛选
-        参数列表：
-            organ_id	int		当前医院ID
-            upper_expired_date	string		截止时间2（2018-06-01）
-            lower_expired_date	string		截止时间1（2018-06-19）
-            pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
-            pro_title_leader	string		项目名称/项目负责人
-            creator_id	int		申请人ID（此ID为当前登录用户ID），筛选我申请的项目
-            performer_id int	项目负责人ID（此ID为当前登录用户ID），筛选我负责的项目
-
-        """
-        hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        self.check_object_permissions(req, hospital)
-        form = ProjectPlanListForm(req)
-        if not form.is_valid():
-            return resp.form_err(form.errors)
-        return resp.serialize_response(
-            form.my_projects_plan(), srl_cls_name='ChunkProjectPlanSerializer',
-            results_name='projects'
-        )
-
-
-class AllotProjectListView(BaseAPIView):
-    permission_classes = (IsHospitalAdmin, )
-
-    @check_id('organ_id')
-    def get(self, req):
-        """
-        获取所有待分配的项目列表
-        """
-        hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        self.check_object_permissions(req, hospital)
-
-        undispatched_projects = ProjectPlan.objects.get_undispatched_projects(hospital)
-        return resp.serialize_response(
-            undispatched_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
-        )
+# class MyProjectListView(BaseAPIView):
+#     permission_classes = (IsHospitalAdmin, )
+#
+#     @check_id('organ_id')
+#     def get(self, req):
+#         """
+#         我的项目列表，带筛选
+#         参数列表：
+#             organ_id	int		当前医院ID
+#             upper_expired_date	string		截止时间2（2018-06-01）
+#             lower_expired_date	string		截止时间1（2018-06-19）
+#             pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
+#             pro_title_leader	string		项目名称/项目负责人
+#             creator_id	int		申请人ID（此ID为当前登录用户ID），筛选我申请的项目
+#             performer_id int	项目负责人ID（此ID为当前登录用户ID），筛选我负责的项目
+#
+#         """
+#         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
+#         self.check_object_permissions(req, hospital)
+#         form = ProjectPlanListForm(req, hospital)
+#         if not form.is_valid():
+#             return resp.form_err(form.errors)
+#         return resp.serialize_response(
+#             form.my_projects_plan(), srl_cls_name='ChunkProjectPlanSerializer',
+#             results_name='projects'
+#         )
+#
+#
+# class AllotProjectListView(BaseAPIView):
+#     permission_classes = (IsHospitalAdmin, )
+#
+#     @check_id('organ_id')
+#     def get(self, req):
+#         """
+#         获取所有待分配的项目列表
+#         """
+#         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
+#         self.check_object_permissions(req, hospital)
+#
+#         undispatched_projects = ProjectPlan.objects.get_undispatched_projects(hospital)
+#         return resp.serialize_response(
+#             undispatched_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+#         )
 
 
 
