@@ -192,6 +192,36 @@ class ProjectFlowCreateForm(BaseForm):
         return ProjectFlow.objects.create_flow(self.data.get("milestones"), **data)
 
 
+class ProjectFlowUpdateForm(BaseForm):
+
+    def __init__(self, old_flow, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, kwargs)
+        self.old_flow = old_flow
+
+        self.ERR_CODES.update({
+            "err_flow_title": "流程标题错误",
+        })
+
+    def is_valid(self):
+        return self.check_flow_title()
+
+    def check_flow_title(self):
+        title = self.data.get('flow_title', '').strip()
+        if not title:
+            self.update_errors('flow_title', 'err_flow_title')
+            return False
+        return True
+
+    def check_flow_used(self):
+        pass
+
+    def save(self):
+        data = {
+            'title': self.data.get('flow_title', '').strip(),
+        }
+        return self.old_flow.update(data)
+
+
 class ProjectPlanListForm(BaseForm):
     def __init__(self, req, hospital, *args, **kwargs):
         BaseForm.__init__(self, req, hospital, *args, **kwargs)

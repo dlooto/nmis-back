@@ -7,8 +7,13 @@ import logging
 import random
 from unittest import skip
 
+from django.core.files.uploadedfile import UploadedFile
+from django.http.multipartparser import FILE
+from django.test import Client
+
 from nmis.hospitals.models import Staff
 from runtests import BaseTestCase
+from settings import FIXTURE_DIRS
 
 logs = logging.getLogger(__name__)
 
@@ -165,15 +170,14 @@ class StaffsPermChangeTestCase(BaseTestCase):
 
 class StaffAPITestCase(BaseTestCase):
 
-    staff_create_api = '/api/v1/hospitals/{0}/staffs/create'
-    staff_update_get_delete_api = '/api/v1/hospitals/{0}/staffs/{1}'
-    staff_get_list_apt = '/api/v1/hospitals/{0}/staffs'
 
     def test_staff_create(self):
         """
         测试新增员工信息
         :return:
         """
+        api = '/api/v1/hospitals/{0}/staffs/create'
+
         self.login_with_username(self.user)
 
         new_staff_data = {
@@ -188,7 +192,7 @@ class StaffAPITestCase(BaseTestCase):
         }
 
         response = self.post(
-            self.staff_create_api.format(self.organ.id),
+            api.format(self.organ.id),
             data=new_staff_data
         )
         self.assert_response_success(response)
@@ -202,10 +206,12 @@ class StaffAPITestCase(BaseTestCase):
         测试获取员工详细信息
         :return:
         """
+        api = '/api/v1/hospitals/{0}/staffs/{1}'
+
         self.login_with_username(self.user)
         # new_staff = self.create_completed_staff(self.organ, self.dept, 'test001')
         response = self.get(
-            self.staff_update_get_delete_api.format(
+            api.format(
                 self.organ.id,
                 self.admin_staff.id,
             )
@@ -221,6 +227,8 @@ class StaffAPITestCase(BaseTestCase):
         测试更新员工信息
         :return:
         """
+        api = '/api/v1/hospitals/{0}/staffs/{1}'
+
         self.login_with_username(self.user)
 
         update_staff_data = {
@@ -231,7 +239,7 @@ class StaffAPITestCase(BaseTestCase):
             'dept_id': self.dept.id,
         }
         response = self.put(
-            self.staff_update_get_delete_api.format(
+            api.format(
                 self.organ.id,
                 self.admin_staff.id,
             ), data=update_staff_data
@@ -246,10 +254,11 @@ class StaffAPITestCase(BaseTestCase):
         测试删除员工信息
         :return:
         """
+        api = '/api/v1/hospitals/{0}/staffs/{1}'
 
         self.login_with_username(self.user)
         response = self.delete(
-            self.staff_update_get_delete_api.format(self.organ.id, self.admin_staff.id)
+            api.format(self.organ.id, self.admin_staff.id)
         )
 
         self.assert_response_success(response)
@@ -260,11 +269,12 @@ class StaffAPITestCase(BaseTestCase):
         测试获取员工列表
         :return:
         """
+        api = '/api/v1/hospitals/{0}/staffs'
         self.create_completed_staff(self.organ, self.dept, 'test001')
         self.create_completed_staff(self.organ, self.dept, 'test002')
         self.login_with_username(self.user)
         response = self.get(
-            self.staff_get_list_apt.format(self.organ.id),
+            api.format(self.organ.id),
             dept_id=self.dept.id,
 
         )
@@ -272,5 +282,21 @@ class StaffAPITestCase(BaseTestCase):
         #self.assert_response_failure(response)
         self.assertIsNotNone(response.get('staffs'))
         self.assertEqual(len(response.get('staffs')), 3)
+
+    def test_staff_batch_upload(self):
+        """
+        测试批量导入员工
+        :return:
+        """
+        api = '/api/v1/hospitals/{0}/staffs/batch-upload'
+
+        self.login_with_username(self.user)
+        import os
+        curr_path = os.path.dirname(__file__)
+        staff_file_obj = open(curr_path+'/data/staff-normal-test.xlsx', 'rb')
+        response = self.raw_post(api.format(self.organ.id), {'staff_excel_file': staff_file_obj})
+        self.assert_response_success(response)
+
+
 
 

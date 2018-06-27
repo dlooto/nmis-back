@@ -8,22 +8,18 @@
 """
 
 import logging
-
-from django.core.files.uploadedfile import UploadedFile
+from operator import eq
 
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from base.common.param_utils import get_id_list
 from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
-
-from nmis.hospitals.managers import StaffManager
-from users.models import User
-from utils import files
+from utils.files import ExcelBasedOXL, get_file_extension
 
 from base import resp
 from base.views import BaseAPIView
-from nmis.hospitals.forms import StaffUpdateForm
+from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm
 from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission
 from nmis.hospitals.models import Hospital, Department, Staff, Group
 from .forms import (
@@ -32,6 +28,8 @@ from .forms import (
     StaffSignupForm,
     DepartmentCreateForm
 )
+
+from nmis.hospitals.consts import UPLOADED_STAFF_EXCEL_HEADER_DICT
 
 
 logs = logging.getLogger(__name__)
@@ -267,9 +265,9 @@ class StaffListView(BaseAPIView):
         return resp.serialize_response(staff_list, results_name='staffs')
 
 
-class StaffsBatchImportView(BaseAPIView):
+class StaffBatchUploadView(BaseAPIView):
 
-    permission_classes = (AllowAny,)
+    permission_classes = (IsHospitalAdmin,)
 
     def post(self, req, hid):
         """
@@ -283,7 +281,6 @@ class StaffsBatchImportView(BaseAPIView):
         检查医疗机构是否存在
         检查科室列表是否存在
         检查excel文档中员工用户名是否有重复数据
-        检查excel文档中存在同名员工，给出提示
         检查员工用户名是否存在
 
         """
@@ -291,55 +288,30 @@ class StaffsBatchImportView(BaseAPIView):
         self.check_object_permissions(req, organ)
 
         file_obj = req.FILES.get('staff_excel_file')
-        file_obj.read()
-        file_name = file_obj.name
-        file_size = file_obj.size
-
+        print(req.FILES)
+        if not file_obj:
+            return resp.failed('请选择导入文件')
+        file_extension = get_file_extension(file_obj.name)
+        if file_extension != '.xlsx':
+            return resp.failed('导入文件不是Excel文件，请检查')
         # 将文件存放到服务器
         # import os
         # file_server_path = open(os.path.join('/media/', '', file_obj.name), 'wb')
         # file = open('file_server_path', 'wb')
 
-        head_dict = {'username': '用户名', 'staff_name': '员工姓名', 'email': '邮箱', 'contact_phone': '联系电话', 'dept_name': '所属科室'}
-        excel_data = files.read_excel_with_header_path(file_obj, head_dict)
-        staff_data = list()
-        print(excel_data)
-        print(excel_data[0])
-        if excel_data[0] and excel_data[0][0]:
-            sheet_data = excel_data[0]
-            for s in range(len(sheet_data)):
-                # 封装科室
-                print(sheet_data[s].get('dept_name'))
-                dept = Department.objects.filter(name=sheet_data[s].get('dept_name'))[0]
-                staff_data.append({
-                    'username': sheet_data[s].get('username'),
-                    'staff_name': sheet_data[s].get('email'),
-                    'contact_phone': sheet_data[s].get('contact_phone'),
-                    'email': sheet_data[s].get('email'),
-                    'dept': dept,
-                    'organ': organ,
-                })
-
-            # 循环添加
-            for i in range(len(staff_data)):
-                try:
-                    with transaction.atomic():
-                        user = User.objects.create_param_user(
-                            ('username', staff_data[i].get('username')), password='111111', is_active=True,
-                        )
-                        Staff.objects.create(
-                            organ=staff_data[i].get('organ'),
-                            dept=staff_data[i].get('dept'),
-                            user=user,
-                            name=staff_data[i].get('staff_name'),
-                            contact=staff_data[i].get('contact_phone'),
-                            email=staff_data[i].get('email')
-                        )
-                except Exception as e:
-                    logging.exception(e)
-                    return resp.failed('操作失败')
-            return resp.ok('操作成功')
-        return resp.failed('文件不能为空')
+        head_dict = UPLOADED_STAFF_EXCEL_HEADER_DICT
+        try:
+            excel_data = ExcelBasedOXL.read_excel_with_header(ExcelBasedOXL.open_excel(file_obj), head_dict)
+        except Exception as e:
+            if eq('ExcelHeaderNotMatched', e.args[0]) == 0:
+                return resp.failed('表单的表头数据和指定的标准不一致，请检查')
+            return resp.failed('导入失败')
+        form = StaffBatchUploadForm(organ, excel_data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        if form.save():
+            return resp.ok('导入成功')
+        return resp.failed('导入失败')
 
 
 class DepartmentCreateView(BaseAPIView):

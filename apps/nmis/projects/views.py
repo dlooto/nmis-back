@@ -24,8 +24,8 @@ from nmis.projects.forms import (
     OrderedDeviceCreateForm,
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
-    ProjectPlanListForm
-)
+    ProjectPlanListForm,
+    ProjectFlowUpdateForm)
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
 from nmis.projects.permissions import ProjectPerformerPermission
 
@@ -343,18 +343,46 @@ class ProjectFlowView(BaseAPIView):
         """
         pass
 
+    @check_id('organ_id')
+    @check_params_not_null('flow_title')
     def put(self, req, flow_id):
         """
         修改流程名称及其他属性信息, 修改不包括添加/删除/修改流程内的里程碑项(已提取到单独的接口)
         仅允许管理员操作
+        TODO： 添加修改限制条件
         """
-        pass
+        objects = self.get_objects_or_404({'organ_id': Hospital, 'flow_id': ProjectFlow})
+        self.check_object_permissions(req, objects.get('organ_id'))
 
+        form = ProjectFlowUpdateForm(objects.get('flow_id'), req.data)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+
+        new_flow = form.save()
+        if not new_flow:
+            return resp.failed('操作失败')
+        return resp.serialize_response(new_flow, result_name='flow')
+
+    @check_id('organ_id')
     def delete(self, req, flow_id):
         """
         删除流程. 仅允许管理员操作
+
+        如果流程已经在使用，不能删除
+        TODO： 添加删除限制条件
         """
-        pass
+        objects = self.get_objects_or_404({'organ_id': Hospital, 'flow_id': ProjectFlow})
+        self.check_object_permissions(req, objects.get('organ_id'))
+
+        flow = objects.get('flow_id')
+        flow.clear_cache()
+        try:
+            flow.delete()
+        except Exception as e:
+            logs.info(e)
+            return resp.failed('操作失败')
+        return resp.failed('操作成功')
 
 
 class MilestoneCreateView(BaseAPIView):
