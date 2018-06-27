@@ -291,6 +291,7 @@ class StaffAPITestCase(BaseTestCase):
         api = '/api/v1/hospitals/{0}/staffs/batch-upload'
 
         self.login_with_username(self.user)
+        self.create_department(self.organ, dept_name='测试部门')
         import os
         curr_path = os.path.dirname(__file__)
         staff_file_obj = open(curr_path+'/data/staff-normal-test.xlsx', 'rb')

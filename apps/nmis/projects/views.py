@@ -76,7 +76,7 @@ class ProjectPlanListView(BaseAPIView):
             if not form.is_valid():
                 return resp.form_err(form.errors)
             return resp.serialize_response(
-                form.my_projects_plan(), srl_cls_name='ChunkProjectPlanSerializer',
+                form.my_projects(), srl_cls_name='ChunkProjectPlanSerializer',
                 results_name='projects'
             )
 
