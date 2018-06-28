@@ -83,15 +83,15 @@ class StaffSignupForm(BaseForm):
     新增员工表单数据验证
     """
     ERR_CODES = {
-        'err_username': '用户名为空或格式错误',
-        'err_username_existed': '用户名已存在',
-        'err_password': '密码为空或格式错误',
-        'err_staff_name': '员工姓名错误',
+        'err_username':             '用户名为空或格式错误',
+        'err_username_existed':     '用户名已存在',
+        'err_password':             '密码为空或格式错误',
+        'err_staff_name':           '员工姓名错误',
         'err_contact_phone':        '联系电话格式错误',
-        'err_email':                 '无效邮箱',
-        'err_staff_title': '职位名为空或格式错误',
-        'err_group_is_null': '权限组为空或数据错误',
-        'err_group_not_exist': '权限组不存在',
+        'err_email':                '无效邮箱',
+        'err_staff_title':          '职位名为空或格式错误',
+        'err_group_is_null':        '权限组为空或数据错误',
+        'err_group_not_exist':      '权限组不存在',
     }
 
     def __init__(self, organ, dept, data, *args, **kwargs):
@@ -207,11 +207,11 @@ class StaffSignupForm(BaseForm):
 class StaffUpdateForm(BaseForm):
 
     ERR_CODES = {
-        'err_staff_name': '员工姓名错误',
+        'err_staff_name':           '员工姓名错误',
         'err_contact_phone':        '联系电话格式错误',
-        'err_email':                 '无效邮箱',
-        'err_dept':                   '科室信息错误',
-        'err_staff_title': '职位名为空或格式错误'
+        'err_email':                '无效邮箱',
+        'err_dept':                 '科室信息错误',
+        'err_staff_title':          '职位名为空或格式错误'
     }
 
     def __init__(self, staff, data, *args, **kwargs):
@@ -282,13 +282,13 @@ class StaffUpdateForm(BaseForm):
 class StaffBatchUploadForm(BaseForm):
 
     ERR_CODES = {
-        'null_username': '第{0}行用户名不能为空',
-        'duplicate_username': '第{0}行和第{1}行用户名重复，请检查',
-        'username_exists': '第{0}行用户名{1}已存在',
-        'null_staff_name': '第{0}行员工姓名不能为空',
-        'err_contact_phone':        '第{0}联系电话格式错误',
-        'err_email':                 '第{0}无效邮箱',
-        'err_dept':                   '第{0}科室为空或不存在',
+        'null_username':                '第{0}行用户名不能为空',
+        'duplicate_username':           '第{0}行和第{1}行用户名重复，请检查',
+        'username_exists':              '第{0}行用户名{1}已存在',
+        'null_staff_name':              '第{0}行员工姓名不能为空',
+        'err_contact_phone':            '第{0}联系电话格式错误',
+        'err_email':                    '第{0}无效邮箱',
+        'err_dept':                     '第{0}科室为空或不存在',
     }
 
     def __init__(self, organ, data, *args, **kwargs):
@@ -302,13 +302,13 @@ class StaffBatchUploadForm(BaseForm):
             sheet_data = self.data[0]
             usernames, staff_names, dept_names, emails, contact_phones, = [], [], [], [], []
             for i in range(len(sheet_data)):
-                usernames.append(sheet_data[i].get('username', ''))
+                usernames.append(sheet_data[i].get('username', '').strip())
             for i in range(len(sheet_data)):
-                staff_names.append(sheet_data[i].get('staff_name', ''))
+                staff_names.append(sheet_data[i].get('staff_name', '').strip())
             for i in range(len(sheet_data)):
-                dept_names.append(sheet_data[i].get('dept_name', ''))
+                dept_names.append(sheet_data[i].get('dept_name', '').strip())
             for i in range(len(sheet_data)):
-                emails.append(sheet_data[i].get('email', ''))
+                emails.append(sheet_data[i].get('email', '').strip())
             for i in range(len(sheet_data)):
                 contact_phones.append(sheet_data[i].get('contact_phone', ''))
         validate_excel_data['usernames'] = usernames
@@ -319,10 +319,10 @@ class StaffBatchUploadForm(BaseForm):
         return validate_excel_data
 
     def is_valid(self):
-        is_valid = True
-        if not self.check_username():
-            is_valid = False
-
+        is_valid = False
+        if self.check_username() and self.check_staff_name() and self.check_dept() \
+            and self.check_email() and self.check_contact_phone():
+            is_valid = True
         return is_valid
 
     def check_username(self):
@@ -371,10 +371,10 @@ class StaffBatchUploadForm(BaseForm):
         """
         emails = self.validate_excel_data['emails']
         for i in range(len(emails)):
-            if not eggs.is_email_valid(emails[i]):
-                self.update_errors('email', 'err_email', str(i+2))
-                return False
-
+            if emails[i]:
+                if not eggs.is_email_valid(emails[i]):
+                    self.update_errors('email', 'err_email', str(i+2))
+                    return False
         return True
 
     def check_contact_phone(self):
@@ -383,9 +383,11 @@ class StaffBatchUploadForm(BaseForm):
         """
         contact_phones = self.validate_excel_data['contact_phones']
         for i in range(len(contact_phones)):
-            if not eggs.is_phone_valid(contact_phones[i]):
-                self.update_errors('contact_phone', 'err_contact_phone', str(i+2))
-                return False
+            if contact_phones[i]:
+                if not eggs.is_phone_valid(str(contact_phones[i])):
+                    self.update_errors('contact_phone', 'err_contact_phone', str(i+2))
+                    return False
+
         return True
 
     def check_dept(self):
