@@ -63,6 +63,9 @@ class ProjectPlanManager(BaseManager):
             Q(performer__in=staffs)
         ).filter(**data)
 
+    def get_projects_apply(self, organ, creator_id):
+        return self.filter(related_dept__organ=organ, creator_id=creator_id)
+
 
 class ProjectFlowManager(BaseManager):
 
