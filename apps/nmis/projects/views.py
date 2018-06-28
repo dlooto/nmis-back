@@ -80,6 +80,16 @@ class ProjectPlanListView(BaseAPIView):
                 results_name='projects'
             )
 
+        # 获取我申请的项目列表
+        if req.GET.get('type') == 'apply':
+            creator_id = req.GET.get('creator_id')
+            if not req.GET.get('creator_id'):
+                return resp.failed('creator_id：参数为空')
+            projects = ProjectPlan.objects.get_projects_apply(hospital, creator_id)
+            return resp.serialize_response(
+                projects, srl_cls_name='ChunkProjectPlanSerializer',
+                results_name='projects')
+
 
 class ProjectPlanCreateView(BaseAPIView):
     """
