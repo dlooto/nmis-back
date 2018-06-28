@@ -70,8 +70,6 @@ class ProjectPlanListView(BaseAPIView):
                 current_stone_id 里程碑id
             """
 
-            hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-            self.check_object_permissions(req, hospital)
             form = ProjectPlanListForm(req, hospital)
             if not form.is_valid():
                 return resp.form_err(form.errors)

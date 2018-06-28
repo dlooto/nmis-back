@@ -53,12 +53,13 @@ class ProjectPlanManager(BaseManager):
     def get_projects(self, organ, **data):
         return self.filter(related_dept__organ=organ, **data)
 
-    # 筛选查询项目列表
     def get_projects_vague(self, organ, title_leader, staffs, **data):
+        """
+        筛选查询项目列表
+        """
         from django.db.models import Q
         return self.filter(
-            Q(related_dept__organ=organ),
-            Q(title__contains=title_leader) |
+            Q(related_dept__organ=organ), Q(title__contains=title_leader) |
             Q(performer__in=staffs)
         ).filter(**data)
 
