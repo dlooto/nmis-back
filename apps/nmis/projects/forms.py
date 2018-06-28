@@ -245,21 +245,7 @@ class ProjectPlanListForm(BaseForm):
         })
 
     def is_valid(self):
-        return self.check_expired_date() and self.check_status()
-
-    def check_expired_date(self):
-
-        # 如果时间段不存在，直接返回true
-        if not self.req.GET.get('upper_expired_date') and \
-                not self.req.GET.get('lower_expired_date'):
-            return True
-
-        # 时间段中只存在一个时间，直接返回false
-        if not self.req.GET.get('upper_expired_date') or \
-                not self.req.GET.get('lower_expired_date'):
-            self.update_errors('expired_date', 'err_expired_date')
-            return False
-        return True
+        return self.check_status()
 
     def check_status(self):
         status = self.req.GET.get('pro_status')
@@ -291,11 +277,6 @@ class ProjectPlanListForm(BaseForm):
 
         if self.req.GET.get('current_stone_id', ''):
             data['current_stone_id'] = self.req.GET.get('current_stone_id').strip()
-
-        if self.req.GET.get('upper_expired_date', '').strip() and \
-                self.req.GET.get('lower_expired_date', '').strip():
-            data['created_time__lte'] = self.req.GET.get('upper_expired_date', '').strip()
-            data['created_time__gte'] = self.req.GET.get('lower_expired_date', '').strip()
 
         # 判断是否存在项目名和项目负责人关键字
         if self.req.GET.get('pro_title_leader', '').strip():

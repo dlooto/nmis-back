@@ -37,10 +37,14 @@ class IsHospitalAdmin(BasePermission):
     message = u'仅医院管理员可操作'
 
     def has_permission(self, request, view):
+        """
+        View/接口级权限检查
+        """
         return is_login(request)
 
     def has_object_permission(self, request, view, obj):
         """
+        对象级权限检查.
         :param obj: organ object
         """
         if not request.user.get_profile():

@@ -61,8 +61,6 @@ class ProjectPlanListView(BaseAPIView):
             我的项目列表，带筛选
             参数列表：
                 organ_id	int		当前医院ID
-                upper_expired_date	string		截止时间2（2018-06-01）
-                lower_expired_date	string		截止时间1（2018-06-19）
                 pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
                 pro_title_leader	string		项目名称/项目负责人
                 creator_id	int		申请人ID（此ID为当前登录用户ID），筛选我申请的项目
@@ -119,7 +117,7 @@ class ProjectPlanCreateView(BaseAPIView):
          }
         """
         objects = self.get_objects_or_404({
-            "organ_id":      Hospital,
+            "organ_id":         Hospital,
             "creator_id":       Staff,
             "related_dept_id":  Department
         })
