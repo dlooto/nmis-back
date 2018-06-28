@@ -37,7 +37,7 @@ class ProjectPlanListView(BaseAPIView):
     项目列表操作
     """
 
-    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+    permission_classes = (HospitalStaffPermission, )
 
     @check_params_not_null(['organ_id', 'type'])
     def get(self, req):

@@ -192,7 +192,7 @@ class Staff(BaseStaff):
     def __str__(self):
         return '%s %s' % (self.id, self.name)
 
-    def has_project_approver_perm(self, ):
+    def has_project_dispatcher_perm(self, ):
         group = self.organ.get_specified_group(GROUP_CATE_PROJECT_APPROVER)
         return self.has_group_perm(group)
 

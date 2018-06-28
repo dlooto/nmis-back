@@ -67,6 +67,8 @@ class HospitalStaffPermission(BasePermission):
         if not is_login(request):
             return False
         staff = request.user.get_profile()
+        if staff.is_admin_for_organ(obj) or staff.has_project_dispatcher_perm():
+            return True
         return staff.organ == obj if staff else False
 
 
@@ -87,7 +89,7 @@ class ProjectDispatcherPermission(BasePermission):
         staff = request.user.get_profile()
         if staff.is_admin_for_organ(obj):
             return True
-        return staff.organ == obj and staff.has_project_approver_perm()
+        return staff.organ == obj and staff.has_project_dispatcher_perm()
 
 
 # class ProjectAdminPermission(BaseComposedPermission):
