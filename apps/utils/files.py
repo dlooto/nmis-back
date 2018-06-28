@@ -134,11 +134,16 @@ class ExcelBasedOXL(object):
         :return:
         """
         excel_data = []
-        for sheet_name in wb.sheetnames:
-            sheet_data = ExcelBasedOXL.read_sheet_with_header(wb[sheet_name], header_dict)
-            if sheet_data:
-                excel_data.append(sheet_data)
-        return excel_data
+        try:
+            for sheet_name in wb.sheetnames:
+                sheet_data = ExcelBasedOXL.read_sheet_with_header(wb[sheet_name], header_dict)
+                if sheet_data:
+                    excel_data.append(sheet_data)
+            return True, excel_data
+        except Exception as e:
+            logs.exception(e)
+            return False, "Excel解析错误"
+
 
     @staticmethod
     def read_sheet_with_header(ws, header_dict):
@@ -148,36 +153,38 @@ class ExcelBasedOXL(object):
         :param header_dict: 表头字典，K:键，一般为model属性；V:对应表头单元格数据
         :return: 返回一个List对象，该List对象由一组Dictionary对象构成
         """
+        if not ws:
+            return []
+
         sheet_data = []
-        if ws:
-            ws_rows_len = ws.max_row
-            ws_column_len = len(header_dict)
+        ws_rows_len = ws.max_row
+        ws_column_len = len(header_dict)
 
-            # 读取首行数据
-            header_data = []
+        # 读取首行数据
+        header_data = []
+        for col in range(1, ws_column_len+1):
+            header_data.append(ws.cell(1, col).value)
+
+        header_keys = []  # 表头顺序对应的关键字列表
+        # 判断首行数据是否和指定的标准一致，如果一致，按顺序封装表头关键字；否则抛出异常
+        for item in header_dict.items():
+            for hdata in header_data:
+                if item[1] == hdata:
+                    header_keys.append(item[0])
+                    break
+
+        if len(header_keys) != len(header_dict):
+            # 抛出“表单的表头数据和指定的标准不一致，请检查”异常
+            raise Exception('ExcelHeaderNotMatched')
+
+        # 读取业务数据
+        for row in range(2, ws_rows_len+1):
+            row_data = {}
             for col in range(1, ws_column_len+1):
-                header_data.append(ws.cell(1, col).value)
-
-            header_keys = []  # 表头顺序对应的关键字列表
-            # 判断首行数据是否和指定的标准一致，如果一致，按顺序封装表头关键字；否则抛出异常
-            for item in header_dict.items():
-                for hdata in header_data:
-                    if item[1] == hdata:
-                        header_keys.append(item[0])
-                        break
-
-            if len(header_keys) != len(header_dict):
-                # 抛出“表单的表头数据和指定的标准不一致，请检查”异常
-                raise Exception('ExcelHeaderNotMatched')
-
-            # 读取业务数据
-            for row in range(2, ws_rows_len+1):
-                row_data = {}
-                for col in range(1, ws_column_len+1):
-                    key = header_keys[col-1]
-                    value = ws.cell(row=row, column=col).value
-                    row_data[key] = value
-                sheet_data.append(row_data)
+                key = header_keys[col-1]
+                value = ws.cell(row=row, column=col).value
+                row_data[key] = value
+            sheet_data.append(row_data)
 
         return sheet_data
 

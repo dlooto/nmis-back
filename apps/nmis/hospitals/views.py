@@ -267,7 +267,7 @@ class StaffListView(BaseAPIView):
 
 class StaffBatchUploadView(BaseAPIView):
 
-    permission_classes = (IsHospitalAdmin,)
+    permission_classes = (IsHospitalAdmin, )
 
     def post(self, req, hid):
         """
@@ -290,7 +290,7 @@ class StaffBatchUploadView(BaseAPIView):
         file_obj = req.FILES.get('staff_excel_file')
         logs.debug(req.FILES)
         if not file_obj:
-            return resp.failed('请选择导入文件')
+            return resp.failed('请选择要上传的文件')
 
         file_extension = get_file_extension(file_obj.name)
         if file_extension != '.xlsx':
@@ -302,19 +302,15 @@ class StaffBatchUploadView(BaseAPIView):
         # file = open('file_server_path', 'wb')
 
         head_dict = UPLOADED_STAFF_EXCEL_HEADER_DICT
-        try:
-            excel_data = ExcelBasedOXL.read_excel_with_header(ExcelBasedOXL.open_excel(file_obj), head_dict)
-        except Exception as e:
-            if eq('ExcelHeaderNotMatched', e.args[0]) == 0:
-                return resp.failed('表单的表头数据和指定的标准不一致，请检查')
-            return resp.failed('导入失败')
+        success, result = ExcelBasedOXL.read_excel_with_header(ExcelBasedOXL.open_excel(file_obj), head_dict)
+        if not success:
+            return resp.failed(result)
 
-        form = StaffBatchUploadForm(organ, excel_data)
+        form = StaffBatchUploadForm(organ, result)
         if not form.is_valid():
             return resp.form_err(form.errors)
-        if form.save():
-            return resp.ok('导入成功')
-        return resp.failed('导入失败')
+
+        return resp.ok('导入员工信息成功') if form.save() else resp.failed('导入失败')
 
 
 class DepartmentCreateView(BaseAPIView):

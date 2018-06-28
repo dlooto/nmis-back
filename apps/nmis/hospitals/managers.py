@@ -12,6 +12,7 @@ from django.db import transaction
 from users.models import User
 
 from base.models import BaseManager
+from utils import times
 
 logs = logging.getLogger(__name__)
 
@@ -46,22 +47,37 @@ class StaffManager(BaseManager):
             logging.exception(e)
             return None
 
-    def batch_upload_staff(self, staff_data):
-        # TODO: 暂时用如下方式进行批量添加员工信息，后续创建批量添加接口进行优化
+    def batch_upload_staffs(self, staffs_data):
         try:
             with transaction.atomic():
-                for i in range(len(staff_data)):
-                    user = User.objects.create_param_user(
-                        ('username', staff_data[i].get('username')), password='111111', is_active=True,
+                user_list = []
+                for data in staffs_data:
+                    user = User(
+                        username=data.get('username'), password='111111',
+                        is_active=True, is_staff=False, is_superuser=False,
+                        last_login=times.now(), date_joined=times.now()
                     )
-                    staff = self.create(
-                        organ=staff_data[i].get('organ'),
-                        dept=staff_data[i].get('dept'),
-                        user=user,
-                        name=staff_data[i].get('staff_name'),
-                        contact=staff_data[i].get('contact_phone'),
-                        email=staff_data[i].get('email')
-                    )
+                    user.set_password('111111')
+                    user_list.append(user)
+                none_id_users = User.objects.bulk_create(user_list)
+
+                users = User.objects.filter(username__in=[user.username for user in none_id_users])
+
+                user_dict = {}
+                for user in users:
+                    user_dict[user.username] = user
+
+                staff_list = []
+                for data in staffs_data:
+                    staff_list.append(
+                        self.model(
+                            organ=data.get('organ'), dept=data.get('dept'),
+                            user=user_dict[data.get('username')],
+                            name=data.get('staff_name'),
+                            contact=data.get('contact_phone'),
+                            email=data.get('email')
+                    ))
+                self.bulk_create(staff_list)
             return True
         except Exception as e:
             logging.exception(e)
