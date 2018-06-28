@@ -240,7 +240,6 @@ class ProjectPlanListForm(BaseForm):
         self.hospital = hospital
 
         self.ERR_CODES.update({
-            "err_expired_date": "截止时间必须为一个时间段",
             "err_status": "项目状态错误"
         })
 
@@ -266,8 +265,6 @@ class ProjectPlanListForm(BaseForm):
 
         if self.req.GET.get('pro_status', ''):
             data['status'] = self.req.GET.get('pro_status', '').strip()
-        else:
-            data['status__in'] = dict(PROJECT_STATUS_CHOICES).keys()
 
         if self.req.GET.get('creator_id', ''):
             data['creator_id'] = self.req.GET.get('creator_id', '').strip()
@@ -279,15 +276,12 @@ class ProjectPlanListForm(BaseForm):
             data['current_stone_id'] = self.req.GET.get('current_stone_id').strip()
 
         # 判断是否存在项目名和项目负责人关键字
-        if self.req.GET.get('pro_title_leader', '').strip():
+        performers = None
+        search_key = self.req.GET.get('pro_title_leader', '').strip()
+        if search_key:
+            performers = Staff.objects.get_by_name(self.hospital, search_key)
 
-            staffs = Staff.objects.get_staffs_by_name(
-                self.hospital, self.req.GET.get('pro_title_leader', '').strip()
-            )
+        return ProjectPlan.objects.get_by_search_key(
+            self.hospital, project_title=search_key, performers=performers, **data
+        )
 
-            return ProjectPlan.objects.get_projects_vague(
-                self.hospital,
-                self.req.GET.get('pro_title_leader', '').strip(),
-                staffs, **data)
-
-        return ProjectPlan.objects.get_projects(self.hospital, **data)
