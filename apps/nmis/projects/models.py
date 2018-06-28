@@ -214,6 +214,10 @@ class ProjectFlow(BaseModel):
         verbose_name_plural = 'B 项目流程'
         db_table = 'projects_project_flow'
 
+    VALID_ATTRS = [
+        'title',
+    ]
+
     def __str__(self):
         return "%s %s" % (self.id, self.title)
 
@@ -236,6 +240,12 @@ class ProjectFlow(BaseModel):
     def get_last_milestone(self):
         """ 返回流程中的最后一个里程碑项 """
         pass
+
+    def is_used(self):
+        query_set = ProjectPlan.objects.filter(attached_flow=self)
+        if not query_set:
+            return False
+        return True
 
 
 class Milestone(BaseModel):
@@ -295,7 +305,7 @@ class ProjectMilestoneRecord(BaseModel):
         db_table = 'projects_project_milestone_record'
 
     def __str__(self):
-        return self.project_id, self.milestone_id
+        return '%s %s' % (self.project_id, self.milestone_id)
 
 
 # class Contract(BaseModel):

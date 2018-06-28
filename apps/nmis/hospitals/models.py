@@ -1,4 +1,4 @@
-# coding=utf-8
+ # coding=utf-8
 #
 # Created by junn, on 2018-5-29
 #
@@ -35,6 +35,9 @@ class Hospital(BaseOrgan):
         verbose_name = u'A 医疗机构'
         verbose_name_plural = u'A 医疗机构'
         db_table = 'hosp_hospital'
+
+    def __str__(self):
+        return '%s %s' % (self.id, self.organ_name)
 
     def save(self, *args, **kwargs):  # 重写save函数，当admin后台保存表单后，更新缓存
         super(self.__class__, self).save(*args, **kwargs)
@@ -162,7 +165,7 @@ class Department(BaseDepartment):
     ]
 
     def __str__(self):
-        return u'%s' % self.name
+        return '%s %s' % (self.id, self.name)
 
 
 class Staff(BaseStaff):
@@ -185,6 +188,9 @@ class Staff(BaseStaff):
         verbose_name = 'C 员工'
         verbose_name_plural = 'C 员工'
         db_table = 'hosp_staff'
+
+    def __str__(self):
+        return '%s %s' % (self.id, self.name)
 
     def has_project_approver_perm(self, ):
         group = self.organ.get_specified_group(GROUP_CATE_PROJECT_APPROVER)

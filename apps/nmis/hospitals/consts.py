@@ -86,11 +86,11 @@ GROUPS = {
 
 # 上传的员工excel模板文件表头字典
 UPLOADED_STAFF_EXCEL_HEADER_DICT = {
-    'username': '用户名',
-    'staff_name': '员工姓名',
-    'email': '邮箱',
-    'contact_phone': '联系电话',
-    'dept_name': '所属科室'
+    'username':     '用户名',
+    'staff_name':   '员工姓名',
+    'email':        '邮箱',
+    'contact_phone':'联系电话',
+    'dept_name':    '所属科室'
 }
 
 
