@@ -67,7 +67,7 @@ class StaffManager(BaseManager):
             logging.exception(e)
             return False
 
-    def get_staffs_by_name(self, organ, staff_name):
+    def get_by_name(self, organ, staff_name):
         """
         通过名字模糊查询返回员工列表
         :param staff_name: 员工姓名

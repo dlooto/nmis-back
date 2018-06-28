@@ -182,7 +182,7 @@ class ProjectPlan(BaseModel):
             return False, "里程碑项不属于当前所用流程, 请检查数据是否异常"
 
         if new_milestone == self.current_stone:
-            return False, "已处于该状态"
+            return False, "项目已处于该状态"
 
         if new_milestone in self.get_recorded_milestones():
             return False, "里程碑已存在项目状态记录中"

@@ -47,24 +47,28 @@ class ProjectPlanManager(BaseManager):
     #     return self.filter(performer=None)
 
     def get_undispatched_projects(self, organ):
-        """ 返回机构待分配负责人的项目列表 """
+        """ 返回机构待分配(负责人)的项目列表 """
         return self.filter(related_dept__organ=organ, performer=None)
 
-    def get_projects(self, organ, **data):
-        return self.filter(related_dept__organ=organ, **data)
-
-    def get_projects_vague(self, organ, title_leader, staffs, **data):
+    def get_by_search_key(self, organ, project_title=None, performers=None, **fields):
         """
-        筛选查询项目列表
+        按关键字(项目名/项目负责人名)查询机构拥有的项目列表
         """
         from django.db.models import Q
-        return self.filter(
-            Q(related_dept__organ=organ), Q(title__contains=title_leader) |
-            Q(performer__in=staffs)
-        ).filter(**data)
 
-    def get_projects_apply(self, organ, creator_id):
-        return self.filter(related_dept__organ=organ, creator_id=creator_id)
+        query_set = self.filter(related_dept__organ=organ, **fields)
+        if project_title or performers:
+            query_set = query_set.filter(Q(title__contains=project_title) | Q(performer__in=performers)).distinct()
+        return query_set
+
+    def get_applied_projects(self, organ, creator):
+        """
+        返回项目申请者申请的项目列表
+        :param organ: 项目申请者所有机构
+        :param creator: 项目申请者staff object
+        :return:
+        """
+        return self.filter(related_dept__organ=organ, creator=creator)
 
 
 class ProjectFlowManager(BaseManager):
