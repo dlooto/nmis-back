@@ -186,3 +186,27 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertIsNotNone(project.get('performer_id'))
         self.assertIsNotNone(project.get('attached_flow_id'))
         self.assertEquals(project_plan.id, project.get('id'))
+
+    def test_projects_applied(self):
+        """
+        API测试：我申请的项目接口测试
+        """
+        api = '/api/v1/projects/'
+        self.login_with_username(self.user)
+        # 创建项目
+        for index in range(0, 3):
+            self.create_project(
+                self.admin_staff, self.dept,
+                title='我是申请的项目_{}'.format(self.get_random_suffix()))
+
+        data = {
+            'organ_id': self.organ.id,
+            'creator_id': self.admin_staff.id,
+            'type': 'apply'
+        }
+
+        response = self.get(api, data=data)
+        self.assert_response_success(response)
+        projects = response.get('projects')
+        self.assertEquals(len(projects), 3)
+        self.assert_object_in_results({'creator_id': self.admin_staff.id}, projects)
