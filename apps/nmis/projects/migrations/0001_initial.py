@@ -2,8 +2,7 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-from settings.subs.init_data_conf import PROJECTS_MIGRATION_INIT_SQL, \
-    SET_PROJECT_START_ID
+from settings.subs.init_data_conf import SET_PROJECT_START_ID
 
 
 class Migration(migrations.Migration):
