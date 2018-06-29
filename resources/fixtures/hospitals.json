@@ -1,9 +1,9 @@
 [
   	{
-      "pk": 20180606,
+      "pk": 20040001,
       "model": "hospitals.hospital",
       "fields": {
-        "creator": 20101212,
+        "creator": 10010001,
         "organ_name": "东都第一人民医院",
         "organ_scale": "5",
         "contact_name": "吴主任",
@@ -20,10 +20,10 @@
     },
 
     {
-      "pk": 10001001,
+      "pk": 30030001,
       "model": "hospitals.department",
       "fields": {
-        "organ": 20180606,
+        "organ": 20040001,
         "name": "信息科",
         "attri": "SU",
         "created_time": "2018-6-6 15:00"
@@ -31,13 +31,13 @@
     },
 
     {
-      "pk": 20181001,
+      "pk": 40040001,
       "model": "hospitals.staff",
       "fields": {
-        "user": 20101212,
-        "organ": 20180606,
-        "dept": 10001001,
-        "name": "腾主任",
+        "user": 10010001,
+        "organ": 20040001,
+        "dept": 30030001,
+        "name": "周主任",
         "title": "信息科主任",
         "group": null,
         "created_time": "2018-6-6 15:00"

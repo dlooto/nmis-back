@@ -56,7 +56,7 @@ ACTIVATE_PATH = os.path.join(ENV_ROOT, 'bin/activate')
 
 INIT_JSON_DATA = [
     'users.json',
-    'init_hospitals.json',
+    'hospitals.json',
     'project_flows.json',
 
 ]

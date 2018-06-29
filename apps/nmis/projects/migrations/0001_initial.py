@@ -2,6 +2,8 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
+from settings.subs.init_data_conf import PROJECTS_MIGRATION_INIT_SQL, \
+    SET_PROJECT_START_ID
 
 
 class Migration(migrations.Migration):
@@ -67,5 +69,10 @@ class Migration(migrations.Migration):
             model_name='milestone',
             name='flow',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='projects.ProjectFlow', verbose_name='归属流程'),
+        ),
+
+        # customized id start
+        migrations.RunSQL(  # id自增从设定的值开始
+            SET_PROJECT_START_ID,
         ),
     ]

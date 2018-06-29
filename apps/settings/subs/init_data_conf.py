@@ -5,14 +5,23 @@
 
 # 
 
+
+# id起始值规则说明
+"""
+user_id起始值:       10010001 (admin_user_id=10010000)
+hospital_id起始值:   20040001
+department_id起始值: 30030001
+staff_id起始值:      40040001
+project_id起始值:    50050001
+"""
+
 from django.contrib.auth import get_user_model
 
-# 默认起始业务ID设置
-
-USER_ID_AUTO_START = 20101211       # 用户id自增起始值
+USER_ID_AUTO_START = 10010000       # 用户id自增起始值, admin_user_id值
+PROJECT_ID_AUTO_START = 50050001    # 项目id自增起始值
 
 superuser_email = 'admin@nmis.com'
-superuser_password = 'Nmis1345a'
+superuser_password = 'Admin123'
 
 # 该方法在migration中被使用
 def create_superuser(apps, schema_editor):
@@ -27,4 +36,5 @@ def create_superuser(apps, schema_editor):
 
 
 # id自增从设定的值开始
-USERS_MIGRATION_INIT_SQL = [("alter table users_user AUTO_INCREMENT=%s;", [USER_ID_AUTO_START, ])]
+SET_USER_START_ID = [("alter table users_user AUTO_INCREMENT=%s;", [USER_ID_AUTO_START, ])]
+SET_PROJECT_START_ID = [("alter table projects_project_plan AUTO_INCREMENT=%s;", [PROJECT_ID_AUTO_START, ])]

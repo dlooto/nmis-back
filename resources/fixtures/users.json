@@ -1,9 +1,9 @@
 [
   	{
-      "pk": 20101212,
+      "pk": 10010001,
       "model": "users.user",
       "fields": {
-        "username": "yulaishini",
+        "username": "yuanlai",
         "email": "contact@nmis.com",
         "is_staff": false,
         "is_active": true,
