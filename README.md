@@ -25,7 +25,7 @@
 - Install Python3.6.5
 - pip install virtualenvwrapper
 - 创建virtualenv环境(指定Python版本)
-- pip install requirements.txt
+- pip install -r requirements.txt
 - 安装MySQL/Redis等数据存储服务
 - git clone ssh://git@gitee.com:juyangtech/nextcloud.git
 - 创建本地logs, media目录, 修改local.py文件

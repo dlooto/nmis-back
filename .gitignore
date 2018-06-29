@@ -19,6 +19,5 @@ dump.rdb
 *.rdb
 
 apps/settings/local.py
-apps/settings/__init__.py
 apps/build
 apps/celerybeat-schedule.db
