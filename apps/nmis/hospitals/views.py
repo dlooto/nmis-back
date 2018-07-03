@@ -400,7 +400,8 @@ class DepartmentView(BaseAPIView):
 
     def delete(self, req, hid, dept_id):
         """
-        删除科室，操作成功返回如下json格式
+        删除科室，科室存在员工不能删除
+        操作成功返回如下json格式
         {
             "code": 10000,
             "msg":  "ok"
@@ -408,6 +409,9 @@ class DepartmentView(BaseAPIView):
         """
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
+        # 查询当前科室是否存在员工
+        if Staff.objects.get_by_dept(hospital, dept_id):
+            return resp.failed('当前科室存在员工')
 
         dept = self.get_object_or_404(dept_id, Department)
         dept.clear_cache()  # 清除缓存

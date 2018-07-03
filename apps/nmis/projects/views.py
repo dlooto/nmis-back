@@ -29,6 +29,8 @@ from nmis.projects.forms import (
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
 from nmis.projects.permissions import ProjectPerformerPermission
 
+from nmis.hospitals.consts import GROUP_CATE_PROJECT_APPROVER
+
 logs = logging.getLogger(__name__)
 
 
@@ -147,20 +149,22 @@ class ProjectPlanCreateView(BaseAPIView):
 
 class ProjectPlanView(BaseAPIView):
     """
-    单个项目操作
+    单个项目操作（任何权限都可对项目进行操作，此操作建立在该申请项目未分配负责人）
     """
 
-    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+    # permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+    permission_classes = (HospitalStaffPermission, )
 
     @check_id('organ_id')
     def get(self, req, project_id):     # 项目详情
         """
         需要项目管理员权限或者项目为提交者自己的项目
         """
-        project = ProjectPlan.objects.get_by_id(project_id)
+        project = self.get_object_or_404(project_id, ProjectPlan)
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
-            self.check_object_any_permissions(req, hospital)
+        # if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
+        #     self.check_object_any_permissions(req, hospital)
+        self.check_object_permissions(req, hospital)
 
         return resp.serialize_response(
             project, results_name="project", srl_cls_name='ChunkProjectPlanSerializer'
@@ -174,10 +178,8 @@ class ProjectPlanView(BaseAPIView):
         """
 
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        old_project = ProjectPlan.objects.get_by_id(project_id)
-        if not (req.user.get_profile() == old_project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
-            self.check_object_any_permissions(req, hospital)
-
+        old_project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_object_permissions(req, hospital)
         if not old_project.is_unstarted():
             return resp.failed('项目已启动或已完成, 无法修改')
 
@@ -191,27 +193,40 @@ class ProjectPlanView(BaseAPIView):
         return resp.serialize_response(new_project, srl_cls_name='ChunkProjectPlanSerializer',
                                        results_name='project')
 
-    def delete(self, req, project_id):  # 删除项目
-        raise NotImplementedError()
+    @check_id('organ_id')
+    def delete(self, req, project_id):
+        """
+        删除未分配负责人的项目
+        :param req:
+        :param project_id: 申请项目ID
+        :return:
+        """
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
+        self.check_object_permissions(req, hospital)
+
+        if not project.performer:
+            if project.deleted():
+                return resp.ok('操作成功')
+            return resp.failed('操作失败')
+        return resp.failed('项目已被分配，无法删除')
 
 
 class ProjectPlanDispatchView(BaseAPIView):
     """
     项目分配责任人
     """
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, )
 
-    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
-
-    @check_id_list(['performer_id', 'flow_id'])
-    @check_params_not_null(['expired_time'])
-    def post(self, req, project_id):
-        self.check_object_permissions(req, req.user.get_profile().organ)  # 检查操作者权限
-
+    @check_id_list(['performer_id', ])
+    def put(self, req, project_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
-        objects = self.get_objects_or_404({'performer_id': Staff, 'flow_id': ProjectFlow})
-        success = project.dispatch(
-            objects.get('performer_id'), flow=objects.get('flow_id'), expired_time=req.data.get('expired_time')
-        )
+        staff = self.get_object_or_404(req.data.get('performer_id'), Staff,)
+        # 检查操作者权限是否为项目分配者，否则检查是否为管理员权限
+        if not (req.user.get_profile().group.cate == GROUP_CATE_PROJECT_APPROVER):
+            self.check_object_permissions(req, req.user.get_profile().organ)
+
+        success = project.dispatch(staff)
         return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
 
 
