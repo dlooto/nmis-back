@@ -48,7 +48,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.login_with_username(self.user)
 
-        old_project = self.create_project(self.admin_staff, self.dept, title="旧项目名")
+        old_project = self.create_project(self.admin_staff, self.dept, title="旧项目名",)
         old_device = old_project.get_ordered_devices()[0]
 
         project_data = {
@@ -73,6 +73,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         project_data = {
             "organ_id": self.organ.id,
             "project_title": "牛逼项目1",
+            "handing_type": "SE",
             "purpose": "牛逼的不能为外人说道的目标",
             "creator_id": self.admin_staff.id,
             "related_dept_id": self.admin_staff.dept.id,
@@ -102,6 +103,8 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         result_project = response.get('project')
         self.assertIsNotNone(result_project)
         self.assertEquals(project_data['project_title'], result_project.get('title'))
+        self.assertEquals(project_data['handing_type'], result_project.get('handing_type'))
+
         self.assertEquals(
             len(result_project.get('ordered_devices')), len(project_data.get('ordered_devices'))
         )

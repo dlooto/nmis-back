@@ -70,6 +70,12 @@ class ProjectPlanManager(BaseManager):
         """
         return self.filter(related_dept__organ=organ, creator=creator)
 
+    def start_project(self,):
+        """
+        TODO:
+        """
+        pass
+
 
 class ProjectFlowManager(BaseManager):
 

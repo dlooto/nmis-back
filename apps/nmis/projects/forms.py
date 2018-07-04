@@ -9,7 +9,8 @@ import logging
 from itertools import chain
 from base.forms import BaseForm
 from nmis.projects.models import ProjectPlan, ProjectFlow
-from nmis.projects.consts import PROJECT_STATUS_CHOICES
+from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
+    PRO_HANDING_TYPE_SELF
 from nmis.hospitals.models import Staff
 logs = logging.getLogger(__name__)
 
@@ -32,16 +33,29 @@ class ProjectPlanCreateForm(BaseForm):
             'device_name_error': '设备名为空或格式错误',
             'device_num_error': '设备购买数量为空或格式错误',
             'device_planned_price_error': '设备预购价格输入错误',
+            'err_handing_type': '办理方式为空或数据错误',
         })
 
     def is_valid(self):
-        return self.check_project_title() and self.check_devices()
+        return self.check_project_title() and self.check_devices() and self.check_handing_type()
 
     def check_project_title(self):
         project_title = self.data.get('project_title')
         if not project_title:
             self.update_errors('project_title', 'project_title_error')
             return False
+        return True
+
+    def check_handing_type(self):
+        handing_type = self.data.get('handing_type')
+        if not handing_type:
+            self.update_errors('handing_type', 'err_handing_type')
+            return False
+
+        if not handing_type in dict(PROJECT_HANDING_TYPE_CHOICES).keys():
+            self.update_errors('handing_type', 'err_handing_type')
+            return False
+
         return True
 
     def check_devices(self):
@@ -80,19 +94,32 @@ class ProjectPlanCreateForm(BaseForm):
     def save(self):
         data = {
             'title': self.data.get('project_title'),
+            'handing_type': self.data.get('handing_type'),
             'purpose': self.data.get('purpose'),
             'creator': self.creator,
             'related_dept': self.related_dept,
         }
+        if data.get('handing_type') == PRO_HANDING_TYPE_SELF:
+            data["performer"] = self.creator
+
         return ProjectPlan.objects.create_project(self.data.get('ordered_devices'), **data)
 
 
-class ProjectPlanUpdateForm(ProjectPlanCreateForm):
+class ProjectPlanUpdateForm(BaseForm):
 
     def __init__(self, old_project, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.old_project = old_project
         self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'project_title_error': '项目名称输入错误',
+            'purpose_error': '用途不能为空或数据错误',
+        })
+
+    def is_valid(self):
+        return True
 
     def check_devices(self):
         return True

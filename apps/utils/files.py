@@ -80,7 +80,7 @@ class ExcelBasedOXL(object):
         global workbook
         if not path:
             return None
-        workbook = load_workbook(path)
+        workbook = load_workbook(path, read_only=True, data_only=True)
         return workbook
 
     @staticmethod
