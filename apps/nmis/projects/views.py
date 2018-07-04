@@ -152,7 +152,7 @@ class ProjectPlanCreateView(BaseAPIView):
     permission_classes = [HospitalStaffPermission, ]
 
     @check_id_list(["organ_id", "creator_id", "related_dept_id"])
-    @check_params_not_null(['project_title', 'ordered_devices'])
+    @check_params_not_null(['project_title', 'ordered_devices', 'handing_type'])
     def post(self, req):
         """
         创建项目申请, 项目申请提交后进入未分配(待启动)状态.
@@ -161,6 +161,7 @@ class ProjectPlanCreateView(BaseAPIView):
         {
             "organ_id": 20180606,
             "project_title": "政府要求采购项目",
+            "handing_type": '自行办理'
             "purpose": "本次申请经科室共同研究决定, 响应政府号召",
             "creator_id": 20181001,
             "related_dept_id": 	10001001,
@@ -285,6 +286,27 @@ class ProjectPlanDispatchView(BaseAPIView):
             self.check_object_permissions(req, req.user.get_profile().organ)
 
         success = project.dispatch(staff)
+        return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
+
+
+class ProjectPlanStartupView(BaseAPIView):
+    """
+    启动项目
+    TODO: 补充权限校验
+    """
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission)
+
+    @check_id_list(['flow_id', 'assistant_id'])
+    @check_params_not_null(["expired_time"])
+    def put(self, req, project_id):
+        # self.check_object_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        objects = self.get_objects_or_404({'assistant_id': Staff, 'flow_id': ProjectFlow})
+        success = project.startup(
+            assistant=objects.get('assistant_id'),
+            flow=objects.get('flow_id'),
+            expired_time=req.data.get('expired_time')
+        )
         return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
 
 

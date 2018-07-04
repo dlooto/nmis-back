@@ -25,6 +25,9 @@ class ProjectPlan(BaseModel):
     采购申请(一次申请即开始一个项目)
     """
     title = models.CharField('项目名称', max_length=30)
+    handing_type = models.CharField('办理方式', max_length=2,
+                                    choices=PROJECT_HANDING_TYPE_CHOICES,
+                                    default=PRO_HANDING_TYPE_SELF)
     purpose = models.CharField('申请原因', max_length=100, null=True, default='')
     creator = models.ForeignKey(
         'hospitals.Staff', related_name='created_projects', verbose_name='项目申请人/提出者',
@@ -36,6 +39,11 @@ class ProjectPlan(BaseModel):
     )
     performer = models.ForeignKey(  # 项目新建后为空
         'hospitals.Staff', related_name='performed_projects', verbose_name='项目负责人/执行人',
+        null=True, blank=True, on_delete=models.SET_NULL
+    )
+
+    assistant = models.ForeignKey(
+        'hospitals.staff', related_name='assisted_projects', verbose_name='协助办理人',
         null=True, blank=True, on_delete=models.SET_NULL
     )
 
@@ -138,6 +146,29 @@ class ProjectPlan(BaseModel):
 
                 self.save()
                 self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
+
+    def startup(self, assistant, **data):
+        """
+        责任人启动项目，选择协助办理人和项目截至日期
+        :param assistant: 协助办理人
+        :param data: dict parameters, 一般情况下需要有flow, expired_time等参数
+        :return: True or False
+        """
+        try:
+            with transaction.atomic():
+                self.assistant = assistant
+                self.attached_flow = data.pop('flow')
+                self.expired_time = data.pop("expired_time")
+                self.startup_time = times.now()
+                self.status = PRO_STATUS_STARTED
+
+                self.current_stone = self.attached_flow.get_first_milestone()
+                self.add_milestone_record(self.current_stone)
+                self.save()
             return True
         except Exception as e:
             logs.exception(e)

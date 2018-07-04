@@ -104,6 +104,12 @@ class ProjectPlanManager(BaseManager):
             query_set = query_set.filter(title__contains=project_title)
         return query_set
 
+    def start_project(self,):
+        """
+        TODO:
+        """
+        pass
+
 
 class ProjectFlowManager(BaseManager):
 

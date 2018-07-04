@@ -26,6 +26,7 @@ class ProjectPlanSerializer(BaseModelSerializer):
 
     creator_name = serializers.SerializerMethodField("_get_creator_name")
     performer_name = serializers.SerializerMethodField("_get_performer_name")
+    assistant_name = serializers.SerializerMethodField("_get_assistant_name")
     related_dept_name = serializers.SerializerMethodField("_get_related_dept_name")
 
     startup_time = serializers.SerializerMethodField("str_startup_time")
@@ -34,9 +35,11 @@ class ProjectPlanSerializer(BaseModelSerializer):
     class Meta:
         model = ProjectPlan
         fields = (
-            'id', 'title', 'purpose', 'status', 'creator_id', 'creator_name',
-            'related_dept_id', 'related_dept_name', 'performer_id', 'performer_name',
-            'attached_flow_id', 'current_stone_id', 'startup_time', 'expired_time', 'created_time',
+            'id', 'title', 'handing_type', 'purpose', 'status',
+            'creator_id', 'creator_name', 'related_dept_id', 'related_dept_name',
+            'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
+            'attached_flow_id', 'current_stone_id',
+            'startup_time', 'expired_time', 'created_time',
         )
 
     def _get_creator_name(self, obj):
@@ -47,6 +50,12 @@ class ProjectPlanSerializer(BaseModelSerializer):
         if not obj.performer_id:
             return ''
         staff = Staff.objects.get_cached(obj.performer_id)
+        return staff.name
+
+    def _get_assistant_name(self, obj):
+        if not obj.assistant_id:
+            return ''
+        staff = Staff.objects.get_cached(obj.assistant_id)
         return staff.name
 
     def _get_related_dept_name(self, obj):
@@ -67,6 +76,7 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
 
     creator_name = serializers.SerializerMethodField("_get_creator_name")
     performer_name = serializers.SerializerMethodField("_get_performer_name")
+    assistant_name = serializers.SerializerMethodField("_get_assistant_name")
     related_dept_name = serializers.SerializerMethodField("_get_related_dept_name")
 
     startup_time = serializers.SerializerMethodField("str_startup_time")
@@ -80,11 +90,11 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     class Meta:
         model = ProjectPlan
         fields = (
-            'id', 'title', 'purpose', 'status',
+            'id', 'title', 'purpose', 'status', 'handing_type',
             'creator_id', 'creator_name',
             'related_dept_id', 'related_dept_name',
-            'performer_id', 'performer_name', 'current_stone_id',
-            'attached_flow', 'ordered_devices', 'milestone_records',
+            'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
+            'current_stone_id', 'attached_flow', 'ordered_devices', 'milestone_records',
             'startup_time', 'expired_time', 'created_time',
         )
 
@@ -96,6 +106,12 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         if not obj.performer_id:
             return ''
         staff = Staff.objects.get_cached(obj.performer_id)
+        return staff.name
+
+    def _get_assistant_name(self, obj):
+        if not obj.assistant_id:
+            return ''
+        staff = Staff.objects.get_cached(obj.assistant_id)
         return staff.name
 
     def _get_related_dept_name(self, obj):
