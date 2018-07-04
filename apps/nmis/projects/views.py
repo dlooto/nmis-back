@@ -29,6 +29,12 @@ from nmis.projects.forms import (
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
 from nmis.projects.permissions import ProjectPerformerPermission
 
+from nmis.hospitals.consts import (
+    GROUP_CATE_PROJECT_APPROVER,
+    GROUP_CATE_NORMAL_STAFF
+)
+from nmis.projects.consts import PROJECT_STATUS_CHOICES
+
 logs = logging.getLogger(__name__)
 
 
@@ -37,7 +43,7 @@ class ProjectPlanListView(BaseAPIView):
     项目列表操作
     """
 
-    permission_classes = (HospitalStaffPermission, )
+    permission_classes = (IsHospitalAdmin, HospitalStaffPermission, ProjectDispatcherPermission)
 
     @check_params_not_null(['organ_id', 'type'])
     def get(self, req):
@@ -45,37 +51,93 @@ class ProjectPlanListView(BaseAPIView):
         获取项目列表，包括：我的项目列表（待筛选）、待分配项目列表
         """
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        self.check_object_permissions(req, req.user.get_profile().organ)  # 检查操作者权限
+        # self.check_object_permissions(req, hospital)  # 检查操作者权限
 
         action_type = req.GET.get("type")
-        if action_type not in ('undispatch', 'my_projects', 'apply'):
+        # 判断操作类型
+        if action_type not in ('undispatch', 'total_projects', 'apply', 'my_performer'):
             return resp.form_err({"type": "不存在的操作类型"})
 
-        # 获取所有待分配的项目列表
-        if action_type == 'undispatch':
-            result_projects = ProjectPlan.objects.get_undispatched_projects(hospital)
+        status = req.GET.get('pro_status', '').strip()
+        if status:          # 项目状态校验
+            if not status in dict(PROJECT_STATUS_CHOICES).keys():
+                return resp.form_err({'err_status:': '项目状态异常'})
+        staff = req.user.get_profile()
 
-        elif action_type == 'my_projects':  # 我申请的项目/我负责的项目
+        if action_type == 'undispatch':
             """
-            我的项目列表，带筛选
+            所有待分配的项目列表，带筛选
+            参数：
+                search_key: 项目名称/项目申请人关键字
+            """
+            # 检查当前员工是否为项目分配者权限，否则检查是否为管理权限
+            if not (staff.group.cate == GROUP_CATE_PROJECT_APPROVER):
+                self.check_object_permissions(req, hospital)
+
+            creators = None
+            search_key = req.GET.get('search_key', '').strip()
+            if search_key:
+                creators = Staff.objects.get_by_name(hospital, search_key)
+            result_projects = ProjectPlan.objects.get_undispatched_projects(
+                hospital, project_title=search_key, creators=creators
+            )
+
+        elif action_type == 'total_projects':   # 项目总览（分配与未分配的项目列表）
+            """
+            项目总览，带筛选
+            只有管理员权限才可查看操作列表
             参数列表：
                 organ_id	int		当前医院ID
                 pro_status	string  项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
-                pro_title_leader	string		项目名称/项目负责人
-                creator_id	int		申请人ID（此ID为当前登录用户ID），筛选我申请的项目
-                performer_id int	项目负责人ID（此ID为当前登录用户ID），筛选我负责的项目
-                current_stone_id    里程碑id
+                search_key	string		项目名称/项目负责人关键字
             """
 
-            form = ProjectPlanListForm(req, hospital)
-            if not form.is_valid():
-                return resp.form_err(form.errors)
-            result_projects = form.my_projects()
+            self.check_object_permissions(req, hospital)    # 检查管理员权限
+            # 判断是否存在项目名和项目负责人关键字
+            performers = None
+            search_key = req.GET.get('search_key', '').strip()
+            if search_key:
+                performers = Staff.objects.get_by_name(hospital, search_key)
 
-        # 获取我申请的项目列表
-        else:
+            result_projects = ProjectPlan.objects.get_by_search_key(
+                hospital, project_title=search_key, performers=performers, status=status
+            )
+
+        elif action_type == 'apply':
+            """
+            获取我申请的项目列表,带筛选(关键字：项目名)
+            参数列表：
+                organ_id	int		当前医院ID
+                pro_status	string  项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
+                search_key	string		项目名称
+            """
+            # 检查当前员工是否为普通员工权限和项目分配者权限，则检查是否为管理员
+            if not ((staff.group.cate == GROUP_CATE_NORMAL_STAFF) or
+                    (staff.group.cate == GROUP_CATE_PROJECT_APPROVER)):
+                self.check_object_permissions(req, hospital)
+
             result_projects = ProjectPlan.objects.get_applied_projects(
-                hospital, req.user.get_profile()
+                hospital, req.user.get_profile(), project_title=req.GET.get('search_key'),
+                status=status
+            )
+
+        else:
+            """
+            获取我负责的项目列表，带筛选条件(关键字：项目名)
+            参数列表：
+                organ_id: int 当前医院ID
+                pro_status: string 项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
+                search_key: string 项目名称关键字
+            """
+            # 检查当前员工是否为普通员工权限和项目分配者权限，则检查是否为管理员
+            if not ((staff.group.cate == GROUP_CATE_NORMAL_STAFF) or
+                    (staff.group.cate == GROUP_CATE_PROJECT_APPROVER)):
+                self.check_object_permissions(req, hospital)
+
+            result_projects = ProjectPlan.objects.get_my_performer_projects(
+                hospital, req.user.get_profile(),
+                project_title=req.GET.get('search_key'),
+                status=status
             )
 
         return resp.serialize_response(
@@ -147,20 +209,22 @@ class ProjectPlanCreateView(BaseAPIView):
 
 class ProjectPlanView(BaseAPIView):
     """
-    单个项目操作
+    单个项目操作（任何权限都可对项目进行操作，此操作建立在该申请项目未分配负责人）
     """
 
-    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+    # permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+    permission_classes = (HospitalStaffPermission, )
 
     @check_id('organ_id')
     def get(self, req, project_id):     # 项目详情
         """
         需要项目管理员权限或者项目为提交者自己的项目
         """
-        project = ProjectPlan.objects.get_by_id(project_id)
+        project = self.get_object_or_404(project_id, ProjectPlan)
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
-            self.check_object_any_permissions(req, hospital)
+        # if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
+        #     self.check_object_any_permissions(req, hospital)
+        self.check_object_permissions(req, hospital)
 
         return resp.serialize_response(
             project, results_name="project", srl_cls_name='ChunkProjectPlanSerializer'
@@ -174,10 +238,8 @@ class ProjectPlanView(BaseAPIView):
         """
 
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        old_project = ProjectPlan.objects.get_by_id(project_id)
-        if not (req.user.get_profile() == old_project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
-            self.check_object_any_permissions(req, hospital)
-
+        old_project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_object_permissions(req, hospital)
         if not old_project.is_unstarted():
             return resp.failed('项目已启动或已完成, 无法修改')
 
@@ -191,27 +253,38 @@ class ProjectPlanView(BaseAPIView):
         return resp.serialize_response(new_project, srl_cls_name='ChunkProjectPlanSerializer',
                                        results_name='project')
 
-    def delete(self, req, project_id):  # 删除项目
-        raise NotImplementedError()
+    def delete(self, req, project_id):
+        """
+        删除项目(已分配负责人的项目不能被删除)
+        :param req:
+        :param project_id: 申请项目ID
+        """
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        hospital = self.get_object_or_404(req.user.get_profile().organ.id, Hospital)
+        self.check_object_permissions(req, hospital)
+
+        if not project.performer:
+            if project.deleted():
+                return resp.ok('操作成功')
+            return resp.failed('操作失败')
+        return resp.failed('项目已被分配，无法删除')
 
 
 class ProjectPlanDispatchView(BaseAPIView):
     """
     项目分配责任人
     """
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, )
 
-    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
-
-    @check_id_list(['performer_id', 'flow_id'])
-    @check_params_not_null(['expired_time'])
-    def post(self, req, project_id):
-        self.check_object_permissions(req, req.user.get_profile().organ)  # 检查操作者权限
-
+    @check_id_list(['performer_id', ])
+    def put(self, req, project_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
-        objects = self.get_objects_or_404({'performer_id': Staff, 'flow_id': ProjectFlow})
-        success = project.dispatch(
-            objects.get('performer_id'), flow=objects.get('flow_id'), expired_time=req.data.get('expired_time')
-        )
+        staff = self.get_object_or_404(req.data.get('performer_id'), Staff,)
+        # 检查操作者权限是否为项目分配者，否则检查是否为管理员权限
+        if not (req.user.get_profile().group.cate == GROUP_CATE_PROJECT_APPROVER):
+            self.check_object_permissions(req, req.user.get_profile().organ)
+
+        success = project.dispatch(staff)
         return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
 
 
@@ -409,53 +482,3 @@ class MilestoneView(BaseAPIView):
     def delete(self, req, flow_id, mid):
         """ 删除里程碑项 """
         pass
-
-
-# class MyProjectListView(BaseAPIView):
-#     permission_classes = (IsHospitalAdmin, )
-#
-#     @check_id('organ_id')
-#     def get(self, req):
-#         """
-#         我的项目列表，带筛选
-#         参数列表：
-#             organ_id	int		当前医院ID
-#             upper_expired_date	string		截止时间2（2018-06-01）
-#             lower_expired_date	string		截止时间1（2018-06-19）
-#             pro_status	string		项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
-#             pro_title_leader	string		项目名称/项目负责人
-#             creator_id	int		申请人ID（此ID为当前登录用户ID），筛选我申请的项目
-#             performer_id int	项目负责人ID（此ID为当前登录用户ID），筛选我负责的项目
-#
-#         """
-#         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-#         self.check_object_permissions(req, hospital)
-#         form = ProjectPlanListForm(req, hospital)
-#         if not form.is_valid():
-#             return resp.form_err(form.errors)
-#         return resp.serialize_response(
-#             form.my_projects_plan(), srl_cls_name='ChunkProjectPlanSerializer',
-#             results_name='projects'
-#         )
-#
-#
-# class AllotProjectListView(BaseAPIView):
-#     permission_classes = (IsHospitalAdmin, )
-#
-#     @check_id('organ_id')
-#     def get(self, req):
-#         """
-#         获取所有待分配的项目列表
-#         """
-#         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-#         self.check_object_permissions(req, hospital)
-#
-#         undispatched_projects = ProjectPlan.objects.get_undispatched_projects(hospital)
-#         return resp.serialize_response(
-#             undispatched_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
-#         )
-
-
-
-
-
