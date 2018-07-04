@@ -29,7 +29,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         """
         self.login_with_username(self.user)
 
-        # 仅项目管理者(医院管理员, 项目分配者)及项目提交者可以查看项目详情
+        # 医院员工都可查看项目详情
         data = {
             "organ_id": self.organ.id,
         }
@@ -38,8 +38,6 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         self.assertIsNotNone(response.get("project"))
         self.assertEquals(response.get("project").get('title'), project.title)
-
-        # TODO: 增加对接口请求权限的验证...
 
     def test_project_update(self):
         """
@@ -62,6 +60,37 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         new_project = response.get('project')
         self.assertIsNotNone(new_project)
         self.assertEquals(new_project.get('title'), project_data['project_title'])
+
+    def test_project_del(self):
+        """
+        删除项目API接口测试(已分配的项目不能被删除)
+        """
+        self.login_with_username(self.user)
+        # 创建项目
+        organ_id = {
+            "organ_id": self.organ.id
+        }
+        project = self.create_project(self.admin_staff, self.dept, title="测试项目")
+
+        response = self.delete(
+            self.single_project_api.format(project.id)
+        )
+
+        self.assert_response_success(response)
+        self.assertEquals(response.get('code'), 10000)
+
+        # 测试项目被使用，不能删除
+        new_project = self.create_project(self.admin_staff, self.dept, title='新的测试项目')
+        new_project.performer = self.admin_staff
+        new_project.save()
+
+        response2 = self.delete(
+            self.single_project_api.format(new_project.id)
+        )
+
+        self.assert_response_failure(response2)
+        self.assertEquals(response2.get('code'), 0)
+        self.assertEquals(response2.get('msg'), '项目已被分配，无法删除')
 
     def test_project_create(self):
         """
@@ -110,29 +139,26 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
     def test_my_project_list(self):
         """
-        api测试：我的项目列表(带筛选)api接口测试
+        api测试：项目列表(带筛选)api接口测试(项目总览、待分配项目、我申请项目、我负责的项目)
         """
         api = "/api/v1/projects/"
 
         self.login_with_username(self.user)
         for index in range(0, 5):
-            project = self.create_project(self.admin_staff, self.dept,
-                                          title='测试项目_{}'.format(self.get_random_suffix()))
+            project = self.create_project(
+                self.admin_staff, self.dept, title='测试项目_{}'.format(self.get_random_suffix())
+            )
 
         project_data = {
             'organ_id': self.organ.id,
-            'lower_expired_date': yesterday(),
-            'upper_expired_date': now(),
             'pro_status': 'PE',
-            'pro_title_leader': '测试',
-            'creator_id': self.admin_staff.id,
-            'current_stone_id': '',
-            'type': 'my_projects'
+            'search_key': '测试',
+            'type': 'total_projects'
         }
 
         response = self.get(api, data=project_data)
-        self.assert_response_success(response)
 
+        self.assert_response_success(response)
         self.assertIsNotNone(response.get('projects'))
         self.assertEquals(len(response.get('projects')), 5)
         self.assert_object_in_results(
@@ -164,28 +190,24 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
     def test_project_dispatch(self):
         """
-        API测试：分配项目给负责人接口测试
+        API测试：分配项目给负责人接口测试(只需分配项目负责人)
         """
         api = '/api/v1/projects/{}/dispatch'
         self.login_with_username(self.user)
         # 创建项目
         project_plan = self.create_project(self.admin_staff, self.dept, title='待分配项目')
 
-        # 创建项目流程
-        project_flow = self.create_flow(self.organ)
-
         data = {
             'performer_id': self.admin_staff.id,
-            'flow_id': project_flow.id,
-            'expired_time': str(tomorrow())
         }
 
-        response = self.post(api.format(project_plan.id), data=data)
+        response = self.put(api.format(project_plan.id), data=data)
+
         self.assert_response_success(response)
         project = response.get('project')
         self.assertIsNotNone(project.get('performer_id'))
-        self.assertIsNotNone(project.get('attached_flow_id'))
         self.assertEquals(project_plan.id, project.get('id'))
+        self.assertEquals(self.admin_staff.id, project.get('performer_id'))
 
     def test_projects_applied(self):
         """

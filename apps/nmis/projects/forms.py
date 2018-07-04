@@ -240,7 +240,7 @@ class ProjectPlanListForm(BaseForm):
         self.hospital = hospital
 
         self.ERR_CODES.update({
-            "err_status": "项目状态错误"
+            "err_status": "项目状态异常"
         })
 
     def is_valid(self):
@@ -266,18 +266,9 @@ class ProjectPlanListForm(BaseForm):
         if self.req.GET.get('pro_status', ''):
             data['status'] = self.req.GET.get('pro_status', '').strip()
 
-        if self.req.GET.get('creator_id', ''):
-            data['creator_id'] = self.req.GET.get('creator_id', '').strip()
-
-        if self.req.GET.get('performer_id', ''):
-            data['performer_id'] = self.req.GET.get('performer_id', '').strip()
-
-        if self.req.GET.get('current_stone_id', ''):
-            data['current_stone_id'] = self.req.GET.get('current_stone_id').strip()
-
         # 判断是否存在项目名和项目负责人关键字
         performers = None
-        search_key = self.req.GET.get('pro_title_leader', '').strip()
+        search_key = self.req.GET.get('search_key', '').strip()
         if search_key:
             performers = Staff.objects.get_by_name(self.hospital, search_key)
 
