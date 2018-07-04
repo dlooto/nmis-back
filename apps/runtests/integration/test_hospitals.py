@@ -85,14 +85,32 @@ class DepartmentApiTestCase(BaseTestCase):
         """
 
         self.login_with_username(self.user)
+        # 创建科室
+        dept = self.create_department(self.organ, dept_name='测试科室')
 
         resp = self.delete(
-            self.dept_single_operation_api.format(self.organ.id, self.admin_staff.dept_id)
+            self.dept_single_operation_api.format(self.organ.id, dept.id)
         )
 
         self.assert_response_success(resp)
-        self.assertIsNone(resp.get('dept'))
-        # self.assertNotEquals(resp.get('msg'), '操作成功')
+        self.assertEquals(resp.get('code'), 10000)
+
+        # 测试科室存在员工不能删除
+        dept = self.create_department(self.organ, dept_name='存在员工科室')
+
+        # 初始化staff相应数据
+        staff_data = {
+            'title': '主治医师',
+            'contact': '19822012220',
+            'email': 'ceshi01@test.com',
+        }
+        staff = self.create_completed_staff(self.organ, dept, name='测试员工', **staff_data)
+        response = self.delete(
+            self.dept_single_operation_api.format(self.organ.id, dept.id)
+        )
+        self.assert_response_failure(response)
+        self.assertEquals(staff.dept.id, dept.id)
+        self.assertEquals(response.get('code'), 0)
 
     def test_departments_list(self):
         """

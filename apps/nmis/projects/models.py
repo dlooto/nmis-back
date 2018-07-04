@@ -113,28 +113,39 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return None
 
+    def deleted(self):
+        """
+        删除申请项目，被分配的项目不能删除
+        """
+        try:
+            self.clear_cache()
+            self.delete()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
+
     def create_device(self, **device_data):
         return OrderedDevice.objects.create(project=self, **device_data)
 
-    def dispatch(self, performer, **data):
+    def dispatch(self, performer):
         """
         分派项目给某个员工作为责任人. 项目分配责任人后即进入启动状态
         :param performer:  要分派的责任人, staff object
-        :param data: dict parameters, 一般情况下需要有flow, expired_time等参数
-        :return: True or False
         """
         try:
             with transaction.atomic():
                 self.performer = performer
-                self.attached_flow = data.pop("flow")
-                self.expired_time = data.pop("expired_time")
+                # self.attached_flow = data.pop("flow")
+                # self.expired_time = data.pop("expired_time")
                 self.status = PRO_STATUS_STARTED
-                self.startup_time = times.now()
+                # self.startup_time = times.now()
 
-                self.current_stone = self.attached_flow.get_first_milestone()
-                self.add_milestone_record(self.current_stone)
+                # self.current_stone = self.attached_flow.get_first_milestone()
+                # self.add_milestone_record(self.current_stone)
 
                 self.save()
+                self.cache()
             return True
         except Exception as e:
             logs.exception(e)

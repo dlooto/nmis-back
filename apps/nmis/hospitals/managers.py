@@ -89,7 +89,16 @@ class StaffManager(BaseManager):
         :param staff_name: 员工姓名
         :return:
         """
-        return self.filter(organ=organ, name__contains=staff_name)
+        return self.filter(organ=organ, name__contains=staff_name) if True else False
+
+    def get_by_dept(self, organ, dept_id):
+        """
+        通过科室查询员工，存在员工返回true，不存在返回false
+        :param organ:
+        :param dept_id: 当前机构科室id
+        :return:
+        """
+        return self.filter(organ=organ, dept_id=dept_id)
 
 
 class GroupManager(BaseManager):

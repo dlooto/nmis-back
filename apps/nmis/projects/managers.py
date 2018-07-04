@@ -46,29 +46,63 @@ class ProjectPlanManager(BaseManager):
     # def get_allot_projects(self):
     #     return self.filter(performer=None)
 
-    def get_undispatched_projects(self, organ):
-        """ 返回机构待分配(负责人)的项目列表 """
-        return self.filter(related_dept__organ=organ, performer=None)
+    def get_undispatched_projects(self, organ, project_title=None, creators=None):
+        """
+        按关键字(项目名/项目申请人)查询机构所有待分配的项目列表
+        """
+        from django.db.models import Q
 
-    def get_by_search_key(self, organ, project_title=None, performers=None, **fields):
+        query_set = self.filter(related_dept__organ=organ, performer=None)
+        if project_title or creators:
+            query_set = query_set.filter(
+                Q(title__contains=project_title) | Q(creator__in=creators)
+            ).distinct()
+        return query_set
+
+    def get_by_search_key(self, organ, project_title=None, performers=None, status=None):
         """
         按关键字(项目名/项目负责人名)查询机构拥有的项目列表
         """
         from django.db.models import Q
 
-        query_set = self.filter(related_dept__organ=organ, **fields)
+        query_set = self.filter(related_dept__organ=organ)
+        if status:
+            query_set = query_set.filter(status=status)
         if project_title or performers:
-            query_set = query_set.filter(Q(title__contains=project_title) | Q(performer__in=performers)).distinct()
+            query_set = query_set.filter(
+                Q(title__contains=project_title) | Q(performer__in=performers)
+            ).distinct()
         return query_set
 
-    def get_applied_projects(self, organ, creator):
+    def get_applied_projects(self, organ, creator, project_title=None, status=None):
         """
-        返回项目申请者申请的项目列表
+        按关键字:(项目名)查询机构所有我的申请项目列表
         :param organ: 项目申请者所有机构
         :param creator: 项目申请者staff object
         :return:
         """
-        return self.filter(related_dept__organ=organ, creator=creator)
+        query_set = self.filter(related_dept__organ=organ, creator=creator)
+        if status:
+            query_set = query_set.filter(status=status)
+        if project_title:
+            query_set = query_set.filter(title__contains=project_title)
+        return query_set
+
+    def get_my_performer_projects(self, organ, performer, project_title=None, status=None):
+        """
+        按关键字:(项目名)查询机构所有我负责的项目列表
+        :param organ:
+        :param performer: 项目负责人
+        :param project_title: 项目名称关键字
+        :param fields:
+        :return:
+        """
+        query_set = self.filter(related_dept__organ=organ, performer=performer)
+        if status:
+            query_set = query_set.filter(status=status)
+        if project_title:
+            query_set = query_set.filter(title__contains=project_title)
+        return query_set
 
     def start_project(self,):
         """
