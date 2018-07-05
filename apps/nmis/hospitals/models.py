@@ -181,7 +181,7 @@ class Staff(BaseStaff):
     objects = StaffManager()
 
     VALID_ATTRS = [
-        'name', 'title', 'organ', 'dept', 'contact', 'email', 'group', 'status'
+        'name', 'title', 'organ', 'dept', 'contact', 'email', 'status'
     ]
 
     class Meta:

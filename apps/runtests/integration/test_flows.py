@@ -39,7 +39,7 @@ class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):
 
     def test_project_milestone_change(self):
         """
-        api测试: 变更项目里程碑状态(需要负责人启动项目后才可测试)
+        api测试: 变更项目里程碑状态
         """
 
         api = '/api/v1/projects/{}/change-milestone'
@@ -51,21 +51,29 @@ class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):
 
         flow = self.create_flow(self.organ)
 
-        # 启动项目
+        # 分配项目负责人
         self.assertTrue(
             project.dispatch(performer)
         )
-        # new_milestone = project.current_stone.next()
-        # self.assertIsNotNone(new_milestone)
-        #
-        # self.login_with_username(performer.user)
-        # response = self.post(api.format(project.id),
-        #           data={"milestone_id": new_milestone.id})
-        # self.assert_response_success(response)
-        #
-        # result_project = response.get("project")
-        # self.assertEquals(new_milestone.id, result_project.get("current_stone_id"))
-        # self.assertTrue(project.contains_recorded_milestone(new_milestone))
+        # 项目负责人启动项目
+        self.assertTrue(
+            project.startup(
+                assistant=self.admin_staff,
+                flow=flow,
+                expired_time=times.tomorrow()
+            )
+        )
+        new_milestone = project.current_stone.next()
+        self.assertIsNotNone(new_milestone)
+
+        self.login_with_username(performer.user)
+        response = self.post(api.format(project.id),
+                  data={"milestone_id": new_milestone.id})
+        self.assert_response_success(response)
+
+        result_project = response.get("project")
+        self.assertEquals(new_milestone.id, result_project.get("current_stone_id"))
+        self.assertTrue(project.contains_recorded_milestone(new_milestone))
 
         # clear data
         performer.user.clear_cache()
@@ -73,7 +81,7 @@ class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):
 
     def test_project_flow_update(self):
         """
-        api测试：变更项目流程(需负责人启动项目后才可用例测试)
+        api测试：变更项目流程
         """
 
         # 测试正常更改
@@ -90,14 +98,21 @@ class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertEqual('流程名称UpdateTest', response.get('flow')['title'])
 
         # 测试流程已经被使用需要启动项目后才可进行用例测试
-        # project = self.create_project(creator=self.admin_staff, dept=self.dept, title="设备采购Test", )
-        # project.dispatch(self.admin_staff)
-        # response2 = self.put(
-        #     api.format(flow.id),
-        #     data={'organ_id': self.organ.id, 'flow_title': '流程名称UpdateTest'}
-        # )
-        # self.assert_response_form_errors(response2)
-        # self.assertEqual(response2['errors']['flow_id'], '流程已经在使用中，不能修改')
+        project = self.create_project(creator=self.admin_staff, dept=self.dept, title="设备采购Test", )
+        # 分配项目负责人
+        project.dispatch(self.admin_staff)
+        # 负责人启动项目
+        project.startup(
+            assistant=self.admin_staff,
+            flow=flow,
+            expired_time=times.tomorrow()
+        )
+        response2 = self.put(
+            api.format(flow.id),
+            data={'organ_id': self.organ.id, 'flow_title': '流程名称UpdateTest'}
+        )
+        self.assert_response_form_errors(response2)
+        self.assertEqual(response2['errors']['flow_id'], '流程已经在使用中，不能修改')
 
     def test_project_flow_delete(self):
         """
