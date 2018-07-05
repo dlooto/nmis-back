@@ -7,10 +7,15 @@ from django.conf.urls.static import static
 from django.views.generic.base import TemplateView
 from django.urls import include, path
 
+from rest_framework_swagger.views import get_swagger_view
+
+schema_view = get_swagger_view(title='Pastebin API')
+
 admin.autodiscover()
 
 urlpatterns = [
     path("",              TemplateView.as_view(template_name='index.html')),
+    path('api/docs/',     schema_view),
     path('admin/',        admin.site.urls),
 
     # API

@@ -315,7 +315,7 @@ class Milestone(BaseModel):
         返回当前里程碑项在流程中的下一个里程碑项
         :return: milestone
         """
-        it = iter(self.flow.get_milestones().order_by('index')) # 迭代器
+        it = iter(self.flow.get_milestones().order_by('index'))     # 迭代器
         while True:
             try:
                 m = next(it)
