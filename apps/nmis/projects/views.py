@@ -51,35 +51,38 @@ class ProjectPlanListView(BaseAPIView):
         获取项目列表，包括：我的项目列表（待筛选）、待分配项目列表
         """
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        # self.check_object_permissions(req, hospital)  # 检查操作者权限
 
-        action_type = req.GET.get("type")
+        action_type = req.GET.get("type", '').strip()
         # 判断操作类型
         if action_type not in ('undispatch', 'total_projects', 'apply', 'my_performer'):
             return resp.form_err({"type": "不存在的操作类型"})
 
         status = req.GET.get('pro_status', '').strip()
+
         if status:          # 项目状态校验
             if not status in dict(PROJECT_STATUS_CHOICES).keys():
                 return resp.form_err({'err_status:': '项目状态异常'})
-        staff = req.user.get_profile()
+
+        login_staff = req.user.get_profile()     # 当前登录系统用户
+
+        search_key = req.GET.get('search_key', '').strip()
+        # 根据关键字查询staff集合
+        staff = None
+        if search_key:
+            staff = Staff.objects.get_by_name(hospital, search_key)
 
         if action_type == 'undispatch':
             """
             所有待分配的项目列表，带筛选
             参数：
-                search_key: 项目名称/项目申请人关键字
+                search_key  string      项目名称/项目申请人关键字
             """
             # 检查当前员工是否为项目分配者权限，否则检查是否为管理权限
-            if not (staff.group.cate == GROUP_CATE_PROJECT_APPROVER):
+            if not (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER):
                 self.check_object_permissions(req, hospital)
 
-            creators = None
-            search_key = req.GET.get('search_key', '').strip()
-            if search_key:
-                creators = Staff.objects.get_by_name(hospital, search_key)
             result_projects = ProjectPlan.objects.get_undispatched_projects(
-                hospital, project_title=search_key, creators=creators
+                hospital, project_title=search_key, creators=staff
             )
 
         elif action_type == 'total_projects':   # 项目总览（分配与未分配的项目列表）
@@ -87,57 +90,49 @@ class ProjectPlanListView(BaseAPIView):
             项目总览，带筛选
             只有管理员权限才可查看操作列表
             参数列表：
-                organ_id	int		当前医院ID
-                pro_status	string  项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
+                organ_id	int		    当前医院ID
+                pro_status	string      项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
                 search_key	string		项目名称/项目负责人关键字
             """
 
             self.check_object_permissions(req, hospital)    # 检查管理员权限
-            # 判断是否存在项目名和项目负责人关键字
-            performers = None
-            search_key = req.GET.get('search_key', '').strip()
-            if search_key:
-                performers = Staff.objects.get_by_name(hospital, search_key)
 
             result_projects = ProjectPlan.objects.get_by_search_key(
-                hospital, project_title=search_key, performers=performers, status=status
+                hospital, project_title=search_key, performers=staff, status=status
             )
 
         elif action_type == 'apply':
             """
-            获取我申请的项目列表,带筛选(关键字：项目名)
+            获取我申请的项目列表,带筛选(关键字：项目名/项目负责人)
             参数列表：
-                organ_id	int		当前医院ID
-                pro_status	string  项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
-                search_key	string		项目名称
+                organ_id	int		    当前医院ID
+                pro_status	string      项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
+                search_key	string		项目名称/负责人关键字
             """
             # 检查当前员工是否为普通员工权限和项目分配者权限，则检查是否为管理员
-            if not ((staff.group.cate == GROUP_CATE_NORMAL_STAFF) or
-                    (staff.group.cate == GROUP_CATE_PROJECT_APPROVER)):
+            if not ((login_staff.group.cate == GROUP_CATE_NORMAL_STAFF) or
+                    (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER)):
                 self.check_object_permissions(req, hospital)
 
             result_projects = ProjectPlan.objects.get_applied_projects(
-                hospital, req.user.get_profile(), project_title=req.GET.get('search_key'),
-                status=status
+                hospital, login_staff, performers=staff, project_title=search_key, status=status
             )
 
         else:
             """
-            获取我负责的项目列表，带筛选条件(关键字：项目名)
+            获取我负责的项目列表，带筛选条件(关键字：项目名/项目负责人)
             参数列表：
-                organ_id: int 当前医院ID
-                pro_status: string 项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
-                search_key: string 项目名称关键字
+                organ_id:   int       当前医院ID
+                pro_status: string    项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
+                search_key: string    项目名称/项目申请人关键字
             """
             # 检查当前员工是否为普通员工权限和项目分配者权限，则检查是否为管理员
-            if not ((staff.group.cate == GROUP_CATE_NORMAL_STAFF) or
-                    (staff.group.cate == GROUP_CATE_PROJECT_APPROVER)):
+            if not ((login_staff.group.cate == GROUP_CATE_NORMAL_STAFF) or
+                    (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER)):
                 self.check_object_permissions(req, hospital)
 
             result_projects = ProjectPlan.objects.get_my_performer_projects(
-                hospital, req.user.get_profile(),
-                project_title=req.GET.get('search_key'),
-                status=status
+                hospital, login_staff, creators=staff, project_title=search_key, status=status
             )
 
         return resp.serialize_response(
@@ -272,11 +267,11 @@ class ProjectPlanView(BaseAPIView):
 
 class ProjectPlanDispatchView(BaseAPIView):
     """
-    项目分配责任人
+    项目分配责任人(只分配负责人，不改变项目状态，启动项目才改变项目状态)
     """
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, )
 
-    @check_id_list(['performer_id', ])
+    @check_id('performer_id')
     def put(self, req, project_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
         staff = self.get_object_or_404(req.data.get('performer_id'), Staff,)

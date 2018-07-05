@@ -61,7 +61,7 @@ class ProjectPlanManager(BaseManager):
 
     def get_by_search_key(self, organ, project_title=None, performers=None, status=None):
         """
-        按关键字(项目名/项目负责人名)查询机构拥有的项目列表
+        按关键字(项目名/项目负责人名)查询机构所有的项目列表
         """
         from django.db.models import Q
 
@@ -74,34 +74,43 @@ class ProjectPlanManager(BaseManager):
             ).distinct()
         return query_set
 
-    def get_applied_projects(self, organ, creator, project_title=None, status=None):
+    def get_applied_projects(self, organ, staff, performers=None, project_title=None, status=None):
         """
-        按关键字:(项目名)查询机构所有我的申请项目列表
+        按关键字:(项目名/项目负责人)查询机构所有我的申请项目列表
         :param organ: 项目申请者所有机构
-        :param creator: 项目申请者staff object
-        :return:
+        :param staff: 当前登录系统用户
+        :param performers: 项目负责人Staff集合
+        :param project_title: 项目名称
+        :param status 项目状态
         """
-        query_set = self.filter(related_dept__organ=organ, creator=creator)
+        query_set = self.filter(related_dept__organ=organ, creator=staff)
         if status:
             query_set = query_set.filter(status=status)
-        if project_title:
-            query_set = query_set.filter(title__contains=project_title)
+        if performers or project_title:
+            from django.db.models import Q
+            query_set = query_set.filter(
+                Q(title__contains=project_title) | Q(performer__in=performers)
+            ).distinct()
         return query_set
 
-    def get_my_performer_projects(self, organ, performer, project_title=None, status=None):
+    def get_my_performer_projects(self, organ, staff, creators=None, project_title=None, status=None):
         """
-        按关键字:(项目名)查询机构所有我负责的项目列表
+        按关键字:(项目名/项目申请人)查询机构所有我负责的项目列表
         :param organ:
-        :param performer: 项目负责人
-        :param project_title: 项目名称关键字
-        :param fields:
-        :return:
+        :param staff: 当前登录系统用户
+        :param project_title: 项目名称
+        :param creators 项目申请人Staff集合
+        :param status 项目状态
+        :param
         """
-        query_set = self.filter(related_dept__organ=organ, performer=performer)
+        query_set = self.filter(related_dept__organ=organ, performer=staff)
         if status:
             query_set = query_set.filter(status=status)
-        if project_title:
-            query_set = query_set.filter(title__contains=project_title)
+        if project_title or creators:
+            from django.db.models import Q
+            query_set = query_set.filter(
+                Q(title__contains=project_title) | Q(creator__in=creators)
+            ).distinct()
         return query_set
 
 
