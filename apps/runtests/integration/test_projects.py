@@ -194,7 +194,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
     def test_project_dispatch(self):
         """
-        API测试：分配项目给负责人接口测试(只需分配项目负责人)
+        API测试：分配项目给负责人接口测试(只需分配项目负责人，不改变项目状态)
         """
         api = '/api/v1/projects/{}/dispatch'
         self.login_with_username(self.user)
@@ -215,7 +215,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
     def test_projects_applied(self):
         """
-        API测试：我申请的项目接口测试
+        API测试：我申请的项目列表接口测试
         """
         api = '/api/v1/projects/'
         self.login_with_username(self.user)
@@ -227,12 +227,40 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         data = {
             'organ_id': self.organ.id,
-            'creator_id': self.admin_staff.id,
             'type': 'apply'
         }
 
         response = self.get(api, data=data)
         self.assert_response_success(response)
         projects = response.get('projects')
+        self.assertIsNotNone(projects)
         self.assertEquals(len(projects), 3)
         self.assert_object_in_results({'creator_id': self.admin_staff.id}, projects)
+
+    def test_projects_my_performer(self):
+        """
+        API测试：我负责的项目列表接口测试
+        """
+        api = '/api/v1/projects/'
+        self.login_with_username(self.user)
+
+        # 创建项目
+        for index in range(0, 3):
+            project = self.create_project(
+                self.admin_staff, self.dept, title='我负责的项目_{}'.format(self.get_random_suffix())
+            )
+            project.performer = self.admin_staff
+            project.save()
+
+        data = {
+            'organ_id': self.organ.id,
+            'pro_status': 'PE',
+            'search_key': '项目',
+            'type': 'my_performer'
+        }
+        response = self.get(api, data=data)
+
+        self.assert_response_success(response)
+        projects = response.get('projects')
+        self.assertIsNotNone(projects)
+        self.assertEquals(len(projects), 3)

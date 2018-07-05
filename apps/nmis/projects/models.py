@@ -130,7 +130,7 @@ class ProjectPlan(BaseModel):
 
     def dispatch(self, performer):
         """
-        分派项目给某个员工作为责任人. 项目分配责任人后即进入启动状态
+        分派项目给某个员工作为责任人. 项目状态不改变，处于未启动状态，启动项目时改变项目状态
         :param performer:  要分派的责任人, staff object
         """
         try:
@@ -138,7 +138,7 @@ class ProjectPlan(BaseModel):
                 self.performer = performer
                 # self.attached_flow = data.pop("flow")
                 # self.expired_time = data.pop("expired_time")
-                self.status = PRO_STATUS_STARTED
+                # self.status = PRO_STATUS_STARTED
                 # self.startup_time = times.now()
 
                 # self.current_stone = self.attached_flow.get_first_milestone()
@@ -323,7 +323,7 @@ class Milestone(BaseModel):
         返回当前里程碑项在流程中的下一个里程碑项
         :return: milestone
         """
-        it = iter(self.flow.get_milestones().order_by('index')) # 迭代器
+        it = iter(self.flow.get_milestones().order_by('index'))     # 迭代器
         while True:
             try:
                 m = next(it)

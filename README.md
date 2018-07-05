@@ -25,10 +25,13 @@
 - Install Python3.6.5
 - pip install virtualenvwrapper
 - 创建virtualenv环境(指定Python版本)
-- pip install -r requirements.txt
+- git clone ssh://git@gitee.com:juyangtech/nmis.git
+- cd <work_dir>/nmis-back
+- 创建本地logs, logs/nmis-back, media目录, 修改local.py文件
+- pip install -r deploy/requirements.txt
 - 安装MySQL/Redis等数据存储服务
-- git clone ssh://git@gitee.com:juyangtech/nextcloud.git
-- 创建本地logs, media目录, 修改local.py文件
+- 创建DB: CREATE DATABASE nmis CHARACTER SET utf8;
+- python apps/manage.py migrate 
 
 
 ## Initial data with fixtures(加载初始数据)
