@@ -278,9 +278,12 @@ class StaffAPITestCase(BaseTestCase):
         response = self.delete(
             api.format(self.organ.id, self.admin_staff.id)
         )
-
-        self.assert_response_success(response)
-        # self.assert_response_failure(response)
+        self.assert_response_failure(response)
+        staff = self.create_completed_staff(organ=self.organ, dept=self.dept, name='test0001')
+        response2 =  self.delete(
+            api.format(self.organ.id, staff.id)
+        )
+        self.assert_response_success(response2)
 
     def test_staff_list(self):
         """

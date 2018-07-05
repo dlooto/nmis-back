@@ -573,3 +573,103 @@ class DepartmentCreateForm(BaseForm):
         except Exception as e:
             logging.exception(e)
             return None
+
+
+class DepartmentBatchUploadForm(BaseForm):
+    ERR_CODES = {
+        'organ_name': '第{0}行所属机构为空或不存在',
+        'error_attri': '第{0}行科室属性为空或数据错误',
+        'dept_name_duplicate': '第{0}行和第{1}行科室名称重复，请检查',
+        'dept_name_exists': '科室{}已存在',
+        'err_dept': '第{0}行科室名称为空或数据错误',
+        'desc_errr': '第{0}行职能描述数据错误'
+    }
+
+    def __init__(self, organ, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.organ = organ
+        self.validate_excel_data = self.init_data()
+
+    def init_data(self):
+        """
+        封装各列数据, 以进行数据验证
+        :return:
+        """
+        validate_excel_data = {}
+        if self.data and self.data[0] and self.data[0][0]:
+            sheet_data = self.data[0]
+            dept_names, dept_attris, descs, = [], [], []
+            for i in range(len(sheet_data)):
+                dept_names.append(sheet_data[i].get('dept_name', '').strip())
+            for i in range(len(sheet_data)):
+                dept_attris.append(sheet_data[i].get('dept_attri', '').strip())
+            for i in range(len(sheet_data)):
+                descs.append(sheet_data[i].get('desc', '').strip())
+        validate_excel_data['dept_names'] = dept_names
+        validate_excel_data['dept_attris'] = dept_attris
+        validate_excel_data['descs'] = descs
+        return validate_excel_data
+
+    def is_valid(self):
+        # if self.check_username() and self.check_staff_name() and self.check_dept() \
+        #         and self.check_email() and self.check_contact_phone():
+        #     return True
+        # return False
+        return True
+
+
+    def check_dept(self):
+        """校验科室名称"""
+        dept_names = self.validate_excel_data['dept_names']
+        if not dept_names:
+            self.update_errors('dept', 'empty_dept_data')
+            return False
+
+        distincted_dept_names = set(dept_names)
+        dept_query_set = Department.objects.filter(name__in=distincted_dept_names)
+        if not dept_query_set or len(dept_query_set) < len(distincted_dept_names):
+            self.update_errors('dept', 'err_dept')
+            return False
+
+        return True
+
+    def check_dept_attri(self):
+        """
+        校验科室属性
+        """
+        emails = self.validate_excel_data['emails']
+        for i in range(len(emails)):
+            if emails[i]:
+                if not eggs.is_email_valid(emails[i]):
+                    self.update_errors('email', 'err_email', str(i + 2))
+                    return False
+        return True
+
+    def check_dept_desc(self):
+        """
+        校验只能描述
+        """
+        contact_phones = self.validate_excel_data['contact_phones']
+        for i in range(len(contact_phones)):
+            if contact_phones[i]:
+                if not eggs.is_phone_valid(str(contact_phones[i])):
+                    self.update_errors('contact_phone', 'err_contact_phone', str(i + 2))
+                    return False
+
+        return True
+
+    def save(self):
+        # 封装excel数据
+        depts_data = []
+        if self.data and self.data[0] and self.data[0][0]:
+            sheet_data = self.data[0]
+
+            for row_data in sheet_data:
+                depts_data.append({
+                    'organ': self.organ,
+                    'name': row_data.get('dept_name', ''),
+                    'attri': row_data.get('dept_attri', ''),
+                    'desc': row_data.get('desc', ''),
+                })
+
+        return self.organ.batch_upload_departments(depts_data)
