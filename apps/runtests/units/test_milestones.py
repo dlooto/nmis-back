@@ -32,7 +32,7 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
 
         success = self.project.dispatch(self.performer)
         self.assertTrue(success)
-        self.assertFalse(self.project.is_unstarted()) # 分配后项目进入启动状态
+        # self.assertFalse(self.project.is_unstarted()) # 分配后项目进入启动状态
         # self.assertEquals(self.project.current_stone, self.flow.get_first_milestone())
 
     def test_change_milestone(self):
