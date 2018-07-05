@@ -57,13 +57,14 @@ class ProjectPlanMixin(object):
     项目管理基础工具类
     """
 
-    def create_project(self, creator, dept, title="设备采购", ordered_devices=ORDERED_DEVICES):
+    def create_project(self, creator, dept, title="设备采购", handing_type='SE', ordered_devices=ORDERED_DEVICES):
         """
         :param creator:  项目创建者, staff object
         :param dept: 申请科室
         """
         project_data = {
             'title': title,
+            'handing_type': handing_type,
             'purpose': "设备老旧换新",
             'creator': creator,
             'related_dept': dept,

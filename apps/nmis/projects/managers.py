@@ -113,6 +113,12 @@ class ProjectPlanManager(BaseManager):
             ).distinct()
         return query_set
 
+    def start_project(self,):
+        """
+        TODO:
+        """
+        pass
+
 
 class ProjectFlowManager(BaseManager):
 
