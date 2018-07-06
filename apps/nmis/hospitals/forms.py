@@ -16,8 +16,7 @@ from utils import eggs
 from nmis.hospitals.models import Hospital, Department, Staff, Doctor, Group
 from organs.forms import OrganSignupForm
 from base.forms import BaseForm
-from nmis.hospitals.consts import DPT_ATTRI_CHOICES
-
+from nmis.hospitals.consts import DPT_ATTRI_CHOICES, GROUP_CATE_NORMAL_STAFF
 
 from users.models import User
 
@@ -102,7 +101,8 @@ class StaffSignupForm(BaseForm):
     def is_valid(self):
         is_valid = True
         # 校验必输项
-        if not self.check_username() or not self.check_password() or not self.check_staff_name():
+        if not self.check_username() or not self.check_password() \
+                or not self.check_staff_name() or not self.check_group():
             is_valid = False
 
         # 校验非必输项
@@ -177,15 +177,18 @@ class StaffSignupForm(BaseForm):
 
     def check_group(self):
         group_id = self.data.get('group_id')
+        group = None
         if not group_id:
-            self.update_errors('group_id', 'err_group_is_null')
-            return False
+            group = Group.objects.filter(cate=GROUP_CATE_NORMAL_STAFF, is_admin=0).first()
+            if not group:
+                self.update_errors('group_id', 'err_group_not_exist')
+            self.data.update({'group': group})
+            return True
         group = Group.objects.get_by_id(group_id)
         if not group:
             self.update_errors('group_id', 'err_group_not_exist')
             return False
         self.data.update({'group': group})
-
         return True
 
     def save(self):
@@ -194,6 +197,7 @@ class StaffSignupForm(BaseForm):
             'title': self.data.get('staff_title', '').strip(),
             'contact': self.data.get('contact_phone', '').strip(),
             'email': self.data.get('email', '').strip(),
+            'group': self.data.get("group")
         }
 
         user_data = {
@@ -290,19 +294,21 @@ class StaffBatchUploadForm(BaseForm):
         'err_email':                    '第{0}无效邮箱',
         'empty_dept_data':              '没有科室数据',
         'err_dept':                     '含有不存在的科室信息',
+        'err_group_not_exist':          '系统不存在普通员工权限，请先维护'
     }
 
     def __init__(self, organ, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.organ = organ
-        self.validate_excel_data = self.init_data()
+        self.group = None
+        self.pre_data = self.init_data()
 
     def init_data(self):
         """
         封装各列数据, 以进行数据验证
         :return:
         """
-        validate_excel_data = {}
+        pre_data = {}
         if self.data and self.data[0] and self.data[0][0]:
             sheet_data = self.data[0]
             usernames, staff_names, dept_names, emails, contact_phones, = [], [], [], [], []
@@ -316,16 +322,16 @@ class StaffBatchUploadForm(BaseForm):
                 emails.append(sheet_data[i].get('email', '').strip())
             for i in range(len(sheet_data)):
                 contact_phones.append(sheet_data[i].get('contact_phone', ''))
-        validate_excel_data['usernames'] = usernames
-        validate_excel_data['staff_names'] = staff_names
-        validate_excel_data['dept_names'] = dept_names
-        validate_excel_data['emails'] = emails
-        validate_excel_data['contact_phones'] = contact_phones
-        return validate_excel_data
+                pre_data['usernames'] = usernames
+                pre_data['staff_names'] = staff_names
+                pre_data['dept_names'] = dept_names
+                pre_data['emails'] = emails
+                pre_data['contact_phones'] = contact_phones
+        return pre_data
 
     def is_valid(self):
         if self.check_username() and self.check_staff_name() and self.check_dept() \
-                and self.check_email() and self.check_contact_phone():
+                and self.check_email() and self.check_contact_phone() and self.check_group():
             return True
         return False
 
@@ -336,7 +342,7 @@ class StaffBatchUploadForm(BaseForm):
         用户名重复校验
         用户名已存在校验
         """
-        usernames = self.validate_excel_data['usernames']
+        usernames = self.pre_data['usernames']
         for i in range(len(usernames)):
             if not usernames[i]:
                 self.update_errors('username', 'null_username', str(i + 2))
@@ -360,7 +366,7 @@ class StaffBatchUploadForm(BaseForm):
         """
         校验员工名称
         """
-        staff_names = self.validate_excel_data['staff_names']
+        staff_names = self.pre_data['staff_names']
         for i in range(len(staff_names)):
             if not staff_names[i]:
                 self.update_errors('staff_name', 'null_staff_name', str(i+2))
@@ -372,7 +378,7 @@ class StaffBatchUploadForm(BaseForm):
         """
         校验邮箱
         """
-        emails = self.validate_excel_data['emails']
+        emails = self.pre_data['emails']
         for i in range(len(emails)):
             if emails[i]:
                 if not eggs.is_email_valid(emails[i]):
@@ -384,7 +390,7 @@ class StaffBatchUploadForm(BaseForm):
         """
         校验手机号
         """
-        contact_phones = self.validate_excel_data['contact_phones']
+        contact_phones = self.pre_data['contact_phones']
         for i in range(len(contact_phones)):
             if contact_phones[i]:
                 if not eggs.is_phone_valid(str(contact_phones[i])):
@@ -395,7 +401,7 @@ class StaffBatchUploadForm(BaseForm):
 
     def check_dept(self):
         """校验职位名称"""
-        dept_names = self.validate_excel_data['dept_names']
+        dept_names = self.pre_data['dept_names']
         if not dept_names:
             self.update_errors('dept', 'empty_dept_data')
             return False
@@ -407,6 +413,14 @@ class StaffBatchUploadForm(BaseForm):
             return False
 
         return True
+
+    def check_group(self):
+        group = Group.objects.filter(cate=GROUP_CATE_NORMAL_STAFF, is_admin=0).first()
+        if not group:
+            self.update_errors('group_id', 'err_group_not_exist')
+        self.group = group
+        return True
+
 
     def save(self):
         # 封装excel数据
@@ -422,11 +436,12 @@ class StaffBatchUploadForm(BaseForm):
                     'email': row_data.get('email', '').strip(),
                     'dept_name': row_data.get('dept_name'),  # 将username和dept建立字典关系, 以便于批量查询dept
                     'organ': self.organ,
+                    'group': self.group
                 })
 
             # 建立字典结构, 以便通过dept_name快速定位dept对象: key/value: dept_name/dept
             dept_dict = {}
-            dept_names = set(self.validate_excel_data['dept_names'])
+            dept_names = set(self.pre_data['dept_names'])
             depts = Department.objects.filter(name__in=dept_names)
             for dept in depts:
                 dept_dict[dept.name] = dept

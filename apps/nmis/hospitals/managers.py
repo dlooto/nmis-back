@@ -75,7 +75,8 @@ class StaffManager(BaseManager):
                             user=user_dict[data.get('username')],
                             name=data.get('staff_name'),
                             contact=data.get('contact_phone'),
-                            email=data.get('email')
+                            email=data.get('email'),
+                            group=data.get('group')
                     ))
                 self.bulk_create(staff_list)
             return True

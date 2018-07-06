@@ -152,10 +152,7 @@ class ProjectPlanManager(BaseManager):
                 if data.get('updated_devices'):
                     # 批量修改设备明细
                     updated_devices = data["updated_devices"]
-                    updated_device_ids = []
-
-                    for update_device in updated_devices:
-                        updated_device_ids.append(update_device['id'])
+                    updated_device_ids = [update_device['id'] for update_device in updated_devices]
 
                     devices = OrderedDevice.objects.filter(pk__in=updated_device_ids)
                     for i in range(len(devices)):
