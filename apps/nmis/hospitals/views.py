@@ -21,7 +21,8 @@ from base import resp
 from base.views import BaseAPIView
 from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
     DepartmentBatchUploadForm
-from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission
+from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission, \
+    ProjectDispatcherPermission
 from nmis.hospitals.models import Hospital, Department, Staff, Group
 from .forms import (
     HospitalSignupForm,
@@ -255,14 +256,15 @@ class StaffView(BaseAPIView):
 
 class StaffListView(BaseAPIView):
 
-    permission_classes = (IsHospitalAdmin,)
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
 
     def get(self, req, hid):
         """
         查询某机构下员工列表
         """
         organ = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, organ)
+
+        self.check_object_any_permissions(req, organ)
 
         staff_list = organ.get_staffs()
         return resp.serialize_response(staff_list, results_name='staffs')
@@ -291,7 +293,6 @@ class StaffBatchUploadView(BaseAPIView):
         self.check_object_permissions(req, organ)
 
         file_obj = req.FILES.get('staff_excel_file')
-        logs.debug(req.FILES)
         if not file_obj:
             return resp.failed('请选择要上传的文件')
 
@@ -438,17 +439,13 @@ class DepartmentBatchUploadView(BaseAPIView):
 
         TODO：先实现文件上传解析功能，再补充校验
         检查文件格式，目前仅支持xlsx格式
-        检查医疗机构是否存在
         检查科室列表是否存在
-        检查excel文档中员工用户名是否有重复数据
-        检查员工用户名是否存在
-
+        检查科室是否有重复数据
         """
         organ = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, organ)
 
         file_obj = req.FILES.get('dept_excel_file')
-        logs.debug(req.FILES)
         if not file_obj:
             return resp.failed('请选择要上传的文件')
 
