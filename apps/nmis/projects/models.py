@@ -171,6 +171,7 @@ class ProjectPlan(BaseModel):
                 self.current_stone = self.attached_flow.get_first_milestone()
                 self.add_milestone_record(self.current_stone)
                 self.save()
+                self.cache()
             return True
         except Exception as e:
             logs.exception(e)
