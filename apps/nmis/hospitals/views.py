@@ -15,8 +15,6 @@ from base.common.param_utils import get_id_list
 from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
-
-from nmis.projects.permissions import ProjectPerformerPermission
 from utils.files import ExcelBasedOXL, get_file_extension
 
 from base import resp
@@ -359,7 +357,9 @@ class DepartmentListView(BaseAPIView):
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
         dept_list = hospital.get_all_depts()
-        return resp.serialize_response(dept_list, results_name='dept')
+        return resp.serialize_response(
+            dept_list, srl_cls_name='DepartmentStaffsCountSerializer', results_name='dept'
+        )
 
 
 class DepartmentView(BaseAPIView):

@@ -109,7 +109,7 @@ class ProjectPlanListView(BaseAPIView):
                 pro_status	string      项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
                 search_key	string		项目名称/负责人关键字
             """
-            # 检查当前员工是否为普通员工权限和项目分配者权限，则检查是否为管理员
+            # 检查当前员工是否为普通员工权限或者项目分配者权限，则检查是否为管理员
             if not ((login_staff.group.cate == GROUP_CATE_NORMAL_STAFF) or
                     (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER)):
                 self.check_object_permissions(req, hospital)
@@ -126,7 +126,7 @@ class ProjectPlanListView(BaseAPIView):
                 pro_status: string    项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
                 search_key: string    项目名称/项目申请人关键字
             """
-            # 检查当前员工是否为普通员工权限和项目分配者权限，则检查是否为管理员
+            # 检查当前员工是否为普通员工权限或者项目分配者权限，则检查是否为管理员
             if not ((login_staff.group.cate == GROUP_CATE_NORMAL_STAFF) or
                     (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER)):
                 self.check_object_permissions(req, hospital)

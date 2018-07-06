@@ -25,33 +25,43 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
 
     def test_project_dispatch(self):
         """
-        测试: 项目分配
+        测试: 项目分配(只负责分配负责人，项目状态不改变)
         :return:
         """
         self.assertTrue(self.project.is_unstarted())
 
         success = self.project.dispatch(self.performer)
         self.assertTrue(success)
-        # self.assertFalse(self.project.is_unstarted()) # 分配后项目进入启动状态
-        # self.assertEquals(self.project.current_stone, self.flow.get_first_milestone())
+        self.assertTrue(self.project.is_unstarted())  # 分配后项目后状态不发生改变
+        self.assertIsNotNone(self.project.performer)
 
     def test_change_milestone(self):
         """
         测试: 变更项目里程碑项
         """
+        # 分配负责人
         self.assertTrue(
             self.project.dispatch(self.performer)
         )
-        # self.assertEquals(self.project.current_stone, self.flow.get_first_milestone())
+        # 启动项目
+        self.assertTrue(
+            self.project.startup(
+                assistant=self.admin_staff,
+                flow=self.flow,
+                expired_time=times.tomorrow()
+            )
+        )
+
+        self.assertEquals(self.project.current_stone, self.flow.get_first_milestone())
 
         # new_milestone = self.project.current_stone
         # success, msg = self.project.change_milestone(new_milestone)
         # self.assertFalse(success)
 
-        # # new_milestone = self.project.current_stone.next()
-        # success, msg = self.project.change_milestone(new_milestone)
-        # self.assertTrue(success)
-        # self.assertEquals(self.project.current_stone, new_milestone)
-        # self.assertTrue(self.project.contains_recorded_milestone(new_milestone))
+        new_milestone = self.project.current_stone.next()
+        success, msg = self.project.change_milestone(new_milestone)
+        self.assertTrue(success)
+        self.assertEquals(self.project.current_stone, new_milestone)
+        self.assertTrue(self.project.contains_recorded_milestone(new_milestone))
 
 

@@ -35,6 +35,21 @@ class DepartmentSerializer(BaseModelSerializer):
         return '' if not obj.organ else obj.organ.organ_name
 
 
+class DepartmentStaffsCountSerializer(BaseModelSerializer):
+    """
+    返回科室对象中含员工数量
+    """
+    staffs_count = serializers.SerializerMethodField('_get_staff_count')
+
+    class Meta:
+        model = Department
+        fields = ('id', 'created_time', 'name', 'contact', 'desc', 'attri', 'organ_id',
+                  'staffs_count')
+
+    def _get_staff_count(self, obj):
+        return Staff.objects.get_count_by_dept(obj.organ, obj)
+
+
 class StaffSerializer(BaseModelSerializer):
 
     organ_name = serializers.SerializerMethodField('_get_organ_name')

@@ -94,12 +94,21 @@ class StaffManager(BaseManager):
 
     def get_by_dept(self, organ, dept_id):
         """
-        通过科室查询员工，存在员工返回true，不存在返回false
+        通过科室查询员工
         :param organ:
         :param dept_id: 当前机构科室id
         :return:
         """
         return self.filter(organ=organ, dept_id=dept_id)
+
+    def get_count_by_dept(self, organ, dept):
+        """
+        通过科室查询科室人员数
+        :param organ:
+        :param dept:
+        :return:
+        """
+        return self.filter(organ=organ, dept=dept).count()
 
 
 class GroupManager(BaseManager):
