@@ -68,7 +68,7 @@ class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.login_with_username(performer.user)
         response = self.post(api.format(project.id),
-                  data={"milestone_id": new_milestone.id})
+                  data={"milestone_id": new_milestone.id, 'done_sign': 'UN'})
         self.assert_response_success(response)
 
         result_project = response.get("project")
