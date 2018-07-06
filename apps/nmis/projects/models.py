@@ -161,7 +161,7 @@ class ProjectPlan(BaseModel):
         """
         try:
             with transaction.atomic():
-                if not data['assistant']:
+                if data['assistant']:
                     self.assistant = data['assistant']
                 self.attached_flow = flow
                 self.expired_time = expired_time

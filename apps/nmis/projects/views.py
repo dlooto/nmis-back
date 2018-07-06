@@ -303,7 +303,7 @@ class ProjectPlanStartupView(BaseAPIView):
         success = project.startup(
             flow=flow,
             expired_time=req.data.get('expired_time'),
-            **data
+            **data,
         )
         return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
 
