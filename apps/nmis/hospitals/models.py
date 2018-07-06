@@ -146,6 +146,24 @@ class Hospital(BaseOrgan):
     def create_department(self, **dept_data):
         return Department.objects.create(organ=self, **dept_data)
 
+    def batch_upload_departments(self, depts_data):
+        try:
+            with transaction.atomic():
+                dept_list = []
+                for data in depts_data:
+                    dept_list.append(
+                        Department(
+                            organ=data.get('organ'),
+                            name=data.get('name'),
+                            attri=data.get('attri'),
+                            desc=data.get('desc')
+                    ))
+            Department.objects.bulk_create(dept_list)
+            return True
+        except Exception as e:
+            logging.exception(e)
+            return False
+
 
 class Department(BaseDepartment):
     """

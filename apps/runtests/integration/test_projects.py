@@ -53,6 +53,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             "organ_id": self.organ.id,
             "project_title": "新的项目名称",
             "purpose": "修改后的用途说明",
+            'handing_type': 'SE',
         }
 
         response = self.put(self.single_project_api.format(old_project.id), data=project_data)

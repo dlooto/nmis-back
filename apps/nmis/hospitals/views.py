@@ -19,7 +19,8 @@ from utils.files import ExcelBasedOXL, get_file_extension
 
 from base import resp
 from base.views import BaseAPIView
-from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm
+from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
+    DepartmentBatchUploadForm
 from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission
 from nmis.hospitals.models import Hospital, Department, Staff, Group
 from .forms import (
@@ -29,8 +30,8 @@ from .forms import (
     DepartmentCreateForm
 )
 
-from nmis.hospitals.consts import UPLOADED_STAFF_EXCEL_HEADER_DICT
-
+from nmis.hospitals.consts import UPLOADED_STAFF_EXCEL_HEADER_DICT, \
+    UPLOADED_DEPT_EXCEL_HEADER_DICT
 
 logs = logging.getLogger(__name__)
 
@@ -226,7 +227,7 @@ class StaffView(BaseAPIView):
 
     def delete(self, req, hid, staff_id):
         """
-        删除员工，同时删除用户账号信息
+        删除员工，同时删除用户账号信息,
         如果存在其他关联数据导致删除失败，目前直接返回删除失败
         :param req: http请求
         :param hid: organ_id 机构ID
@@ -237,6 +238,8 @@ class StaffView(BaseAPIView):
         self.check_object_permissions(req, organ)
 
         staff = self.get_object_or_404(staff_id, Staff)
+        if req.user.get_profile().id == staff_id:
+            return resp.failed("无权删除本人信息")
         user = staff.user
         staff.clear_cache()
         user.clear_cache()
@@ -418,6 +421,54 @@ class DepartmentView(BaseAPIView):
         dept.clear_cache()  # 清除缓存
         dept.delete()
         return resp.ok('操作成功')
+
+
+class DepartmentBatchUploadView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, )
+
+    def post(self, req, hid):
+        """
+        批量导入某机构的部门信息
+        :param req:
+        :param hid:
+        :return:
+
+        TODO：先实现文件上传解析功能，再补充校验
+        检查文件格式，目前仅支持xlsx格式
+        检查医疗机构是否存在
+        检查科室列表是否存在
+        检查excel文档中员工用户名是否有重复数据
+        检查员工用户名是否存在
+
+        """
+        organ = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, organ)
+
+        file_obj = req.FILES.get('dept_excel_file')
+        logs.debug(req.FILES)
+        if not file_obj:
+            return resp.failed('请选择要上传的文件')
+
+        file_extension = get_file_extension(file_obj.name)
+        if file_extension != '.xlsx':
+            return resp.failed('导入文件不是Excel文件，请检查')
+
+        # 将文件存放到服务器
+        # import os
+        # file_server_path = open(os.path.join('/media/', '', file_obj.name), 'wb')
+        # file = open('file_server_path', 'wb')
+
+        head_dict = UPLOADED_DEPT_EXCEL_HEADER_DICT
+        success, result = ExcelBasedOXL.read_excel_with_header(ExcelBasedOXL.open_excel(file_obj), head_dict)
+        if not success:
+            return resp.failed(result)
+
+        form = DepartmentBatchUploadForm(organ, result)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+
+        return resp.ok('导入成功') if form.save() else resp.failed('导入失败')
 
 
 class GroupListView(BaseAPIView):

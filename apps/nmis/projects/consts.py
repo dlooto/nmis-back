@@ -21,7 +21,7 @@ PROJECT_STATUS_CHOICES = (
     (PRO_STATUS_DONE,       '已完成'),
 )
 
-#项目申请办理方式
+# 项目申请办理方式
 PRO_HANDING_TYPE_SELF = 'SE'
 PRO_HANDING_TYPE_AGENT = 'AG'
 
@@ -30,3 +30,10 @@ PROJECT_HANDING_TYPE_CHOICES = (
     (PRO_HANDING_TYPE_AGENT,    '转交办理'),
 )
 
+# 项目流程结束标识
+FLOW_DONE = 'DN'
+FLOW_UNDONE = 'UN'
+FLOW_DONE_SIGN = (
+    (FLOW_DONE, '项目流程结束'),
+    (FLOW_UNDONE, '项目流程未结束'),
+)
