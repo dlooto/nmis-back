@@ -75,7 +75,7 @@ class ProjectPlan(BaseModel):
         db_table = 'projects_project_plan'
 
     VALID_ATTRS = [
-        'title', 'purpose',
+        'title', 'purpose', 'handing_type',
     ]
 
     def __str__(self):
@@ -151,18 +151,20 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return False
 
-    def startup(self, assistant, **data):
+    def startup(self, flow, expired_time, **data):
         """
         责任人启动项目，选择协助办理人和项目截至日期
-        :param assistant: 协助办理人
-        :param data: dict parameters, 一般情况下需要有flow, expired_time等参数
+        :param flow: 协助办理人
+        :param expired_time: 项目截至时间
+        :param data: dict parameters, 一般情况下需要有assistant等参数
         :return: True or False
         """
         try:
             with transaction.atomic():
-                self.assistant = assistant
-                self.attached_flow = data.pop('flow')
-                self.expired_time = data.pop("expired_time")
+                if not data['assistant']:
+                    self.assistant = data['assistant']
+                self.attached_flow = flow
+                self.expired_time = expired_time
                 self.startup_time = times.now()
                 self.status = PRO_STATUS_STARTED
 
@@ -211,7 +213,7 @@ class ProjectPlan(BaseModel):
             return True
         return False
 
-    def change_milestone(self, new_milestone):
+    def change_milestone(self, new_milestone, done_sign):
         """
         变更项目里程碑状态
         :param new_milestone: 新的里程碑状态对象
@@ -223,12 +225,18 @@ class ProjectPlan(BaseModel):
         if not self.attached_flow.contains(new_milestone):
             return False, "里程碑项不属于当前所用流程, 请检查数据是否异常"
 
-        if new_milestone == self.current_stone:
-            return False, "项目已处于该状态"
-
-        if new_milestone in self.get_recorded_milestones():
+        if not new_milestone == self.current_stone and \
+                new_milestone in self.get_recorded_milestones():
             return False, "里程碑已存在项目状态记录中"
 
+        if new_milestone == self.current_stone:
+            if done_sign == FLOW_UNDONE:
+                return False, "数据异常"
+            if done_sign == FLOW_DONE and self.attached_flow.get_last_milestone() == new_milestone:
+                self.status = PRO_STATUS_DONE
+                self.save()
+                return True, "变更成功"
+            return False, "数据异常"
         try:
             with transaction.atomic():
                 self.add_milestone_record(new_milestone)
@@ -281,7 +289,7 @@ class ProjectFlow(BaseModel):
 
     def get_last_milestone(self):
         """ 返回流程中的最后一个里程碑项 """
-        pass
+        return self.get_milestones().order_by('-index')[:1][0]
 
     def is_used(self):
         query_set = ProjectPlan.objects.filter(attached_flow=self)
@@ -315,7 +323,7 @@ class Milestone(BaseModel):
         返回当前里程碑项在流程中的下一个里程碑项
         :return: milestone
         """
-        it = iter(self.flow.get_milestones().order_by('index')) # 迭代器
+        it = iter(self.flow.get_milestones().order_by('index'))     # 迭代器
         while True:
             try:
                 m = next(it)

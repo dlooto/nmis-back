@@ -8,6 +8,7 @@
 import logging
 
 from django.db import transaction
+from django_bulk_update import helper
 
 from base.models import BaseManager
 from nmis.devices.models import OrderedDevice
@@ -118,6 +119,58 @@ class ProjectPlanManager(BaseManager):
         TODO:
         """
         pass
+
+    def update_project(self, old_project, **data):
+        """
+        TODO:
+        :param old_project:
+        :param update_devices: 变更的设备明细, 列表数据, 列表元素类型为dict
+        :param added_devices: 新添加的设备明细, 列表数据, 列表元素类型为dict
+        :return:
+        """
+
+        try:
+            with transaction.atomic():
+                pro_base_data = {}
+                if data['title']:
+                    pro_base_data['title'] = data['title']
+                if data['handing_type']:
+                    pro_base_data['handing_type'] = data['handing_type']
+                if data['purpose']:
+                    pro_base_data['purpose'] = data['purpose']
+                if pro_base_data:
+                    new_project = old_project.update(pro_base_data)
+
+                if data.get('added_devices'):
+                    # 批量添加设备明细
+                    ordered_device_list = []
+                    for device_data in data['added_devices']:
+                        ordered_device_list.append(
+                            OrderedDevice(project=old_project, **device_data)
+                        )
+                    OrderedDevice.objects.bulk_create(ordered_device_list)
+                if data.get('updated_devices'):
+                    # 批量修改设备明细
+                    updated_devices = data["updated_devices"]
+                    updated_device_ids = []
+
+                    for update_device in updated_devices:
+                        updated_device_ids.append(update_device['id'])
+
+                    devices = OrderedDevice.objects.filter(pk__in=updated_device_ids)
+                    for i in range(len(devices)):
+                        devices[i].name = updated_devices[i]['name']
+                        devices[i].num = updated_devices[i]['num']
+                        devices[i].planned_price = updated_devices[i]['planned_price']
+                        devices[i].measure = updated_devices[i]['measure']
+                        devices[i].purpose = updated_devices[i]['purpose']
+                        devices[i].type_spec = updated_devices[i]['type_spec']
+                    helper.bulk_update(devices)
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+        return new_project
 
 
 class ProjectFlowManager(BaseManager):

@@ -31,6 +31,9 @@ urlpatterns = [
 
     path("<int:hid>/departments",        views.DepartmentListView.as_view(), ),   # 科室列表操作
 
+    # 批量导科室信息（以上传excel文件的形式）
+    path("<int:hid>/departments/batch-upload", views.DepartmentBatchUploadView.as_view(), ),
+
     # 单个员工查、删、改
     path("<int:hid>/staffs/<int:staff_id>", views.StaffView.as_view(), ),
 

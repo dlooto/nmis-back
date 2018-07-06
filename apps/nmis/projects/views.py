@@ -25,7 +25,7 @@ from nmis.projects.forms import (
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
     ProjectPlanListForm,
-    ProjectFlowUpdateForm)
+    ProjectFlowUpdateForm, )
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
 from nmis.projects.permissions import ProjectPerformerPermission
 
@@ -227,7 +227,8 @@ class ProjectPlanView(BaseAPIView):
         )
 
     @check_id('organ_id')
-    @check_params_not_all_null(['project_title', 'purpose'])
+    @check_params_not_all_null(['project_title', 'purpose', 'handing_type',
+                                'added_devices', 'updated_devices'])
     def put(self, req, project_id):
         """
         修改项目. 该接口仅可以修改项目本身的属性, 若修改设备明细, 需要调用其他接口对设备逐个进行修改.
@@ -291,16 +292,23 @@ class ProjectPlanStartupView(BaseAPIView):
     """
     permission_classes = (IsHospitalAdmin, ProjectPerformerPermission)
 
-    @check_id_list(['flow_id', 'assistant_id'])
+    @check_id_list(['flow_id',])
     @check_params_not_null(["expired_time"])
     def put(self, req, project_id):
-        # self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
-        objects = self.get_objects_or_404({'assistant_id': Staff, 'flow_id': ProjectFlow})
+
+        if not req.user.get_profile().id == project.performer.id:
+            return resp.failed("无操作权限")
+
+        flow = self.get_object_or_404(req.data.get('flow_id'), ProjectFlow)
+        data = {}
+        if req.data.get('assistant_id'):
+            data['assistant'] = self.get_object_or_404(req.data.get('assistant_id'), Staff)
         success = project.startup(
-            assistant=objects.get('assistant_id'),
-            flow=objects.get('flow_id'),
-            expired_time=req.data.get('expired_time')
+            flow=flow,
+            expired_time=req.data.get('expired_time'),
+            **data
         )
         return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
 
@@ -310,15 +318,16 @@ class ProjectPlanChangeMilestoneView(BaseAPIView):
     变更项目里程碑状态
     """
 
-    permission_classes = (ProjectPerformerPermission, )
+    #permission_classes = (ProjectPerformerPermission, )
 
     @check_id_list(['milestone_id', ])
+    @check_params_not_null(['done_sign', ])
     def post(self, req, project_id):
         project = self.get_object_or_404(project_id, ProjectPlan, use_cache=False)
         self.check_object_permissions(req, project)
 
         new_milestone = self.get_objects_or_404({'milestone_id': Milestone}, use_cache=False)['milestone_id']
-        success, msg = project.change_milestone(new_milestone)
+        success, msg = project.change_milestone(new_milestone, done_sign=req.data.get('done_sign', 'UN').strip())
         if not success:
             return resp.failed(msg)
 

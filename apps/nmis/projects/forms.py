@@ -106,16 +106,35 @@ class ProjectPlanCreateForm(BaseForm):
 
 
 class ProjectPlanUpdateForm(BaseForm):
+    """
+    TODO:添加相关校验
+    """
 
     def __init__(self, old_project, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.old_project = old_project
         self.init_err_codes()
+        self.pre_data = self.init_data()
+
+    def init_data(self):
+        pre_data = {}
+        if self.data.get('project_title', '').strip():
+            pre_data['title'] = self.data.get('project_title', '').strip()
+        if self.data.get('purpose', '').strip():
+            pre_data['purpose'] = self.data.get('purpose', '').strip()
+        if self.data.get('handing_type', '').strip():
+            pre_data['handing_type'] = self.data.get('handing_type', '').strip()
+        if self.data.get('added_devices', []):
+            pre_data['added_devices'] = self.data.get('added_devices', [])
+        if self.data.get('updated_devices', []):
+            pre_data['updated_devices'] = self.data.get('updated_devices', [])
+        return pre_data
 
     def init_err_codes(self):
         self.ERR_CODES.update({
             'project_title_error': '项目名称输入错误',
             'purpose_error': '用途不能为空或数据错误',
+            'handing_type_error': '办理方式数据错误'
         })
 
     def is_valid(self):
@@ -125,11 +144,14 @@ class ProjectPlanUpdateForm(BaseForm):
         return True
 
     def save(self):
-        data = {
-            'title': self.data.get('project_title', '').strip(),
-            'purpose': self.data.get('purpose', '').strip(),
-        }
-        return self.old_project.update(data)
+        # data = {
+        #     'title': self.data.get('project_title', '').strip(),
+        #     'purpose': self.data.get('purpose', '').strip(),
+        #     'handing_type': self.data.get('handing_type', '').strip(),
+        #     'updated_devices': self.data.get('updated_devices', []),
+        #     'added_devices': self.data.get('added_devices', []),
+        # }
+        return ProjectPlan.objects.update_project(self.old_project, **self.pre_data)
 
 
 class BaseOrderedDeviceForm(BaseForm):
