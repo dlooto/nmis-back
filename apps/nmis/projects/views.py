@@ -290,15 +290,14 @@ class ProjectPlanStartupView(BaseAPIView):
     启动项目
     TODO: 补充权限校验
     """
-    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission)
+    permission_classes = (IsHospitalAdmin, HospitalStaffPermission, ProjectDispatcherPermission)
 
     @check_id_list(['flow_id',])
     @check_params_not_null(["expired_time"])
     def put(self, req, project_id):
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
-
-        if not req.user.get_profile().id == project.performer.id:
+        if not req.user.get_profile().id == project.performer_id:
             return resp.failed("无操作权限")
 
         flow = self.get_object_or_404(req.data.get('flow_id'), ProjectFlow)
