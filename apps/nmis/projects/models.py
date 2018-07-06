@@ -236,6 +236,7 @@ class ProjectPlan(BaseModel):
             if done_sign == FLOW_DONE and self.attached_flow.get_last_milestone() == new_milestone:
                 self.status = PRO_STATUS_DONE
                 self.save()
+                self.cache()
                 return True, "变更成功"
             return False, "数据异常"
         try:
@@ -243,6 +244,7 @@ class ProjectPlan(BaseModel):
                 self.add_milestone_record(new_milestone)
                 self.current_stone = new_milestone
                 self.save()
+                self.cache()
             return True, "变更成功"
         except Exception as e:
             logs.exception(e)
