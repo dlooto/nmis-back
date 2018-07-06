@@ -255,7 +255,7 @@ class StaffView(BaseAPIView):
 
 class StaffListView(BaseAPIView):
 
-    permission_classes = (IsHospitalAdmin, )
+    permission_classes = (IsHospitalAdmin,)
 
     def get(self, req, hid):
         """
@@ -356,7 +356,9 @@ class DepartmentListView(BaseAPIView):
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
         dept_list = hospital.get_all_depts()
-        return resp.serialize_response(dept_list, results_name='dept')
+        return resp.serialize_response(
+            dept_list, srl_cls_name='DepartmentStaffsCountSerializer', results_name='dept'
+        )
 
 
 class DepartmentView(BaseAPIView):
