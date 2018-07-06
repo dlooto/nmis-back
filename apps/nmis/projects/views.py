@@ -77,7 +77,7 @@ class ProjectPlanListView(BaseAPIView):
             参数：
                 search_key  string      项目名称/项目申请人关键字
             """
-            # 检查当前员工是否为项目分配者权限，否则检查是否为管理权限
+            # 判断当前员工是否为项目分配者权限，否则检查是否为管理权限
             if not (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER):
                 self.check_object_permissions(req, hospital)
 
@@ -94,8 +94,8 @@ class ProjectPlanListView(BaseAPIView):
                 pro_status	string      项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
                 search_key	string		项目名称/项目负责人关键字
             """
-
-            self.check_object_permissions(req, hospital)    # 检查管理员权限
+            # 检查管理员权限,只允许管理员操作
+            self.check_object_permissions(req, hospital)
 
             result_projects = ProjectPlan.objects.get_by_search_key(
                 hospital, project_title=search_key, performers=staff, status=status
@@ -109,10 +109,8 @@ class ProjectPlanListView(BaseAPIView):
                 pro_status	string      项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
                 search_key	string		项目名称/负责人关键字
             """
-            # 检查当前员工是否为普通员工权限或者项目分配者权限，则检查是否为管理员
-            if not ((login_staff.group.cate == GROUP_CATE_NORMAL_STAFF) or
-                    (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER)):
-                self.check_object_permissions(req, hospital)
+            # 管理员、项目分配者、普通员工都可操作
+            self.check_object_any_permissions(req, hospital)
 
             result_projects = ProjectPlan.objects.get_applied_projects(
                 hospital, login_staff, performers=staff, project_title=search_key, status=status
@@ -126,10 +124,8 @@ class ProjectPlanListView(BaseAPIView):
                 pro_status: string    项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
                 search_key: string    项目名称/项目申请人关键字
             """
-            # 检查当前员工是否为普通员工权限或者项目分配者权限，则检查是否为管理员
-            if not ((login_staff.group.cate == GROUP_CATE_NORMAL_STAFF) or
-                    (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER)):
-                self.check_object_permissions(req, hospital)
+            # 管理员、项目分配者、普通员工都可操作
+            self.check_object_any_permissions(req, hospital)
 
             result_projects = ProjectPlan.objects.get_my_performer_projects(
                 hospital, login_staff, creators=staff, project_title=search_key, status=status
@@ -208,8 +204,9 @@ class ProjectPlanView(BaseAPIView):
     单个项目操作（任何权限都可对项目进行操作，此操作建立在该申请项目未分配负责人）
     """
 
-    # permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
-    permission_classes = (HospitalStaffPermission, )
+    permission_classes = (
+        IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission
+    )
 
     @check_id('organ_id')
     def get(self, req, project_id):     # 项目详情
@@ -218,9 +215,7 @@ class ProjectPlanView(BaseAPIView):
         """
         project = self.get_object_or_404(project_id, ProjectPlan)
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        # if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
-        #     self.check_object_any_permissions(req, hospital)
-        self.check_object_permissions(req, hospital)
+        self.check_object_any_permissions(req, hospital)
 
         return resp.serialize_response(
             project, results_name="project", srl_cls_name='ChunkProjectPlanSerializer'
@@ -236,7 +231,7 @@ class ProjectPlanView(BaseAPIView):
 
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
         old_project = self.get_object_or_404(project_id, ProjectPlan)
-        self.check_object_permissions(req, hospital)
+        self.check_object_any_permissions(req, hospital)
         if not old_project.is_unstarted():
             return resp.failed('项目已启动或已完成, 无法修改')
 
@@ -247,8 +242,9 @@ class ProjectPlanView(BaseAPIView):
         if not new_project:
             return resp.failed('项目修改失败')
 
-        return resp.serialize_response(new_project, srl_cls_name='ChunkProjectPlanSerializer',
-                                       results_name='project')
+        return resp.serialize_response(
+            new_project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
+        )
 
     def delete(self, req, project_id):
         """
@@ -258,7 +254,7 @@ class ProjectPlanView(BaseAPIView):
         """
         project = self.get_object_or_404(project_id, ProjectPlan)
         hospital = self.get_object_or_404(req.user.get_profile().organ.id, Hospital)
-        self.check_object_permissions(req, hospital)
+        self.check_object_any_permissions(req, hospital)
 
         if not project.performer:
             if project.deleted():
@@ -269,7 +265,7 @@ class ProjectPlanView(BaseAPIView):
 
 class ProjectPlanDispatchView(BaseAPIView):
     """
-    项目分配责任人(只分配负责人，不改变项目状态，启动项目才改变项目状态)
+    项目分配责任人(管理员或项目分配者才可分配负责人，不改变项目状态，启动项目才改变项目状态)
     """
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, )
 
@@ -277,9 +273,9 @@ class ProjectPlanDispatchView(BaseAPIView):
     def put(self, req, project_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
         staff = self.get_object_or_404(req.data.get('performer_id'), Staff,)
-        # 检查操作者权限是否为项目分配者，否则检查是否为管理员权限
-        if not (req.user.get_profile().group.cate == GROUP_CATE_PROJECT_APPROVER):
-            self.check_object_permissions(req, req.user.get_profile().organ)
+
+        # 检查当前操作者是否具有管理员和项目分配者权限
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
 
         success = project.dispatch(staff)
         return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
@@ -318,7 +314,7 @@ class ProjectPlanChangeMilestoneView(BaseAPIView):
     变更项目里程碑状态
     """
 
-    #permission_classes = (ProjectPerformerPermission, )
+    permission_classes = (ProjectPerformerPermission, )
 
     @check_id_list(['milestone_id', ])
     @check_params_not_null(['done_sign', ])
