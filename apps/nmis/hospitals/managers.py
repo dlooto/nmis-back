@@ -87,6 +87,7 @@ class StaffManager(BaseManager):
     def get_by_name(self, organ, staff_name):
         """
         通过名字模糊查询返回员工列表
+        :param organ:
         :param staff_name: 员工姓名
         :return:
         """

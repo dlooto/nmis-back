@@ -410,7 +410,7 @@ class DepartmentView(BaseAPIView):
         操作成功返回如下json格式
         {
             "code": 10000,
-            "msg":  "ok"
+            "msg":  "操作成功"
         }
         """
         hospital = self.get_object_or_404(hid, Hospital)
@@ -420,10 +420,13 @@ class DepartmentView(BaseAPIView):
         # 查询当前科室是否存在员工
         if Staff.objects.get_by_dept(hospital, dept_id):
             return resp.failed('当前科室存在员工')
-
-        dept.clear_cache()  # 清除缓存
-        dept.delete()
-        return resp.ok('操作成功')
+        try:
+            dept.clear_cache()  # 清除缓存
+            dept.delete()
+            return resp.ok('操作成功')
+        except Exception as e:
+            logs.error(e)
+            return resp.failed('操作失败')
 
 
 class DepartmentBatchUploadView(BaseAPIView):
