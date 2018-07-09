@@ -184,8 +184,10 @@ class StaffsPermChangeView(BaseAPIView):
         staff_id_list = get_id_list(req.data.get('staffs'))
         if Staff.objects.filter(id__in=staff_id_list).count() < len(staff_id_list):
             return resp.failed('请确认是否有不存在的员工信息')
-
-        Staff.objects.filter(id__in=staff_id_list).update(group=perm_group)
+        staffs = Staff.objects.filter(id__in=staff_id_list)
+        staffs.update(group=perm_group)
+        for staff in staffs:
+             staff.cache()
         return resp.ok('员工权限已修改')
 
 
@@ -211,10 +213,7 @@ class StaffView(BaseAPIView):
         self.check_object_permissions(req, organ)
 
         # 判断变更的员工是否存在；
-        print(req.data.get('dept_id'))
-
         staff = self.get_object_or_404(staff_id, Staff)
-        print(req.data.get('dept_id'))
 
         if req.data.get('dept_id'):
             req.data.update({'dept': self.get_object_or_404(req.data.get('dept_id'), Department)})
