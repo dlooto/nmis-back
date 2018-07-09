@@ -23,6 +23,8 @@
 
 ## 运行部署
 - Install Python3.6.5
+    >>> sudo apt install python3 python3-pip python-dev python3-dev python-pip virtualenvwrapper
+    >>> sudo apt install 
 - pip install virtualenvwrapper
 - 创建virtualenv环境(指定Python版本)
 - git clone ssh://git@gitee.com:juyangtech/nmis.git

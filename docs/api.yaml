@@ -1,0 +1,283 @@
+swagger: "2.0"
+info:
+  description: "Nmis 后端API接口文档. 原文档地址使用http://apiview.com编写, 现统一转移到Swagger."
+  version: "1.0.0"
+  title: "Nmis"
+host: "b.juyangtech.com"
+basePath: "/v1"
+tags:
+- name: "Hospitals"
+  description: "机构管理"
+- name: "Users"
+  description: "用户与权限管理"
+schemes:
+- "http"
+paths:
+  /hospitals/create:
+    post:
+      tags:
+      - "Hospitals"
+      summary: "创建一个新的医疗机构"
+      description: ""
+      operationId: "create_hospital"
+      consumes:
+      - "application/json"
+      
+      produces:
+      - "application/xml"
+      
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Pet object that needs to be added to the store"
+        required: true
+        schema:
+          $ref: "#/definitions/Hospital"
+      responses:
+        405:
+          description: "Invalid input"
+      security:
+      - petstore_auth:
+        - "write:pets"
+        - "read:pets"
+        
+  /hospitals/:organ_id:
+    get:
+      tags:
+      - "Hospitals"
+      summary: "返回医疗机构信息"
+      description: "返回一个机构数据实体"
+      operationId: "get_hospital"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "organ_id"
+        in: "path"
+        description: "机构id"
+        required: true
+        type: "integer"
+        format: "int64"
+      responses:
+        200:
+          description: "操作成功"
+          schema:
+            $ref: "#/definitions/Hospital"
+        400:
+          description: "Invalid ID supplied"
+        404:
+          description: "Pet not found"
+      security:
+      - api_key: []
+    put:
+      tags:
+      - "Hospitals"
+      summary: "通过提交表单数据更新机构信息"
+      description: ""
+      operationId: "update_hospital"
+      consumes:
+      - "application/x-www-form-urlencoded"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "organ_id"
+        in: "path"
+        description: "机构id"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "name"
+        in: "formData"
+        description: "Updated name of the pet"
+        required: false
+        type: "string"
+      - name: "status"
+        in: "formData"
+        description: "Updated status of the pet"
+        required: false
+        type: "string"
+      responses:
+        405:
+          description: "Invalid input"
+      security:
+      - petstore_auth:
+        - "write:pets"
+        - "read:pets"
+    delete:
+      tags:
+      - "Hospitals"
+      summary: "Deletes a pet"
+      description: ""
+      operationId: "deletePet"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "api_key"
+        in: "header"
+        required: false
+        type: "string"
+      - name: "petId"
+        in: "path"
+        description: "Pet id to delete"
+        required: true
+        type: "integer"
+        format: "int64"
+      responses:
+        400:
+          description: "Invalid ID supplied"
+        404:
+          description: "Pet not found"
+      security:
+      - petstore_auth:
+        - "write:pets"
+        - "read:pets"
+  
+  /users:
+    post:
+      tags:
+      - "Users"
+      summary: "Create user"
+      description: "This can only be done by the logged in user."
+      operationId: "create_user"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Created user object"
+        required: true
+        schema:
+          $ref: "#/definitions/User"
+      responses:
+        default:
+          description: "successful operation"
+  
+  /user/login:
+    get:
+      tags:
+      - "Users"
+      summary: "Logs user into the system"
+      description: ""
+      operationId: "loginUser"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "username"
+        in: "query"
+        description: "The user name for login"
+        required: true
+        type: "string"
+      - name: "password"
+        in: "query"
+        description: "The password for login in clear text"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "string"
+          headers:
+            X-Rate-Limit:
+              type: "integer"
+              format: "int32"
+              description: "calls per hour allowed by the user"
+            X-Expires-After:
+              type: "string"
+              format: "date-time"
+              description: "date in UTC when token expires"
+        400:
+          description: "Invalid username/password supplied"
+  /user/logout:
+    get:
+      tags:
+      - "Users"
+      summary: "退出系统"
+      description: ""
+      operationId: "logout"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters: []
+      responses:
+        default:
+          description: "successful operation"
+  
+securityDefinitions:
+  petstore_auth:
+    type: "oauth2"
+    authorizationUrl: "http://b.juyangtech.com/oauth/dialog"
+    flow: "implicit"
+    scopes:
+      write:pets: "modify pets in your account"
+      read:pets: "read your pets"
+  api_key:
+    type: "apiKey"
+    name: "api_key"
+    in: "header"
+definitions:
+  User:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+      username:
+        type: "string"
+      firstName:
+        type: "string"
+      lastName:
+        type: "string"
+      email:
+        type: "string"
+      password:
+        type: "string"
+      phone:
+        type: "string"
+      userStatus:
+        type: "integer"
+        format: "int32"
+        description: "User Status"
+    xml:
+      name: "User"
+  
+  Hospital:
+    type: "object"
+    required:
+    - "name"
+    - "photoUrls"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+      name:
+        type: "string"
+        example: "doggie"
+      photoUrls:
+        type: "array"
+        xml:
+          name: "photoUrl"
+          wrapped: true
+        items:
+          type: "string"
+      status:
+        type: "string"
+        description: "商店中的宠物状态"
+        enum:
+        - "available"
+        - "pending"
+        - "sold"
+    xml:
+      name: "Pet"
+  ApiResponse:
+    type: "object"
+    properties:
+      code:
+        type: "integer"
+        format: "int32"
+      msg:
+        type: "string"
+externalDocs:
+  description: "Find out more about Swagger"
+  url: "http://swagger.io"
