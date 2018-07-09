@@ -101,4 +101,23 @@ UPLOADED_DEPT_EXCEL_HEADER_DICT = {
 }
 
 
+# 文档类型
+ARCHIVE = {
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.xltx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
+    '.xlsm': 'application/vnd.ms-excel.sheet.macroEnabled.12',
+    '.xltm': 'application/vnd.ms-excel.template.macroEnabled.12',
+    '.xlam': 'application/vnd.ms-excel.addin.macroEnabled.12',
+    '.xlsb': 'application/vnd.ms-excel.sheet.binary.macroEnabled.12',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlt': 'application/vnd.ms-excel',
+    '.xla': 'application/vnd.ms-excel',
+    '.doc': 'application/msword',
+    '.dot': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.dotx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+    '.docm': 'application/vnd.ms-word.template.macroEnabled.12',
+}
+
+
 
