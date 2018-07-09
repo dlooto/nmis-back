@@ -33,7 +33,8 @@ from nmis.hospitals.consts import (
     GROUP_CATE_PROJECT_APPROVER,
     GROUP_CATE_NORMAL_STAFF
 )
-from nmis.projects.consts import PROJECT_STATUS_CHOICES
+from nmis.projects.consts import PROJECT_STATUS_CHOICES, PRO_STATUS_STARTED, \
+    PRO_STATUS_DONE, PRO_STATUS_PENDING
 
 logs = logging.getLogger(__name__)
 
@@ -284,7 +285,7 @@ class ProjectPlanDispatchView(BaseAPIView):
 class ProjectPlanStartupView(BaseAPIView):
     """
     启动项目
-    TODO: 补充权限校验
+    TODO: 权限后续需优化
     """
     permission_classes = (IsHospitalAdmin, HospitalStaffPermission, ProjectDispatcherPermission)
 
@@ -300,10 +301,12 @@ class ProjectPlanStartupView(BaseAPIView):
         data = {}
         if req.data.get('assistant_id'):
             data['assistant'] = self.get_object_or_404(req.data.get('assistant_id'), Staff)
+        if not project.status == PRO_STATUS_PENDING:
+            resp.failed("操作失败,项目状态异常")
         success = project.startup(
             flow=flow,
             expired_time=req.data.get('expired_time'),
-            **data
+            **data,
         )
         return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
 

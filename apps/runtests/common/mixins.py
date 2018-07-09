@@ -7,6 +7,7 @@
 
 import logging
 
+from nmis.projects.consts import PRO_HANDING_TYPE_SELF
 from nmis.projects.models import ProjectPlan, ProjectFlow
 
 logs = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ class ProjectPlanMixin(object):
     项目管理基础工具类
     """
 
-    def create_project(self, creator, dept, title="设备采购", handing_type='SE', ordered_devices=ORDERED_DEVICES):
+    def create_project(self, creator, dept, title="设备采购", handing_type='AG', ordered_devices=ORDERED_DEVICES):
         """
         :param creator:  项目创建者, staff object
         :param dept: 申请科室
@@ -69,6 +70,8 @@ class ProjectPlanMixin(object):
             'creator': creator,
             'related_dept': dept,
         }
+        if handing_type == PRO_HANDING_TYPE_SELF:
+            project_data['performer'] = creator
         return ProjectPlan.objects.create_project(ordered_devices, **project_data)
 
     def create_flow(self, organ, milestones=MILESTONES):
