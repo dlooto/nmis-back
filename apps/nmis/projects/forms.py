@@ -10,7 +10,7 @@ from itertools import chain
 from base.forms import BaseForm
 from nmis.projects.models import ProjectPlan, ProjectFlow
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
-    PRO_HANDING_TYPE_SELF
+    PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT
 from nmis.hospitals.models import Staff
 logs = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class ProjectPlanCreateForm(BaseForm):
             self.update_errors('handing_type', 'err_handing_type')
             return False
 
-        if not handing_type in dict(PROJECT_HANDING_TYPE_CHOICES).keys():
+        if not (handing_type in dict(PROJECT_HANDING_TYPE_CHOICES).keys()):
             self.update_errors('handing_type', 'err_handing_type')
             return False
 
@@ -138,19 +138,89 @@ class ProjectPlanUpdateForm(BaseForm):
         })
 
     def is_valid(self):
+        if self.check_project_title() and self.check_devices() and self.check_handing_type():
+            return True
+        return False
+
+    def check_project_title(self):
+        return True
+
+    def check_handing_type(self):
+        handing_type = self.pre_data.get('handing_type')
+        if not handing_type:
+            self.update_errors('handing_type', 'err_handing_type')
+            return False
+
+        if not (handing_type in dict(PROJECT_HANDING_TYPE_CHOICES).keys()):
+            self.update_errors('handing_type', 'err_handing_type')
+            return False
+
         return True
 
     def check_devices(self):
+        added_devices = self.pre_data.get('added_devices')
+        updated_devices = self.pre_data.get('updated_devices')
+
+        if added_devices and len(added_devices) > 0:
+            for device in added_devices:
+                if not device.get('name'):
+                    self.update_errors('name', 'device_name_error')
+                    return False
+
+                device_num = device.get('num')
+                if not device_num:
+                    self.update_errors('num', 'device_num_error')
+                    return False
+                try:
+                    int(device_num)
+                except ValueError:
+                    self.update_errors('num', 'device_num_error')
+                    return False
+
+                device_planned_price = device.get('planned_price')
+                if not device_planned_price:
+                    self.update_errors('planned_price', 'device_planned_price_error')
+                    return False
+                try:
+                    float(device_planned_price)
+                except ValueError:
+                    self.update_errors('planned_price', 'device_planned_price_error')
+                    return False
+        if updated_devices and len(updated_devices) > 0:
+            for device in updated_devices:
+                if not device.get('name'):
+                    self.update_errors('name', 'device_name_error')
+                    return False
+
+                device_num = device.get('num')
+                if not device_num:
+                    self.update_errors('num', 'device_num_error')
+                    return False
+                try:
+                    int(device_num)
+                except ValueError:
+                    self.update_errors('num', 'device_num_error')
+                    return False
+
+                device_planned_price = device.get('planned_price')
+                if not device_planned_price:
+                    self.update_errors('planned_price', 'device_planned_price_error')
+                    return False
+                try:
+                    float(device_planned_price)
+                except ValueError:
+                    self.update_errors('planned_price', 'device_planned_price_error')
+                    return False
+            return True
+
         return True
 
     def save(self):
-        # data = {
-        #     'title': self.data.get('project_title', '').strip(),
-        #     'purpose': self.data.get('purpose', '').strip(),
-        #     'handing_type': self.data.get('handing_type', '').strip(),
-        #     'updated_devices': self.data.get('updated_devices', []),
-        #     'added_devices': self.data.get('added_devices', []),
-        # }
+        if not self.old_project.handing_type == self.pre_data['handing_type']:
+            if self.pre_data['handing_type'] == PRO_HANDING_TYPE_SELF:
+                self.pre_data['performer'] = self.old_project.creator
+            if self.pre_data['handing_type'] == PRO_HANDING_TYPE_AGENT:
+                self.pre_data['performer'] = None
         return ProjectPlan.objects.update_project(self.old_project, **self.pre_data)
 
 

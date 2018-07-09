@@ -145,6 +145,20 @@ class DepartmentApiTestCase(BaseTestCase):
         staff.user.clear_cache()
         staff.clear_cache()
 
+    def test_department_batch_upload(self):
+        """
+        测试批量导入部门
+        :return:
+        """
+        api = '/api/v1/hospitals/{0}/departments/batch-upload'
+
+        self.login_with_username(self.user)
+        import os
+        curr_path = os.path.dirname(__file__)
+        dept_file_obj = open(curr_path+'/data/dept-normal-test.xlsx', 'rb')
+        response = self.raw_post(api.format(self.organ.id), {'dept_excel_file': dept_file_obj})
+        self.assert_response_success(response)
+
 
 class StaffsPermChangeTestCase(BaseTestCase):
     """

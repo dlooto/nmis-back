@@ -5,7 +5,9 @@ used for file process
 """
 
 import os, logging
+from zipfile import BadZipFile
 
+from openpyxl.utils.exceptions import InvalidFileException
 from openpyxl.worksheet import Worksheet
 
 import settings
@@ -67,8 +69,6 @@ class ExcelBasedOXL(object):
     基于Openpyxl库的excel封装
     """
 
-    workbook = None
-
     @staticmethod
     def open_excel(path):
         """
@@ -77,19 +77,24 @@ class ExcelBasedOXL(object):
         :type path: string or a file-like object open in binary mode c.f., :class:`zipfile.ZipFile`
         :return: 返回Workbook对象，即excel文件对象
         """
-        global workbook
         if not path:
-            return None
-        workbook = load_workbook(path, read_only=True, data_only=True)
-        return workbook
+            return False, 'path参数不能为空'
+        try:
+            workbook = load_workbook(path, read_only=True, data_only=True)
+            return True, workbook
+        except (InvalidFileException, BadZipFile) as iex:
+            logs.exception(iex)
+            return False, '文件格式异常或文件损坏'
+        except Exception as e:
+            logs.exception(e)
+            return False, '文件读取异常'
 
     @staticmethod
-    def get_sheet(sheet_name):
+    def get_sheet(workbook, sheet_name):
         """
         获取Worksheet对象
         :return: 返回Worksheet对象
         """
-        global workbook
         return workbook[sheet_name]
 
     @staticmethod
@@ -117,36 +122,40 @@ class ExcelBasedOXL(object):
         return sheet.cell(row, col).value
 
     @staticmethod
-    def close():
+    def close(workbook):
         """
         关闭Workbook对象
         :return:
         """
-        global workbook
-        workbook.close()
+        if workbook:
+            workbook.close()
 
     @staticmethod
-    def read_excel_with_header(wb, header_dict):
+    def read_excel(wb, header_dict=None):
         """
-        读取单个excel文件数据，带表头
+        读取excel文件数据，带表头
         :param wb: Workbook对象
-        :param header_dict: 表头字典，K:键，一般为model属性；V:对应表头单元格数据
+        :param header_dict: 表头字典，K:属性名；V:表头单元格数据
         :return:
+            返回由读取结果（True/False）和读取的数据列表(excel_data)组成的Cuple
+            excel_data是由多个sheet数据组成的List；
+            sheet是由多个行数据组成的List；
+            每行数据则是以header_dict的k作为键，对应单元格数据作为值组成的Dict
+
         """
         excel_data = []
         try:
             for sheet_name in wb.sheetnames:
-                sheet_data = ExcelBasedOXL.read_sheet_with_header(wb[sheet_name], header_dict)
+                sheet_data = ExcelBasedOXL.read_sheet(wb[sheet_name], header_dict)
                 if sheet_data:
                     excel_data.append(sheet_data)
             return True, excel_data
         except Exception as e:
             logs.exception(e)
-            return False, "Excel解析错误"
-
+            return False, "表头数据和指定的标准不一致或excel解析错误"
 
     @staticmethod
-    def read_sheet_with_header(ws, header_dict):
+    def read_sheet(ws: Worksheet, header_dict=None):
         """
         读取单个sheet数据，带表头
         :param ws: Worksheet对象
@@ -158,6 +167,18 @@ class ExcelBasedOXL(object):
 
         sheet_data = []
         ws_rows_len = ws.max_row
+        ws_column_len = ws.max_column
+
+        # 读取不带表头的sheet
+        if header_dict is None:
+            for row in range(1, ws_rows_len + 1):
+                row_data = []
+                for col in range(1, ws_column_len + 1):
+                    value = ws.cell(row=row, column=col).value
+                    row_data.append(value)
+                sheet_data.append(row_data)
+
+        # 读取带表头的sheet
         ws_column_len = len(header_dict)
 
         # 读取首行数据

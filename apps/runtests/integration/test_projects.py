@@ -7,6 +7,7 @@
 
 import logging
 
+from nmis.projects.consts import PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
 from utils.times import now, yesterday, tomorrow
@@ -46,21 +47,77 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.login_with_username(self.user)
 
-        old_project = self.create_project(self.admin_staff, self.dept, title="旧项目名",)
-        old_device = old_project.get_ordered_devices()[0]
+        old_project = self.create_project(self.admin_staff, self.dept, title="旧项目名",handing_type='SE')
+        old_devices = old_project.get_ordered_devices()
 
-        project_data = {
+        new_deivces = [
+            {
+                "name": "胎心仪Csnew",
+                "type_spec": "CS29-1001",
+                "num": 12,
+                "measure": "架",
+                "purpose": "用来测胎儿心电cs",
+                "planned_price": 15001.0
+            },
+            {
+                "name": "理疗仪Csnew",
+                "type_spec": "CS19-1002",
+                "num": 11,
+                "measure": "个",
+                "purpose": "心理科室需要cs",
+                "planned_price": 25002.0
+            }
+        ]
+        update_deivces = [
+            {
+                "name": "胎心仪CsUP",
+                "type_spec": "CS29-1003",
+                "num": 20,
+                "measure": "架",
+                "purpose": "用来测胎儿心电cs",
+                "planned_price": 2002.0
+            },
+            {
+                "name": "理疗仪CsUP",
+                "type_spec": "CS19-1004",
+                "num": 21,
+                "measure": "个",
+                "purpose": "心理科室需要cs",
+                "planned_price": 2001.0
+            }
+        ]
+        update_deivces[0]['id'] = old_devices[0].id
+        update_deivces[1]['id'] = old_devices[1].id
+
+        project_base_data = {
             "organ_id": self.organ.id,
             "project_title": "新的项目名称",
             "purpose": "修改后的用途说明",
             'handing_type': 'SE',
+            'added_devices': new_deivces,
+            'updated_devices': update_deivces,
         }
 
-        response = self.put(self.single_project_api.format(old_project.id), data=project_data)
+        response = self.put(self.single_project_api.format(old_project.id), data=project_base_data)
         self.assert_response_success(response)
         new_project = response.get('project')
         self.assertIsNotNone(new_project)
-        self.assertEquals(new_project.get('title'), project_data['project_title'])
+        self.assertEquals(new_project.get('title'), project_base_data['project_title'])
+        self.assertEqual(new_project.get('handing_type'), project_base_data['handing_type'])
+        self.assertEquals(new_project.get('performer_id'), new_project.get('creator_id'))
+        devices = new_project['ordered_devices']
+        self.assertIsNotNone(devices)
+        for item in devices:
+            for im in update_deivces:
+                if item['id'] == im['id']:
+                    self.assertEqual(item['name'], im['name'])
+                    self.assertEqual(item['type_spec'], im['type_spec'])
+                    self.assertEqual(item['num'], im['num'])
+
+                elif item['name'] == im['name']:
+                    self.assertEqual(item['measure'], im['measure'])
+                    self.assertEqual(item['purpose'], im['purpose'])
+                    self.assertEqual(item['planned_price'], im['planned_price'])
 
     def test_project_del(self):
         """
@@ -100,6 +157,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.login_with_username(self.user)
 
+        # 测试自行办理申请
         project_data = {
             "organ_id": self.organ.id,
             "project_title": "牛逼项目1",
@@ -140,6 +198,15 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         )
         self.assert_object_in_results(project_data.get('ordered_devices')[0],
                                       result_project.get('ordered_devices'))
+        # 测试转交办理申请
+        pro2_data = project_data
+        pro2_data['handing_type'] = PRO_HANDING_TYPE_AGENT
+        resp2 = self.post(self.project_create_api, data=pro2_data)
+        self.assert_response_success(resp2)
+        pro2 = resp2.get('project')
+        self.assertIsNotNone(pro2)
+        self.assertEquals(pro2_data['handing_type'], pro2.get('handing_type'))
+        self.assertIsNone(pro2.get('performer_id'))
 
     def test_my_project_list(self):
         """
@@ -212,6 +279,48 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertIsNotNone(project.get('performer_id'))
         self.assertEquals(project_plan.id, project.get('id'))
         self.assertEquals(self.admin_staff.id, project.get('performer_id'))
+
+    def test_project_startup(self):
+        """
+        API测试：启动项目接口测试(可选择协助执行人，选择项目截止时间，项目启动后状态变更为已启动)
+        """
+        api = '/api/v1/projects/{}/startup'
+
+        self.login_with_username(self.user)
+        # 启动有协助办理人项目测试
+        project1 = self.create_project(self.admin_staff, self.dept, title='待启动项目T1',
+                                       handing_type='SE')
+        # 启动无协助办理人项目 测试
+        project2 = self.create_project(self.admin_staff, self.dept, title='待启动项目T2',
+                                       handing_type='SE')
+        flow = self.create_flow(self.organ)
+        data1 = {
+            'expired_time': '2018-12-01',
+            'flow_id': flow.id,
+            'assistant_id': self.admin_staff.id,
+        }
+        data2 = {
+            'expired_time': '2018-12-01',
+            'flow_id': flow.id,
+        }
+        reps1 = self.put(api.format(project1.id), data=data1)
+        reps2 = self.put(api.format(project2.id), data=data2)
+
+        self.assert_response_success(reps1)
+        pro1 = reps1.get('project')
+        self.assertIsNotNone(pro1)
+        self.assertEqual(pro1.get('status'), PRO_STATUS_STARTED)
+        self.assertEqual(pro1.get('assistant_id'), self.admin_staff.id)
+        self.assertIsNotNone(pro1.get('startup_time'))
+        self.assertEqual(pro1.get('expired_time'), data1.get('expired_time'))
+
+        self.assert_response_success(reps2)
+        pro2 = reps2.get('project')
+        self.assertIsNotNone(pro2)
+        self.assertEqual(pro2.get('status'), PRO_STATUS_STARTED)
+        self.assertIsNone(pro2.get('assistant_id'))
+        self.assertIsNotNone(pro2.get('startup_time'))
+        self.assertEqual(pro2.get('expired_time'), data1.get('expired_time'))
 
     def test_projects_applied(self):
         """
