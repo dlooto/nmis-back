@@ -32,7 +32,7 @@ from .forms import (
 )
 
 from nmis.hospitals.consts import UPLOADED_STAFF_EXCEL_HEADER_DICT, \
-    UPLOADED_DEPT_EXCEL_HEADER_DICT
+    UPLOADED_DEPT_EXCEL_HEADER_DICT, ARCHIVE
 
 logs = logging.getLogger(__name__)
 
@@ -274,6 +274,7 @@ class StaffBatchUploadView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, )
 
+    @check_params_not_null(['staff_excel_file'])
     def post(self, req, hid):
         """
         批量导入某机构的员工信息
@@ -296,8 +297,7 @@ class StaffBatchUploadView(BaseAPIView):
         if not file_obj:
             return resp.failed('请选择要上传的文件')
 
-        file_extension = get_file_extension(file_obj.name)
-        if file_extension != '.xlsx':
+        if not ARCHIVE['.xlsx'] == file_obj.content_type:
             return resp.failed('导入文件不是Excel文件，请检查')
 
         # 将文件存放到服务器
@@ -305,8 +305,13 @@ class StaffBatchUploadView(BaseAPIView):
         # file_server_path = open(os.path.join('/media/', '', file_obj.name), 'wb')
         # file = open('file_server_path', 'wb')
 
+        is_success, ret = ExcelBasedOXL.open_excel(file_obj)
+        if not is_success:
+            return resp.failed(ret)
+
         head_dict = UPLOADED_STAFF_EXCEL_HEADER_DICT
-        success, result = ExcelBasedOXL.read_excel_with_header(ExcelBasedOXL.open_excel(file_obj), head_dict)
+        success, result = ExcelBasedOXL.read_excel(ret, head_dict)
+        ExcelBasedOXL.close(ret)
         if not success:
             return resp.failed(result)
 
@@ -430,6 +435,7 @@ class DepartmentBatchUploadView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, )
 
+    @check_params_not_null(['dept_excel_file'])
     def post(self, req, hid):
         """
         批量导入某机构的部门信息
@@ -449,8 +455,7 @@ class DepartmentBatchUploadView(BaseAPIView):
         if not file_obj:
             return resp.failed('请选择要上传的文件')
 
-        file_extension = get_file_extension(file_obj.name)
-        if file_extension != '.xlsx':
+        if not ARCHIVE['.xlsx'] == file_obj.content_type:
             return resp.failed('导入文件不是Excel文件，请检查')
 
         # 将文件存放到服务器
@@ -458,8 +463,13 @@ class DepartmentBatchUploadView(BaseAPIView):
         # file_server_path = open(os.path.join('/media/', '', file_obj.name), 'wb')
         # file = open('file_server_path', 'wb')
 
+        is_success, ret = ExcelBasedOXL.open_excel(file_obj)
+        if not is_success:
+            return resp.failed(ret)
+
         head_dict = UPLOADED_DEPT_EXCEL_HEADER_DICT
-        success, result = ExcelBasedOXL.read_excel_with_header(ExcelBasedOXL.open_excel(file_obj), head_dict)
+        success, result = ExcelBasedOXL.read_excel(ret, head_dict)
+        ExcelBasedOXL.close(ret)
         if not success:
             return resp.failed(result)
 

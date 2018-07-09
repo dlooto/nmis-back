@@ -151,10 +151,10 @@ class ProjectPlanManager(BaseManager):
                     OrderedDevice.objects.bulk_create(ordered_device_list)
                 if data.get('updated_devices'):
                     # 批量修改设备明细
-                    updated_devices = data["updated_devices"]
+                    updated_devices = sorted(data["updated_devices"], key=lambda item: item['id'])
                     updated_device_ids = [update_device['id'] for update_device in updated_devices]
 
-                    devices = OrderedDevice.objects.filter(pk__in=updated_device_ids)
+                    devices = OrderedDevice.objects.filter(pk__in=updated_device_ids).order_by("id")
                     for i in range(len(devices)):
                         devices[i].name = updated_devices[i]['name']
                         devices[i].num = updated_devices[i]['num']
