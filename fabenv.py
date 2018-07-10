@@ -63,9 +63,9 @@ INIT_JSON_DATA = [
 
 
 @task
-def h156(ctx):
-    """ 前置Task: 主机156 """
-    env.host = '192.168.1.156'
+def bsite(ctx):
+    """ 前置Task: 线上测试主机 """
+    env.host = '47.92.154.145'
 
     env.redis_user = None
     env.redis_host = '127.0.0.1'
