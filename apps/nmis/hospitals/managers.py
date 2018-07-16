@@ -72,7 +72,7 @@ class StaffManager(BaseManager):
                     staff_list.append(
                         self.model(
                             organ=data.get('organ'), dept=data.get('dept'),
-                            user=user_dict[data.get('username')],
+                            user=user_dict.get(data.get('username')),
                             name=data.get('staff_name'),
                             contact=data.get('contact_phone'),
                             email=data.get('email'),
