@@ -73,6 +73,20 @@ class BaseAPIView(GenericAPIView):
         """
         return self.paginator.get_paginated_stuff()
 
+    def get_pages(self, obj_list, results_name='data'):
+        """
+        将serializer数据转换为分页数据
+        :param obj_list: 要序列化的数据列表, queryset或data_list
+        :param results_name: 数据结果集名称, 默认为'data'
+        :return:
+        """
+        single_page = self.paginate_queryset(obj_list)
+        if single_page:
+            serializer_data = single_page
+        response = resp.serialize_response(serializer_data, results_name=results_name)
+        response.data.update(self.get_paginated_stuff())
+        return response
+
     def handle_exception(self, exc):
         """
         重写异常处理方法
@@ -154,17 +168,4 @@ def server_error(request, template_name='500.html'):
     return http.HttpResponseServerError(template.render(RequestContext(request, {'request_path': request.path})))
 
 
-def get_pages(self, serializer_data, results_name='data'):
-    """
-    将serializer数据转换为分页数据
-    :param self:
-    :param serializer_data: 序列化的数据
-    :param results_name: 数据结果集名称, 默认为'data'
-    :return:
-    """
-    single_page = self.paginate_queryset(serializer_data)
-    if single_page:
-        serializer_data = single_page
-    response = resp.serialize_response(serializer_data, results_name=results_name)
-    response.data.update(self.get_paginated_stuff())
-    return response
+

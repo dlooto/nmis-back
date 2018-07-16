@@ -15,7 +15,6 @@ admin.autodiscover()
 
 urlpatterns = [
     path("",              TemplateView.as_view(template_name='index.html')),
-    # path('api/docs/',     schema_view),
     path('admin/',        admin.site.urls),
 
     # API

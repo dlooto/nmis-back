@@ -8,7 +8,7 @@
 """
 
 import logging
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from operator import eq
 
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from base.common.param_utils import get_id_list
@@ -18,7 +18,7 @@ from rest_framework.permissions import AllowAny
 from utils.files import ExcelBasedOXL, get_file_extension
 
 from base import resp
-from base.views import BaseAPIView, get_pages
+from base.views import BaseAPIView
 from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
     DepartmentBatchUploadForm
 from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission, \
@@ -179,12 +179,11 @@ class StaffsPermChangeView(BaseAPIView):
         """
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
-        perm_group = self.get_objects_or_404({'perm_group_id': Group})['perm_group_id']
+        perm_group = self.get_objects_or_404({'perm_group_id': Group}).get('perm_group_id')
 
         staff_id_list = get_id_list(req.data.get('staffs'))
-        if str(req.user.get_profile().id) in staff_id_list:
-
-            return resp.failed('不能修改自己权限')
+        if req.user.get_profile().id in staff_id_list:
+            return resp.failed('无权修改自身权限')
         if Staff.objects.filter(id__in=staff_id_list).count() < len(staff_id_list):
             return resp.failed('请确认是否有不存在的员工信息')
         staffs = Staff.objects.filter(id__in=staff_id_list)
@@ -328,7 +327,7 @@ class DepartmentCreateView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, )
 
-    @check_params_not_null(['name'])
+    @check_params_not_null(['name', 'attri'])
     def post(self, req, hid):
         """
         创建科室
@@ -364,8 +363,9 @@ class DepartmentListView(BaseAPIView):
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
         dept_list = hospital.get_all_depts()
-
-        return get_pages(self, serializer_data=dept_list, results_name='dept')
+        return resp.serialize_response(
+            dept_list, srl_cls_name='DepartmentStaffsCountSerializer', results_name='dept'
+        )
 
 
 class DepartmentView(BaseAPIView):
@@ -416,7 +416,7 @@ class DepartmentView(BaseAPIView):
         操作成功返回如下json格式
         {
             "code": 10000,
-            "msg":  "操作成功"
+            "msg":  "ok"
         }
         """
         hospital = self.get_object_or_404(hid, Hospital)
@@ -426,13 +426,10 @@ class DepartmentView(BaseAPIView):
         # 查询当前科室是否存在员工
         if Staff.objects.get_by_dept(hospital, dept_id):
             return resp.failed('当前科室存在员工')
-        try:
-            dept.clear_cache()  # 清除缓存
-            dept.delete()
-            return resp.ok('操作成功')
-        except Exception as e:
-            logs.error(e)
-            return resp.failed('操作失败')
+
+        dept.clear_cache()  # 清除缓存
+        dept.delete()
+        return resp.ok('操作成功')
 
 
 class DepartmentBatchUploadView(BaseAPIView):
