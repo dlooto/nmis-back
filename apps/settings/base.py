@@ -200,7 +200,7 @@ REST_FRAMEWORK = {
     # 默认分页设置
     'DEFAULT_PAGINATION_CLASS': 'base.serializers.PlugPageNumberPagination',
     'MAX_PAGE_SIZE': 50,
-    'PAGE_SIZE':     15  # default page size
+    'PAGE_SIZE':     10  # default page size
 }
 
 FIXTURE_DIRS = [
