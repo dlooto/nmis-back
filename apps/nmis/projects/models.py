@@ -75,7 +75,7 @@ class ProjectPlan(BaseModel):
         db_table = 'projects_project_plan'
 
     VALID_ATTRS = [
-        'title', 'purpose', 'handing_type',
+        'title', 'purpose', 'handing_type'
     ]
 
     def __str__(self):

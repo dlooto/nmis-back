@@ -11,9 +11,8 @@ import logging
 import re
 
 from django.db import transaction
-from rest_framework.exceptions import NotFound
 from utils import eggs
-from nmis.hospitals.models import Hospital, Department, Staff, Doctor, Group
+from nmis.hospitals.models import Hospital, Department, Staff, Group
 from organs.forms import OrganSignupForm
 from base.forms import BaseForm
 from nmis.hospitals.consts import DPT_ATTRI_CHOICES, GROUP_CATE_NORMAL_STAFF
@@ -311,7 +310,7 @@ class StaffBatchUploadForm(BaseForm):
         pre_data = {}
         if self.data and self.data[0] and self.data[0][0]:
             sheet_data = self.data[0]
-            usernames, staff_names, dept_names, emails, contact_phones, = [], [], [], [], []
+            usernames, staff_names, dept_names, emails, contact_phones = [], [], [], [], []
             for i in range(len(sheet_data)):
                 usernames.append(sheet_data[i].get('username', '').strip())
             for i in range(len(sheet_data)):
@@ -321,7 +320,7 @@ class StaffBatchUploadForm(BaseForm):
             for i in range(len(sheet_data)):
                 emails.append(sheet_data[i].get('email', '').strip())
             for i in range(len(sheet_data)):
-                contact_phones.append(sheet_data[i].get('contact_phone', ''))
+                contact_phones.append(sheet_data[i].get('contact_phone', '').strip())
                 pre_data['usernames'] = usernames
                 pre_data['staff_names'] = staff_names
                 pre_data['dept_names'] = dept_names
@@ -342,7 +341,7 @@ class StaffBatchUploadForm(BaseForm):
         用户名重复校验
         用户名已存在校验
         """
-        usernames = self.pre_data['usernames']
+        usernames = self.pre_data.get('usernames')
         for i in range(len(usernames)):
             if not usernames[i]:
                 self.update_errors('username', 'null_username', str(i + 2))
@@ -366,7 +365,7 @@ class StaffBatchUploadForm(BaseForm):
         """
         校验员工名称
         """
-        staff_names = self.pre_data['staff_names']
+        staff_names = self.pre_data.get('staff_names')
         for i in range(len(staff_names)):
             if not staff_names[i]:
                 self.update_errors('staff_name', 'null_staff_name', str(i+2))
@@ -378,7 +377,7 @@ class StaffBatchUploadForm(BaseForm):
         """
         校验邮箱
         """
-        emails = self.pre_data['emails']
+        emails = self.pre_data.get('emails')
         for i in range(len(emails)):
             if emails[i]:
                 if not eggs.is_email_valid(emails[i]):
@@ -390,7 +389,7 @@ class StaffBatchUploadForm(BaseForm):
         """
         校验手机号
         """
-        contact_phones = self.pre_data['contact_phones']
+        contact_phones = self.pre_data.get('contact_phones')
         for i in range(len(contact_phones)):
             if contact_phones[i]:
                 if not eggs.is_phone_valid(str(contact_phones[i])):
@@ -401,7 +400,7 @@ class StaffBatchUploadForm(BaseForm):
 
     def check_dept(self):
         """校验职位名称"""
-        dept_names = self.pre_data['dept_names']
+        dept_names = self.pre_data.get('dept_names')
         if not dept_names:
             self.update_errors('dept', 'empty_dept_data')
             return False
@@ -432,9 +431,9 @@ class StaffBatchUploadForm(BaseForm):
                 staffs_data.append({
                     'username': row_data.get('username', '').strip(),
                     'staff_name': row_data.get('staff_name', '').strip(),
-                    'contact_phone': row_data.get('contact_phone', ''),
+                    'contact_phone': row_data.get('contact_phone', '').strip(),
                     'email': row_data.get('email', '').strip(),
-                    'dept_name': row_data.get('dept_name'),  # 将username和dept建立字典关系, 以便于批量查询dept
+                    'dept_name': row_data.get('dept_name').strip(),  # 将username和dept建立字典关系, 以便于批量查询dept
                     'organ': self.organ,
                     'group': self.group
                 })
@@ -603,14 +602,14 @@ class DepartmentBatchUploadForm(BaseForm):
     def __init__(self, organ, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.organ = organ
-        self.validate_excel_data = self.init_data()
+        self.pre_data = self.init_data()
 
     def init_data(self):
         """
         封装各列数据, 以进行数据验证
         :return:
         """
-        validate_excel_data = {}
+        pre_data = {}
         if self.data and self.data[0] and self.data[0][0]:
             sheet_data = self.data[0]
             dept_names, dept_attris, descs, = [], [], []
@@ -620,10 +619,10 @@ class DepartmentBatchUploadForm(BaseForm):
                 dept_attris.append(sheet_data[i].get('dept_attri', '').strip())
             for i in range(len(sheet_data)):
                 descs.append(sheet_data[i].get('desc', '').strip())
-        validate_excel_data['dept_names'] = dept_names
-        validate_excel_data['dept_attris'] = dept_attris
-        validate_excel_data['descs'] = descs
-        return validate_excel_data
+        pre_data['dept_names'] = dept_names
+        pre_data['dept_attris'] = dept_attris
+        pre_data['descs'] = descs
+        return pre_data
 
     def is_valid(self):
         # if self.check_username() and self.check_staff_name() and self.check_dept() \
@@ -635,7 +634,7 @@ class DepartmentBatchUploadForm(BaseForm):
 
     def check_dept(self):
         """校验科室名称"""
-        dept_names = self.validate_excel_data['dept_names']
+        dept_names = self.pre_data['dept_names']
         if not dept_names:
             self.update_errors('dept', 'empty_dept_data')
             return False
@@ -652,7 +651,7 @@ class DepartmentBatchUploadForm(BaseForm):
         """
         校验科室属性
         """
-        emails = self.validate_excel_data['emails']
+        emails = self.pre_data['emails']
         for i in range(len(emails)):
             if emails[i]:
                 if not eggs.is_email_valid(emails[i]):
@@ -664,7 +663,7 @@ class DepartmentBatchUploadForm(BaseForm):
         """
         校验只能描述
         """
-        contact_phones = self.validate_excel_data['contact_phones']
+        contact_phones = self.pre_data['contact_phones']
         for i in range(len(contact_phones)):
             if contact_phones[i]:
                 if not eggs.is_phone_valid(str(contact_phones[i])):

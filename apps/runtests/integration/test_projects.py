@@ -66,7 +66,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                 "measure": "个",
                 "purpose": "心理科室需要cs",
                 "planned_price": 25002.0
-            }
+            },
         ]
         update_deivces = [
             {
@@ -84,7 +84,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                 "measure": "个",
                 "purpose": "心理科室需要cs",
                 "planned_price": 2001.0
-            }
+            },
         ]
         update_deivces[0]['id'] = old_devices[0].id
         update_deivces[1]['id'] = old_devices[1].id
@@ -97,7 +97,6 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             'added_devices': new_deivces,
             'updated_devices': update_deivces,
         }
-
         response = self.put(self.single_project_api.format(old_project.id), data=project_base_data)
         self.assert_response_success(response)
         new_project = response.get('project')
@@ -118,6 +117,32 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                     self.assertEqual(item['measure'], im['measure'])
                     self.assertEqual(item['purpose'], im['purpose'])
                     self.assertEqual(item['planned_price'], im['planned_price'])
+
+        # 测试自行办理项目变更为转交办理项目
+        # old_pro2 = self.create_project(self.admin_staff, self.dept, title="旧项目名SE", handing_type='SE')
+        # data2 = {
+        #     "organ_id": self.organ.id,
+        #     'handing_type': 'AG'
+        # }
+        # resp2 = self.put(self.single_project_api.format(old_pro2.id), data=data2)
+        # self.assert_response_success(resp2)
+        # new_pro2 = resp2.get('project')
+        # self.assertEqual(new_pro2.get('handing_type'), data2['handing_type'])
+        # self.assertIsNone(new_pro2.get('performer_id'))
+        #
+        # # 测试转交办理项目变更为自行办理项目
+        # old_pro3 = self.create_project(self.admin_staff, self.dept, title="旧项目名AG", handing_type='AG')
+        # data3 = {
+        #     "organ_id": self.organ.id,
+        #     'handing_type': 'SE'
+        # }
+        # resp3 = self.put(self.single_project_api.format(old_pro3.id), data=data3)
+        # self.assert_response_success(resp3)
+        # new_pro3 = resp3.get('project')
+        # self.assertEqual(new_pro3.get('handing_type'), data3['handing_type'])
+        # self.assertEquals(new_pro3.get('performer_id'), new_pro3.get('creator_id'))
+
+        #测试变更数据异常
 
     def test_project_del(self):
         """
