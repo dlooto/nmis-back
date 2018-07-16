@@ -7,7 +7,7 @@
 
 import logging
 
-from django.db import transaction
+from django.db import transaction, DataError
 from django_bulk_update import helper
 
 from base.models import BaseManager
@@ -38,10 +38,12 @@ class ProjectPlanManager(BaseManager):
                         OrderedDevice(project=project, **device_data)
                     )
                 OrderedDevice.objects.bulk_create(ordered_device_list)
+        except DataError as dex:
+            logger.exception(dex)
+            return None
         except Exception as e:
             logger.exception(e)
             return None
-
         return project
 
     # def get_allot_projects(self):
@@ -132,36 +134,36 @@ class ProjectPlanManager(BaseManager):
         try:
             with transaction.atomic():
                 pro_base_data = {}
-                if data['title']:
-                    pro_base_data['title'] = data['title']
-                if data['handing_type']:
-                    pro_base_data['handing_type'] = data['handing_type']
-                if data['purpose']:
-                    pro_base_data['purpose'] = data['purpose']
+                if data.get('title'):
+                    pro_base_data['title'] = data.get('title')
+                if data.get('handing_type'):
+                    pro_base_data['handing_type'] = data.get('handing_type')
+                if data.get('purpose'):
+                    pro_base_data['purpose'] = data.get('purpose')
                 if pro_base_data:
                     new_project = old_project.update(pro_base_data)
 
                 if data.get('added_devices'):
                     # 批量添加设备明细
                     ordered_device_list = []
-                    for device_data in data['added_devices']:
+                    for device_data in data.get('added_devices'):
                         ordered_device_list.append(
                             OrderedDevice(project=old_project, **device_data)
                         )
                     OrderedDevice.objects.bulk_create(ordered_device_list)
                 if data.get('updated_devices'):
                     # 批量修改设备明细
-                    updated_devices = sorted(data["updated_devices"], key=lambda item: item['id'])
+                    updated_devices = sorted(data.get('updated_devices'), key=lambda item: item['id'])
                     updated_device_ids = [update_device['id'] for update_device in updated_devices]
 
                     devices = OrderedDevice.objects.filter(pk__in=updated_device_ids).order_by("id")
                     for i in range(len(devices)):
-                        devices[i].name = updated_devices[i]['name']
-                        devices[i].num = updated_devices[i]['num']
-                        devices[i].planned_price = updated_devices[i]['planned_price']
-                        devices[i].measure = updated_devices[i]['measure']
-                        devices[i].purpose = updated_devices[i]['purpose']
-                        devices[i].type_spec = updated_devices[i]['type_spec']
+                        devices[i].name = updated_devices[i].get('name')
+                        devices[i].num = updated_devices[i].get('num')
+                        devices[i].planned_price = updated_devices[i].get('planned_price')
+                        devices[i].measure = updated_devices[i].get('measure')
+                        devices[i].purpose = updated_devices[i].get('purpose')
+                        devices[i].type_spec = updated_devices[i].get('type_spec')
                     helper.bulk_update(devices)
         except Exception as e:
             logger.exception(e)

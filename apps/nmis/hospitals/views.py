@@ -179,9 +179,11 @@ class StaffsPermChangeView(BaseAPIView):
         """
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
-        perm_group = self.get_objects_or_404({'perm_group_id': Group})['perm_group_id']
+        perm_group = self.get_objects_or_404({'perm_group_id': Group}).get('perm_group_id')
 
         staff_id_list = get_id_list(req.data.get('staffs'))
+        if req.user.get_profile().id in staff_id_list:
+            return resp.failed('无权修改自身权限')
         if Staff.objects.filter(id__in=staff_id_list).count() < len(staff_id_list):
             return resp.failed('请确认是否有不存在的员工信息')
         staffs = Staff.objects.filter(id__in=staff_id_list)

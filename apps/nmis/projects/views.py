@@ -34,7 +34,7 @@ from nmis.hospitals.consts import (
     GROUP_CATE_NORMAL_STAFF
 )
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PRO_STATUS_STARTED, \
-    PRO_STATUS_DONE, PRO_STATUS_PENDING
+    PRO_STATUS_DONE, PRO_STATUS_PENDING, FLOW_UNDONE
 
 logs = logging.getLogger(__name__)
 
@@ -301,8 +301,8 @@ class ProjectPlanStartupView(BaseAPIView):
         data = {}
         if req.data.get('assistant_id'):
             data['assistant'] = self.get_object_or_404(req.data.get('assistant_id'), Staff)
-        if not project.status == PRO_STATUS_PENDING:
-            resp.failed("操作失败,项目状态异常")
+        if not project.is_unstarted():
+            resp.failed("项目已启动或已完成，无需再启动")
         success = project.startup(
             flow=flow,
             expired_time=req.data.get('expired_time'),
@@ -325,7 +325,7 @@ class ProjectPlanChangeMilestoneView(BaseAPIView):
         self.check_object_permissions(req, project)
 
         new_milestone = self.get_objects_or_404({'milestone_id': Milestone}, use_cache=False)['milestone_id']
-        success, msg = project.change_milestone(new_milestone, done_sign=req.data.get('done_sign', 'UN').strip())
+        success, msg = project.change_milestone(new_milestone, done_sign=req.data.get('done_sign', FLOW_UNDONE).strip())
         if not success:
             return resp.failed(msg)
 

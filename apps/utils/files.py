@@ -174,8 +174,7 @@ class ExcelBasedOXL(object):
             for row in range(1, ws_rows_len + 1):
                 row_data = []
                 for col in range(1, ws_column_len + 1):
-                    value = ws.cell(row=row, column=col).value
-                    row_data.append(value)
+                    row_data.append(ws.cell(row=row, column=col).value)
                 sheet_data.append(row_data)
 
         # 读取带表头的sheet
