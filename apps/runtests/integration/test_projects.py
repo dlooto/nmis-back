@@ -241,7 +241,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.login_with_username(self.user)
         for index in range(0, 5):
-            project = self.create_project(
+            self.create_project(
                 self.admin_staff, self.dept, title='测试项目_{}'.format(self.get_random_suffix())
             )
 
@@ -249,14 +249,16 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             'organ_id': self.organ.id,
             'pro_status': 'PE',
             'search_key': '测试',
-            'type': 'total_projects'
+            'type': 'total_projects',
+            'page': 1,
+            'size': 4
         }
 
         response = self.get(api, data=project_data)
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('projects'))
-        self.assertEquals(len(response.get('projects')), 5)
+        self.assertEquals(len(response.get('projects')), 4)
         self.assert_object_in_results(
             {'creator_id': self.admin_staff.id}, response.get('projects')
         )
