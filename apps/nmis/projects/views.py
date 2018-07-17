@@ -132,7 +132,7 @@ class ProjectPlanListView(BaseAPIView):
                 hospital, login_staff, creators=staff, project_title=search_key, status=status
             )
 
-        return resp.serialize_response(
+        return self.get_pages(
             result_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
         )
 
