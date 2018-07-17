@@ -10,6 +10,8 @@
 import logging
 from operator import eq
 
+from django.contrib.auth.decorators import permission_required
+
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from base.common.param_utils import get_id_list
 from django.conf import settings
@@ -326,7 +328,6 @@ class StaffBatchUploadView(BaseAPIView):
 class DepartmentCreateView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, )
-
     @check_params_not_null(['name', 'attri'])
     def post(self, req, hid):
         """

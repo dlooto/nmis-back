@@ -59,10 +59,14 @@ DOCTOR_TITLE_CHOICES = (
 # 权限组: 医疗机构权限组分类标识(即权限组key)
 GROUP_CATE_PROJECT_APPROVER = 'GPA'  # 项目分配者权限组key
 GROUP_CATE_NORMAL_STAFF = 'GNS'      # 普通员工权限组key
+GROUP_CATE_ROLE = 'GCR'     # 角色类key
+GROUP_CATE_USER = 'GCU'     # 用户类key
 
 GROUP_CATE_CHOICES = (
     (GROUP_CATE_PROJECT_APPROVER, '项目分配人'),
     (GROUP_CATE_NORMAL_STAFF,     '普通员工'),
+    (GROUP_CATE_ROLE, '角色类'),
+    (GROUP_CATE_USER, '用户类')
 )
 GROUP_CATE_DICT = dict(GROUP_CATE_CHOICES)
 

@@ -121,3 +121,13 @@ class GroupManager(BaseManager):
         if commit:
             group.save()
         return group
+
+
+class RoleManager(BaseManager):
+
+    def create_group(self, organ, commit=True, **kwargs):
+        role = self.model(organ=organ, **kwargs)
+        if commit:
+            role.save()
+        role.cache()
+        return role

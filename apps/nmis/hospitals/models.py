@@ -11,7 +11,8 @@ import logging
 
 from django.db import models, transaction
 
-from nmis.hospitals.managers import GroupManager
+from nmis.hospitals.managers import GroupManager, RoleManager
+from nmis.hospitals.models import Role
 
 from organs.models import BaseOrgan, BaseStaff, BaseDepartment, BaseGroup
 from .managers import StaffManager, HospitalManager
@@ -172,6 +173,8 @@ class Department(BaseDepartment):
 
     organ = models.ForeignKey(Hospital, verbose_name=u'所属医疗机构', on_delete=models.CASCADE,  related_name='organ')  # 重写父类
     attri = models.CharField('科室/部门属性', choices=DPT_ATTRI_CHOICES, max_length=2, null=True, blank=True)
+    roles = models.ManyToManyField(Role, verbose_name='员工', related_name="departments",
+                                   related_query_name='department', blank=True)
 
     class Meta:
         verbose_name = u'B 科室/部门'
@@ -243,6 +246,35 @@ class Group(BaseGroup):
         verbose_name_plural = '权限组'
         db_table = 'perm_group'
 
+
+class Role(BaseGroup):
+    """
+    机构权限组数据模型. 每个权限组有一个归属的企业
+    """
+    group_cate_choices = GROUP_CATE_CHOICES
+
+    organ = models.ForeignKey(Hospital, verbose_name=u'所属医院', on_delete=models.CASCADE, null=True, blank=True)
+    cate = models.CharField(u'组类别', max_length=4, choices=GROUP_CATE_ROLE,
+                            null=True, blank=True)
+    permissions = models.ManyToManyField(Group, verbose_name='权限集', blank=True)
+
+    objects = RoleManager()
+
+    class Meta:
+        verbose_name = '角色'
+        verbose_name_plural = '角色'
+        db_table = 'perm_role'
+
+    def get_permissions(self):
+        """获取去角色下的权限"""
+        return self.permissions.all()
+
+    def get_perm_domains(self):
+        """
+        获取权限域
+        :return: 返回拥有该角色的部门List
+        """
+        return self.departments.all()
 
 
 

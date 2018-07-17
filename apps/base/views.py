@@ -33,6 +33,11 @@ class BaseAPIView(GenericAPIView):
                 return
         self.permission_denied(request, message=u'无操作权限')
 
+    def check_object_perm_domains(self, request, obj):
+        if obj in request.user.get_perm_domains():
+            return
+        self.permission_denied(request, message='无操作权限')
+
     def get_object_or_404(self, obj_id, model, use_cache=True):
         """
         :param obj_id: 对象id
