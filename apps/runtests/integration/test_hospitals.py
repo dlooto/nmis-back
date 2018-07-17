@@ -116,16 +116,23 @@ class DepartmentApiTestCase(BaseTestCase):
         """
         测试科室列表
         """
+        api = '/api/v1/hospitals/{0}/departments'
         self.login_with_username(self.user)
-        dept = self.create_department(self.organ,
-                                      dept_name='测试科室_{}'.format(self.get_random_suffix()))
+        # 批量创建科室
+        for index in range(0, 10):
+            self.create_department(self.organ, dept_name='测试科室_{}'.format(self.get_random_suffix()))
+
+        data = {
+            'page': 1,
+            'size': 4
+        }
         response = self.get(
-            self.dept_list.format(self.organ.id)
+            api.format(self.organ.id), data=data
         )
 
         self.assert_response_success(response)
-        self.assertIsNotNone(response.get('dept'))
-        self.assert_object_in_results({'name': dept.name}, response.get('dept'))
+        self.assertIsNotNone(response.get('depts'))
+        self.assertEquals(len(response.get('depts')), data.get('size'))
 
     def test_hospital_global_data(self):
         """
@@ -201,7 +208,6 @@ class StaffsPermChangeTestCase(BaseTestCase):
 
 
 class StaffAPITestCase(BaseTestCase):
-
 
     def test_staff_create(self):
         """
@@ -305,18 +311,23 @@ class StaffAPITestCase(BaseTestCase):
         :return:
         """
         api = '/api/v1/hospitals/{0}/staffs'
-        self.create_completed_staff(self.organ, self.dept, 'test001')
-        self.create_completed_staff(self.organ, self.dept, 'test002')
+
         self.login_with_username(self.user)
+        for index in range(0, 10):
+            self.create_completed_staff(self.organ, self.dept, name='test_{}'.format(self.get_random_suffix()))
+
+        data = {
+            'page': 1,
+            'size': 4
+        }
         response = self.get(
             api.format(self.organ.id),
             dept_id=self.dept.id,
-
+            data=data
         )
         self.assert_response_success(response)
-        #self.assert_response_failure(response)
         self.assertIsNotNone(response.get('staffs'))
-        self.assertEqual(len(response.get('staffs')), 3)
+        self.assertEqual(len(response.get('staffs')), 4)
 
     def test_staff_batch_upload(self):
         """

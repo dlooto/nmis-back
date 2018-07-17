@@ -9,6 +9,8 @@
 
 import logging
 
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+
 from django.db import models, transaction
 
 from nmis.hospitals.managers import GroupManager
@@ -52,7 +54,9 @@ class Hospital(BaseOrgan):
     ################################################
 
     def get_all_depts(self):
-        """ 返回医院的所有科室 """
+        """
+        返回科室所有列表
+        """
         return Department.objects.filter(organ=self)
 
     def add_dept(self, dept):
