@@ -95,7 +95,7 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
             'related_dept_id', 'related_dept_name',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
             'current_stone_id', 'attached_flow', 'ordered_devices', 'milestone_records',
-            'startup_time', 'expired_time', 'created_time',
+            'startup_time', 'expired_time', 'created_time', 'project_cate'
         )
 
     def _get_creator_name(self, obj):

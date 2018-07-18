@@ -28,7 +28,7 @@ class Device(BaseModel):
 
 class OrderedDevice(Device):
     """
-    申购的医疗设备, 一般作为申请项目里的设备明细条目
+    申购的医疗设备, 一般作为申请项目里的硬件设备明细条目
     """
     project = models.ForeignKey(
         'projects.ProjectPlan', verbose_name='所属项目', on_delete=models.CASCADE, null=True, blank=True
@@ -53,6 +53,25 @@ class OrderedDevice(Device):
     def __str__(self):
         return self.name
 
+
+class SoftwareDevice(Device):
+    """
+    申购的软件设备，一般作为申请项目里的软件设备条目明细
+    """
+    project = models.ForeignKey(
+        'projects.ProjectPlan', verbose_name='所属项目', on_delete=models.CASCADE, null=True, blank=True
+    )
+    purpose = models.CharField('用途', max_length=20, null=True, blank=True, default='')
+
+    class Meta:
+        db_table = 'devices_software_device'
+
+    VALID_ATTRS = [
+        'name', 'cate', 'purpose'
+    ]
+
+    def __str__(self):
+        return self.name
 
 # class MedicalDevice(Device):
 #     """

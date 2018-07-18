@@ -11,7 +11,7 @@ from base.forms import BaseForm
 from nmis.devices.models import OrderedDevice
 from nmis.projects.models import ProjectPlan, ProjectFlow
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
-    PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT
+    PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE
 from nmis.hospitals.models import Staff
 logs = logging.getLogger(__name__)
 
@@ -56,11 +56,12 @@ class ProjectPlanCreateForm(BaseForm):
         return True
 
     def check_devices(self):
-        ordered_devices = self.data.get('ordered_devices')
-        if not ordered_devices or len(ordered_devices) == 0:
-            self.update_errors('ordered_devices', 'devices_empty')
-            return False
-        return check_devices_list(self, ordered_devices)
+        pro_type = self.data.get('pro_type')
+        if pro_type == PRO_CATE_HARDWARE:
+            return check_devices_list(self, self.data.get('ordered_devices'))
+        else:
+            # 暂时省略对信息化软件设备的校验，后续增加
+            return True
 
     def save(self):
         data = {
@@ -69,6 +70,7 @@ class ProjectPlanCreateForm(BaseForm):
             'purpose': self.data.get('purpose'),
             'creator': self.creator,
             'related_dept': self.related_dept,
+            'project_cate': self.data.get('pro_type')
         }
         if data.get('handing_type') == PRO_HANDING_TYPE_SELF:
             data["performer"] = self.creator

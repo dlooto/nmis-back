@@ -73,7 +73,7 @@ class BaseAPIView(GenericAPIView):
         """
         return self.paginator.get_paginated_stuff()
 
-    def get_pages(self, obj_list, results_name='data', srl_cls_name=None):
+    def get_pages(self, obj_list, results_name='data', srl_cls_name=None, **data):
         """
         将serializer数据转换为分页数据
         :param obj_list: 要序列化的数据列表, queryset或data_list
@@ -83,11 +83,12 @@ class BaseAPIView(GenericAPIView):
         """
         single_page = self.paginate_queryset(obj_list)
         if single_page:
-            serializer_data = single_page
+            obj_list = single_page
         response = resp.serialize_response(
-            serializer_data, srl_cls_name=srl_cls_name, results_name=results_name
+            obj_list, srl_cls_name=srl_cls_name, results_name=results_name
         )
         response.data.update(self.get_paginated_stuff())
+        response.data.update(self.paginator.get_status_count(**data))
         return response
 
     def handle_exception(self, exc):

@@ -420,7 +420,6 @@ class StaffBatchUploadForm(BaseForm):
         self.group = group
         return True
 
-
     def save(self):
         # 封装excel数据
         staffs_data = []

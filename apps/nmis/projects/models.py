@@ -7,6 +7,7 @@
 
 import logging
 
+from collections import OrderedDict
 from django.db import models, transaction
 
 from utils import times
@@ -66,6 +67,7 @@ class ProjectPlan(BaseModel):
     status = models.CharField('项目状态', max_length=2, choices=PROJECT_STATUS_CHOICES, default=PRO_STATUS_PENDING)
     startup_time = models.DateTimeField(u'项目启动时间', null=True, blank=True)  # 项目分配负责人的时刻即为启动时间
     expired_time = models.DateTimeField(u'项目截止时间', null=True, blank=True)
+    project_cate = models.CharField('项目类型', max_length=2, choices=PROJECT_CATE_CHOICES, default=PRO_CATE_HARDWARE)
 
     objects = ProjectPlanManager()
 
