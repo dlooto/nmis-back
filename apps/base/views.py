@@ -88,7 +88,8 @@ class BaseAPIView(GenericAPIView):
             obj_list, srl_cls_name=srl_cls_name, results_name=results_name
         )
         response.data.update(self.get_paginated_stuff())
-        response.data.update(self.paginator.get_status_count(**data))
+        if data:
+            response.data.update(self.paginator.get_status_count(**data))
         return response
 
     def handle_exception(self, exc):
