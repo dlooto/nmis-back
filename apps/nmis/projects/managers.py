@@ -177,11 +177,14 @@ class ProjectPlanManager(BaseManager):
 
         return new_project
 
-    def get_group_by_status(self, search_key, creator=None, performer=None):
+    def get_group_by_status(self, search_key=None, status=None, creator=None, performer=None ):
         """
         根据项目状态返回每个状态下项目数量(项目总览各状态条数，我申请的项目各状态条数，我负责的各状态条数)
         :return:
         """
+        if status:
+            return self.filter(status=status)\
+                .values_list('status').annotate(models.Count('id'))
         if creator:
             return self.filter(creator=creator, title__contains=search_key)\
                 .values_list('status').annotate(models.Count('id'))

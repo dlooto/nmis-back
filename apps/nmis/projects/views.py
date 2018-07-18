@@ -97,11 +97,8 @@ class ProjectPlanListView(BaseAPIView):
             result_projects = ProjectPlan.objects.get_undispatched_projects(
                 hospital, project_title=search_key, creators=staff
             )
-
-            return self.get_pages(
-                result_projects, srl_cls_name='ChunkProjectPlanSerializer',
-                results_name='projects'
-            )
+            status_counts = ProjectPlan.objects.get_group_by_status(
+                 status=PRO_STATUS_PENDING)
 
         elif action_type == 'total_projects':   # 项目总览（分配与未分配的项目列表）
             """
