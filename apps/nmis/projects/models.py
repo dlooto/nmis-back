@@ -12,7 +12,7 @@ from django.db import models, transaction
 
 from utils import times
 from base.models import BaseModel
-from nmis.devices.models import OrderedDevice
+from nmis.devices.models import OrderedDevice, SoftwareDevice
 
 from .managers import ProjectPlanManager, ProjectFlowManager
 from .consts import *
@@ -83,11 +83,18 @@ class ProjectPlan(BaseModel):
     def __str__(self):
         return '%s %s' % (self.id, self.title)
 
-    def get_ordered_devices(self):
+    def get_hardware_devices(self):
         """
-        返回项目中包含的所有设备列表
+        返回项目中包含的所有硬件设备列表
         """
         return OrderedDevice.objects.filter(project=self)
+
+    def get_software_devices(self):
+        """
+        返回信息化项目包含的所有硬件设备列表
+        :return:
+        """
+        return SoftwareDevice.objects.filter(project=self)
 
     def is_unstarted(self):
         """ 项目是否未启动 """

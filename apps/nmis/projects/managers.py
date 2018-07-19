@@ -13,18 +13,19 @@ from django_bulk_update import helper
 
 from base.models import BaseManager
 from nmis.devices.models import OrderedDevice, SoftwareDevice
-from nmis.projects.consts import PRO_CATE_HARDWARE
+from nmis.projects.consts import PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE
 
 logger = logging.getLogger(__name__)
 
 
 class ProjectPlanManager(BaseManager):
 
-    def create_project(self, ordered_devices, **data):
+    def create_project(self, hardware_devices=None, software_devices=None, **data):
         """
         创建项目项目(新建信息化硬件项目，新建信息化软件项目)
 
-        :param ordered_devices: 设备明细, 列表数据, 列表元素类型为dict
+        :param hardware_devices: 硬件设备明细, 列表数据, 列表元素类型为dict
+        :param software_devices: 软件设备明细, 列表数据, 列表元素类型为dict
         :param data: 字典型参数
         :return:
         """
@@ -36,14 +37,27 @@ class ProjectPlanManager(BaseManager):
 
                 # 批量创建设备明细
                 ordered_device_list = []
-                for device_data in ordered_devices:
-                    ordered_device_list.append(
-                        OrderedDevice(project=project, **device_data)
-                    )
                 if data.get('project_cate') == PRO_CATE_HARDWARE:
+                    for device_data in hardware_devices:
+                        ordered_device_list.append(
+                            OrderedDevice(project=project, **device_data)
+                        )
                     OrderedDevice.objects.bulk_create(ordered_device_list)
+
                 else:
-                    SoftwareDevice.objects.bulk_create(ordered_device_list)
+                    if hardware_devices:
+                        for device_data in hardware_devices:
+                            ordered_device_list.append(
+                                OrderedDevice(project=project, **device_data)
+                            )
+                        OrderedDevice.objects.bulk_create(ordered_device_list)
+                    if software_devices:
+                        ordered_device_list = []
+                        for device_data in software_devices:
+                            ordered_device_list.append(
+                                SoftwareDevice(project=project, **device_data)
+                            )
+                        SoftwareDevice.objects.bulk_create(ordered_device_list)
         except DataError as dex:
             logger.exception(dex)
             return None

@@ -48,10 +48,10 @@ class PlugPageNumberPagination(PageNumberPagination):
     current_page_result_param = 'current_page'      # 当前第几页
     total_count_result_param = 'total_count'        # 数据总数量
 
-    projects_status_counts = 'status_counts'  # 项目数量块标示
+    projects_status_counts = 'status'  # 项目数量块标示
     project_sd = 'SD'  # 进行中项目数量
     project_pe = 'PE'  # 待启动项目数量
-    project_do = 'DO'
+    project_do = 'DO'  # 已完成的项目数量
 
     # 重写PageNumberPagination方法
     def paginate_queryset(self, queryset, request, view=None):

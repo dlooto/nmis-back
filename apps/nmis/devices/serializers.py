@@ -26,5 +26,5 @@ class SoftwareDeviceSerializer(BaseModelSerializer):
     class Meta:
         model = SoftwareDevice
         fields = (
-            'id', 'name', 'cate', 'purpose', 'producer'
+            'id', 'name', 'cate', 'purpose', 'producer', 'created_time'
         )

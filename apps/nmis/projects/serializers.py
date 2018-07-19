@@ -83,7 +83,8 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     expired_time = serializers.SerializerMethodField("str_expired_time")
 
     attached_flow = serializers.SerializerMethodField('_get_attached_flow')
-    ordered_devices = serializers.SerializerMethodField('_get_ordered_devices')
+    hardware_devices = serializers.SerializerMethodField('_get_hardware_devices')
+    software_devices = serializers.SerializerMethodField('_get_software_devices')
 
     milestone_records = serializers.SerializerMethodField('_get_milestone_records')
 
@@ -94,8 +95,9 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
             'creator_id', 'creator_name',
             'related_dept_id', 'related_dept_name',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
-            'current_stone_id', 'attached_flow', 'ordered_devices', 'milestone_records',
-            'startup_time', 'expired_time', 'created_time', 'project_cate'
+            'current_stone_id', 'attached_flow', 'hardware_devices', 'software_devices',
+            'milestone_records', 'startup_time', 'expired_time', 'created_time',
+            'project_cate'
         )
 
     def _get_creator_name(self, obj):
@@ -130,12 +132,15 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         flow = ProjectFlow.objects.get_cached(obj.attached_flow_id)
         return resp.serialize_data(flow)
 
-    def _get_ordered_devices(self, obj):
-        return resp.serialize_data(obj.get_ordered_devices())
+    def _get_hardware_devices(self, obj):
+        return resp.serialize_data(obj.get_hardware_devices())
 
     def _get_milestone_records(self, obj):  # TODO: 需要优化性能...
         records = obj.get_milestone_changed_records()
         return resp.serialize_data(records) if records else []
+
+    def _get_software_devices(self, obj):
+        return resp.serialize_data(obj.get_software_devices())
 
 
 class ProjectFlowSerializer(BaseModelSerializer):

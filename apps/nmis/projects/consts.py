@@ -43,6 +43,6 @@ PRO_CATE_SOFTWARE = 'SW'
 PRO_CATE_HARDWARE = 'HW'
 
 PROJECT_CATE_CHOICES = (
-    (PRO_CATE_SOFTWARE,    '信息化软件项目'),
-    (PRO_CATE_HARDWARE,    '信息化硬件项目'),
+    (PRO_CATE_SOFTWARE,    '信息化项目'),
+    (PRO_CATE_HARDWARE,    '医疗器械项目'),
 )

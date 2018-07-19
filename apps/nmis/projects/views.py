@@ -178,7 +178,7 @@ class ProjectPlanCreateView(BaseAPIView):
     permission_classes = [HospitalStaffPermission, ]
 
     @check_id_list(["organ_id", "creator_id", "related_dept_id"])
-    @check_params_not_null(['project_title', 'ordered_devices', 'handing_type', 'pro_type'])
+    @check_params_not_null(['project_title', 'handing_type', 'pro_type'])
     def post(self, req):
         """
         创建项目申请（device_type:区分此项目属于信息化硬件申请还是信息化软件项目申请）
@@ -186,16 +186,16 @@ class ProjectPlanCreateView(BaseAPIView):
             hardware: 申请项目类型为信息化硬件项目申请
             software: 申请项目类型为信息化软件项目申请
         )
-        信息化硬件项目申请Example:
+        医疗器械项目申请Example:
         {
             "organ_id": 20180606,
             "project_title": "政府要求采购项目",
             "handing_type": '自行办理'
-            "device_type": 'hardware'
+            "device_type": 'HW'
             "purpose": "本次申请经科室共同研究决定, 响应政府号召",
             "creator_id": 20181001,
             "related_dept_id": 	10001001,
-            "ordered_devices": [
+            "hardware_devices": [
                 {
                     "name": "胎心仪",
                     "type_spec": "PE29-1389",
@@ -214,17 +214,36 @@ class ProjectPlanCreateView(BaseAPIView):
                 }
             ]
          }
-         信息化软件项目申请Example:
+         信息化项目申请Example:
          {
             'organ_id': 20180606,
-            'project_title': '新建信息化软件申请',
+            'project_title': '新建信息化项目申请项目',
             'handing_type': '自行办理'
-            'device_type': 'software'
-            'ordered_devices':[
+            'device_type': 'SW'
+            'purpose': '申请项目介绍'
+            'software_devices':[
                 {
                     'name': '易冉单点登录系统',
                     'purpose': '一次登录，解决多次重复登录其它应用',
                     'producer': '软件开发商'
+                }
+            ],
+            "hardware_devices": [
+                {
+                    "name": "胎心仪",
+                    "type_spec": "PE29-1389",
+                    "num": 2,
+                    "measure": "台",
+                    "purpose": "用来测胎儿心电",
+                    "planned_price": 15000.0
+                },
+                {
+                    "name": "理疗仪",
+                    "type_spec": "ST19-1399",
+                    "num": 5,
+                    "measure": "台",
+                    "purpose": "心理科室需要",
+                    "planned_price": 25000.0
                 }
             ]
          }
