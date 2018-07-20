@@ -12,7 +12,7 @@ import re
 
 from django.db import transaction
 from utils import eggs
-from nmis.hospitals.models import Hospital, Department, Staff, Group
+from nmis.hospitals.models import Hospital, Department, Staff, Group, Role
 from organs.forms import OrganSignupForm
 from base.forms import BaseForm
 from nmis.hospitals.consts import DPT_ATTRI_CHOICES, GROUP_CATE_NORMAL_STAFF
@@ -687,3 +687,40 @@ class DepartmentBatchUploadForm(BaseForm):
                 })
 
         return self.organ.batch_upload_departments(depts_data)
+
+
+class RoleCreateForm(BaseForm):
+
+    def __init__(self, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'role_name_error': '角色名称为空或数据错误',
+            'handing_type_error': '办理方式为空或数据错误',
+        })
+
+    def is_valid(self):
+        return True
+
+    def check_role_name(self):
+        pass
+
+    def check_permission(self):
+        pass
+
+    def save(self):
+        role_data = {
+            'name': self.data.get('name', '').strip(),
+            'codename': self.data.get('name', '').strip(),
+            'cate': 'GCR',
+            'desc': self.data.get('desc').strip(),
+        }
+        permissions = []
+        for perm_id in self.data.get('permissions'):
+            perm = Group.objects.get_by_id(perm_id)
+            permissions.append(perm)
+        role_data['permissions'] = permissions
+        return Role.objects.create_role(role_data)
+

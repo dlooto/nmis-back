@@ -33,10 +33,41 @@ class BaseAPIView(GenericAPIView):
                 return
         self.permission_denied(request, message=u'无操作权限')
 
-    def check_object_perm_domains(self, request, obj):
-        if obj in request.user.get_perm_domains():
-            return
-        self.permission_denied(request, message='无操作权限')
+    def get_user_role_dept_domains(self, request, perm_keys, allOrAny="ALL", ):
+        """
+        获取用户可操作的权限域（部门ID）
+        :param request:
+        :param perm_keys: 权限唯一标识List（id或codename）
+        :param allOrAny: 默认为字符串"ALL",还可以为"ANY"
+        :return: 返回权限域标识List集合(Department类实例ID集合）
+        """
+        roles = request.user.get_roles()
+        roles_tmp = []
+        dept_ids = []
+        if not perm_keys or not roles:
+            return dept_ids
+
+        if allOrAny == "ALL":
+            for key in perm_keys:
+                for role in roles:
+                    for perm in role.get_permissions():
+                        if key == perm.id or key == perm.codename:
+                            roles_tmp.append(role)
+            for r in roles_tmp:
+                departments = r.get_dept_domains()
+                for dept in departments:
+                    dept_ids.append(dept.id)
+        if allOrAny == "ANY":
+            for key in perm_keys:
+                for role in roles:
+                    for perm in role.get_permissions():
+                        if key == perm.id or key == perm.codename:
+                            roles_tmp.append(role)
+            for r in roles_tmp:
+                departments = r.get_dept_domains()
+                for dept in departments:
+                    dept_ids.append(dept.id)
+        return dept_ids
 
     def get_object_or_404(self, obj_id, model, use_cache=True):
         """

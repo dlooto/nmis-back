@@ -86,6 +86,16 @@ GROUPS = {
         'cate': GROUP_CATE_NORMAL_STAFF,
         'desc': u'机构普通员工'
     },
+    GROUP_CATE_ROLE: {
+        'name': u'角色类',
+        'cate': GROUP_CATE_ROLE,
+        'desc': u'角色类分组'
+    },
+    GROUP_CATE_USER: {
+        'name': u'用户类',
+        'cate': GROUP_CATE_USER,
+        'desc': u'用户类分组'
+    },
 }
 
 # 上传的员工excel模板文件表头字典

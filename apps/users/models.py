@@ -74,8 +74,6 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username' # email
     VALID_AUTH_FIELDS = ['phone', 'email', 'username']  # 允许的可用于注册/登录的有效属性字段
     backend = 'base.backends.CustomizedModelBackend'
-    roles = models.ManyToManyField('nmis.hospitals.models.Role', verbose_name='员工',
-                                   related_name="users", related_query_name='user', blank=True)
 
     objects = UserManager()
 
@@ -169,21 +167,11 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     def get_permissions(self):
         """获取用户拥有的权限"""
         user_perms = []
-        for role in self.roles:
+        for role in self.roles.all():
             for perm in role.get_permissions():
                 if perm not in user_perms:
                     user_perms.append(perm)
         return user_perms
-
-    def get_perm_domains(self):
-        """获取用户可操作的权限域"""
-        perm_domains = []
-        for role in self.roles:
-            for perm_domain in role.get_perm_domains():
-                if perm_domain not in perm_domains:
-                    perm_domains.append(perm_domain)
-        return perm_domains
-
 
 
 class UserSecureRecord(BaseModel):

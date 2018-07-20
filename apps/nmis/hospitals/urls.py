@@ -50,5 +50,14 @@ urlpatterns = [
     path("<int:hid>/staffs/batch-upload", views.StaffBatchUploadView.as_view(), ),
 
     # 权限组API列表接口
-    path("<int:hid>/groups",             views.GroupListView.as_view(), )
+    path("<int:hid>/groups",             views.GroupListView.as_view(), ),
+
+    # 创建角色
+    path("roles/create", views.RoleCreateView.as_view(), ),
+
+    # 单个角色查、删、改
+    path("roles/<int:role_id>", views.RoleView.as_view(), ),
+
+    # 查询角色列表
+    path("roles", views.RoleListView.as_view(), ),
 ]
