@@ -12,6 +12,7 @@ import settings
 
 from django.contrib import admin
 
+from nmis.hospitals.models import Role
 from .models import Hospital, Staff, Department, Group
 
 logs = logging.getLogger(__name__)
@@ -70,10 +71,18 @@ class GroupAdmin(admin.ModelAdmin):
 #
 #     exclude = ('permissions',)
 
+
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'codename', 'desc')
+    search_fields = ('name', 'codename', 'desc')
+    list_display_links = ('name', 'codename')
+
+
 admin.site.register(Hospital, HospitalAdmin)
 admin.site.register(Staff, StaffAdmin)
 admin.site.register(Department, DepartmentAdmin)
 admin.site.register(Group, GroupAdmin)
+admin.site.register(Role, RoleAdmin)
 
 from django.contrib.auth.models import Group as _Group
 from django.contrib.sites.models import Site as _Site

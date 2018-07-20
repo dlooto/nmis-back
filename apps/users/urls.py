@@ -37,6 +37,7 @@ urlpatterns = [
     path('request-reset-password', views.RequestResetPasswordView.as_view(), name='users_request_reset'),  # 发送找回密码邮件
     path('reset-password',         views.ResetPasswordView.as_view(), name='users_reset_password'),  # 重置密码
     path('verify-reset-key',       views.VerifyResetRecordKeyView.as_view(), name='users_verify_key'),
-
+    # 给用户分配角色和权限域
+    path('assign-roles-dept-domains/',   views.AssignRolesDeptDomains.as_view(),)
 
 ]

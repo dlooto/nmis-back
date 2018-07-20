@@ -13,9 +13,11 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 from django.db import models, transaction
 
-from nmis.hospitals.managers import GroupManager
+from base.models import BaseModel
+from nmis.hospitals.managers import GroupManager, RoleManager
 
 from organs.models import BaseOrgan, BaseStaff, BaseDepartment, BaseGroup
+from users.models import User
 from .managers import StaffManager, HospitalManager
 
 from .consts import *
@@ -248,9 +250,57 @@ class Group(BaseGroup):
         db_table = 'perm_group'
 
 
+class Role(BaseModel):
+    """
+    角色数据模型
+    """
+    name = models.CharField('角色名称', max_length=40)
+    codename = models.CharField('角色代码', max_length=100, unique=False, null=True, blank=True, default='')
+    cate = models.CharField('类别', max_length=4, choices=GROUP_CATE_CHOICES,
+                            null=False, blank=True)
+    permissions = models.ManyToManyField(Group, verbose_name='权限集',
+                                         related_name="roles", related_query_name='role',
+                                         blank=True)
+    desc = models.CharField('描述', max_length=100, null=True, blank=True, default='')
+    users = models.ManyToManyField(User, verbose_name='所属用户集合',
+                                   related_name="roles", related_query_name='role', blank=True)
+    dept_domains = models.ManyToManyField(
+        Department, verbose_name='所属部门集合',
+        related_name="roles", related_query_name='role', blank=True
+    )
+    objects = RoleManager()
 
+    class Meta:
+        verbose_name = '角色'
+        verbose_name_plural = '角色'
+        db_table = 'perm_role'
 
+    def __str__(self):
+        return u'%s' % self.name
 
+    def set_permissions(self, perms):
+        """
+        为权限组初始化设置权限集
+        """
+        pass
+
+    def add_permission(self, perm):
+        """
+        权限组内新加权限
+        :param perm: 权限对象,
+        """
+        pass
+
+    def get_permissions(self):
+        """获取去角色下的权限"""
+        return self.permissions.all()
+
+    def get_dept_domains(self):
+        """
+        获取权限域
+        :return: 返回拥有该角色的部门List
+        """
+        return self.departments.all()
 
 
 

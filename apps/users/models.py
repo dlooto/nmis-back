@@ -160,6 +160,19 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     def generate_reset_record(self):
         return self.generate_secure_record(klass=ResetRecord, expire_hours=2)
 
+    def get_roles(self):
+        """获取用户拥有的角色"""
+        return self.roles.all()
+
+    def get_permissions(self):
+        """获取用户拥有的权限"""
+        user_perms = []
+        for role in self.roles.all():
+            for perm in role.get_permissions():
+                if perm not in user_perms:
+                    user_perms.append(perm)
+        return user_perms
+
 
 class UserSecureRecord(BaseModel):
     """

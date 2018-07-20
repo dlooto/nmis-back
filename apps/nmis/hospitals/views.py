@@ -10,20 +10,22 @@
 import logging
 from operator import eq
 
+from django.contrib.auth.decorators import permission_required
+
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from base.common.param_utils import get_id_list
 from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
-from utils.files import ExcelBasedOXL, get_file_extension
+from utils.files import ExcelBasedOXL
 
 from base import resp
 from base.views import BaseAPIView
 from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
-    DepartmentBatchUploadForm
+    DepartmentBatchUploadForm, RoleCreateForm
 from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission, \
     ProjectDispatcherPermission
-from nmis.hospitals.models import Hospital, Department, Staff, Group
+from nmis.hospitals.models import Hospital, Department, Staff, Group, Role
 from .forms import (
     HospitalSignupForm,
     DepartmentUpdateFrom,
@@ -328,7 +330,6 @@ class StaffBatchUploadView(BaseAPIView):
 class DepartmentCreateView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, )
-
     @check_params_not_null(['name', 'attri'])
     def post(self, req, hid):
         """
@@ -494,3 +495,39 @@ class GroupListView(BaseAPIView):
         groups_list = hospital.get_all_groups()
         return resp.serialize_response(groups_list, results_name='group')
 
+
+class RoleCreateView(BaseAPIView):
+
+    def post(self, req):
+
+        form = RoleCreateForm(req.data)
+        role = Role.objects.filter(name=req.data.get('name'))
+        if not role:
+            resp.failed("角色已存在")
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        new_role = form.save()
+        if not new_role:
+            return resp.failed('操作失败')
+        return resp.serialize_response(new_role, srl_cls_name='ChunkRoleSerializer', results_name='role')
+
+
+class RoleView(BaseAPIView):
+
+    def get(self, req, role_id):
+        role = self.get_object_or_404(role_id, Role)
+        return resp.serialize_response(role, srl_cls_name='RoleSerializer', results_name='role')
+
+    def delete(self, req, role_id):
+        role = self.get_object_or_404(role_id, Role)
+        role.clear_cache()
+        role.delete()
+        return resp.ok("操作成功")
+
+
+class RoleListView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, )
+
+    def get(self, req):
+        roles = Role.objects.all()
+        return resp.serialize_response(roles, srl_cls_name='ChunkRoleSerializer', results_name='roles')
