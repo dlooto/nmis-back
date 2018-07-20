@@ -7,11 +7,8 @@
 
 import logging
 
-
-from rest_framework import serializers
-
 from base.serializers import BaseModelSerializer
-from .models import OrderedDevice
+from .models import OrderedDevice, SoftwareDevice
 
 logs = logging.getLogger(__name__)
 
@@ -24,3 +21,10 @@ class OrderedDeviceSerializer(BaseModelSerializer):
             'measure', 'num', 'planned_price', 'real_price', 'created_time',
         )
 
+
+class SoftwareDeviceSerializer(BaseModelSerializer):
+    class Meta:
+        model = SoftwareDevice
+        fields = (
+            'id', 'name', 'cate', 'purpose', 'producer', 'created_time'
+        )

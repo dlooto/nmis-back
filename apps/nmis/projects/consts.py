@@ -37,3 +37,12 @@ FLOW_DONE_SIGN = (
     (FLOW_DONE, '项目流程结束'),
     (FLOW_UNDONE, '项目流程未结束'),
 )
+
+# 项目类型
+PRO_CATE_SOFTWARE = 'SW'
+PRO_CATE_HARDWARE = 'HW'
+
+PROJECT_CATE_CHOICES = (
+    (PRO_CATE_SOFTWARE,    '信息化项目'),
+    (PRO_CATE_HARDWARE,    '医疗器械项目'),
+)

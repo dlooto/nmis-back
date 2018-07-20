@@ -420,7 +420,6 @@ class StaffBatchUploadForm(BaseForm):
         self.group = group
         return True
 
-
     def save(self):
         # 封装excel数据
         staffs_data = []
@@ -535,7 +534,7 @@ class DepartmentCreateForm(BaseForm):
         })
 
     def is_valid(self):
-        if not self.check_contact() or not self.check_name() or not self.check_attri() or \
+        if not self.check_contact() or not self.check_name() or \
                 not self.check_desc():
             return False
         return True
@@ -577,7 +576,7 @@ class DepartmentCreateForm(BaseForm):
             'name': self.data.get('name', '').strip(),
             'contact': self.data.get('contact', '').strip(),
             'desc': self.data.get('desc').strip(),
-            'attri': self.data.get('attri').strip(),
+            'attri': 'OT'
         }
 
         try:

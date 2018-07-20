@@ -6,38 +6,58 @@
 # 
 
 import logging
+from collections import OrderedDict
 
-from django.db import transaction, DataError
+from django.db import transaction, DataError, models
 from django_bulk_update import helper
 
 from base.models import BaseManager
-from nmis.devices.models import OrderedDevice
+from nmis.devices.models import OrderedDevice, SoftwareDevice
+from nmis.projects.consts import PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE
 
 logger = logging.getLogger(__name__)
 
 
 class ProjectPlanManager(BaseManager):
 
-    def create_project(self, ordered_devices, **data):
+    def create_project(self, hardware_devices=None, software_devices=None, **data):
         """
-        创建项目项目
+        创建项目项目(新建信息化硬件项目，新建信息化软件项目)
 
-        :param ordered_devices: 设备明细, 列表数据, 列表元素类型为dict
+        :param hardware_devices: 硬件设备明细, 列表数据, 列表元素类型为dict
+        :param software_devices: 软件设备明细, 列表数据, 列表元素类型为dict
         :param data: 字典型参数
         :return:
         """
         try:
             with transaction.atomic():
                 project = self.model(**data)
+                print(data)
                 project.save()
 
                 # 批量创建设备明细
                 ordered_device_list = []
-                for device_data in ordered_devices:
-                    ordered_device_list.append(
-                        OrderedDevice(project=project, **device_data)
-                    )
-                OrderedDevice.objects.bulk_create(ordered_device_list)
+                if data.get('project_cate') == PRO_CATE_HARDWARE:
+                    for device_data in hardware_devices:
+                        ordered_device_list.append(
+                            OrderedDevice(project=project, **device_data)
+                        )
+                    OrderedDevice.objects.bulk_create(ordered_device_list)
+
+                else:
+                    if hardware_devices:
+                        for device_data in hardware_devices:
+                            ordered_device_list.append(
+                                OrderedDevice(project=project, **device_data)
+                            )
+                        OrderedDevice.objects.bulk_create(ordered_device_list)
+                    if software_devices:
+                        ordered_device_list = []
+                        for device_data in software_devices:
+                            ordered_device_list.append(
+                                SoftwareDevice(project=project, **device_data)
+                            )
+                        SoftwareDevice.objects.bulk_create(ordered_device_list)
         except DataError as dex:
             logger.exception(dex)
             return None
@@ -68,7 +88,7 @@ class ProjectPlanManager(BaseManager):
         """
         from django.db.models import Q
 
-        query_set = self.filter(related_dept__organ=organ)
+        query_set = self.filter(related_dept__organ=organ).order_by('id')
         if status:
             query_set = query_set.filter(status=status)
         if project_title or performers:
@@ -86,7 +106,7 @@ class ProjectPlanManager(BaseManager):
         :param project_title: 项目名称
         :param status 项目状态
         """
-        query_set = self.filter(related_dept__organ=organ, creator=staff)
+        query_set = self.filter(related_dept__organ=organ, creator=staff).order_by('id')
         if status:
             query_set = query_set.filter(status=status)
         if performers or project_title:
@@ -106,7 +126,7 @@ class ProjectPlanManager(BaseManager):
         :param status 项目状态
         :param
         """
-        query_set = self.filter(related_dept__organ=organ, performer=staff)
+        query_set = self.filter(related_dept__organ=organ, performer=staff).order_by('id')
         if status:
             query_set = query_set.filter(status=status)
         if project_title or creators:
@@ -170,6 +190,22 @@ class ProjectPlanManager(BaseManager):
             return None
 
         return new_project
+
+    def get_group_by_status(self, search_key=None, status=None, creator=None, performer=None ):
+        """
+        根据项目状态返回每个状态下项目数量(项目总览各状态条数，我申请的项目各状态条数，我负责的各状态条数)
+        :return:
+        """
+        if status:
+            return self.filter(status=status)\
+                .values_list('status').annotate(models.Count('id'))
+        if creator:
+            return self.filter(creator=creator, title__contains=search_key)\
+                .values_list('status').annotate(models.Count('id'))
+        if performer:
+            return self.filter(performer=performer, title__contains=search_key)\
+                .values_list('status').annotate(models.Count('id'))
+        return self.filter(title__contains=search_key).values_list('status').annotate(models.Count('id'))
 
 
 class ProjectFlowManager(BaseManager):

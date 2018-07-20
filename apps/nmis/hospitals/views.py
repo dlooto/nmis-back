@@ -270,7 +270,9 @@ class StaffListView(BaseAPIView):
         self.check_object_any_permissions(req, organ)
 
         staff_list = organ.get_staffs()
-        return resp.serialize_response(staff_list, results_name='staffs')
+        # return resp.serialize_response(staff_list, results_name='staffs')
+        # 分页查询员工列表
+        return self.get_pages(staff_list, results_name='staffs')
 
 
 class StaffBatchUploadView(BaseAPIView):
@@ -364,9 +366,7 @@ class DepartmentListView(BaseAPIView):
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
         dept_list = hospital.get_all_depts()
-        return resp.serialize_response(
-            dept_list, srl_cls_name='DepartmentStaffsCountSerializer', results_name='dept'
-        )
+        return self.get_pages(dept_list, results_name='depts')
 
 
 class DepartmentView(BaseAPIView):

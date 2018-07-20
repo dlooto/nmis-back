@@ -11,6 +11,7 @@ from base import resp
 from base.common.decorators import (
     check_id, check_id_list, check_params_not_null, check_params_not_all_null
 )
+
 from base.views import BaseAPIView
 
 from nmis.devices.models import OrderedDevice
@@ -24,7 +25,6 @@ from nmis.projects.forms import (
     OrderedDeviceCreateForm,
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
-    ProjectPlanListForm,
     ProjectFlowUpdateForm, )
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
 from nmis.projects.permissions import ProjectPerformerPermission
@@ -33,8 +33,15 @@ from nmis.hospitals.consts import (
     GROUP_CATE_PROJECT_APPROVER,
     GROUP_CATE_NORMAL_STAFF
 )
-from nmis.projects.consts import PROJECT_STATUS_CHOICES, PRO_STATUS_STARTED, \
-    PRO_STATUS_DONE, PRO_STATUS_PENDING, FLOW_UNDONE
+from nmis.projects.consts import (
+    PROJECT_STATUS_CHOICES,
+    PRO_STATUS_STARTED,
+    PRO_STATUS_DONE,
+    PRO_STATUS_PENDING,
+    FLOW_UNDONE,
+    PROJECT_CATE_CHOICES,
+    PRO_CATE_HARDWARE,
+    PRO_CATE_SOFTWARE)
 
 logs = logging.getLogger(__name__)
 
@@ -45,6 +52,11 @@ class ProjectPlanListView(BaseAPIView):
     """
 
     permission_classes = (IsHospitalAdmin, HospitalStaffPermission, ProjectDispatcherPermission)
+
+    projects_status_counts = 'status_counts'  # 项目数量块标示
+    project_sd = 'SD'  # 进行中项目数量
+    project_pe = 'PE'  # 待启动项目数量
+    project_do = 'DO'  # 已完成项目数量
 
     @check_params_not_null(['organ_id', 'type'])
     def get(self, req):
@@ -61,7 +73,7 @@ class ProjectPlanListView(BaseAPIView):
         status = req.GET.get('pro_status', '').strip()
 
         if status:          # 项目状态校验
-            if not status in dict(PROJECT_STATUS_CHOICES).keys():
+            if status not in dict(PROJECT_STATUS_CHOICES).keys():
                 return resp.form_err({'err_status:': '项目状态异常'})
 
         login_staff = req.user.get_profile()     # 当前登录系统用户
@@ -71,7 +83,7 @@ class ProjectPlanListView(BaseAPIView):
         staff = None
         if search_key:
             staff = Staff.objects.get_by_name(hospital, search_key)
-
+        status_counts = None
         if action_type == 'undispatch':
             """
             所有待分配的项目列表，带筛选
@@ -85,6 +97,8 @@ class ProjectPlanListView(BaseAPIView):
             result_projects = ProjectPlan.objects.get_undispatched_projects(
                 hospital, project_title=search_key, creators=staff
             )
+            status_counts = ProjectPlan.objects.get_group_by_status(
+                 status=PRO_STATUS_PENDING)
 
         elif action_type == 'total_projects':   # 项目总览（分配与未分配的项目列表）
             """
@@ -97,6 +111,9 @@ class ProjectPlanListView(BaseAPIView):
             """
             # 检查管理员权限,只允许管理员操作
             self.check_object_permissions(req, hospital)
+
+            # 获取项目各状态条数
+            status_counts = ProjectPlan.objects.get_group_by_status(search_key=search_key)
 
             result_projects = ProjectPlan.objects.get_by_search_key(
                 hospital, project_title=search_key, performers=staff, status=status
@@ -113,6 +130,10 @@ class ProjectPlanListView(BaseAPIView):
             # 管理员、项目分配者、普通员工都可操作
             self.check_object_any_permissions(req, hospital)
 
+            # 获取项目各状态条数
+            status_counts = ProjectPlan.objects.get_group_by_status(
+                search_key=search_key, creator=req.user.get_profile()
+            )
             result_projects = ProjectPlan.objects.get_applied_projects(
                 hospital, login_staff, performers=staff, project_title=search_key, status=status
             )
@@ -128,36 +149,86 @@ class ProjectPlanListView(BaseAPIView):
             # 管理员、项目分配者、普通员工都可操作
             self.check_object_any_permissions(req, hospital)
 
+            # 获取项目各状态条数
+            status_counts = ProjectPlan.objects.get_group_by_status(
+                search_key=search_key, performer=req.user.get_profile()
+            )
             result_projects = ProjectPlan.objects.get_my_performer_projects(
                 hospital, login_staff, creators=staff, project_title=search_key, status=status
             )
 
-        return resp.serialize_response(
-            result_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+        data = dict(status_counts)
+        if not data.get('SD'):
+            data['SD'] = 0
+        if not data.get('PE'):
+            data['PE'] = 0
+        if not data.get('DO'):
+            data['DO'] = 0
+
+        return self.get_pages(
+            result_projects, srl_cls_name='ChunkProjectPlanSerializer',
+            results_name='projects', **data
         )
 
 
 class ProjectPlanCreateView(BaseAPIView):
     """
-
+    创建项目信息化项目申请（信息化硬件项目申请、信息化软件项目申请）
     """
     permission_classes = [HospitalStaffPermission, ]
 
     @check_id_list(["organ_id", "creator_id", "related_dept_id"])
-    @check_params_not_null(['project_title', 'ordered_devices', 'handing_type'])
+    @check_params_not_null(['project_title', 'handing_type', 'pro_type'])
     def post(self, req):
         """
-        创建项目申请, 项目申请提交后进入未分配(待启动)状态.
-
-        Example:
+        创建项目申请（device_type:区分此项目属于信息化硬件申请还是信息化软件项目申请）
+        device_type(
+            hardware: 申请项目类型为信息化硬件项目申请
+            software: 申请项目类型为信息化软件项目申请
+        )
+        医疗器械项目申请Example:
         {
             "organ_id": 20180606,
             "project_title": "政府要求采购项目",
             "handing_type": '自行办理'
+            "device_type": 'HW'
             "purpose": "本次申请经科室共同研究决定, 响应政府号召",
             "creator_id": 20181001,
             "related_dept_id": 	10001001,
-            "ordered_devices": [
+            "hardware_devices": [
+                {
+                    "name": "胎心仪",
+                    "type_spec": "PE29-1389",
+                    "num": 2,
+                    "measure": "台",
+                    "purpose": "用来测胎儿心电",
+                    "planned_price": 15000.0
+                },
+                {
+                    "name": "理疗仪",
+                    "type_spec": "ST19-1399",
+                    "num": 5,
+                    "measure": "台",
+                    "purpose": "心理科室需要",
+                    "planned_price": 25000.0
+                }
+            ]
+         }
+         信息化项目申请Example:
+         {
+            'organ_id': 20180606,
+            'project_title': '新建信息化项目申请项目',
+            'handing_type': '自行办理'
+            'device_type': 'SW'
+            'purpose': '申请项目介绍'
+            'software_devices':[
+                {
+                    'name': '易冉单点登录系统',
+                    'purpose': '一次登录，解决多次重复登录其它应用',
+                    'producer': '软件开发商'
+                }
+            ],
+            "hardware_devices": [
                 {
                     "name": "胎心仪",
                     "type_spec": "PE29-1389",
@@ -184,20 +255,37 @@ class ProjectPlanCreateView(BaseAPIView):
         })
 
         self.check_object_permissions(req, objects['organ_id'])
+        pro_type = req.data.get('pro_type')
+        if pro_type not in dict(PROJECT_CATE_CHOICES).keys():
+            return resp.form_err({'type_error': '不存在的操作类型'})
 
-        form = ProjectPlanCreateForm(
-            objects['creator_id'], objects['related_dept_id'],
-            data=req.data
-        )
-        if not form.is_valid():
-            return resp.form_err(form.errors)
-        project = form.save()
-        if not project:
-            return resp.failed('项目申请提交异常')
+        if pro_type == PRO_CATE_HARDWARE:
+            form = ProjectPlanCreateForm(
+                objects.get('creator_id'), objects.get('related_dept_id'),
+                data=req.data
+            )
+            if not form.is_valid():
+                return resp.form_err(form.errors)
+            project = form.save()
+            if not project:
+                return resp.failed('项目申请提交异常')
 
-        return resp.serialize_response(
-            project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
-        )
+            return resp.serialize_response(
+                project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
+            )
+        else:
+            form = ProjectPlanCreateForm(
+                objects.get('creator_id'), objects.get('related_dept_id'),
+                data=req.data
+            )
+            if not form.is_valid():
+                return resp.form_err(form.errors)
+            project = form.save()
+            if not project:
+                return resp.failed('项目申请提交异常')
+            return resp.serialize_response(
+                project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
+            )
 
 
 class ProjectPlanView(BaseAPIView):
@@ -348,6 +436,10 @@ class ProjectDeviceCreateView(BaseAPIView):
             return resp.form_err(form.errors)
         new_device = form.save()
         return resp.serialize_response(new_device, results_name="device")
+
+
+class ProjectSoftwareDeviceCreateView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
 
 class ProjectDeviceView(BaseAPIView):

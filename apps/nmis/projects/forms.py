@@ -11,7 +11,7 @@ from base.forms import BaseForm
 from nmis.devices.models import OrderedDevice
 from nmis.projects.models import ProjectPlan, ProjectFlow
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
-    PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT
+    PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE
 from nmis.hospitals.models import Staff
 logs = logging.getLogger(__name__)
 
@@ -31,6 +31,11 @@ class ProjectPlanCreateForm(BaseForm):
         self.ERR_CODES.update({
             'project_title_error': '项目名称输入错误',
             'handing_type_error': '办理方式为空或数据错误',
+            'software_name_error': '软件名称为空或数据错误',
+            'software_purpose_error': '软件用途为空或数据错误',
+            'hardware_devices_error': '硬件设备为空或格式错误',
+            'software_devices_error': '软件设备为空或格式错误',
+            'devices_error': '硬件设备和软件设备不可同时为空'
         })
 
     def is_valid(self):
@@ -56,11 +61,35 @@ class ProjectPlanCreateForm(BaseForm):
         return True
 
     def check_devices(self):
-        ordered_devices = self.data.get('ordered_devices')
-        if not ordered_devices or len(ordered_devices) == 0:
-            self.update_errors('ordered_devices', 'devices_empty')
-            return False
-        return check_devices_list(self, ordered_devices)
+        pro_type = self.data.get('pro_type')
+        if pro_type == PRO_CATE_HARDWARE:
+            # 新建医疗器械设备字段进行校验
+            if not self.data.get('hardware_devices'):
+                self.update_errors('hardware_devices', 'hardware_devices_error')
+                return False
+            return check_devices_list(self, self.data.get('hardware_devices'))
+        else:
+            # 信息化项目设备校验
+            software_devices = self.data.get('software_devices')        # 信息化项目软件设备
+
+            # 信息化项目存在硬件设备申请需对硬件设备字段进行校验
+            if self.data.get('hardware_devices'):
+                return check_devices_list(self, self.data.get('hardware_devices'))
+
+            # 信息化项目存在软件设备申请需对软件设备字段进行校验
+            if software_devices:
+                for item in software_devices:
+                    if not item.get('name'):
+                        self.update_errors('software_name', 'software_name_error')
+                        return False
+                    if not item.get('purpose'):
+                        self.update_errors('software_purpose', 'software_purpose_error')
+                        return False
+            if not software_devices and not self.data.get('hardware_devices'):
+                self.update_errors('devices', 'devices_error')
+                return False
+
+        return True
 
     def save(self):
         data = {
@@ -69,11 +98,16 @@ class ProjectPlanCreateForm(BaseForm):
             'purpose': self.data.get('purpose'),
             'creator': self.creator,
             'related_dept': self.related_dept,
+            'project_cate': self.data.get('pro_type')
         }
         if data.get('handing_type') == PRO_HANDING_TYPE_SELF:
             data["performer"] = self.creator
 
-        return ProjectPlan.objects.create_project(self.data.get('ordered_devices'), **data)
+        return ProjectPlan.objects.create_project(
+            software_devices=self.data.get('software_devices'),     # 软件设备明细
+            hardware_devices=self.data.get('hardware_devices'),     # 硬件设备明细
+            **data                                                  # 新建项目属性列表
+        )
 
 
 class ProjectPlanUpdateForm(BaseForm):
