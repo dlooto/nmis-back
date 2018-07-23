@@ -7,7 +7,7 @@
 
 import logging
 
-from nmis.projects.consts import PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED
+from nmis.projects.consts import PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED, PRO_CATE_SOFTWARE, PRO_CATE_HARDWARE
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
 from utils.times import now, yesterday, tomorrow
@@ -48,7 +48,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.login_with_username(self.user)
 
         old_project = self.create_project(self.admin_staff, self.dept, title="旧项目名",handing_type='SE')
-        old_devices = old_project.get_ordered_devices()
+        old_devices = old_project.get_hardware_devices()
 
         new_deivces = [
             {
@@ -104,7 +104,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertEquals(new_project.get('title'), project_base_data['project_title'])
         self.assertEqual(new_project.get('handing_type'), project_base_data['handing_type'])
         self.assertEquals(new_project.get('performer_id'), new_project.get('creator_id'))
-        devices = new_project['ordered_devices']
+        devices = new_project['hardware_devices']
         self.assertIsNotNone(devices)
         for item in devices:
             for im in update_deivces:
@@ -117,32 +117,6 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                     self.assertEqual(item['measure'], im['measure'])
                     self.assertEqual(item['purpose'], im['purpose'])
                     self.assertEqual(item['planned_price'], im['planned_price'])
-
-        # 测试自行办理项目变更为转交办理项目
-        # old_pro2 = self.create_project(self.admin_staff, self.dept, title="旧项目名SE", handing_type='SE')
-        # data2 = {
-        #     "organ_id": self.organ.id,
-        #     'handing_type': 'AG'
-        # }
-        # resp2 = self.put(self.single_project_api.format(old_pro2.id), data=data2)
-        # self.assert_response_success(resp2)
-        # new_pro2 = resp2.get('project')
-        # self.assertEqual(new_pro2.get('handing_type'), data2['handing_type'])
-        # self.assertIsNone(new_pro2.get('performer_id'))
-        #
-        # # 测试转交办理项目变更为自行办理项目
-        # old_pro3 = self.create_project(self.admin_staff, self.dept, title="旧项目名AG", handing_type='AG')
-        # data3 = {
-        #     "organ_id": self.organ.id,
-        #     'handing_type': 'SE'
-        # }
-        # resp3 = self.put(self.single_project_api.format(old_pro3.id), data=data3)
-        # self.assert_response_success(resp3)
-        # new_pro3 = resp3.get('project')
-        # self.assertEqual(new_pro3.get('handing_type'), data3['handing_type'])
-        # self.assertEquals(new_pro3.get('performer_id'), new_pro3.get('creator_id'))
-
-        #测试变更数据异常
 
     def test_project_del(self):
         """
@@ -182,15 +156,16 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.login_with_username(self.user)
 
-        # 测试自行办理申请
+        # 测试自行办理、信息化项目申请
         project_data = {
             "organ_id": self.organ.id,
             "project_title": "牛逼项目1",
             "handing_type": "SE",
+            "pro_type": PRO_CATE_SOFTWARE,
             "purpose": "牛逼的不能为外人说道的目标",
             "creator_id": self.admin_staff.id,
             "related_dept_id": self.admin_staff.dept.id,
-            "ordered_devices": [
+            "hardware_devices": [
                 {
                     "name": "胎心仪",
                     "type_spec": "PE29-1389",
@@ -207,6 +182,12 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                     "purpose": "心理科室需要",
                     "planned_price": 25000.0
                 }
+            ],
+            "software_devices": [
+                {
+                    "name": "易冉单点登录",
+                    "purpose": "单点登录"
+                }
             ]
         }
 
@@ -219,19 +200,29 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertEquals(project_data['handing_type'], result_project.get('handing_type'))
 
         self.assertEquals(
-            len(result_project.get('ordered_devices')), len(project_data.get('ordered_devices'))
+            len(result_project.get('hardware_devices')), len(project_data.get('hardware_devices'))
         )
-        self.assert_object_in_results(project_data.get('ordered_devices')[0],
-                                      result_project.get('ordered_devices'))
-        # 测试转交办理申请
+        self.assertEquals(
+            len(result_project.get('software_devices')), len(project_data.get('software_devices'))
+        )
+        self.assert_object_in_results(project_data.get('hardware_devices')[0],
+                                      result_project.get('hardware_devices'))
+        self.assertEquals(project_data.get('pro_type'), result_project.get('project_cate'))
+
+        # 测试转交办理、医疗器械设备项目申请
         pro2_data = project_data
         pro2_data['handing_type'] = PRO_HANDING_TYPE_AGENT
+        pro2_data['pro_type'] = PRO_CATE_HARDWARE
+
         resp2 = self.post(self.project_create_api, data=pro2_data)
         self.assert_response_success(resp2)
         pro2 = resp2.get('project')
         self.assertIsNotNone(pro2)
         self.assertEquals(pro2_data['handing_type'], pro2.get('handing_type'))
         self.assertIsNone(pro2.get('performer_id'))
+        self.assertEquals(pro2_data.get('pro_type'), pro2.get('project_cate'))
+        self.assertEquals(len(pro2_data.get('hardware_devices')), len(pro2.get('hardware_devices')))
+        self.assertEquals(len(pro2.get('software_devices')), 0)
 
     def test_my_project_list(self):
         """

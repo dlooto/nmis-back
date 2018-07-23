@@ -91,13 +91,12 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     class Meta:
         model = ProjectPlan
         fields = (
-            'id', 'title', 'purpose', 'status', 'handing_type',
+            'id', 'title', 'purpose', 'status', 'handing_type', 'project_cate',
             'creator_id', 'creator_name',
             'related_dept_id', 'related_dept_name',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
             'current_stone_id', 'attached_flow', 'hardware_devices', 'software_devices',
-            'milestone_records', 'startup_time', 'expired_time', 'created_time',
-            'project_cate'
+            'milestone_records', 'startup_time', 'expired_time', 'created_time'
         )
 
     def _get_creator_name(self, obj):
