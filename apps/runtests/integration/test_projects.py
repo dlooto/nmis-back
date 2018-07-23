@@ -46,11 +46,12 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         """
 
         self.login_with_username(self.user)
+        # 创建医疗器械项目和信息化项目
+        hardware_project = self.create_project(self.admin_staff, self.dept, project_cate='HW', title="医疗器械项目", handing_type='SE')
+        software_project = self.create_project(self.admin_staff, self.dept, project_cate="SW", title="信息化项目", handing_type='SE')
+        hardware_old_devices = hardware_project.get_hardware_devices()
 
-        old_project = self.create_project(self.admin_staff, self.dept, title="旧项目名",handing_type='SE')
-        old_devices = old_project.get_hardware_devices()
-
-        new_deivces = [
+        hardware_added_devices = [
             {
                 "name": "胎心仪Csnew",
                 "type_spec": "CS29-1001",
@@ -68,8 +69,9 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                 "planned_price": 25002.0
             },
         ]
-        update_deivces = [
+        hardware_updated_devices = [
             {
+                "id": hardware_old_devices[0].id,
                 "name": "胎心仪CsUP",
                 "type_spec": "CS29-1003",
                 "num": 20,
@@ -78,6 +80,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                 "planned_price": 2002.0
             },
             {
+                "id": hardware_old_devices[1].id,
                 "name": "理疗仪CsUP",
                 "type_spec": "CS19-1004",
                 "num": 21,
@@ -86,18 +89,39 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                 "planned_price": 2001.0
             },
         ]
-        update_deivces[0]['id'] = old_devices[0].id
-        update_deivces[1]['id'] = old_devices[1].id
+        software_added_devices = [
+            {
+                "name": "说好的系统呢",
+                "purpose": "有卵用"
+            },
+            {
+                "name": "牛逼的系统",
+                "purpose": "有卵用"
+            }
+        ]
+        software_updated_devices = [
+            {
+                "id": software_project.get_software_devices()[0].id,
+                "name": "修改系统名",
+                "purpose": "修改系统用途"
+            },
+            {
+                "id": software_project.get_software_devices()[1].id,
+                "name": "修改的系统名",
+                "purpose": "修改的系统用途"
+            }
+        ]
 
         project_base_data = {
             "organ_id": self.organ.id,
             "project_title": "新的项目名称",
             "purpose": "修改后的用途说明",
             'handing_type': 'SE',
-            'added_devices': new_deivces,
-            'updated_devices': update_deivces,
+            'hardware_added_devices': hardware_added_devices,
+            'hardware_updated_devices': hardware_updated_devices,
         }
-        response = self.put(self.single_project_api.format(old_project.id), data=project_base_data)
+        # 测试修改医疗器械项目申请
+        response = self.put(self.single_project_api.format(hardware_project.id), data=project_base_data)
         self.assert_response_success(response)
         new_project = response.get('project')
         self.assertIsNotNone(new_project)
@@ -107,7 +131,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         devices = new_project['hardware_devices']
         self.assertIsNotNone(devices)
         for item in devices:
-            for im in update_deivces:
+            for im in hardware_updated_devices:
                 if item['id'] == im['id']:
                     self.assertEqual(item['name'], im['name'])
                     self.assertEqual(item['type_spec'], im['type_spec'])
@@ -117,6 +141,37 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                     self.assertEqual(item['measure'], im['measure'])
                     self.assertEqual(item['purpose'], im['purpose'])
                     self.assertEqual(item['planned_price'], im['planned_price'])
+
+        # 测试修改信息化项目
+        software_project_data = {
+            "organ_id": self.organ.id,
+            "project_title": "信息化项目",
+            "purpose": "修改后的用途说明",
+            'handing_type': 'SE',
+            'hardware_added_devices': hardware_added_devices,
+            'hardware_updated_devices': hardware_updated_devices,
+            'software_added_devices': software_added_devices,
+            'software_updated_devices': software_updated_devices
+
+        }
+        resp = self.put(self.single_project_api.format(software_project.id), data=software_project_data)
+        self.assert_response_success(resp)
+        project = resp.get('project')
+        hardware_devices = project.get('hardware_devices')
+        software_devices = project.get('software_devices')
+        self.assertIsNotNone(hardware_devices)
+        self.assertIsNotNone(software_devices)
+        self.assertEquals(len(hardware_devices), 4)
+        self.assertEquals(len(software_devices), 4)
+
+        for i in range(len(software_added_devices)):
+            self.assert_object_in_results(software_added_devices[i], software_devices)
+
+        for i in range(len(software_updated_devices)):
+            self.assert_object_in_results(software_updated_devices[i], software_devices)
+
+        for i in range(len(hardware_added_devices)):
+            self.assert_object_in_results(hardware_added_devices[i], hardware_devices)
 
     def test_project_del(self):
         """

@@ -6,7 +6,6 @@
 # 
 
 import logging
-from collections import OrderedDict
 
 from django.db import transaction, DataError, models
 from django_bulk_update import helper

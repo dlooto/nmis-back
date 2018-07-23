@@ -7,7 +7,7 @@
 
 import logging
 
-from nmis.projects.consts import PRO_HANDING_TYPE_SELF
+from nmis.projects.consts import PRO_HANDING_TYPE_SELF, PRO_CATE_SOFTWARE
 from nmis.projects.models import ProjectPlan, ProjectFlow
 
 logs = logging.getLogger(__name__)
@@ -29,6 +29,17 @@ ORDERED_DEVICES = [
         "measure": "台",
         "purpose": "心理科室需要",
         "planned_price": 25000.0
+    }
+]
+
+SOFTWARE_DEVICES = [
+    {
+        "name": "易冉单点登录",
+        "purpose": "统一登录，统一管理"
+    },
+    {
+        "name": "易冉运维信息服务系统",
+        "purpose": "解决医院设备管理"
     }
 ]
 
@@ -58,21 +69,37 @@ class ProjectPlanMixin(object):
     项目管理基础工具类
     """
 
-    def create_project(self, creator, dept, title="设备采购", handing_type='AG', ordered_devices=ORDERED_DEVICES):
+    def create_project(self, creator, dept, project_cate="HW", title="设备采购",
+                       handing_type='AG', ordered_devices=ORDERED_DEVICES,
+                       software_devices=SOFTWARE_DEVICES):
         """
-        :param creator:  项目创建者, staff object
-        :param dept: 申请科室
+
+        :param creator: 项目创建者
+        :param dept: 项目归属科室
+        :param project_cate: 项目类型（HW：医疗器械项目，SW：信息化项目）
+        :param title: 项目名称
+        :param handing_type: 项目办理类型
+        :param ordered_devices: 硬件设备
+        :param software_devices: 软件设备
+        :return:
         """
         project_data = {
             'title': title,
             'handing_type': handing_type,
+            'project_cate': project_cate,
             'purpose': "设备老旧换新",
             'creator': creator,
             'related_dept': dept,
         }
+
         if handing_type == PRO_HANDING_TYPE_SELF:
             project_data['performer'] = creator
-        return ProjectPlan.objects.create_project(ordered_devices, **project_data)
+
+        if project_cate == PRO_CATE_SOFTWARE:
+            return ProjectPlan.objects.create_project(
+                hardware_devices=ordered_devices, software_devices=software_devices, **project_data
+            )
+        return ProjectPlan.objects.create_project(hardware_devices=ordered_devices, **project_data)
 
     def create_flow(self, organ, milestones=MILESTONES):
         """
