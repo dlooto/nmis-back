@@ -320,7 +320,7 @@ class StaffBatchUploadForm(BaseForm):
             for i in range(len(sheet_data)):
                 emails.append(sheet_data[i].get('email', '').strip())
             for i in range(len(sheet_data)):
-                contact_phones.append(sheet_data[i].get('contact_phone', '').strip())
+                contact_phones.append(str(sheet_data[i].get('contact_phone', '')).strip())
                 pre_data['usernames'] = usernames
                 pre_data['staff_names'] = staff_names
                 pre_data['dept_names'] = dept_names
@@ -697,29 +697,100 @@ class RoleCreateForm(BaseForm):
     def init_err_codes(self):
         self.ERR_CODES.update({
             'role_name_error': '角色名称为空或数据错误',
-            'handing_type_error': '办理方式为空或数据错误',
+            'role_name_exists': '角色已存在',
+            'permission_error': '权限数据为空或错误',
+            'permission_not_exists': '数据中含有不存在的权限'
         })
 
     def is_valid(self):
-        return True
+        return self.check_role_name() and self.check_permission()
 
     def check_role_name(self):
-        pass
+        if not self.data.get('name', '').strip():
+            self.update_errors('name', 'role_name_error')
+            return False
+        role = Role.objects.filter(name=self.data.get('name'))
+        if role:
+            self.update_errors('name', 'role_name_exists')
+            return False
+        return True
 
     def check_permission(self):
-        pass
+        perm_keys = self.data.get('permissions')
+        if not perm_keys or len(perm_keys) <= 0:
+            self.update_errors('permissions', 'permission_error')
+            return False
+        permissions = Group.objects.filter(id__in=perm_keys)
+        if not permissions or len(permissions) < len(perm_keys):
+            self.update_errors('permissions', 'permission_not_exists')
+            return False
+        return True
 
     def save(self):
         role_data = {
             'name': self.data.get('name', '').strip(),
-            'codename': self.data.get('name', '').strip(),
+            'codename': "",
             'cate': 'GCR',
             'desc': self.data.get('desc').strip(),
         }
-        permissions = []
-        for perm_id in self.data.get('permissions'):
-            perm = Group.objects.get_by_id(perm_id)
-            permissions.append(perm)
+        permissions = Group.objects.filter(id__in=self.data.get('permissions'))
         role_data['permissions'] = permissions
         return Role.objects.create_role(role_data)
+
+
+class RoleUpdateForm(BaseForm):
+
+    def __init__(self, old_role, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.old_role = old_role
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'role_name_error': '角色名称为空或数据错误',
+            'role_name_exists': '角色已存在',
+            'permission_error': '权限数据为空或错误',
+            'permission_not_exists': '数据中含有不存在的权限'
+        })
+
+    def is_valid(self):
+        return self.check_role_name() and self.check_permission()
+
+    def check_role_name(self):
+        if not self.data.get('name', '').strip():
+            self.update_errors('name', 'role_name_error')
+            return False
+        role = Role.objects.filter(name=self.data.get('name'))
+        if role:
+            self.update_errors('name', 'role_name_exists')
+            return False
+        return True
+
+    def check_permission(self):
+        perm_keys = self.data.get('permissions')
+        if not perm_keys or len(perm_keys) <= 0:
+            self.update_errors('permissions', 'permission_error')
+            return False
+        permissions = Group.objects.filter(id__in=perm_keys)
+        if not permissions or len(permissions) < len(perm_keys):
+            self.update_errors('permissions', 'permission_not_exists')
+            return False
+        return True
+
+    def save(self):
+        role_data = {
+            'name': self.data.get('name', '').strip(),
+            'codename': "",
+            'cate': 'GCR',
+            'desc': self.data.get('desc').strip(),
+        }
+        permissions = Group.objects.filter(id__in=self.data.get('permissions'))
+        role_data['permissions'] = permissions
+        try:
+            new_role = self.old_role.update(role_data)
+            new_role.cache()
+            return new_role
+        except Exception as e:
+            logs.exception(e)
+            return None
 
