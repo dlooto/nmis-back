@@ -272,7 +272,7 @@ def append_extra_info(user, request, response):
     profile = user.get_profile()
     if not profile:
         return resp.failed(u'员工信息不存在，请联系管理员')
-    response.data.update({'staff': resp.serialize_data(profile)})
+    response.data.update({'staff': resp.serialize_data(profile, srl_cls_name='SimpleStaffSerializer')})
     roles = user.get_roles()
     permissions = user.get_permissions()
     response.data.update({
@@ -296,10 +296,15 @@ class AssignRolesDeptDomains(BaseAPIView):
         role_ids = req.data.get("role_ids")
         dept_domain_ids = req.data.get("dept_domain_ids")
         user_ids = req.data.get("user_ids")
-
         users = User.objects.filter(id__in=user_ids)
         roles = Role.objects.filter(id__in=role_ids)
         depts = Department.objects.filter(id__in=dept_domain_ids)
+        if not roles or not len(role_ids) == len(roles):
+            return resp.failed('含有不存在的角色')
+        if not depts or not len(dept_domain_ids) == len(depts):
+            return resp.failed('含有不存在的部门')
+        if not users or not len(user_ids) == len(users):
+            return resp.failed('含有不存在的用户')
         try:
             with transaction.atomic():
                 for role in roles:

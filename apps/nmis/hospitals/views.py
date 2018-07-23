@@ -22,7 +22,7 @@ from utils.files import ExcelBasedOXL
 from base import resp
 from base.views import BaseAPIView
 from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
-    DepartmentBatchUploadForm, RoleCreateForm
+    DepartmentBatchUploadForm, RoleCreateForm, RoleUpdateForm
 from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission, \
     ProjectDispatcherPermission
 from nmis.hospitals.models import Hospital, Department, Staff, Group, Role
@@ -501,9 +501,6 @@ class RoleCreateView(BaseAPIView):
     def post(self, req):
 
         form = RoleCreateForm(req.data)
-        role = Role.objects.filter(name=req.data.get('name'))
-        if not role:
-            resp.failed("角色已存在")
         if not form.is_valid():
             return resp.form_err(form.errors)
         new_role = form.save()
@@ -517,6 +514,16 @@ class RoleView(BaseAPIView):
     def get(self, req, role_id):
         role = self.get_object_or_404(role_id, Role)
         return resp.serialize_response(role, srl_cls_name='RoleSerializer', results_name='role')
+
+    def put(self, req, role_id):
+        role = self.get_object_or_404(role_id, Role)
+        form = RoleUpdateForm(role, req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        new_role = form.save()
+        if not new_role:
+            return resp.failed('操作失败')
+        return resp.serialize_response(new_role, srl_cls_name='ChunkRoleSerializer', results_name='role')
 
     def delete(self, req, role_id):
         role = self.get_object_or_404(role_id, Role)
