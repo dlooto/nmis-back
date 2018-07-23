@@ -255,37 +255,23 @@ class ProjectPlanCreateView(BaseAPIView):
         })
 
         self.check_object_permissions(req, objects['organ_id'])
-        pro_type = req.data.get('pro_type')
-        if pro_type not in dict(PROJECT_CATE_CHOICES).keys():
+
+        if req.data.get('pro_type') not in dict(PROJECT_CATE_CHOICES).keys():
             return resp.form_err({'type_error': '不存在的操作类型'})
 
-        if pro_type == PRO_CATE_HARDWARE:
-            form = ProjectPlanCreateForm(
-                objects.get('creator_id'), objects.get('related_dept_id'),
-                data=req.data
-            )
-            if not form.is_valid():
-                return resp.form_err(form.errors)
-            project = form.save()
-            if not project:
-                return resp.failed('项目申请提交异常')
+        form = ProjectPlanCreateForm(
+            objects.get('creator_id'), objects.get('related_dept_id'),
+            data=req.data
+        )
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        project = form.save()
+        if not project:
+            return resp.failed('项目申请提交异常')
 
-            return resp.serialize_response(
-                project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
-            )
-        else:
-            form = ProjectPlanCreateForm(
-                objects.get('creator_id'), objects.get('related_dept_id'),
-                data=req.data
-            )
-            if not form.is_valid():
-                return resp.form_err(form.errors)
-            project = form.save()
-            if not project:
-                return resp.failed('项目申请提交异常')
-            return resp.serialize_response(
-                project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
-            )
+        return resp.serialize_response(
+            project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
+        )
 
 
 class ProjectPlanView(BaseAPIView):
@@ -312,7 +298,8 @@ class ProjectPlanView(BaseAPIView):
 
     @check_id('organ_id')
     @check_params_not_all_null(['project_title', 'purpose', 'handing_type',
-                                'added_devices', 'updated_devices'])
+                                'software_added_devices', 'software_updated_devices',
+                                'hardware_added_devices', 'hardware_updated_devices'])
     def put(self, req, project_id):
         """
         修改项目. 该接口仅可以修改项目本身的属性, 若修改设备明细, 需要调用其他接口对设备逐个进行修改.
@@ -320,20 +307,34 @@ class ProjectPlanView(BaseAPIView):
 
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
         old_project = self.get_object_or_404(project_id, ProjectPlan)
+
         self.check_object_any_permissions(req, hospital)
-        if not old_project.is_unstarted():
-            return resp.failed('项目已启动或已完成, 无法修改')
+        if old_project.project_cate == PRO_CATE_HARDWARE:
+            if not old_project.is_unstarted():
+                return resp.failed('项目已启动或已完成, 无法修改')
 
-        form = ProjectPlanUpdateForm(old_project, data=req.data)
-        if not form.is_valid():
-            return resp.form_err(form.errors)
-        new_project = form.save()
-        if not new_project:
-            return resp.failed('项目修改失败')
+            form = ProjectPlanUpdateForm(old_project, data=req.data)
+            if not form.is_valid():
+                return resp.form_err(form.errors)
+            new_project = form.save()
+            if not new_project:
+                return resp.failed('项目修改失败')
 
-        return resp.serialize_response(
-            new_project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
-        )
+            return resp.serialize_response(
+                new_project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
+            )
+        else:
+            if not old_project.is_unstarted():
+                return resp.failed('项目已启动或完成，无法修改')
+            form = ProjectPlanUpdateForm(old_project, data=req.data)
+            if not form.is_valid():
+                return resp.form_err(form.errors)
+            new_project = form.save()
+            if not new_project:
+                return resp.failed('项目修改失败')
+            return resp.serialize_response(
+                new_project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
+            )
 
     def delete(self, req, project_id):
         """

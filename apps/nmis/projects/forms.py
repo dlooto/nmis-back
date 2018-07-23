@@ -8,10 +8,10 @@ import copy
 import logging
 from itertools import chain
 from base.forms import BaseForm
-from nmis.devices.models import OrderedDevice
+from nmis.devices.models import OrderedDevice, SoftwareDevice
 from nmis.projects.models import ProjectPlan, ProjectFlow
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
-    PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE
+    PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE
 from nmis.hospitals.models import Staff
 logs = logging.getLogger(__name__)
 
@@ -67,14 +67,14 @@ class ProjectPlanCreateForm(BaseForm):
             if not self.data.get('hardware_devices'):
                 self.update_errors('hardware_devices', 'hardware_devices_error')
                 return False
-            return check_devices_list(self, self.data.get('hardware_devices'))
+            return check_hardware_devices_list(self, self.data.get('hardware_devices'))
         else:
             # 信息化项目设备校验
             software_devices = self.data.get('software_devices')        # 信息化项目软件设备
 
             # 信息化项目存在硬件设备申请需对硬件设备字段进行校验
             if self.data.get('hardware_devices'):
-                return check_devices_list(self, self.data.get('hardware_devices'))
+                return check_hardware_devices_list(self, self.data.get('hardware_devices'))
 
             # 信息化项目存在软件设备申请需对软件设备字段进行校验
             if software_devices:
@@ -119,27 +119,15 @@ class ProjectPlanUpdateForm(BaseForm):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.old_project = old_project
         self.init_err_codes()
-        self.pre_data = self.init_data()
-
-    def init_data(self):
-        pre_data = {}
-        if self.data.get('project_title'):
-            pre_data['title'] = self.data.get('project_title').strip()
-        if self.data.get('purpose'):
-            pre_data['purpose'] = self.data.get('purpose').strip()
-        if self.data.get('handing_type'):
-            pre_data['handing_type'] = self.data.get('handing_type').strip()
-        if self.data.get('added_devices'):
-            pre_data['added_devices'] = self.data.get('added_devices')
-        if self.data.get('updated_devices'):
-            pre_data['updated_devices'] = self.data.get('updated_devices')
-        return pre_data
 
     def init_err_codes(self):
         self.ERR_CODES.update({
             'project_title_error': '项目名称输入错误',
             'purpose_error': '用途不能为空或数据错误',
             'handing_type_error': '办理方式数据错误',
+            'software_name_error': '软件名称为空或数据错误',
+            'software_purpose_error': '软件用途为空或数据错误',
+            'software_id_error': '更新设备ID不存在'
         })
 
     def is_valid(self):
@@ -151,7 +139,7 @@ class ProjectPlanUpdateForm(BaseForm):
         return True
 
     def check_handing_type(self):
-        handing_type = self.pre_data.get('handing_type')
+        handing_type = self.data.get('handing_type')
         if not handing_type:
             self.update_errors('handing_type', 'handing_type_error')
             return False
@@ -163,25 +151,78 @@ class ProjectPlanUpdateForm(BaseForm):
         return True
 
     def check_devices(self):
-        added_devices = self.pre_data.get('added_devices')
-        updated_devices = self.pre_data.get('updated_devices')
-        if added_devices and len(added_devices) > 0:
-            if not check_devices_list(self, added_devices):
+        hardware_added_devices = self.data.get('hardware_added_devices')
+        hardware_updated_devices = self.data.get('hardware_updated_devices')
+
+        if hardware_added_devices:
+            if not check_hardware_devices_list(self, hardware_added_devices):
                 return False
-        if updated_devices and len(updated_devices) > 0:
-            if not check_devices_list(self, updated_devices):
+
+        if hardware_updated_devices:
+            if not check_hardware_devices_list(self, hardware_updated_devices):
                 return False
+        # 信息化项目校验
+        if self.old_project.project_cate == PRO_CATE_SOFTWARE:
+            software_added_devices = self.data.get('software_added_devices')
+            software_updated_devices = self.data.get('software_updated_devices')
+
+            if software_added_devices:
+                for device in software_added_devices:
+                    if not device.get('name'):
+                        self.update_errors('software_name', 'software_name_error')
+                        return False
+                    if not device.get('purpose'):
+                        self.update_errors('software_purpose', 'software_purpose_error')
+                        return False
+            if software_updated_devices:
+                for device in software_updated_devices:
+                    software = SoftwareDevice.objects.filter(id=device.get('id'))[0]
+                    if not software:
+                        self.update_errors('software_id', 'software_id_error')
+                        return False
+                    if not device.get('name'):
+                        self.update_errors('software_name', 'software_name_error')
+                        return False
+                    if not device.get('purpose'):
+                        self.update_errors('software_purpose', 'software_purpose_error')
+                        return False
         return True
 
     def save(self):
-        if self.pre_data['handing_type'] == PRO_HANDING_TYPE_SELF:
+
+        pro_data = {}
+        if self.data.get('project_title'):
+            pro_data['title'] = self.data.get('project_title').strip()
+
+        if self.data.get('purpose'):
+            pro_data['purpose'] = self.data.get('purpose').strip()
+
+        if self.data.get('handing_type'):
+            pro_data['handing_type'] = self.data.get('handing_type').strip()
+
+        if self.data.get('hardware_added_devices'):
+            pro_data['hardware_added_devices'] = self.data.get('hardware_added_devices')
+
+        if self.data.get('hardware_updated_devices'):
+            pro_data['hardware_updated_devices'] = self.data.get(
+                'hardware_updated_devices')
+
+        if self.data.get('software_added_devices'):
+            pro_data['software_added_devices'] = self.data.get('software_added_devices')
+
+        if self.data.get('software_updated_devices'):
+            pro_data['software_updated_devices'] = self.data.get(
+                'software_updated_devices')
+
+        if self.data.get('handing_type') == PRO_HANDING_TYPE_SELF:
             self.old_project.performer = self.old_project.creator
-        if self.pre_data['handing_type'] == PRO_HANDING_TYPE_AGENT:
+        if self.data.get('handing_type') == PRO_HANDING_TYPE_AGENT:
             self.old_project.performer = None
-        return ProjectPlan.objects.update_project(self.old_project, **self.pre_data)
+
+        return ProjectPlan.objects.update_project(self.old_project, **pro_data)
 
 
-def check_devices_list(baseForm, devices_list):
+def check_hardware_devices_list(baseForm, devices_list):
     """
     校验设备信息
 

@@ -146,8 +146,6 @@ class ProjectPlanManager(BaseManager):
         """
         TODO:
         :param old_project:
-        :param update_devices: 变更的设备明细, 列表数据, 列表元素类型为dict
-        :param added_devices: 新添加的设备明细, 列表数据, 列表元素类型为dict
         :return:
         """
 
@@ -163,28 +161,50 @@ class ProjectPlanManager(BaseManager):
                 if pro_base_data:
                     new_project = old_project.update(pro_base_data)
 
-                if data.get('added_devices'):
-                    # 批量添加设备明细
-                    ordered_device_list = []
-                    for device_data in data.get('added_devices'):
-                        ordered_device_list.append(
+                if data.get('hardware_added_devices'):
+                    # 批量添加新增的医疗器械设备明细
+                    hardware_device_list = []
+                    for device_data in data.get('hardware_added_devices'):
+                        hardware_device_list.append(
                             OrderedDevice(project=old_project, **device_data)
                         )
-                    OrderedDevice.objects.bulk_create(ordered_device_list)
-                if data.get('updated_devices'):
-                    # 批量修改设备明细
-                    updated_devices = sorted(data.get('updated_devices'), key=lambda item: item['id'])
-                    updated_device_ids = [update_device['id'] for update_device in updated_devices]
+                    OrderedDevice.objects.bulk_create(hardware_device_list)
 
-                    devices = OrderedDevice.objects.filter(pk__in=updated_device_ids).order_by("id")
+                if data.get('hardware_updated_devices'):
+                    # 批量修改医疗器械设备明细
+                    hardware_updated_device_list = sorted(data.get('hardware_updated_devices'), key=lambda item: item['id'])
+                    hardware_updated_id_list = [update_device['id'] for update_device in hardware_updated_device_list]
+
+                    devices = OrderedDevice.objects.filter(pk__in=hardware_updated_id_list).order_by("id")
                     for i in range(len(devices)):
-                        devices[i].name = updated_devices[i].get('name')
-                        devices[i].num = updated_devices[i].get('num')
-                        devices[i].planned_price = updated_devices[i].get('planned_price')
-                        devices[i].measure = updated_devices[i].get('measure')
-                        devices[i].purpose = updated_devices[i].get('purpose')
-                        devices[i].type_spec = updated_devices[i].get('type_spec')
+                        devices[i].name = hardware_updated_device_list[i].get('name')
+                        devices[i].num = hardware_updated_device_list[i].get('num')
+                        devices[i].planned_price = hardware_updated_device_list[i].get('planned_price')
+                        devices[i].measure = hardware_updated_device_list[i].get('measure')
+                        devices[i].purpose = hardware_updated_device_list[i].get('purpose')
+                        devices[i].type_spec = hardware_updated_device_list[i].get('type_spec')
                     helper.bulk_update(devices)
+
+                if old_project.project_cate == PRO_CATE_SOFTWARE:
+                    if data.get('software_added_devices'):
+                        # 批量添加新增的信息化设备明细
+                        software_added_device_list = []
+                        for device_data in data.get('software_added_devices'):
+                            software_added_device_list.append(
+                                SoftwareDevice(project=old_project, **device_data)
+                            )
+                        SoftwareDevice.objects.bulk_create(software_added_device_list)
+                    if data.get('software_updated_devices'):
+                        # 批量修改信息化设备
+                        software_update_device_list = sorted(
+                            data.get('software_updated_devices'), key=lambda item: item['id']
+                        )
+                        software_updated_id_list = [software['id'] for software in software_update_device_list]
+                        software_old_device_list = SoftwareDevice.objects.filter(pk__in=software_updated_id_list).order_by('id')
+                        for i in range(len(software_old_device_list)):
+                            software_old_device_list[i].name = software_update_device_list[i].get('name')
+                            software_old_device_list[i].purpose = software_update_device_list[i].get('purpose')
+                        helper.bulk_update(software_old_device_list)
         except Exception as e:
             logger.exception(e)
             return None

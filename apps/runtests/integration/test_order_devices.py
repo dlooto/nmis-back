@@ -32,7 +32,7 @@ class OrderDeviceApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.login_with_username(self.user)
         project = self.project
 
-        ordered_devices = project.get_ordered_devices()
+        ordered_devices = project.get_hardware_devices()
         device_count = len(ordered_devices)
 
         data = {
@@ -49,7 +49,7 @@ class OrderDeviceApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         result_device = response.get("device")
         self.assertIsNotNone(result_device)
-        self.assertEquals(device_count+1, len(project.get_ordered_devices()))
+        self.assertEquals(device_count+1, len(project.get_hardware_devices()))
         self.assertEquals(result_device.get('name'), data.get('name'))
 
     def test_ordered_device_update(self):
@@ -59,7 +59,7 @@ class OrderDeviceApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.login_with_username(self.user)
 
         project = self.project
-        old_device = project.get_ordered_devices()[0]
+        old_device = project.get_hardware_devices()[0]
 
         data = {
             "name": "血压测试仪_%s" % self.get_random_suffix(),
@@ -83,9 +83,9 @@ class OrderDeviceApiTestCase(BaseTestCase, ProjectPlanMixin):
         """
         self.login_with_username(self.user)
         project = self.project
-        old_device = project.get_ordered_devices()[0]
-        devices_count = len(project.get_ordered_devices())
+        old_device = project.get_hardware_devices()[0]
+        devices_count = len(project.get_hardware_devices())
 
         response = self.delete(self.one_device_api.format(project.id, old_device.id))
         self.assert_response_success(response)
-        self.assertEquals(devices_count-1, len(project.get_ordered_devices()))
+        self.assertEquals(devices_count-1, len(project.get_hardware_devices()))
