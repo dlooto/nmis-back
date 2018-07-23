@@ -9,15 +9,18 @@ Users view
 
 import logging
 
+from django.db import transaction
 from rest_framework.permissions import AllowAny
 
 from base import codes
 from base import resp
 from base.authtoken import CustomToken
-from base.common.decorators import check_not_null
+from base.common.decorators import check_not_null, check_params_not_null
 from base.resp import LeanResponse
 from base.views import BaseAPIView
 from django.contrib.auth import logout as system_logout
+
+from nmis.hospitals.models import Role, Department
 from users.forms import UserSignupForm, UserLoginForm, CheckEmailForm
 from users.models import User, ResetRecord
 from utils.eggs import get_email_host_url
@@ -270,7 +273,41 @@ def append_extra_info(user, request, response):
     if not profile:
         return resp.failed(u'员工信息不存在，请联系管理员')
     response.data.update({'staff': resp.serialize_data(profile)})
+    roles = user.get_roles()
+    permissions = user.get_permissions()
+    response.data.update({
+        'roles': resp.serialize_data(roles, srl_cls_name='SimpleRoleSerializer'),
+        "permissions":  resp.serialize_data(permissions, srl_cls_name='SimplePermissionSerializer')})
 
     # 设置登录成功后的跳转页面, 默认到index页
     response.data.update({'next': request.data.get('next', 'index')})
     return response
+
+
+class AssignRolesDeptDomains(BaseAPIView):
+    """
+    给用户分配角色及权限域
+    TODO: 添加校验等处理
+    """
+    permission_classes = (AllowAny,)
+
+    @check_params_not_null(['role_ids', 'dept_domain_ids', 'user_ids'])
+    def post(self, req):
+        role_ids = req.data.get("role_ids")
+        dept_domain_ids = req.data.get("dept_domain_ids")
+        user_ids = req.data.get("user_ids")
+
+        users = User.objects.filter(id__in=user_ids)
+        roles = Role.objects.filter(id__in=role_ids)
+        depts = Department.objects.filter(id__in=dept_domain_ids)
+        try:
+            with transaction.atomic():
+                for role in roles:
+                    role.users.set(users)
+                    role.dept_domains.set(depts)
+                    role.cache()
+                return resp.ok("操作成功")
+        except Exception as e:
+            logs.exception(e)
+            return resp.failed("操作失败")
+

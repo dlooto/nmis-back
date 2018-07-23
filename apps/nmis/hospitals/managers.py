@@ -122,3 +122,15 @@ class GroupManager(BaseManager):
         if commit:
             group.save()
         return group
+
+
+class RoleManager(BaseManager):
+
+    def create_role(self, data, commit=True, **kwargs):
+        role = self.model(name=data.get("name"), codename=data.get("codename"), desc=data.get('desc'), **kwargs)
+        if commit:
+            role.save()
+        logs.info(data.get("permissions"))
+        role.permissions.set(data.get("permissions"))
+        role.cache()
+        return role

@@ -10,8 +10,9 @@ import logging
 
 from rest_framework import serializers
 
+from base import resp
 from base.serializers import BaseModelSerializer
-from nmis.hospitals.models import Department, Hospital, Staff, Group
+from nmis.hospitals.models import Department, Hospital, Staff, Group, Role
 
 logs = logging.getLogger(__name__)
 
@@ -48,6 +49,16 @@ class DepartmentStaffsCountSerializer(BaseModelSerializer):
 
     def _get_staff_count(self, obj):
         return Staff.objects.get_count_by_dept(obj.organ, obj)
+
+
+class SimpleDepartmentSerializer(BaseModelSerializer):
+    """
+    返回科室对象,只包含id和name
+    """
+    class Meta:
+        model = Department
+        fields = ('id',  'name')
+
 
 
 class StaffSerializer(BaseModelSerializer):
@@ -99,7 +110,66 @@ class GroupSerializer(BaseModelSerializer):
     class Meta:
         model = Group
         fields = ('id', 'created_time', 'name', 'is_admin', 'desc', 'cate', 'organ_id',
-                  'organ_name', 'permissions')
+                  'organ_name',)
 
     def _get_organ_name(self, obj):
         return '' if not obj.organ else obj.organ.organ_name
+
+
+class PermissionSerializer(BaseModelSerializer):
+    """
+    权限序列化类.
+    TODO:暂时把group当做permission处理，后续改造为真正的Permission,要去掉is_admin
+    """
+    codename = serializers.SerializerMethodField('_get_codename')
+
+    class Meta:
+        model = Group
+        fields = ('id', 'name', 'codename', 'is_admin', 'desc',  'created_time')
+
+    def _get_codename(self, obj):
+        return obj.cate
+
+
+class SimplePermissionSerializer(BaseModelSerializer):
+    """
+    权限序列化类.
+    TODO:暂时把group当做permission处理，后续改造为真正的Permission,要去掉is_admin
+    """
+    codename = serializers.SerializerMethodField('_get_codename')
+
+    class Meta:
+        model = Group
+        fields = ('id', 'name', 'codename', 'is_admin')
+
+    def _get_codename(self, obj):
+        return obj.cate
+
+
+class ChunkRoleSerializer(BaseModelSerializer):
+    permissions = PermissionSerializer(many=True, read_only=True)
+    dept_domains = SimpleDepartmentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Role
+        fields = ('id', 'name', 'codename',  'desc', 'permissions', 'dept_domains', 'created_time')
+
+
+class RoleSerializer(BaseModelSerializer):
+    permissions = SimplePermissionSerializer(many=True, read_only=True)
+    dept_domains = SimpleDepartmentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Role
+        fields = ('id', 'name', 'codename', 'desc', 'permissions', 'dept_domains', 'created_time')
+
+
+class SimpleRoleSerializer(BaseModelSerializer):
+
+    class Meta:
+        model = Role
+        fields = ('id', 'name', 'codename', )
+
+
+
+
