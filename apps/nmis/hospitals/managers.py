@@ -128,9 +128,12 @@ class RoleManager(BaseManager):
 
     def create_role(self, data, commit=True, **kwargs):
         role = self.model(name=data.get("name"), codename=data.get("codename"), desc=data.get('desc'), **kwargs)
-        if commit:
-            role.save()
-        logs.info(data.get("permissions"))
-        role.permissions.set(data.get("permissions"))
-        role.cache()
-        return role
+        try:
+            if commit:
+                role.save()
+                role.permissions.set(data.get("permissions"))
+                role.cache()
+            return role
+        except Exception as e:
+            logs.exception(e)
+            return None

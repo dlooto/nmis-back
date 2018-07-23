@@ -261,4 +261,3 @@ class CheckEmailForm(BaseForm):
             return False
 
         return True
-
