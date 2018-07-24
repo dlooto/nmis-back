@@ -310,8 +310,9 @@ class AssignRolesDeptDomains(BaseAPIView):
                 for user in users:
                     user.roles.set(roles)
                     user.cache()
+
                 for role in roles:
-                    role.dept_domains.set(depts)
+                    role.get_user_role_ships().dept_domains.set(depts)
                     role.cache()
                 return resp.ok("操作成功")
         except Exception as e:

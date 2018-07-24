@@ -211,6 +211,3 @@ class ResetRecord(UserSecureRecord):
     """帐号重置key相关信息"""
     pass
 
-
-
-

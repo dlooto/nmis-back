@@ -8,6 +8,7 @@ from copy import deepcopy
 
 from django.urls import reverse
 
+from nmis.hospitals.models import Role, Group
 from users.forms import is_valid_password
 
 from runtests import BaseTestCase
@@ -180,13 +181,25 @@ class UserTestCase(BaseTestCase):
 #         self.assertTrue(token.is_expired())
 #         token.refresh(token)
 
-
+#
 # class RoleTestCase(BaseTestCase):
 #
 #     def test_assign_role_dept_domains(self):
 #         self.login_with_username(self.user)
-#         user = self.create_user_with_username('测试人员00001', '123456', active=True)
-#         self.create_staff(user, self.organ, self.dept, '测试staff00001')
+#         user1 = self.create_user_with_username('测试用户0001', '123456', active=True)
+#         staff1 = self.create_staff(user1, self.organ, self.dept, '测试员工0001')
+#         dept1 = self.create_department(self.organ, dept_name='测试部门0001')
+#         user2 = self.create_user_with_username('测试用户0001', '123456', active=True)
+#         staff2 = self.create_staff(user2, self.organ, self.dept, '测试员工0001')
+#         dept2 = self.create_department(self.organ, dept_name='测试部门0001')
+#
+#         gourps = Group.objects.all()
+#         for g in gourps:
+#
+#         permissions = []
+#         for
+#         role1 = Role.objects.create_role(name='测试角色0001',)
+#
 #         self.organ.get_admin_group()
 
 
