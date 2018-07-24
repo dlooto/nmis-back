@@ -14,7 +14,7 @@ from base.common.decorators import (
 
 from base.views import BaseAPIView
 
-from nmis.devices.models import OrderedDevice
+from nmis.devices.models import OrderedDevice, SoftwareDevice
 from nmis.hospitals.models import Hospital, Staff, Department
 from nmis.hospitals.permissions import (
     HospitalStaffPermission, IsHospitalAdmin, ProjectDispatcherPermission
@@ -461,9 +461,15 @@ class ProjectDeviceView(BaseAPIView):
         updated_device = form.save()
         return resp.serialize_response(updated_device, results_name="device")
 
-    def delete(self, req, project_id, device_id):
-        """ 删除存在的设备 """
-
+    @check_params_not_null(['device_type'])
+    def post(self, req, project_id, device_id):
+        """
+        删除申请项目中的相关硬件/软件设备信息（如果项目已在使用当中，则无法删除该设备）
+        :param req:
+        :param project_id: 被删除设备的项目ID
+        :param device_id: 被删除设备的ID
+        :return:
+        """
         project = self.get_object_or_404(project_id, ProjectPlan)
         if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
             self.check_object_any_permissions(req, project.creator.organ)
@@ -471,8 +477,15 @@ class ProjectDeviceView(BaseAPIView):
         if not project.is_unstarted():
             return resp.failed('项目已启动或已完成, 无法修改')
 
-        device = self.get_object_or_404(device_id, OrderedDevice)
+        if req.data.get('device_type') not in ["HW", "SW"]:
+            return resp.failed('不存在的设备类型')
+
+        if req.data.get('device_type') == "HW":
+            device = self.get_object_or_404(device_id, OrderedDevice)
+        else:
+            device = self.get_object_or_404(device_id, SoftwareDevice)
         try:
+            device.clear_cache()
             device.delete()
             return resp.ok("操作成功")
         except Exception as e:

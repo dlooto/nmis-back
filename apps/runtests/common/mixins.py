@@ -76,7 +76,7 @@ class ProjectPlanMixin(object):
 
         :param creator: 项目创建者
         :param dept: 项目归属科室
-        :param project_cate: 项目类型（HW：医疗器械项目，SW：信息化项目）
+        :param project_cate: 项目类型（HW：医疗器械项目，SW：信息化项目，默认为医疗器械项目）
         :param title: 项目名称
         :param handing_type: 项目办理类型
         :param ordered_devices: 硬件设备
