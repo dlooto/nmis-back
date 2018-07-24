@@ -345,5 +345,34 @@ class StaffAPITestCase(BaseTestCase):
         self.assert_response_success(response)
 
 
+class RoleAPITestCase(BaseTestCase):
+
+    def test_add_roles(self):
+        """
+        测试添加角色
+        :return:
+        """
+        api = '/api/v1/hospitals/roles/create'
+        self.login_with_username(self.user)
+        role_data = {
+            'name': '测试角色001',
+            'desc': '描述',
+            'permissions': [
+                self.organ.get_admin_group().id,
+            ]
+        }
+        response = self.post(api.format(), data=role_data)
+        self.assert_response_success(response)
+        role = response.get('role')
+        self.assertEqual(role.get('name'), role_data.get('name'))
+        self.assertEqual(role.get('desc'), role_data.get('desc'))
+        self.assertEqual(role.get('permissions')[0].get('id'), role_data.get('permissions')[0])
+
+    # def test_view_role(self):
+    #     api = '/api/v1/hospitals/roles/{0}'
+
+
+
+
 
 
