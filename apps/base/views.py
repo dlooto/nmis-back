@@ -33,7 +33,7 @@ class BaseAPIView(GenericAPIView):
                 return
         self.permission_denied(request, message=u'无操作权限')
 
-    def get_user_role_dept_domains(self, request, perm_keys, allOrAny="ALL", ):
+    def get_user_role_dept_domains(self, request, perm_keys, allOrAny="ALL" ):
         """
         获取用户可操作的权限域（部门ID）
         :param request:

@@ -85,7 +85,11 @@ class OrderDeviceApiTestCase(BaseTestCase, ProjectPlanMixin):
         project = self.project
         old_device = project.get_hardware_devices()[0]
         devices_count = len(project.get_hardware_devices())
-
-        response = self.delete(self.one_device_api.format(project.id, old_device.id))
+        device_type = {
+            "device_type": "HW"
+        }
+        response = self.delete(
+            self.one_device_api.format(project.id, old_device.id), data=device_type
+        )
         self.assert_response_success(response)
         self.assertEquals(devices_count-1, len(project.get_hardware_devices()))
