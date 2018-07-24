@@ -88,7 +88,7 @@ class OrderDeviceApiTestCase(BaseTestCase, ProjectPlanMixin):
         device_type = {
             "device_type": "HW"
         }
-        response = self.delete(
+        response = self.post(
             self.one_device_api.format(project.id, old_device.id), data=device_type
         )
         self.assert_response_success(response)

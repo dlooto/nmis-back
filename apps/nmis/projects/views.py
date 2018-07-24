@@ -462,7 +462,7 @@ class ProjectDeviceView(BaseAPIView):
         return resp.serialize_response(updated_device, results_name="device")
 
     @check_params_not_null(['device_type'])
-    def delete(self, req, project_id, device_id):
+    def post(self, req, project_id, device_id):
         """
         删除申请项目中的相关硬件/软件设备信息（如果项目已在使用当中，则无法删除该设备）
         :param req:
