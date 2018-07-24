@@ -307,8 +307,10 @@ class AssignRolesDeptDomains(BaseAPIView):
             return resp.failed('含有不存在的用户')
         try:
             with transaction.atomic():
+                for user in users:
+                    user.roles.set(roles)
+                    user.cache()
                 for role in roles:
-                    role.users.set(users)
                     role.dept_domains.set(depts)
                     role.cache()
                 return resp.ok("操作成功")
