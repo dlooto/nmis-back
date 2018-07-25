@@ -6,7 +6,7 @@
 # 
 
 import logging
-
+from collections import OrderedDict
 from base import resp
 from base.common.decorators import (
     check_id, check_id_list, check_params_not_null, check_params_not_all_null
@@ -28,6 +28,7 @@ from nmis.projects.forms import (
     ProjectFlowUpdateForm, )
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
 from nmis.projects.permissions import ProjectPerformerPermission
+from nmis.projects.serializers import ProjectStatusCountSerializers
 
 from nmis.hospitals.consts import (
     GROUP_CATE_PROJECT_APPROVER,
@@ -53,10 +54,10 @@ class ProjectPlanListView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, HospitalStaffPermission, ProjectDispatcherPermission)
 
-    projects_status_counts = 'status_counts'  # 项目数量块标示
-    project_sd = 'SD'  # 进行中项目数量
-    project_pe = 'PE'  # 待启动项目数量
-    project_do = 'DO'  # 已完成项目数量
+    projects_status_count = 'project_status_count'  # 项目数量块标示
+    project_started_count = 'project_started_count'  # 进行中项目数量
+    project_pending_count = 'project_pending_count'  # 待启动项目数量
+    project_down_count = 'project_down_count'  # 已完成的项目数量
 
     @check_params_not_null(['organ_id', 'type'])
     def get(self, req):
@@ -164,11 +165,14 @@ class ProjectPlanListView(BaseAPIView):
             data['PE'] = 0
         if not data.get('DO'):
             data['DO'] = 0
-
-        return self.get_pages(
+        response = self.get_pages(
             result_projects, srl_cls_name='ChunkProjectPlanSerializer',
-            results_name='projects', **data
+            results_name='projects'
         )
+        response.data.update(
+            ProjectStatusCountSerializers().get_project_status_count(**data)
+        )
+        return response
 
 
 class ProjectPlanCreateView(BaseAPIView):

@@ -7,6 +7,7 @@
 
 import logging
 
+from collections import OrderedDict
 
 from rest_framework import serializers
 
@@ -163,6 +164,7 @@ class MilestoneSerializer(BaseModelSerializer):
             'id', 'title', 'index', 'flow_id', 'desc', 'created_time',
         )
 
+
 class ProjectMilestoneRecordSerializer(BaseModelSerializer):
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
@@ -180,3 +182,28 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
     def _get_milestone_index(self, obj):
         stone = Milestone.objects.get_cached(obj.milestone_id)
         return stone.index if stone else -1
+
+
+class ProjectStatusCountSerializers(BaseModelSerializer):
+    """
+    返回项目各状态条数数据结构，该结构添加到最终的json响应结果里
+    :return: 返回数据形如:
+        "project_status_count": {
+            "project_pending_count": 17,    项目待启动数量
+            "project_started_count": 0,     项目进行中数量
+            "project_down_count": 0         项目完成数量
+        }
+    """
+    projects_status_count = 'project_status_count'  # 项目数量块标示
+    project_started_count = 'project_started_count'  # 进行中项目数量
+    project_pending_count = 'project_pending_count'  # 待启动项目数量
+    project_down_count = 'project_down_count'  # 已完成的项目数量
+
+    def get_project_status_count(self, **data):
+        return {
+            self.projects_status_count: OrderedDict([
+                (self.project_pending_count, data.get('PE')),
+                (self.project_started_count, data.get('SD')),
+                (self.project_down_count, data.get('DO'))
+                ])
+        }

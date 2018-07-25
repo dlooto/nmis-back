@@ -74,7 +74,7 @@ class ProjectPlanManager(BaseManager):
         """
         from django.db.models import Q
 
-        query_set = self.filter(related_dept__organ=organ, performer=None)
+        query_set = self.filter(related_dept__organ=organ, performer=None).order_by('id')
         if project_title or creators:
             query_set = query_set.filter(
                 Q(title__contains=project_title) | Q(creator__in=creators)
