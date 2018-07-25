@@ -142,7 +142,7 @@ class BaseTestCase(TestCase, TestCaseDataUtils):
         :rtype: dict
         """
         response = getattr(self.client, method)(*args, **kwargs)
-        return json.loads(response.content)
+        return json.loads(response.content.decode('utf-8'))
 
     ########################################################
     #                       请求方法
