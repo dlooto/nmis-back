@@ -12,7 +12,7 @@ from rest_framework import serializers
 
 from base import resp
 from base.serializers import BaseModelSerializer
-from nmis.hospitals.models import Department, Hospital, Staff, Group, Role
+from nmis.hospitals.models import Department, Hospital, Staff, Group, Role, UserRoleShip
 
 logs = logging.getLogger(__name__)
 
@@ -104,6 +104,9 @@ class StaffSerializer(BaseModelSerializer):
 
     def _get_user_roles(self, obj):
         roles = obj.user.get_roles()
+        for role in roles:
+            dept_domains = role.get_user_role_dept_domains(obj.user)
+            setattr(role, 'dept_domains', dept_domains)
         return resp.serialize_data(roles, srl_cls_name='RoleSerializer')
 
 
@@ -147,7 +150,6 @@ class SimpleStaffSerializer(BaseModelSerializer):
 
     def _get_dept_name(self, obj):
         return '' if not obj.dept else obj.dept.name
-
 
 
 class GroupSerializer(BaseModelSerializer):
@@ -195,17 +197,15 @@ class SimplePermissionSerializer(BaseModelSerializer):
 
 class ChunkRoleSerializer(BaseModelSerializer):
     permissions = PermissionSerializer(many=True, read_only=True)
-    dept_domains = SimpleDepartmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Role
-        fields = ('id', 'name', 'codename',  'desc', 'permissions', 'dept_domains', 'created_time')
+        fields = ('id', 'name', 'codename',  'desc', 'permissions', 'created_time')
 
 
 class RoleSerializer(BaseModelSerializer):
     permissions = SimplePermissionSerializer(many=True, read_only=True)
     dept_domains = SimpleDepartmentSerializer(many=True, read_only=True)
-
     class Meta:
         model = Role
         fields = ('id', 'name', 'codename', 'desc', 'permissions', 'dept_domains', 'created_time')

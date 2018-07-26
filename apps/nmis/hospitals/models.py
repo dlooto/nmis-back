@@ -258,15 +258,17 @@ class Role(BaseModel):
     codename = models.CharField('角色代码', max_length=100, unique=False, null=True, blank=True, default='')
     cate = models.CharField('类别', max_length=4, choices=GROUP_CATE_CHOICES,
                             null=False, blank=True)
-    permissions = models.ManyToManyField(Group, verbose_name='权限集',
-                                         related_name="roles", related_query_name='role',
-                                         blank=True)
+    permissions = models.ManyToManyField(
+        Group, verbose_name='权限集',
+        related_name="roles", related_query_name='role',
+        blank=True
+    )
     desc = models.CharField('描述', max_length=100, null=True, blank=True, default='')
-    users = models.ManyToManyField(User, verbose_name='所属用户集合',
-                                   related_name="roles", related_query_name='role', blank=True)
-    dept_domains = models.ManyToManyField(
-        Department, verbose_name='所属部门集合',
-        related_name="roles", related_query_name='role', blank=True
+    users = models.ManyToManyField(
+        User, verbose_name='角色所属用户集',
+        through='hospitals.UserRoleShip', through_fields=('role', 'user'),
+        related_name="roles", related_query_name='role',
+        blank=True
     )
     objects = RoleManager()
 
@@ -295,12 +297,38 @@ class Role(BaseModel):
         """获取去角色下的权限"""
         return self.permissions.all()
 
-    def get_dept_domains(self):
+    def get_user_role_ships(self, user=None):
         """
-        获取权限域
-        :return: 返回拥有该角色的部门List
+        获取用户角色关系记录
+        :param user:
+        :return:
         """
-        return self.departments.all()
+        return UserRoleShip.objects.filter(user=user, role=self).all()
+
+    def get_user_role_dept_domains(self, user):
+        """
+        获取用户当前角色可操作的部门域
+        :param user:
+        :return:
+        """
+        if not user:
+            return None
+        return UserRoleShip.objects.filter(user=user, role=self).first().dept_domains.all()
 
 
+class UserRoleShip(BaseModel):
+    user = models.ForeignKey('users.User', verbose_name='用户', on_delete=models.CASCADE)
+    role = models.ForeignKey('hospitals.Role', verbose_name='角色', on_delete=models.CASCADE)
+    dept_domains = models.ManyToManyField(
+        Department, verbose_name='用户当前角色可操作部门域集合',
+        related_name="UserRoleShips", related_query_name='UserRoleShip', blank=True
+    )
 
+    class Meta:
+        verbose_name = '用户角色关系'
+        verbose_name_plural = '用户角色关系'
+        unique_together = ('user', 'role')
+        db_table = 'perm_user_roles'
+
+    def __str__(self):
+        return '%s %s %s' % (self.user_id, self.role_id)
