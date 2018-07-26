@@ -137,3 +137,9 @@ class RoleManager(BaseManager):
         except Exception as e:
             logs.exception(e)
             return None
+
+
+class UserRoleShipManager(BaseManager):
+
+    def create_user_role_ship(self):
+        pass

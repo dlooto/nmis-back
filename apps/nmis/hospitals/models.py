@@ -297,15 +297,23 @@ class Role(BaseModel):
         """获取去角色下的权限"""
         return self.permissions.all()
 
-    def get_dept_domains(self):
+    def get_user_role_ships(self, user=None):
         """
-        获取权限域
-        :return: 返回拥有该角色的部门List
+        获取用户角色关系记录
+        :param user:
+        :return:
         """
-        return self.departments.all()
+        return UserRoleShip.objects.filter(user=user, role=self).all()
 
-    def get_user_role_ships(self):
-        return UserRoleShip.objects.get(role=self)
+    def get_user_role_dept_domains(self, user):
+        """
+        获取用户当前角色可操作的部门域
+        :param user:
+        :return:
+        """
+        if not user:
+            return None
+        return UserRoleShip.objects.filter(user=user, role=self).first().dept_domains.all()
 
 
 class UserRoleShip(BaseModel):
@@ -320,7 +328,7 @@ class UserRoleShip(BaseModel):
         verbose_name = '用户角色关系'
         verbose_name_plural = '用户角色关系'
         unique_together = ('user', 'role')
-        db_table = 'perm_user_role'
+        db_table = 'perm_user_roles'
 
     def __str__(self):
         return '%s %s %s' % (self.user_id, self.role_id)
