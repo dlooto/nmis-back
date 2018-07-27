@@ -17,6 +17,8 @@ from base.common.param_utils import get_id_list
 from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
+
+from users.models import User
 from utils.files import ExcelBasedOXL
 
 from base import resp
