@@ -54,11 +54,6 @@ class ProjectPlanListView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, HospitalStaffPermission, ProjectDispatcherPermission)
 
-    projects_status_count = 'project_status_count'  # 项目数量块标示
-    project_started_count = 'project_started_count'  # 进行中项目数量
-    project_pending_count = 'project_pending_count'  # 待启动项目数量
-    project_down_count = 'project_down_count'  # 已完成的项目数量
-
     @check_params_not_null(['organ_id', 'type'])
     def get(self, req):
         """
@@ -84,7 +79,6 @@ class ProjectPlanListView(BaseAPIView):
         staff = None
         if search_key:
             staff = Staff.objects.get_by_name(hospital, search_key)
-        status_counts = None
         if action_type == 'undispatch':
             """
             所有待分配的项目列表，带筛选

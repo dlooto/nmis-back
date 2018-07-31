@@ -59,7 +59,7 @@ class Hospital(BaseOrgan):
         """
         返回科室所有列表
         """
-        return Department.objects.filter(organ=self)
+        return Department.objects.filter(organ=self).order_by('id')
 
     def add_dept(self, dept):
         """

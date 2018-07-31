@@ -559,17 +559,6 @@ class DepartmentCreateForm(BaseForm):
         # desc = self.data.get('desc')
         return True
 
-    def check_attri(self):
-        attri = self.data.get('attri')
-
-        # 验证科室属性是否存在DPT_ATTRI_CHOICES中
-        # attri dict(DPT_ATTRI_CHOICES)
-
-        if not attri in dict(DPT_ATTRI_CHOICES).keys():
-            self.update_errors('attri', 'err_dept_attri')
-            return False
-        return True
-
     def save(self):
 
         dept_data = {

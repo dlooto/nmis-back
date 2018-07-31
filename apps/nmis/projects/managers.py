@@ -74,12 +74,12 @@ class ProjectPlanManager(BaseManager):
         """
         from django.db.models import Q
 
-        query_set = self.filter(related_dept__organ=organ, performer=None).order_by('id')
+        query_set = self.filter(related_dept__organ=organ, performer=None)
         if project_title or creators:
             query_set = query_set.filter(
                 Q(title__contains=project_title) | Q(creator__in=creators)
             ).distinct()
-        return query_set
+        return query_set.order_by('-created_time')
 
     def get_by_search_key(self, organ, project_title=None, performers=None, status=None):
         """
@@ -87,14 +87,14 @@ class ProjectPlanManager(BaseManager):
         """
         from django.db.models import Q
 
-        query_set = self.filter(related_dept__organ=organ).order_by('id')
+        query_set = self.filter(related_dept__organ=organ)
         if status:
             query_set = query_set.filter(status=status)
         if project_title or performers:
             query_set = query_set.filter(
                 Q(title__contains=project_title) | Q(performer__in=performers)
             ).distinct()
-        return query_set
+        return query_set.order_by('-created_time')
 
     def get_applied_projects(self, organ, staff, performers=None, project_title=None, status=None):
         """
@@ -105,7 +105,7 @@ class ProjectPlanManager(BaseManager):
         :param project_title: 项目名称
         :param status 项目状态
         """
-        query_set = self.filter(related_dept__organ=organ, creator=staff).order_by('id')
+        query_set = self.filter(related_dept__organ=organ, creator=staff)
         if status:
             query_set = query_set.filter(status=status)
         if performers or project_title:
@@ -113,7 +113,7 @@ class ProjectPlanManager(BaseManager):
             query_set = query_set.filter(
                 Q(title__contains=project_title) | Q(performer__in=performers)
             ).distinct()
-        return query_set
+        return query_set.order_by('-created_time')
 
     def get_my_performer_projects(self, organ, staff, creators=None, project_title=None, status=None):
         """
@@ -125,7 +125,7 @@ class ProjectPlanManager(BaseManager):
         :param status 项目状态
         :param
         """
-        query_set = self.filter(related_dept__organ=organ, performer=staff).order_by('id')
+        query_set = self.filter(related_dept__organ=organ, performer=staff)
         if status:
             query_set = query_set.filter(status=status)
         if project_title or creators:
@@ -133,9 +133,9 @@ class ProjectPlanManager(BaseManager):
             query_set = query_set.filter(
                 Q(title__contains=project_title) | Q(creator__in=creators)
             ).distinct()
-        return query_set
+        return query_set.order_by('-created_time')
 
-    def start_project(self,):
+    def start_project(self):
         """
         TODO:
         """
