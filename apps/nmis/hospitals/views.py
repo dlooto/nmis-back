@@ -272,8 +272,6 @@ class StaffListView(BaseAPIView):
         self.check_object_any_permissions(req, organ)
 
         staff_list = organ.get_staffs()
-        # return resp.serialize_response(staff_list, results_name='staffs')
-        # 分页查询员工列表
         return self.get_pages(staff_list, results_name='staffs')
 
 

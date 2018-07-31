@@ -68,13 +68,13 @@ class ProjectPlanManager(BaseManager):
     # def get_allot_projects(self):
     #     return self.filter(performer=None)
 
-    def get_undispatched_projects(self, organ, project_title=None, creators=None):
+    def get_undispatched_projects(self, dept_id_list, organ, project_title=None, creators=None):
         """
         按关键字(项目名/项目申请人)查询机构所有待分配的项目列表
         """
         from django.db.models import Q
 
-        query_set = self.filter(related_dept__organ=organ, performer=None)
+        query_set = self.filter(related_dept__organ=organ, related_dept_id__in=dept_id_list, performer=None)
         if project_title or creators:
             query_set = query_set.filter(
                 Q(title__contains=project_title) | Q(creator__in=creators)

@@ -103,7 +103,7 @@ class Hospital(BaseOrgan):
         返回机构的员工列表
         :param dept: 科室, Department object
         """
-        staffs_queryset = Staff.objects.filter(organ=self)
+        staffs_queryset = Staff.objects.filter(organ=self).order_by('id')
         return staffs_queryset.filter(dept=dept) if dept else staffs_queryset
 
     ################################################

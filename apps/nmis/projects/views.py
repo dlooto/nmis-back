@@ -88,9 +88,13 @@ class ProjectPlanListView(BaseAPIView):
             # 判断当前员工是否为项目分配者权限，否则检查是否为管理权限
             if not (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER):
                 self.check_object_permissions(req, hospital)
+            # 获取权限组ID
+            group_id_list = [group.id for group in req.user.get_permissions()]
+            # 获取权限域中部门ID
+            dept_id_list = self.get_user_role_dept_domains(req, group_id_list)
 
             result_projects = ProjectPlan.objects.get_undispatched_projects(
-                hospital, project_title=search_key, creators=staff
+                dept_id_list, hospital, project_title=search_key, creators=staff
             )
             status_counts = ProjectPlan.objects.get_group_by_status(
                  status=PRO_STATUS_PENDING)
