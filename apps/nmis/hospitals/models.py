@@ -161,7 +161,7 @@ class Hospital(BaseOrgan):
                         Department(
                             organ=data.get('organ'),
                             name=data.get('name'),
-                            attri=data.get('attri'),
+                            attri=DPT_ATTRI_MEDICAL,
                             desc=data.get('desc')
                     ))
             Department.objects.bulk_create(dept_list)
@@ -176,7 +176,7 @@ class Department(BaseDepartment):
     医疗机构下设科室数据模型
     """
 
-    organ = models.ForeignKey(Hospital, verbose_name=u'所属医疗机构', on_delete=models.CASCADE,  related_name='organ')  # 重写父类
+    organ = models.ForeignKey(Hospital, verbose_name=u'所属医疗机构', on_delete=models.CASCADE, related_name='organ')  # 重写父类
     attri = models.CharField('科室/部门属性', choices=DPT_ATTRI_CHOICES, max_length=2, null=True, blank=True)
 
     class Meta:

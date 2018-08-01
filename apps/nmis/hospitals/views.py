@@ -8,9 +8,6 @@
 """
 
 import logging
-from operator import eq
-
-from django.contrib.auth.decorators import permission_required
 
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from base.common.param_utils import get_id_list
@@ -18,7 +15,7 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
 
-from users.models import User
+from nmis.hospitals.serializers import StaffSerializer, RoleSerializer
 from utils.files import ExcelBasedOXL
 
 from base import resp
@@ -161,7 +158,9 @@ class StaffCreateView(BaseAPIView):
         staff = form.save()
         if not staff:
             return resp.failed('添加员工失败')
-        return resp.serialize_response(staff, results_name='staff')
+        staff_queryset = Staff.objects.filter(id=staff.id)
+        staff_queryset = StaffSerializer.setup_eager_loading(staff_queryset)
+        return resp.serialize_response(staff_queryset.first(), results_name='staff', srl_cls_name='StaffSerializer')
 
 
 class StaffsPermChangeView(BaseAPIView):
@@ -208,7 +207,8 @@ class StaffView(BaseAPIView):
         self.check_object_permissions(req, organ)
 
         staff = self.get_object_or_404(staff_id, Staff)
-        return resp.serialize_response(staff, results_name='staff')
+        staff_queryset = StaffSerializer.setup_eager_loading(Staff.objects.filter(id=staff_id))
+        return resp.serialize_response(staff_queryset.first(), results_name='staff', srl_cls_name='StaffSerializer')
 
     def put(self, req, hid, staff_id):
         """
@@ -229,7 +229,8 @@ class StaffView(BaseAPIView):
         if not form.is_valid():
             return resp.form_err(form.errors)
         updated_staff = form.save()
-        return resp.serialize_response(updated_staff, results_name='staff')
+        staff_queryset = StaffSerializer.setup_eager_loading(Staff.objects.filter(id=staff_id))
+        return resp.serialize_response(staff_queryset.first(), results_name='staff', srl_cls_name='StaffSerializer')
 
     def delete(self, req, hid, staff_id):
         """
@@ -272,9 +273,10 @@ class StaffListView(BaseAPIView):
         self.check_object_any_permissions(req, organ)
 
         staff_list = organ.get_staffs()
-        # return resp.serialize_response(staff_list, results_name='staffs')
+        staff_list = StaffSerializer.setup_eager_loading(staff_list)
+        #return resp.serialize_response(staff_list, results_name='staffs', srl_cls_name='StaffSerializer')
         # 分页查询员工列表
-        return self.get_pages(staff_list, results_name='staffs')
+        return self.get_pages(staff_list, results_name='staffs', srl_cls_name='StaffSerializer')
 
 
 class StaffBatchUploadView(BaseAPIView):
@@ -385,7 +387,6 @@ class DepartmentView(BaseAPIView):
         :return: 科室存在：返回科室详细信息，不存在科室：返回404
         """
         dept = self.get_object_or_404(dept_id, Department)
-
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
 
@@ -515,7 +516,9 @@ class RoleView(BaseAPIView):
 
     def get(self, req, role_id):
         role = self.get_object_or_404(role_id, Role)
-        return resp.serialize_response(role, srl_cls_name='RoleSerializer', results_name='role')
+        role_queryset = Role.objects.filter(id=role_id)
+        role_queryset = RoleSerializer.setup_eager_loading(role_queryset)
+        return resp.serialize_response(role_queryset, srl_cls_name='RoleSerializer', results_name='role')
 
     def put(self, req, role_id):
         role = self.get_object_or_404(role_id, Role)

@@ -3,7 +3,7 @@
 """
 python manage.py test runtests.test_user
 """
-
+from collections import defaultdict
 from copy import deepcopy
 
 from django.urls import reverse
@@ -181,26 +181,105 @@ class UserTestCase(BaseTestCase):
 #         self.assertTrue(token.is_expired())
 #         token.refresh(token)
 
-#
-# class RoleTestCase(BaseTestCase):
-#
-#     def test_assign_role_dept_domains(self):
-#         self.login_with_username(self.user)
-#         user1 = self.create_user_with_username('测试用户0001', '123456', active=True)
-#         staff1 = self.create_staff(user1, self.organ, self.dept, '测试员工0001')
-#         dept1 = self.create_department(self.organ, dept_name='测试部门0001')
-#         user2 = self.create_user_with_username('测试用户0001', '123456', active=True)
-#         staff2 = self.create_staff(user2, self.organ, self.dept, '测试员工0001')
-#         dept2 = self.create_department(self.organ, dept_name='测试部门0001')
-#
-#         gourps = Group.objects.all()
-#         for g in gourps:
-#
-#         permissions = []
-#         for
-#         role1 = Role.objects.create_role(name='测试角色0001',)
-#
-#         self.organ.get_admin_group()
+
+class RoleTestCase(BaseTestCase):
+
+    def test_assign_role_dept_domains(self):
+        api = '/api/v1/users/assign-roles-dept-domains/'
+
+        # 创建初始化数据
+        self.login_with_username(self.user)
+        user1 = self.create_user_with_username('测试用户0001', '123456', active=True)
+        staff1 = self.create_staff(user1, self.organ, self.dept, '测试员工0001')
+        dept1 = self.create_department(self.organ, dept_name='测试部门0001')
+        user2 = self.create_user_with_username('测试用户0002', '123456', active=True)
+        staff2 = self.create_staff(user2, self.organ, self.dept, '测试员工0002')
+        dept2 = self.create_department(self.organ, dept_name='测试部门0002')
+
+        groups = Group.objects.all()
+        permissions =[]
+
+        for group in groups:
+            permissions.append(group.id)
+
+        role1 = Role.objects.create_role(data={'name': '测试角色0001', 'permissions': [permissions[0]]})
+        role2 = Role.objects.create_role(data={'name': '测试角色0002', 'permissions': [permissions[1]]})
+
+        self.login_with_username(self.user)
+        # 封装请求参数
+        data = defaultdict(list)
+        user_ids = [user1.id, user2.id]
+        role_ids = [role1.id, role2.id]
+        dept_domain_ids = [dept1.id, dept2.id]
+        data['user_ids'] = user_ids
+        data['role_ids'] = role_ids
+        data['dept_domain_ids'] = dept_domain_ids
+
+        resp1 = self.post(api.format(), data=data)
+        self.assert_response_success(resp1)
+        for role in user1.get_roles():
+            self.assertTrue((role.id == role1.id or role.id == role2.id))
+            dept_domains = role.get_user_role_dept_domains(user1)
+            for dept in dept_domains:
+                self.assertTrue((dept.id == dept1.id or dept.id == dept2.id))
+
+        for role in user2.get_roles():
+            self.assertTrue((role.id == role1.id or role.id == role2.id))
+            dept_domains = role.get_user_role_dept_domains(user2)
+            for dept in dept_domains:
+                self.assertTrue((dept.id == dept1.id or dept.id == dept2.id))
+
+        data.get('user_ids').remove(user1.id)
+        data.get('role_ids').remove(role1.id)
+        data.get('dept_domain_ids').remove(dept1.id)
+        resp2 = self.post(api.format(), data=data)
+        self.assert_response_success(resp2)
+
+        for role in user1.get_roles():
+            self.assertTrue((role.id == role1.id or role.id == role2.id))
+            dept_domains = role.get_user_role_dept_domains(user1)
+            for dept in dept_domains:
+                self.assertTrue((dept.id == dept1.id or dept.id == dept2.id))
+        self.assertEqual(1, len(user2.get_roles()))
+        for role in user2.get_roles():
+            self.assertTrue((role.id == role2.id))
+            dept_domains = role.get_user_role_dept_domains(user2)
+            self.assertEqual(1, len(dept_domains))
+            for dept in dept_domains:
+                self.assertTrue(dept.id == dept2.id)
+
+        data.get('user_ids').append(user1.id)
+        data.get('role_ids').append(role1.id)
+        data.get('role_ids').remove(role2.id)
+        data.get('dept_domain_ids').append(dept1.id)
+        data.get('dept_domain_ids').remove(dept2.id)
+        resp3 = self.post(api.format(), data=data)
+        self.assert_response_success(resp3)
+        roles = user1.get_roles()
+        self.assertEqual(1, len(roles))
+        role = user1.get_roles()[0]
+        self.assertTrue(role.id == role1.id)
+        dept_domains = role.get_user_role_dept_domains(user1)
+        self.assertEqual(1, len(dept_domains))
+        self.assertTrue(dept_domains[0].id == dept1.id)
+
+        roles = user2.get_roles()
+        self.assertEqual(1, len(roles))
+        role = user1.get_roles()[0]
+        self.assertTrue(role.id == role1.id)
+        dept_domains = role.get_user_role_dept_domains(user2)
+        self.assertEqual(1, len(dept_domains))
+        self.assertTrue(dept_domains[0].id == dept1.id)
+
+
+
+
+
+
+
+
+
+
 
 
 

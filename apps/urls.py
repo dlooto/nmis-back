@@ -27,5 +27,3 @@ urlpatterns = [
 if settings.DEBUG:
     # Used in debug mode for handling user-uploaded files
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-

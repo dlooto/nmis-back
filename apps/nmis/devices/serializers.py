@@ -21,6 +21,10 @@ class OrderedDeviceSerializer(BaseModelSerializer):
             'measure', 'num', 'planned_price', 'real_price', 'created_time',
         )
 
+    @staticmethod
+    def setup_eager_loading(queryset):
+        pass
+
 
 class SoftwareDeviceSerializer(BaseModelSerializer):
     class Meta:
@@ -28,3 +32,7 @@ class SoftwareDeviceSerializer(BaseModelSerializer):
         fields = (
             'id', 'name', 'cate', 'purpose', 'producer', 'created_time'
         )
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        pass
