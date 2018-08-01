@@ -14,24 +14,24 @@ from fabric import Config, Connection
 
 
 USER = 'deploy'
-USER_ROOT = '/home/deploy'
-BASE_DIR = '/home/deploy/nmis'                  # 项目部署根目录
+USER_ROOT = '/home/deploy/'
+BASE_DIR = '/home/deploy/nmis/'                  # 项目部署根目录
 
-PROD_DIR   = os.path.join(BASE_DIR, 'prod')     # 程序目录根目录
-LOGS_DIR   = os.path.join(BASE_DIR, 'logs')     # 日志文件目录
-MEDIA_DIR  = os.path.join(BASE_DIR, 'media')    # 媒体静态文件目录根
+PROD_DIR   = os.path.join(BASE_DIR, 'prod/')     # 程序目录根目录
+LOGS_DIR   = os.path.join(BASE_DIR, 'logs/')     # 日志文件目录
+MEDIA_DIR  = os.path.join(BASE_DIR, 'media/')    # 媒体静态文件目录根
 
-NGX_LOG_DIR = os.path.join(LOGS_DIR, 'nginx')    # nginx访问日志
+NGX_LOG_DIR = os.path.join(LOGS_DIR, 'nginx/')    # nginx访问日志
 
 PROCESS_NAME = 'nmis'  # 程序在supervisor中的进程名
-PROJECT_NAME = 'nmis-back'
+PROJECT_NAME = 'nmis-back/'
 CODE_ROOT   = os.path.join(PROD_DIR, PROJECT_NAME)          # 后端代码根目录
-ENV_ROOT    = os.path.join(USER_ROOT, '.virtualenvs/nmis')  #
+ENV_ROOT    = os.path.join(USER_ROOT, '.virtualenvs/nmis/')  #
 LOGS_ROOT   = os.path.join(LOGS_DIR, PROJECT_NAME)
 
-TEST_CASE_ROOT = os.path.join(CODE_ROOT, 'apps/runtests')
+TEST_CASE_ROOT = os.path.join(CODE_ROOT, 'apps/runtests/')
 
-CONF_ROOT = os.path.join(CODE_ROOT, 'deploy')
+CONF_ROOT = os.path.join(CODE_ROOT, 'deploy/')
 
 PIP_SOURCE = 'http://pypi.douban.com/simple/ --trusted-host pypi.douban.com'
 CODE_REPOS = 'git@gitee.com:tenda-dev/nmis-back.git'  # 代码仓库
