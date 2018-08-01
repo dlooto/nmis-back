@@ -55,11 +55,6 @@ class ProjectPlanListView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, HospitalStaffPermission, ProjectDispatcherPermission)
 
-    projects_status_count = 'project_status_count'  # 项目数量块标示
-    project_started_count = 'project_started_count'  # 进行中项目数量
-    project_pending_count = 'project_pending_count'  # 待启动项目数量
-    project_down_count = 'project_down_count'  # 已完成的项目数量
-
     @check_params_not_null(['organ_id', 'type'])
     def get(self, req):
         """
@@ -85,7 +80,6 @@ class ProjectPlanListView(BaseAPIView):
         staff = None
         if search_key:
             staff = Staff.objects.get_by_name(hospital, search_key)
-        status_counts = None
         if action_type == 'undispatch':
             """
             所有待分配的项目列表，带筛选
@@ -95,9 +89,13 @@ class ProjectPlanListView(BaseAPIView):
             # 判断当前员工是否为项目分配者权限，否则检查是否为管理权限
             if not (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER):
                 self.check_object_permissions(req, hospital)
+            # 获取权限组ID
+            group_id_list = [group.id for group in req.user.get_permissions()]
+            # 获取权限域中部门ID
+            dept_id_list = self.get_user_role_dept_domains(req, group_id_list)
 
             result_projects = ProjectPlan.objects.get_undispatched_projects(
-                hospital, project_title=search_key, creators=staff
+                dept_id_list, hospital, project_title=search_key, creators=staff
             )
             status_counts = ProjectPlan.objects.get_group_by_status(
                  status=PRO_STATUS_PENDING)

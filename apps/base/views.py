@@ -51,17 +51,17 @@ class BaseAPIView(GenericAPIView):
             for key in perm_keys:
                 for role in roles:
                     for perm in role.get_permissions():
-                        if key == perm.id or key == perm.codename:
+                        if key == perm.id:
                             roles_tmp.append(role)
             for r in roles_tmp:
-                departments = r.get_dept_domains()
+                departments = r.get_user_role_dept_domains(request.user)
                 for dept in departments:
                     dept_ids.append(dept.id)
         if allOrAny == "ANY":
             for key in perm_keys:
                 for role in roles:
                     for perm in role.get_permissions():
-                        if key == perm.id or key == perm.codename:
+                        if key == perm.id:
                             roles_tmp.append(role)
             for r in roles_tmp:
                 departments = r.get_dept_domains()

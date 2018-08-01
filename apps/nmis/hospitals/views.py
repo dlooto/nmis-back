@@ -334,7 +334,8 @@ class StaffBatchUploadView(BaseAPIView):
 class DepartmentCreateView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, )
-    @check_params_not_null(['name', 'attri'])
+
+    @check_params_not_null(['name'])
     def post(self, req, hid):
         """
         创建科室
@@ -370,7 +371,9 @@ class DepartmentListView(BaseAPIView):
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
         dept_list = hospital.get_all_depts()
-        return self.get_pages(dept_list, results_name='depts')
+        return self.get_pages(
+            dept_list, srl_cls_name='DepartmentStaffsCountSerializer', results_name='depts'
+        )
 
 
 class DepartmentView(BaseAPIView):
@@ -516,8 +519,7 @@ class RoleView(BaseAPIView):
 
     def get(self, req, role_id):
         role = self.get_object_or_404(role_id, Role)
-        role_queryset = Role.objects.filter(id=role_id)
-        role_queryset = RoleSerializer.setup_eager_loading(role_queryset)
+        role_queryset = RoleSerializer.setup_eager_loading(Role.objects.filter(id=role_id)).first()
         return resp.serialize_response(role_queryset, srl_cls_name='RoleSerializer', results_name='role')
 
     def put(self, req, role_id):

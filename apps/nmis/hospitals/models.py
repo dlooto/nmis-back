@@ -59,7 +59,7 @@ class Hospital(BaseOrgan):
         """
         返回科室所有列表
         """
-        return Department.objects.filter(organ=self)
+        return Department.objects.filter(organ=self).order_by('id')
 
     def add_dept(self, dept):
         """
@@ -103,7 +103,7 @@ class Hospital(BaseOrgan):
         返回机构的员工列表
         :param dept: 科室, Department object
         """
-        staffs_queryset = Staff.objects.filter(organ=self)
+        staffs_queryset = Staff.objects.filter(organ=self).order_by('id')
         return staffs_queryset.filter(dept=dept) if dept else staffs_queryset
 
     ################################################
@@ -148,6 +148,48 @@ class Hospital(BaseOrgan):
         group_data = {'is_admin': True}
         group_data.update(GROUPS.get('admin'))
         return self.create_group(**group_data)
+
+    def assign_roles_dept_domains(self, users, roles, depts):
+        old_ships = []
+        ship_args = []
+        same_ships = []
+        for user in users:
+            for role in roles:
+                ship_args.append(UserRoleShip(user=user, role=role))
+
+            old_ship_query = UserRoleShip.objects.filter(user=user).all()
+            if old_ship_query:
+                for query in old_ship_query:
+                    old_ships.append(query)
+
+        for ship_arg in ship_args[:]:
+            for old_ship in old_ships[:]:
+                if ship_arg.user.id == old_ship.user.id and ship_arg.role.id == old_ship.role.id:
+                    ship_args.remove(ship_arg)
+                    same_ships.append(old_ship)
+                    old_ships.remove(old_ship)
+        try:
+            with transaction.atomic():
+
+                if ship_args:
+                    for ship in ship_args:
+                        ship.save()
+                        ship.cache()
+                        ship.dept_domains.set(depts)
+                if old_ships:
+                    for ship in old_ships:
+                        ship.clear_cache()
+                        ship.dept_domains.set(depts)
+                        ship.delete()
+                if same_ships:
+                    for s in same_ships:
+                        s.dept_domains.set(depts)
+                        s.cache
+                return True
+        except Exception as e:
+            logs.info(e.__cause__)
+            logs.exception(e)
+            return False
 
     def create_department(self, **dept_data):
         return Department.objects.create(organ=self, **dept_data)
