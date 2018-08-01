@@ -368,12 +368,12 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                                        handing_type='SE')
         flow = self.create_flow(self.organ)
         data1 = {
-            'expired_time': '2018-12-01',
+            'expired_time': '2018-12-01 00:00:00',
             'flow_id': flow.id,
             'assistant_id': self.admin_staff.id,
         }
         data2 = {
-            'expired_time': '2018-12-01',
+            'expired_time': '2018-12-01 00:00:00',
             'flow_id': flow.id,
         }
         reps1 = self.put(api.format(project1.id), data=data1)

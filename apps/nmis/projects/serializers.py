@@ -13,138 +13,27 @@ from rest_framework import serializers
 
 from base import resp
 from base.serializers import BaseModelSerializer
-from nmis.hospitals.models import Staff, Department
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
     ProjectMilestoneRecord
 
 logs = logging.getLogger(__name__)
 
 
-class ProjectPlanSerializer(BaseModelSerializer):
-    """
-    简单项目序列化对象
-    """
+class MilestoneSerializer(BaseModelSerializer):
 
-    creator_name = serializers.SerializerMethodField("_get_creator_name")
-    performer_name = serializers.SerializerMethodField("_get_performer_name")
-    assistant_name = serializers.SerializerMethodField("_get_assistant_name")
-    related_dept_name = serializers.SerializerMethodField("_get_related_dept_name")
-
-    startup_time = serializers.SerializerMethodField("str_startup_time")
-    expired_time = serializers.SerializerMethodField("str_expired_time")
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.select_related('flow')
+        return queryset
 
     class Meta:
-        model = ProjectPlan
+        model = Milestone
         fields = (
-            'id', 'title', 'handing_type', 'purpose', 'status',
-            'creator_id', 'creator_name', 'related_dept_id', 'related_dept_name',
-            'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
-            'attached_flow_id', 'current_stone_id',
-            'startup_time', 'expired_time', 'created_time',
+            'id', 'title', 'index', 'flow_id', 'desc', 'created_time',
         )
-
-    def _get_creator_name(self, obj):
-        staff = Staff.objects.get_cached(obj.creator_id)
-        return staff.name if staff else ''
-
-    def _get_performer_name(self, obj):
-        if not obj.performer_id:
-            return ''
-        staff = Staff.objects.get_cached(obj.performer_id)
-        return staff.name
-
-    def _get_assistant_name(self, obj):
-        if not obj.assistant_id:
-            return ''
-        staff = Staff.objects.get_cached(obj.assistant_id)
-        return staff.name
-
-    def _get_related_dept_name(self, obj):
-        dept = Department.objects.get_cached(obj.related_dept_id)
-        return dept.name
-
-    def str_startup_time(self, obj):
-        return self.str_time_obj(obj.startup_time)
-
-    def str_expired_time(self, obj):
-        return self.str_time_obj(obj.expired_time)
-
-
-class ChunkProjectPlanSerializer(BaseModelSerializer):
-    """
-    复杂项目申请对象, 返回项目对象中内含设备明细
-    """
-
-    creator_name = serializers.SerializerMethodField("_get_creator_name")
-    performer_name = serializers.SerializerMethodField("_get_performer_name")
-    assistant_name = serializers.SerializerMethodField("_get_assistant_name")
-    related_dept_name = serializers.SerializerMethodField("_get_related_dept_name")
-
-    startup_time = serializers.SerializerMethodField("str_startup_time")
-    expired_time = serializers.SerializerMethodField("str_expired_time")
-
-    attached_flow = serializers.SerializerMethodField('_get_attached_flow')
-    hardware_devices = serializers.SerializerMethodField('_get_hardware_devices')
-    software_devices = serializers.SerializerMethodField('_get_software_devices')
-
-    milestone_records = serializers.SerializerMethodField('_get_milestone_records')
-
-    class Meta:
-        model = ProjectPlan
-        fields = (
-            'id', 'title', 'purpose', 'status', 'handing_type', 'project_cate',
-            'creator_id', 'creator_name',
-            'related_dept_id', 'related_dept_name',
-            'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
-            'current_stone_id', 'attached_flow', 'hardware_devices', 'software_devices',
-            'milestone_records', 'startup_time', 'expired_time', 'created_time'
-        )
-
-    def _get_creator_name(self, obj):
-        staff = Staff.objects.get_cached(obj.creator_id)
-        return staff.name if staff else ''
-
-    def _get_performer_name(self, obj):
-        if not obj.performer_id:
-            return ''
-        staff = Staff.objects.get_cached(obj.performer_id)
-        return staff.name
-
-    def _get_assistant_name(self, obj):
-        if not obj.assistant_id:
-            return ''
-        staff = Staff.objects.get_cached(obj.assistant_id)
-        return staff.name
-
-    def _get_related_dept_name(self, obj):
-        dept = Department.objects.get_cached(obj.related_dept_id)
-        return dept.name
-
-    def str_startup_time(self, obj):
-        return self.str_time_obj(obj.startup_time)
-
-    def str_expired_time(self, obj):
-        return self.str_time_obj(obj.expired_time)
-
-    def _get_attached_flow(self, obj):
-        if not obj.attached_flow:
-            return {}
-        flow = ProjectFlow.objects.get_cached(obj.attached_flow_id)
-        return resp.serialize_data(flow)
-
-    def _get_hardware_devices(self, obj):
-        return resp.serialize_data(obj.get_hardware_devices())
-
-    def _get_milestone_records(self, obj):  # TODO: 需要优化性能...
-        records = obj.get_milestone_changed_records()
-        return resp.serialize_data(records) if records else []
-
-    def _get_software_devices(self, obj):
-        return resp.serialize_data(obj.get_software_devices())
 
 
 class ProjectFlowSerializer(BaseModelSerializer):
-
     milestones = serializers.SerializerMethodField('_get_milestones')
 
     class Meta:
@@ -153,16 +42,13 @@ class ProjectFlowSerializer(BaseModelSerializer):
             'id', 'organ_id', 'title', 'type', 'pre_defined', 'milestones'
         )
 
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.prefetch_related()
+        return queryset
+
     def _get_milestones(self, obj):
         return resp.serialize_data(obj.get_milestones())
-
-
-class MilestoneSerializer(BaseModelSerializer):
-    class Meta:
-        model = Milestone
-        fields = (
-            'id', 'title', 'index', 'flow_id', 'desc', 'created_time',
-        )
 
 
 class ProjectMilestoneRecordSerializer(BaseModelSerializer):
@@ -182,6 +68,145 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
     def _get_milestone_index(self, obj):
         stone = Milestone.objects.get_cached(obj.milestone_id)
         return stone.index if stone else -1
+
+
+class ProjectPlanSerializer(BaseModelSerializer):
+    """
+    简单项目序列化对象
+    """
+
+    creator_name = serializers.SerializerMethodField("_get_creator_name")
+    performer_name = serializers.SerializerMethodField("_get_performer_name")
+    assistant_name = serializers.SerializerMethodField("_get_assistant_name")
+    related_dept_name = serializers.SerializerMethodField("_get_related_dept_name")
+
+    startup_time = serializers.SerializerMethodField("str_startup_time")
+    expired_time = serializers.SerializerMethodField("str_expired_time")
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.prefetch_related('attached_flow')
+        queryset = queryset.select_related('creator')
+        queryset = queryset.select_related('related_dept')
+        queryset = queryset.select_related('performer')
+        queryset = queryset.select_related('assistant')
+        return queryset
+
+    class Meta:
+        model = ProjectPlan
+        fields = (
+            'id', 'title', 'handing_type', 'purpose', 'status',
+            'creator_id', 'creator_name', 'related_dept_id', 'related_dept_name',
+            'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
+            'attached_flow_id', 'current_stone_id',
+            'startup_time', 'expired_time', 'created_time',
+        )
+
+    def _get_creator_name(self, obj):
+        staff = obj.creator
+        return staff.name if staff else ''
+
+    def _get_performer_name(self, obj):
+        if not obj.performer:
+            return ''
+        staff = obj.performer
+        return staff.name
+
+    def _get_assistant_name(self, obj):
+        if not obj.assistant:
+            return ''
+        staff = obj.assistant
+        return staff.name
+
+    def _get_related_dept_name(self, obj):
+        dept = obj.related_dept
+        return dept.name if dept else ''
+
+    def str_startup_time(self, obj):
+        return self.str_time_obj(obj.startup_time)
+
+    def str_expired_time(self, obj):
+        return self.str_time_obj(obj.expired_time)
+
+
+class ChunkProjectPlanSerializer(BaseModelSerializer):
+    """
+    复杂项目申请对象, 返回项目对象中内含设备明细
+    """
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.prefetch_related('attached_flow')
+        queryset = queryset.select_related('creator')
+        queryset = queryset.select_related('related_dept')
+        queryset = queryset.select_related('performer')
+        queryset = queryset.select_related('assistant')
+        return queryset
+
+    creator_name = serializers.SerializerMethodField("_get_creator_name")
+    performer_name = serializers.SerializerMethodField("_get_performer_name")
+    assistant_name = serializers.SerializerMethodField("_get_assistant_name")
+    related_dept_name = serializers.SerializerMethodField("_get_related_dept_name")
+
+    startup_time = serializers.SerializerMethodField("str_startup_time")
+    expired_time = serializers.SerializerMethodField("str_expired_time")
+
+    # attached_flow = serializers.SerializerMethodField('_get_attached_flow')
+    attached_flow = ProjectFlowSerializer(many=False)
+    hardware_devices = serializers.SerializerMethodField('_get_hardware_devices')
+    software_devices = serializers.SerializerMethodField('_get_software_devices')
+
+    milestone_records = serializers.SerializerMethodField('_get_milestone_records')
+
+    class Meta:
+        model = ProjectPlan
+        fields = (
+            'id', 'title', 'purpose', 'status', 'handing_type', 'project_cate',
+            'creator_id', 'creator_name',
+            'related_dept_id', 'related_dept_name',
+            'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
+            'current_stone_id', 'attached_flow', 'hardware_devices', 'software_devices',
+            'milestone_records', 'startup_time', 'expired_time', 'created_time'
+        )
+
+    def _get_creator_name(self, obj):
+        staff = obj.creator
+        return staff.name if staff else ''
+
+    def _get_performer_name(self, obj):
+        if not obj.performer:
+            return ''
+        staff = obj.performer
+        return staff.name
+
+    def _get_assistant_name(self, obj):
+        if not obj.assistant:
+            return ''
+        staff = obj.assistant
+        return staff.name
+
+    def _get_related_dept_name(self, obj):
+        dept = obj.related_dept
+        return dept.name if dept else ''
+
+    def str_startup_time(self, obj):
+        return self.str_time_obj(obj.startup_time)
+
+    def str_expired_time(self, obj):
+        return self.str_time_obj(obj.expired_time)
+
+    # def _get_attached_flow(self, queryset):
+    #     return resp.serialize_data(queryset.attached_flow)
+
+    def _get_hardware_devices(self, obj):
+        return resp.serialize_data(obj.get_hardware_devices())
+
+    def _get_software_devices(self, obj):
+        return resp.serialize_data(obj.get_software_devices())
+
+    def _get_milestone_records(self, obj):  # TODO: 需要优化性能...
+        records = obj.get_milestone_changed_records()
+        return resp.serialize_data(records) if records else []
 
 
 class ProjectStatusCountSerializers(BaseModelSerializer):

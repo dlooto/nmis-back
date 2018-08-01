@@ -23,9 +23,14 @@ class HospitalSerializer(BaseModelSerializer):
         fields = '__all__'
 
 
-class DepartmentSerializer(BaseModelSerializer):
+class DepartmentSerializer(serializers.ModelSerializer):
 
     organ_name = serializers.SerializerMethodField('_get_organ_name')
+
+    @staticmethod
+    def setup_eager_loading(query_set):
+        query_set = query_set.select_related('organ')
+        return query_set
 
     class Meta:
         model = Department
@@ -84,6 +89,14 @@ class StaffSerializer(BaseModelSerializer):
             'contact_phone', 'email', 'created_time', 'roles'
         )
 
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.select_related('organ')
+        queryset = queryset.select_related('dept')
+        queryset = queryset.select_related('user')
+        queryset = queryset.select_related('group')
+        return queryset
+
     def _get_group_name(self, obj):
         return '' if not obj.group else obj.group.name
 
@@ -103,6 +116,11 @@ class StaffSerializer(BaseModelSerializer):
         return '' if not obj.dept else obj.dept.name
 
     def _get_user_roles(self, obj):
+        """
+        TODO: 待优化：应用
+        :param obj:
+        :return:
+        """
         roles = obj.user.get_roles()
         for role in roles:
             dept_domains = role.get_user_role_dept_domains(obj.user)
@@ -121,6 +139,14 @@ class SimpleStaffSerializer(BaseModelSerializer):
     group_name = serializers.SerializerMethodField('_get_group_name')
     group_cate = serializers.SerializerMethodField('_get_group_cate')
     contact_phone = serializers.CharField(source='contact')
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.select_related('organ')
+        queryset = queryset.select_related('dept')
+        queryset = queryset.select_related('user')
+        queryset = queryset.select_related('group')
+        return queryset
 
     class Meta:
         model = Staff
@@ -156,6 +182,11 @@ class GroupSerializer(BaseModelSerializer):
 
     organ_name = serializers.SerializerMethodField('_get_organ_name')
 
+    @staticmethod
+    def set_eager_loading(queryset):
+        queryset = queryset.select_related('organ')
+        return queryset
+
     class Meta:
         model = Group
         fields = ('id', 'created_time', 'name', 'is_admin', 'desc', 'cate', 'organ_id',
@@ -171,6 +202,11 @@ class PermissionSerializer(BaseModelSerializer):
     TODO:暂时把group当做permission处理，后续改造为真正的Permission,要去掉is_admin
     """
     codename = serializers.SerializerMethodField('_get_codename')
+
+    @staticmethod
+    def set_eager_loading(queryset):
+        queryset = queryset.select_related('organ')
+        return queryset
 
     class Meta:
         model = Group
@@ -198,6 +234,11 @@ class SimplePermissionSerializer(BaseModelSerializer):
 class ChunkRoleSerializer(BaseModelSerializer):
     permissions = PermissionSerializer(many=True, read_only=True)
 
+    @staticmethod
+    def set_eager_loading(queryset):
+        queryset = queryset.prefetch_related('permissions')
+        return queryset
+
     class Meta:
         model = Role
         fields = ('id', 'name', 'codename',  'desc', 'permissions', 'created_time')
@@ -206,6 +247,12 @@ class ChunkRoleSerializer(BaseModelSerializer):
 class RoleSerializer(BaseModelSerializer):
     permissions = SimplePermissionSerializer(many=True, read_only=True)
     dept_domains = SimpleDepartmentSerializer(many=True, read_only=True)
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.prefetch_related('permissions')
+        return queryset
+
     class Meta:
         model = Role
         fields = ('id', 'name', 'codename', 'desc', 'permissions', 'dept_domains', 'created_time')
@@ -215,8 +262,7 @@ class SimpleRoleSerializer(BaseModelSerializer):
 
     class Meta:
         model = Role
-        fields = ('id', 'name', 'codename', )
-
+        fields = ('id', 'name', 'codename')
 
 
 

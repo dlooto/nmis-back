@@ -24,6 +24,33 @@ class BaseModelSerializer(serializers.ModelSerializer):
             return time_obj
         return time_obj.strftime('%Y-%m-%d %H:%M:%S') if time_obj else ''
 
+    @staticmethod
+    def setup_eager_loading(queryset):
+        """
+        对数据的关联对象进行预加载处理，优化序列化性能
+        可根据实际情况，是否调用改方法进行预加载处理
+        :param queryset: Queryset对象
+        :return: Queryset对象
+
+        示例如下：
+        # 1. select_related for "to-one" relationships
+        queryset = queryset.select_related('creator')
+
+        # 2. prefetch_related for "to-many" relationships
+        queryset = queryset.prefetch_related(
+            'attendees',
+            'attendees__organization')
+
+        # 3. Prefetch for subsets of relationships
+        queryset = queryset.prefetch_related(
+            Prefetch('unaffiliated_attendees',
+                     queryset=Attendee.objects.filter(organization__isnull=True))
+        )
+        return queryset
+
+        """
+        pass
+
 
 class PlugPageNumberPagination(PageNumberPagination):
     """

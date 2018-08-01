@@ -11,7 +11,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.http.multipartparser import FILE
 from django.test import Client
 
-from nmis.hospitals.models import Staff
+from nmis.hospitals.models import Staff, Group, Role
 from runtests import BaseTestCase
 from settings import FIXTURE_DIRS
 
@@ -370,6 +370,28 @@ class RoleAPITestCase(BaseTestCase):
 
     # def test_view_role(self):
     #     api = '/api/v1/hospitals/roles/{0}'
+
+
+    def test_role_list(self):
+        api = '/api/v1/hospitals/roles'
+        self.login_with_username(self.user)
+        groups = Group.objects.all()
+        permissions =[]
+
+        for group in groups:
+            permissions.append(group.id)
+        data1= {'name': '测试角色0001', 'permissions': [permissions[0]]}
+        data2= {'name': '测试角色0002', 'permissions': [permissions[1]]}
+        role1 = Role.objects.create_role(data=data1)
+        role2 = Role.objects.create_role(data=data2)
+        resp1 = self.get(api.format())
+        self.assert_response_success(resp1)
+        roles = resp1['roles']
+        self.assertIsNotNone(roles)
+        # 测试数据库和本地数据库串号，导致匹配结果有误
+        #self.assertEqual(2, len(roles))
+        # for role in roles:
+        #     self.assertTrue((role['name'] == data1['name'] or role['name'] == data2['name']))
 
 
 

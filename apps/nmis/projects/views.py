@@ -28,7 +28,8 @@ from nmis.projects.forms import (
     ProjectFlowUpdateForm, )
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
 from nmis.projects.permissions import ProjectPerformerPermission
-from nmis.projects.serializers import ProjectStatusCountSerializers
+from nmis.projects.serializers import ProjectStatusCountSerializers, \
+    ChunkProjectPlanSerializer, ProjectPlanSerializer
 
 from nmis.hospitals.consts import (
     GROUP_CATE_PROJECT_APPROVER,
@@ -163,6 +164,7 @@ class ProjectPlanListView(BaseAPIView):
             data['PE'] = 0
         if not data.get('DO'):
             data['DO'] = 0
+        result_projects = ChunkProjectPlanSerializer.setup_eager_loading(result_projects)
         response = self.get_pages(
             result_projects, srl_cls_name='ChunkProjectPlanSerializer',
             results_name='projects'
@@ -294,6 +296,8 @@ class ProjectPlanView(BaseAPIView):
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
         self.check_object_any_permissions(req, hospital)
 
+        project_queryset = ProjectPlan.objects.filter(id=project_id)
+        project = ChunkProjectPlanSerializer.setup_eager_loading(project_queryset).first()
         return resp.serialize_response(
             project, results_name="project", srl_cls_name='ChunkProjectPlanSerializer'
         )
@@ -304,7 +308,7 @@ class ProjectPlanView(BaseAPIView):
                                 'hardware_added_devices', 'hardware_updated_devices'])
     def put(self, req, project_id):
         """
-        修改项目. 该接口仅可以修改项目本身的属性, 若修改设备明细, 需要调用其他接口对设备逐个进行修改.
+        修改项目.
         """
 
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
@@ -322,8 +326,11 @@ class ProjectPlanView(BaseAPIView):
             if not new_project:
                 return resp.failed('项目修改失败')
 
+            new_project_queryset = ChunkProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)
+            ).first()
             return resp.serialize_response(
-                new_project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
+                new_project_queryset, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
             )
         else:
             if not old_project.is_unstarted():
@@ -334,8 +341,11 @@ class ProjectPlanView(BaseAPIView):
             new_project = form.save()
             if not new_project:
                 return resp.failed('项目修改失败')
+            new_project_queryset = ChunkProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)
+            ).first()
             return resp.serialize_response(
-                new_project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
+                new_project_queryset, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
             )
 
     def delete(self, req, project_id):
@@ -370,7 +380,12 @@ class ProjectPlanDispatchView(BaseAPIView):
         self.check_object_any_permissions(req, req.user.get_profile().organ)
 
         success = project.dispatch(staff)
-        return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
+        project_queryset = ProjectPlanSerializer.setup_eager_loading(ProjectPlan.objects.filter(id=project_id)).first()
+        return resp.serialize_response(
+            project_queryset,
+            results_name="project",
+            srl_cls_name='ProjectPlanSerializer'
+        ) if success else resp.failed("操作失败")
 
 
 class ProjectPlanStartupView(BaseAPIView):
@@ -393,13 +408,16 @@ class ProjectPlanStartupView(BaseAPIView):
         if req.data.get('assistant_id'):
             data['assistant'] = self.get_object_or_404(req.data.get('assistant_id'), Staff)
         if not project.is_unstarted():
-            resp.failed("项目已启动或已完成，无需再启动")
+            return resp.failed("项目已启动或已完成，无需再启动")
         success = project.startup(
             flow=flow,
             expired_time=req.data.get('expired_time'),
             **data,
         )
-        return resp.serialize_response(project, results_name="project") if success else resp.failed("操作失败")
+        project_queryset = ProjectPlanSerializer.setup_eager_loading(ProjectPlan.objects.filter(id=project_id)).first()
+        return resp.serialize_response(
+            project_queryset, results_name="project", srl_cls_name='ProjectPlanSerializer'
+        ) if success else resp.failed("操作失败")
 
 
 class ProjectPlanChangeMilestoneView(BaseAPIView):
@@ -551,7 +569,7 @@ class ProjectFlowView(BaseAPIView):
         pass
 
     @check_id('organ_id')
-    @check_params_not_null(['flow_title',])
+    @check_params_not_null(['flow_title', ])
     def put(self, req, flow_id):
         """
         修改流程名称及其他属性信息, 修改不包括添加/删除/修改流程内的里程碑项(已提取到单独的接口)

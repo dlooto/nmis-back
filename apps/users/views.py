@@ -21,6 +21,7 @@ from base.views import BaseAPIView
 from django.contrib.auth import logout as system_logout
 
 from nmis.hospitals.models import Role, Department, UserRoleShip
+from nmis.hospitals.serializers import SimpleRoleSerializer, SimplePermissionSerializer
 from users.forms import UserSignupForm, UserLoginForm, CheckEmailForm
 from users.models import User, ResetRecord
 from utils.eggs import get_email_host_url
@@ -276,6 +277,8 @@ def append_extra_info(user, request, response):
     roles = user.get_roles()
 
     permissions = user.get_permissions()
+    roles = SimpleRoleSerializer.setup_eager_loading(roles)
+    permissions = SimplePermissionSerializer.setup_eager_loading(permissions)
     response.data.update({
         'roles': resp.serialize_data(roles, srl_cls_name='SimpleRoleSerializer'),
         "permissions":  resp.serialize_data(permissions, srl_cls_name='SimplePermissionSerializer')})
