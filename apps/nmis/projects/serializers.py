@@ -141,6 +141,9 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         queryset = queryset.select_related('related_dept')
         queryset = queryset.select_related('performer')
         queryset = queryset.select_related('assistant')
+        queryset = queryset.prefetch_related('ordered_devices')
+        queryset = queryset.prefetch_related('software_devices')
+        queryset = queryset.prefetch_related('project_milestone_records')
         return queryset
 
     creator_name = serializers.SerializerMethodField("_get_creator_name")
@@ -199,13 +202,18 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     #     return resp.serialize_data(queryset.attached_flow)
 
     def _get_hardware_devices(self, obj):
-        return resp.serialize_data(obj.get_hardware_devices())
+        return resp.serialize_data(obj.ordered_devices.all())
+        # return resp.serialize_data(obj.get_hardware_devices())
 
     def _get_software_devices(self, obj):
-        return resp.serialize_data(obj.get_software_devices())
+        # return resp.serialize_data(obj.get_software_devices())
+        return resp.serialize_data(obj.software_devices.all())
 
-    def _get_milestone_records(self, obj):  # TODO: 需要优化性能...
-        records = obj.get_milestone_changed_records()
+    def _get_milestone_records(self, obj):
+        # TODO: 已完成部分优化，还需优化，需要去掉根据流程ID查询milestone数据
+        # records = obj.get_milestone_changed_records()
+        # return resp.serialize_data(records) if records else []
+        records = obj.project_milestone_records.all()
         return resp.serialize_data(records) if records else []
 
 

@@ -20,7 +20,8 @@ logs = logging.getLogger(__name__)
 
 class ProjectPlanAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'title', 'creator', 'related_dept', 'performer',
+        'id', 'title', 'project_cate', 'handing_type',
+        'creator', 'related_dept', 'performer',
         'current_stone', 'status', 'created_time'
     )
 
@@ -31,6 +32,7 @@ class ProjectFlowAdmin(admin.ModelAdmin):
 
 class MilestoneAdmin(admin.ModelAdmin):
     list_display = ('id', 'flow', 'title', 'index', 'created_time')
+
 
 class ProjectMilestoneRecordAdmin(admin.ModelAdmin):
     list_display = ('id', 'project', 'milestone', 'created_time')

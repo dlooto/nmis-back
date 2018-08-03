@@ -9,13 +9,16 @@
 
 import logging
 
+from django.db.models.query import QuerySet
+
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from base.common.param_utils import get_id_list
 from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
 
-from nmis.hospitals.serializers import StaffSerializer, RoleSerializer
+from nmis.hospitals.serializers import StaffSerializer, RoleSerializer, \
+    ChunkRoleSerializer, DepartmentStaffsCountSerializer
 from utils.files import ExcelBasedOXL
 
 from base import resp
@@ -276,7 +279,7 @@ class StaffListView(BaseAPIView):
         staff_list = StaffSerializer.setup_eager_loading(staff_list)
         #return resp.serialize_response(staff_list, results_name='staffs', srl_cls_name='StaffSerializer')
         # 分页查询员工列表
-        return self.get_pages(staff_list, results_name='staffs', srl_cls_name='StaffSerializer')
+        return self.get_pages(staff_list, results_name='staffs', srl_cls_name='StaffWithRoleSerializer')
 
 
 class StaffBatchUploadView(BaseAPIView):
@@ -371,6 +374,7 @@ class DepartmentListView(BaseAPIView):
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_permissions(req, hospital)
         dept_list = hospital.get_all_depts()
+        dept_list = DepartmentStaffsCountSerializer.setup_eager_loading(dept_list)
         return self.get_pages(
             dept_list, srl_cls_name='DepartmentStaffsCountSerializer', results_name='depts'
         )
@@ -530,6 +534,7 @@ class RoleView(BaseAPIView):
         new_role = form.save()
         if not new_role:
             return resp.failed('操作失败')
+        new_role = RoleSerializer.setup_eager_loading(Role.objects.filter(id=role_id)).first()
         return resp.serialize_response(new_role, srl_cls_name='ChunkRoleSerializer', results_name='role')
 
     def delete(self, req, role_id):
@@ -544,4 +549,5 @@ class RoleListView(BaseAPIView):
 
     def get(self, req):
         roles = Role.objects.all()
+        roles = RoleSerializer.setup_eager_loading(roles)
         return resp.serialize_response(roles, srl_cls_name='ChunkRoleSerializer', results_name='roles')
