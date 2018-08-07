@@ -47,13 +47,19 @@ class DepartmentStaffsCountSerializer(BaseModelSerializer):
     """
     staffs_count = serializers.SerializerMethodField('_get_staff_count')
 
+    @staticmethod
+    def setup_eager_loading(query_set):
+        query_set = query_set.select_related('organ')
+        query_set = query_set.prefetch_related('staff_set')
+        return query_set
+
     class Meta:
         model = Department
         fields = ('id', 'created_time', 'name', 'contact', 'desc', 'attri', 'organ_id',
                   'staffs_count')
 
     def _get_staff_count(self, obj):
-        return Staff.objects.get_count_by_dept(obj.organ, obj)
+        return obj.staff_set.all().count()
 
 
 class SimpleDepartmentSerializer(BaseModelSerializer):
@@ -76,7 +82,7 @@ class StaffSerializer(BaseModelSerializer):
     group_name = serializers.SerializerMethodField('_get_group_name')
     group_cate = serializers.SerializerMethodField('_get_group_cate')
     contact_phone = serializers.CharField(source='contact')
-    roles = serializers.SerializerMethodField('_get_user_roles')
+    # roles = serializers.SerializerMethodField('_get_user_roles')
 
     class Meta:
         model = Staff
@@ -86,7 +92,7 @@ class StaffSerializer(BaseModelSerializer):
             'staff_name', 'staff_title',
             'user_id', 'username', 'is_admin',
             'group_id', 'group_name', 'group_cate',
-            'contact_phone', 'email', 'created_time', 'roles'
+            'contact_phone', 'email', 'created_time', # 'roles'
         )
 
     @staticmethod
@@ -115,16 +121,46 @@ class StaffSerializer(BaseModelSerializer):
     def _get_dept_name(self, obj):
         return '' if not obj.dept else obj.dept.name
 
+    # def _get_user_roles(self, obj):
+    #     """
+    #     TODO: 待优化：应用
+    #     :param obj:
+    #     :return:
+    #     """
+    #     roles = obj.user.roles.prefetch_related().all()
+    #     for role in roles:
+    #         dept_domains = role.get_user_role_dept_domains(obj.user)
+    #         setattr(role, 'dept_domains', dept_domains)
+    #     # roles = RoleSerializer.setup_eager_loading(roles)
+    #     return resp.serialize_data(roles, srl_cls_name='RoleSerializer')
+
+
+class StaffWithRoleSerializer(StaffSerializer):
+
+    roles = serializers.SerializerMethodField('_get_user_roles')
+
+    class Meta:
+        model = Staff
+        fields = (
+            'id', 'organ_id', 'organ_name',
+            'dept_id', 'dept_name',
+            'staff_name', 'staff_title',
+            'user_id', 'username', 'is_admin',
+            'group_id', 'group_name', 'group_cate',
+            'contact_phone', 'email', 'created_time', 'roles'
+        )
+
     def _get_user_roles(self, obj):
         """
         TODO: 待优化：应用
         :param obj:
         :return:
         """
-        roles = obj.user.get_roles()
+        roles = obj.user.roles.prefetch_related().all()
         for role in roles:
             dept_domains = role.get_user_role_dept_domains(obj.user)
             setattr(role, 'dept_domains', dept_domains)
+        # roles = RoleSerializer.setup_eager_loading(roles)
         return resp.serialize_data(roles, srl_cls_name='RoleSerializer')
 
 

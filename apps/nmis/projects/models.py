@@ -354,10 +354,13 @@ class ProjectMilestoneRecord(BaseModel):
     项目里程碑变更记录. m/m关系: 一个项目的生命周期内, 有多条变更记录存在. 一个里程碑项可被多个项目
      使用.
     """
-    project = models.ForeignKey('projects.ProjectPlan', verbose_name='项目', on_delete=models.CASCADE)
+    project = models.ForeignKey(
+        'projects.ProjectPlan', verbose_name='项目', on_delete=models.CASCADE,
+        related_name='project_milestone_records',
+    )
     milestone = models.ForeignKey(
         'projects.Milestone', verbose_name='里程碑节点', on_delete=models.SET_NULL,
-        null=True, blank=True
+        related_name='project_milestone_records', null=True, blank=True
     )
     # doc_list = models.CharField()  # 文档列表
 
