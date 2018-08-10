@@ -9,8 +9,6 @@
 
 import logging
 
-from django.db.models.query import QuerySet
-
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from base.common.param_utils import get_id_list
 from django.conf import settings
@@ -27,7 +25,7 @@ from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
     DepartmentBatchUploadForm, RoleCreateForm, RoleUpdateForm
 from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission, \
     ProjectDispatcherPermission
-from nmis.hospitals.models import Hospital, Department, Staff, Group, Role
+from nmis.hospitals.models import Hospital, Department, Staff, Group, Role, UserRoleShip
 from .forms import (
     HospitalSignupForm,
     DepartmentUpdateFrom,
@@ -277,7 +275,15 @@ class StaffListView(BaseAPIView):
 
         staff_list = organ.get_staffs()
         staff_list = StaffSerializer.setup_eager_loading(staff_list)
-        #return resp.serialize_response(staff_list, results_name='staffs', srl_cls_name='StaffSerializer')
+        # users = []
+        # for staff in staff_list:
+        #     users.append(staff.user_id)
+        # user_role_ships = UserRoleShip.objects.select_related('user', 'role').prefetch_related('dept_domains').filter(user_id__in=[users])
+        # for staff in staff_list:
+        #     ships = user_role_ships.filter(user_id=staff.user_id)
+        #     setattr(staff, 'user_role_ships', ships)
+
+        # return resp.serialize_response(staff_list, results_name='staffs', srl_cls_name='StaffSerializer')
         # 分页查询员工列表
         return self.get_pages(staff_list, results_name='staffs', srl_cls_name='StaffWithRoleSerializer')
 
