@@ -16,6 +16,21 @@ LOGGING_SETTINGS = {
     'business_log_level':   'DEBUG',    # 业务模块日志级别
 }
 
+DATABASES = {
+    "default": {
+        "ENGINE":   'django.db.backends.mysql',
+        "OPTIONS": {
+            'sql_mode': 'TRADITIONAL',
+        },
+
+        'TEST': {
+            'NAME':     'test_nmis1',
+            'CHARSET':  'utf8',
+            'COLLATION': 'utf8_general_ci',
+        },
+    }
+}
+
 # 本模板中相关注释代码请勿删 !!!
 # `pytest` automatically calls this function once when runtests are run.
 def pytest_configure():
