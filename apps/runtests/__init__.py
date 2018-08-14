@@ -11,7 +11,6 @@ from django.urls import reverse
 from django.test import TestCase
 
 
-
 class TestCaseDataUtils(object):
     BASE_URL = 'http://b.nmis.com'
     FROM_EMAIL_FOR_TEST = 'test@nmis.com'
