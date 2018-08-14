@@ -285,7 +285,7 @@ class ProjectFlow(BaseModel):
 
     def get_milestones(self):
         """ 流程内含的里程碑列表 """
-        return self.milestone_set.all()
+        return self.milestones.all()
 
     def get_first_milestone(self):
         """ 返回流程中的第1个里程碑项 """
@@ -314,7 +314,10 @@ class Milestone(BaseModel):
     """
     项目里程碑结点
     """
-    flow = models.ForeignKey('projects.ProjectFlow', verbose_name='归属流程', on_delete=models.CASCADE)
+    flow = models.ForeignKey(
+        'projects.ProjectFlow', verbose_name='归属流程',
+        related_name='milestones', on_delete=models.CASCADE
+    )
     title = models.CharField('里程碑标题', max_length=10, )
 
     # 用于决定里程碑项在流程中的顺序. index值小的排在前面

@@ -35,6 +35,7 @@ class MilestoneSerializer(BaseModelSerializer):
 
 class ProjectFlowSerializer(BaseModelSerializer):
     milestones = serializers.SerializerMethodField('_get_milestones')
+    #milestones = MilestoneSerializer(many=True)
 
     class Meta:
         model = ProjectFlow
@@ -44,16 +45,21 @@ class ProjectFlowSerializer(BaseModelSerializer):
 
     @staticmethod
     def setup_eager_loading(queryset):
-        queryset = queryset.prefetch_related()
+        queryset = queryset.prefetch_related('milestones')
         return queryset
 
     def _get_milestones(self, obj):
-        return resp.serialize_data(obj.get_milestones())
+        return resp.serialize_data(obj.milestones.all())
 
 
 class ProjectMilestoneRecordSerializer(BaseModelSerializer):
+
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        return queryset.select_related('milestone')
 
     class Meta:
         model = ProjectMilestoneRecord
@@ -85,11 +91,9 @@ class ProjectPlanSerializer(BaseModelSerializer):
 
     @staticmethod
     def setup_eager_loading(queryset):
-        queryset = queryset.prefetch_related('attached_flow')
-        queryset = queryset.select_related('creator')
-        queryset = queryset.select_related('related_dept')
-        queryset = queryset.select_related('performer')
-        queryset = queryset.select_related('assistant')
+        queryset = queryset.select_related(
+            'attached_flow', 'creator', 'related_dept', 'performer', 'assistant',
+        )
         return queryset
 
     class Meta:
@@ -134,18 +138,6 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     复杂项目申请对象, 返回项目对象中内含设备明细
     """
 
-    @staticmethod
-    def setup_eager_loading(queryset):
-        queryset = queryset.prefetch_related('attached_flow')
-        queryset = queryset.select_related('creator')
-        queryset = queryset.select_related('related_dept')
-        queryset = queryset.select_related('performer')
-        queryset = queryset.select_related('assistant')
-        queryset = queryset.prefetch_related('ordered_devices')
-        queryset = queryset.prefetch_related('software_devices')
-        queryset = queryset.prefetch_related('project_milestone_records')
-        return queryset
-
     creator_name = serializers.SerializerMethodField("_get_creator_name")
     performer_name = serializers.SerializerMethodField("_get_performer_name")
     assistant_name = serializers.SerializerMethodField("_get_assistant_name")
@@ -161,6 +153,17 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
 
     milestone_records = serializers.SerializerMethodField('_get_milestone_records')
 
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.select_related(
+            'attached_flow', 'creator', 'related_dept', 'performer', 'assistant'
+        )
+        queryset = queryset.prefetch_related(
+            'ordered_devices', 'software_devices',
+            'project_milestone_records', 'attached_flow__milestones',
+        )
+        return queryset
+
     class Meta:
         model = ProjectPlan
         fields = (
@@ -168,8 +171,11 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
             'creator_id', 'creator_name',
             'related_dept_id', 'related_dept_name',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
-            'current_stone_id', 'attached_flow', 'hardware_devices', 'software_devices',
-            'milestone_records', 'startup_time', 'expired_time', 'created_time'
+            'current_stone_id',
+            'attached_flow',
+            'hardware_devices', 'software_devices',
+            'milestone_records',
+            'startup_time', 'expired_time', 'created_time'
         )
 
     def _get_creator_name(self, obj):
@@ -198,12 +204,12 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     def str_expired_time(self, obj):
         return self.str_time_obj(obj.expired_time)
 
-    # def _get_attached_flow(self, queryset):
-    #     return resp.serialize_data(queryset.attached_flow)
+    # def _get_attached_flow(self, obj):
+    #     return resp.serialize_data(obj.attached_flow)
 
     def _get_hardware_devices(self, obj):
-        return resp.serialize_data(obj.ordered_devices.all())
         # return resp.serialize_data(obj.get_hardware_devices())
+        return resp.serialize_data(obj.ordered_devices.all())
 
     def _get_software_devices(self, obj):
         # return resp.serialize_data(obj.get_software_devices())

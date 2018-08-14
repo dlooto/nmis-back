@@ -359,18 +359,24 @@ class Role(BaseModel):
 
 
 class UserRoleShip(BaseModel):
-    user = models.ForeignKey('users.User', verbose_name='用户', on_delete=models.CASCADE)
-    role = models.ForeignKey('hospitals.Role', verbose_name='角色', on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        'users.User', verbose_name='用户',
+        related_name='user_role_ships', on_delete=models.CASCADE,
+    )
+    role = models.ForeignKey(
+        'hospitals.Role', verbose_name='角色',
+        related_name='user_role_ships', on_delete=models.CASCADE,
+    )
     dept_domains = models.ManyToManyField(
         Department, verbose_name='用户当前角色可操作部门域集合',
-        related_name="UserRoleShips", related_query_name='UserRoleShip', blank=True
+        related_name="user_role_ships", related_query_name='user_role_ship', blank=True
     )
 
     class Meta:
         verbose_name = '用户角色关系'
-        verbose_name_plural = '用户角色关系'
+        verbose_name_plural = verbose_name
         unique_together = ('user', 'role')
         db_table = 'perm_user_roles'
 
     def __str__(self):
-        return '%s %s %s' % (self.user_id, self.role_id)
+        return '%s %s' % (self.user_id, self.role_id)

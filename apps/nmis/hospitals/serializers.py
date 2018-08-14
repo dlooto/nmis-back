@@ -7,7 +7,7 @@
 
 import logging
 
-
+from django.db.models import Prefetch
 from rest_framework import serializers
 
 from base import resp
@@ -82,7 +82,6 @@ class StaffSerializer(BaseModelSerializer):
     group_name = serializers.SerializerMethodField('_get_group_name')
     group_cate = serializers.SerializerMethodField('_get_group_cate')
     contact_phone = serializers.CharField(source='contact')
-    # roles = serializers.SerializerMethodField('_get_user_roles')
 
     class Meta:
         model = Staff
@@ -97,10 +96,7 @@ class StaffSerializer(BaseModelSerializer):
 
     @staticmethod
     def setup_eager_loading(queryset):
-        queryset = queryset.select_related('organ')
-        queryset = queryset.select_related('dept')
-        queryset = queryset.select_related('user')
-        queryset = queryset.select_related('group')
+        queryset = queryset.select_related('organ', 'dept', 'user', 'group')
         return queryset
 
     def _get_group_name(self, obj):
@@ -121,23 +117,58 @@ class StaffSerializer(BaseModelSerializer):
     def _get_dept_name(self, obj):
         return '' if not obj.dept else obj.dept.name
 
-    # def _get_user_roles(self, obj):
-    #     """
-    #     TODO: 待优化：应用
-    #     :param obj:
-    #     :return:
-    #     """
-    #     roles = obj.user.roles.prefetch_related().all()
-    #     for role in roles:
-    #         dept_domains = role.get_user_role_dept_domains(obj.user)
-    #         setattr(role, 'dept_domains', dept_domains)
-    #     # roles = RoleSerializer.setup_eager_loading(roles)
-    #     return resp.serialize_data(roles, srl_cls_name='RoleSerializer')
+
+class UserRoleShipSerializer(BaseModelSerializer):
+    role_name = serializers.SerializerMethodField('_get_role_name')
+    role_codename = serializers.SerializerMethodField('_get_role_codename')
+    role_permissions = serializers.SerializerMethodField('_get_role_permissions')
+    dept_domains = SimpleDepartmentSerializer(many=True, read_only=True)
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.select_related('role',)
+        queryset = queryset.prefetch_related('dept_domains', 'role__permissions',)
+        return queryset
+
+    class Meta:
+        model = UserRoleShip
+        fields = (
+            'role_id',
+            'role_name',
+            'role_codename',
+            'role_permissions',
+            'dept_domains',
+        )
+
+    def _get_role_name(self, obj):
+        return obj.role.name if obj.role else ''
+
+    def _get_role_codename(self, obj):
+        return obj.role.codename if obj.role else ''
+
+    def _get_role_permissions(self, obj):
+        if not obj.role:
+            return []
+        return resp.serialize_data(
+            obj.role.permissions.all(), srl_cls_name='SimplePermissionSerializer'
+        )
 
 
 class StaffWithRoleSerializer(StaffSerializer):
 
-    roles = serializers.SerializerMethodField('_get_user_roles')
+    user_role_ships = serializers.SerializerMethodField('_get_user_role_ships')
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.select_related(
+            'organ', 'dept', 'group', 'user', 'dept__organ',
+        )
+        queryset = queryset.prefetch_related(
+            'user__user_role_ships__dept_domains',
+            'user__user_role_ships__role',
+            'user__user_role_ships__role__permissions'
+        )
+        return queryset
 
     class Meta:
         model = Staff
@@ -147,21 +178,17 @@ class StaffWithRoleSerializer(StaffSerializer):
             'staff_name', 'staff_title',
             'user_id', 'username', 'is_admin',
             'group_id', 'group_name', 'group_cate',
-            'contact_phone', 'email', 'created_time', 'roles'
+            'contact_phone', 'email', 'created_time',
+            'user_role_ships',
         )
 
-    def _get_user_roles(self, obj):
+    def _get_user_role_ships(self, obj):
         """
-        TODO: 待优化：应用
         :param obj:
         :return:
         """
-        roles = obj.user.roles.prefetch_related().all()
-        for role in roles:
-            dept_domains = role.get_user_role_dept_domains(obj.user)
-            setattr(role, 'dept_domains', dept_domains)
-        # roles = RoleSerializer.setup_eager_loading(roles)
-        return resp.serialize_data(roles, srl_cls_name='RoleSerializer')
+        user_role_ships = obj.user.user_role_ships.all()
+        return resp.serialize_data(user_role_ships, srl_cls_name='UserRoleShipSerializer')
 
 
 class SimpleStaffSerializer(BaseModelSerializer):
@@ -178,10 +205,7 @@ class SimpleStaffSerializer(BaseModelSerializer):
 
     @staticmethod
     def setup_eager_loading(queryset):
-        queryset = queryset.select_related('organ')
-        queryset = queryset.select_related('dept')
-        queryset = queryset.select_related('user')
-        queryset = queryset.select_related('group')
+        queryset = queryset.select_related('organ', 'dept', 'user', 'group')
         return queryset
 
     class Meta:
@@ -282,16 +306,18 @@ class ChunkRoleSerializer(BaseModelSerializer):
 
 class RoleSerializer(BaseModelSerializer):
     permissions = SimplePermissionSerializer(many=True, read_only=True)
-    dept_domains = SimpleDepartmentSerializer(many=True, read_only=True)
 
     @staticmethod
     def setup_eager_loading(queryset):
-        queryset = queryset.prefetch_related('permissions')
+        queryset = queryset.prefetch_related(
+            'permissions',
+        )
         return queryset
 
     class Meta:
         model = Role
-        fields = ('id', 'name', 'codename', 'desc', 'permissions', 'dept_domains', 'created_time')
+        fields = ('id', 'name', 'codename', 'desc', 'permissions',
+                  'created_time')
 
 
 class SimpleRoleSerializer(BaseModelSerializer):

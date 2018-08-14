@@ -329,6 +329,30 @@ class StaffAPITestCase(BaseTestCase):
         self.assertIsNotNone(response.get('staffs'))
         self.assertEqual(len(response.get('staffs')), 4)
 
+    def test_chunk_staff_list(self):
+        """
+        测试获取员工列表
+        :return:
+        """
+        api = '/api/v1/hospitals/{0}/chunk_staffs'
+
+        self.login_with_username(self.user)
+        for index in range(0, 10):
+            self.create_completed_staff(self.organ, self.dept, name='test_{}'.format(self.get_random_suffix()))
+
+        data = {
+            'page': 1,
+            'size': 4
+        }
+        response = self.get(
+            api.format(self.organ.id),
+            dept_id=self.dept.id,
+            data=data
+        )
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('staffs'))
+        self.assertEqual(len(response.get('staffs')), 4)
+
     def test_staff_batch_upload(self):
         """
         测试批量导入员工
@@ -377,7 +401,6 @@ class RoleAPITestCase(BaseTestCase):
     # def test_view_role(self):
     #     api = '/api/v1/hospitals/roles/{0}'
 
-
     def test_role_list(self):
         api = '/api/v1/hospitals/roles'
         self.login_with_username(self.user)
@@ -386,8 +409,10 @@ class RoleAPITestCase(BaseTestCase):
 
         for group in groups:
             permissions.append(group.id)
-        data1= {'name': '测试角色0001', 'permissions': [permissions[0]]}
-        data2= {'name': '测试角色0002', 'permissions': [permissions[1]]}
+        init_roles = Role.objects.all()
+        init_roles_len = len(init_roles)
+        data1 = {'name': '测试角色0001', 'permissions': [permissions[0]]}
+        data2 = {'name': '测试角色0002', 'permissions': [permissions[1]]}
         role1 = Role.objects.create_role(data=data1)
         role2 = Role.objects.create_role(data=data2)
         resp1 = self.get(api.format())
@@ -395,9 +420,12 @@ class RoleAPITestCase(BaseTestCase):
         roles = resp1['roles']
         self.assertIsNotNone(roles)
         # 测试数据库和本地数据库串号，导致匹配结果有误
-        #self.assertEqual(2, len(roles))
-        # for role in roles:
-        #     self.assertTrue((role['name'] == data1['name'] or role['name'] == data2['name']))
+        self.assertEqual(2, len(roles)-init_roles_len)
+        role_names = []
+        for role in roles:
+            role_names.append(role['name'])
+
+        self.assertTrue((data1['name'] in role_names or data2['name'] in role_names))
 
 
 

@@ -46,6 +46,9 @@ urlpatterns = [
     # 查询员工列表
     path("<int:hid>/staffs",            views.StaffListView.as_view(), ),
 
+    # 查询员工列表(附带用户角色、角色权限、和部门权限域信息)
+    path("<int:hid>/chunk_staffs", views.StaffListView.as_view(), ),
+
     # 批量导入员工信息（以上传excel文件的形式）
     path("<int:hid>/staffs/batch-upload", views.StaffBatchUploadView.as_view(), ),
 
