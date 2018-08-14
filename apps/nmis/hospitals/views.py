@@ -15,8 +15,11 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
 
+from base.resp import Response
 from nmis.hospitals.serializers import StaffSerializer, RoleSerializer, \
-    ChunkRoleSerializer, DepartmentStaffsCountSerializer
+    DepartmentStaffsCountSerializer, StaffWithRoleSerializer
+from utils.eggs import make_instance
+
 from utils.files import ExcelBasedOXL
 
 from base import resp
@@ -275,15 +278,27 @@ class StaffListView(BaseAPIView):
 
         staff_list = organ.get_staffs()
         staff_list = StaffSerializer.setup_eager_loading(staff_list)
-        # users = []
-        # for staff in staff_list:
-        #     users.append(staff.user_id)
-        # user_role_ships = UserRoleShip.objects.select_related('user', 'role').prefetch_related('dept_domains').filter(user_id__in=[users])
-        # for staff in staff_list:
-        #     ships = user_role_ships.filter(user_id=staff.user_id)
-        #     setattr(staff, 'user_role_ships', ships)
 
-        # return resp.serialize_response(staff_list, results_name='staffs', srl_cls_name='StaffSerializer')
+        # return resp.serialize_response(
+        #     staff_list, results_name='staffs', srl_cls_name='StaffSerializer', many=True
+        # )
+        # 分页查询员工列表
+        return self.get_pages(staff_list, results_name='staffs', srl_cls_name='StaffSerializer')
+
+
+class ChunkStaffListView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+
+    def get(self, req, hid):
+        """
+        查询某机构下员工列表(附带用户角色、角色权限、和部门权限域信息)
+        """
+        organ = self.get_object_or_404(hid, Hospital)
+
+        self.check_object_any_permissions(req, organ)
+
+        staff_list = organ.get_staffs()
+        staff_list = StaffWithRoleSerializer.setup_eager_loading(staff_list)
         # 分页查询员工列表
         return self.get_pages(staff_list, results_name='staffs', srl_cls_name='StaffWithRoleSerializer')
 

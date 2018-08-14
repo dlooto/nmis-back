@@ -329,6 +329,30 @@ class StaffAPITestCase(BaseTestCase):
         self.assertIsNotNone(response.get('staffs'))
         self.assertEqual(len(response.get('staffs')), 4)
 
+    def test_chunk_staff_list(self):
+        """
+        测试获取员工列表
+        :return:
+        """
+        api = '/api/v1/hospitals/{0}/chunk_staffs'
+
+        self.login_with_username(self.user)
+        for index in range(0, 10):
+            self.create_completed_staff(self.organ, self.dept, name='test_{}'.format(self.get_random_suffix()))
+
+        data = {
+            'page': 1,
+            'size': 4
+        }
+        response = self.get(
+            api.format(self.organ.id),
+            dept_id=self.dept.id,
+            data=data
+        )
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('staffs'))
+        self.assertEqual(len(response.get('staffs')), 4)
+
     def test_staff_batch_upload(self):
         """
         测试批量导入员工
