@@ -69,6 +69,10 @@ def configure_logging_params(**kwargs):
                 'handlers': ['sentry', 'file', 'console'],
                 'level': kwargs.get('business_log_level'),
             },
+            'runtests': {
+                'handlers': ['sentry', 'file', 'console'],
+                'level': kwargs.get('business_log_level'),
+            },
 
         }
     }
