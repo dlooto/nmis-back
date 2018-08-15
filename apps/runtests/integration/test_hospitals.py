@@ -15,7 +15,7 @@ from nmis.hospitals.models import Staff, Group, Role
 from runtests import BaseTestCase
 from settings import FIXTURE_DIRS
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger('runtests')
 
 
 class DepartmentApiTestCase(BaseTestCase):
@@ -363,13 +363,14 @@ class StaffAPITestCase(BaseTestCase):
         api = '/api/v1/hospitals/{0}/staffs/batch-upload'
 
         self.login_with_username(self.user)
-        self.create_department(self.organ, dept_name='测试部门')
+
         curr_path = os.path.dirname(__file__)
         staff_file_obj = open(curr_path+'/data/staff-normal-test.xlsx', 'rb')
         response = self.raw_post(api.format(self.organ.id), {'staff_excel_file': staff_file_obj})
         self.assert_response_form_errors(response)
 
-        self.create_department(self.organ, dept_name='信息科')
+        # self.create_department(self.organ, dept_name='信息科')
+        self.create_department(self.organ, dept_name='测试部门')
         staff_file_obj = open(curr_path + '/data/staff-normal-test.xlsx', 'rb')
         response = self.raw_post(api.format(self.organ.id), {'staff_excel_file': staff_file_obj})
         self.assert_response_success(response)

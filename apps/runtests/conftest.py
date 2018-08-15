@@ -16,6 +16,7 @@ LOGGING_SETTINGS = {
     'business_log_level':   'DEBUG',    # 业务模块日志级别
 }
 
+# 运行测试用例时使用该配置
 DATABASES = {
     "default": {
         "ENGINE":   'django.db.backends.mysql',
