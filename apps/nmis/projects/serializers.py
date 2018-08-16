@@ -221,28 +221,3 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         # return resp.serialize_data(records) if records else []
         records = obj.project_milestone_records.all()
         return resp.serialize_data(records) if records else []
-
-
-class ProjectStatusCountSerializers(BaseModelSerializer):
-    """
-    返回项目各状态条数数据结构，该结构添加到最终的json响应结果里
-    :return: 返回数据形如:
-        "project_status_count": {
-            "project_pending_count": 17,    项目待启动数量
-            "project_started_count": 0,     项目进行中数量
-            "project_down_count": 0         项目完成数量
-        }
-    """
-    projects_status_count = 'project_status_count'  # 项目数量块标示
-    project_started_count = 'project_started_count'  # 进行中项目数量
-    project_pending_count = 'project_pending_count'  # 待启动项目数量
-    project_done_count = 'project_done_count'  # 已完成的项目数量
-
-    def get_project_status_count(self, **data):
-        return {
-            self.projects_status_count: OrderedDict([
-                (self.project_pending_count, data.get('PE')),
-                (self.project_started_count, data.get('SD')),
-                (self.project_done_count, data.get('DO'))
-                ])
-        }
