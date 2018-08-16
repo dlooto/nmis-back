@@ -28,8 +28,7 @@ from nmis.projects.forms import (
     ProjectFlowUpdateForm, )
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
 from nmis.projects.permissions import ProjectPerformerPermission
-from nmis.projects.serializers import ProjectStatusCountSerializers, \
-    ChunkProjectPlanSerializer, ProjectPlanSerializer
+from nmis.projects.serializers import ChunkProjectPlanSerializer, ProjectPlanSerializer
 
 from nmis.hospitals.consts import (
     GROUP_CATE_PROJECT_APPROVER,
@@ -49,130 +48,159 @@ logs = logging.getLogger(__name__)
 
 
 class ProjectPlanListView(BaseAPIView):
-    """
-    项目列表操作
-    """
 
     permission_classes = (IsHospitalAdmin, HospitalStaffPermission, ProjectDispatcherPermission)
 
     @check_params_not_null(['organ_id', 'type'])
     def get(self, req):
         """
-        获取项目列表，包括：我的项目列表（待筛选）、待分配项目列表
+        获取项目列表，包括：我申请的项目，待分配的项目、项目总览、我负责的项目
+        参数列表：
+            type:       string    项目类型
+            organ_id:   int       当前医院ID
+            pro_status: string    项目状态（PE：未启动，SD：已启动，DO：已完成）,为None查看全部
+            search_key: string    项目名称/项目申请人关键字
         """
-        hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
+        hospital = self.get_object_or_404(req.GET.get('organ_id'), Hospital)
 
         action_type = req.GET.get("type", '').strip()
         # 判断操作类型
         if action_type not in ('undispatch', 'total_projects', 'apply', 'my_performer'):
-            return resp.form_err({"type": "不存在的操作类型"})
+            return resp.form_err({'type': '不存在的操作类型'})
 
         status = req.GET.get('pro_status', '').strip()
+        # 项目状态校验
+        if status:
+            if status not in dict(PROJECT_STATUS_CHOICES):
+                return resp.form_err({'err_status': '项目状态异常'})
 
-        if status:          # 项目状态校验
-            if status not in dict(PROJECT_STATUS_CHOICES).keys():
-                return resp.form_err({'err_status:': '项目状态异常'})
-
-        login_staff = req.user.get_profile()     # 当前登录系统用户
-
+        # 获取当前登录系统用户
+        login_staff = req.user.get_profile()
         search_key = req.GET.get('search_key', '').strip()
-        # 根据关键字查询staff集合
-        staff = None
+        # 根据关键字查询staffs集合
+        staffs = None
         if search_key:
-            staff = Staff.objects.get_by_name(hospital, search_key)
+            staffs = Staff.objects.get_by_name(hospital, search_key)
+
         if action_type == 'undispatch':
-            """
-            所有待分配的项目列表，带筛选
-            参数：
-                search_key  string      项目名称/项目申请人关键字
-            """
             # 判断当前员工是否为项目分配者权限，否则检查是否为管理权限
             if not (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER):
                 self.check_object_permissions(req, hospital)
-            # 获取权限组ID
-            group_id_list = [group.id for group in req.user.get_permissions()]
-            # 获取权限域中部门ID
-            dept_id_list = self.get_user_role_dept_domains(req, group_id_list)
 
-            result_projects = ProjectPlan.objects.get_undispatched_projects(
-                dept_id_list, hospital, project_title=search_key, creators=staff
-            )
-            status_counts = ProjectPlan.objects.get_group_by_status(
-                 status=PRO_STATUS_PENDING)
+            result_data = self.get_undispatch_project_list(req, hospital=hospital)
 
-        elif action_type == 'total_projects':   # 项目总览（分配与未分配的项目列表）
-            """
-            项目总览，带筛选
-            只有管理员权限才可查看操作列表
-            参数列表：
-                organ_id	int		    当前医院ID
-                pro_status	string      项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
-                search_key	string		项目名称/项目负责人关键字
-            """
+        elif action_type == 'total_projects':
             # 检查管理员权限,只允许管理员操作
             self.check_object_permissions(req, hospital)
-
-            # 获取项目各状态条数
-            status_counts = ProjectPlan.objects.get_group_by_status(search_key=search_key)
-
-            result_projects = ProjectPlan.objects.get_by_search_key(
-                hospital, project_title=search_key, performers=staff, status=status
-            )
-
-        elif action_type == 'apply':
-            """
-            获取我申请的项目列表,带筛选(关键字：项目名/项目负责人)
-            参数列表：
-                organ_id	int		    当前医院ID
-                pro_status	string      项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
-                search_key	string		项目名称/负责人关键字
-            """
-            # 管理员、项目分配者、普通员工都可操作
-            self.check_object_any_permissions(req, hospital)
-
-            # 获取项目各状态条数
-            status_counts = ProjectPlan.objects.get_group_by_status(
-                search_key=search_key, creator=req.user.get_profile()
-            )
-            result_projects = ProjectPlan.objects.get_applied_projects(
-                hospital, login_staff, performers=staff, project_title=search_key, status=status
-            )
+            result_data = self.get_total_project_list(
+                search_key, status, staffs=staffs, hospital=hospital)
 
         else:
-            """
-            获取我负责的项目列表，带筛选条件(关键字：项目名/项目负责人)
-            参数列表：
-                organ_id:   int       当前医院ID
-                pro_status: string    项目状态（PE：未启动，SD：已启动，DO：已完成）,为none查看全部
-                search_key: string    项目名称/项目申请人关键字
-            """
-            # 管理员、项目分配者、普通员工都可操作
             self.check_object_any_permissions(req, hospital)
+            result_data = self.get_performer_or_apply_project_list(
+                req, search_key, status, action_type, hospital=hospital, login_staff=login_staff,
+                staffs=staffs
+            )
+        return self.response_project_list(**result_data)
+
+    def get_undispatch_project_list(self, req, hospital=None):
+        """
+        所有待分配的项目列表
+        """
+        # 获取权限组ID
+        group_id_list = [group.id for group in req.user.get_permissions()]
+        # 获取权限域中部门ID
+        dept_id_list = self.get_user_role_dept_domains(req, group_id_list)
+
+        result_projects = ProjectPlan.objects.get_undispatched_projects(dept_id_list, hospital)
+        status_count = ProjectPlan.objects.get_group_by_status(
+            status=PRO_STATUS_PENDING)
+
+        return self.get_projects_and_status_count_data(result_projects, status_count)
+
+    def get_total_project_list(self, search_key, status, hospital=None, staffs=None):
+        """
+        获取项目总览列表
+        """
+        # 获取项目各状态条数
+        status_count = ProjectPlan.objects.get_group_by_status(search_key=search_key)
+
+        result_projects = ProjectPlan.objects.get_by_search_key(
+            hospital, project_title=search_key, performers=staffs, status=status
+        )
+
+        return self.get_projects_and_status_count_data(result_projects, status_count)
+
+    def get_performer_or_apply_project_list(self, req, search_key, status, action_type,
+                                            hospital=None, login_staff=None, staffs=None):
+        """
+        获取我负责的、我申请的项目列表
+        """
+        if action_type == 'my_performer':
 
             # 获取项目各状态条数
-            status_counts = ProjectPlan.objects.get_group_by_status(
+            status_count = ProjectPlan.objects.get_group_by_status(
                 search_key=search_key, performer=req.user.get_profile()
             )
             result_projects = ProjectPlan.objects.get_my_performer_projects(
-                hospital, login_staff, creators=staff, project_title=search_key, status=status
+                hospital, login_staff, creators=staffs, project_title=search_key, status=status
+            )
+        elif action_type == 'apply':
+            status_count = ProjectPlan.objects.get_group_by_status(
+                search_key=search_key, creator=req.user.get_profile()
+            )
+            result_projects = ProjectPlan.objects.get_applied_projects(
+                hospital, login_staff, performers=staffs, project_title=search_key, status=status
             )
 
-        data = dict(status_counts)
-        if not data.get('SD'):
-            data['SD'] = 0
-        if not data.get('PE'):
-            data['PE'] = 0
-        if not data.get('DO'):
-            data['DO'] = 0
-        result_projects = ChunkProjectPlanSerializer.setup_eager_loading(result_projects)
+        return self.get_projects_and_status_count_data(result_projects, status_count)
+
+    def response_project_list(self, **result_data):
+        status_count_data = dict(result_data.get('status_count'))
+        if not status_count_data.get('SD'):
+            status_count_data['SD'] = 0
+        if not status_count_data.get('PE'):
+            status_count_data['PE'] = 0
+        if not status_count_data.get('DO'):
+            status_count_data['DO'] = 0
+
+        result_projects = ChunkProjectPlanSerializer.setup_eager_loading(
+            result_data.get('result_projects'))
         response = self.get_pages(
             result_projects, srl_cls_name='ChunkProjectPlanSerializer',
             results_name='projects'
         )
         response.data.update(
-            ProjectStatusCountSerializers().get_project_status_count(**data)
+            self.get_project_status_count(**status_count_data)
         )
         return response
+
+    def get_project_status_count(self, **data):
+        """
+        返回项目各状态条数数据结构，该结构添加到最终的json响应结果里
+        :return: 返回数据形如:
+            "project_status_count": {
+                "project_pending_count": 17,    项目待启动数量
+                "project_started_count": 0,     项目进行中数量
+                "project_down_count": 0         项目完成数量
+            }
+        """
+        projects_status_count = 'project_status_count'  # 项目数量块标示
+        project_started_count = 'project_started_count'  # 进行中项目数量
+        project_pending_count = 'project_pending_count'  # 待启动项目数量
+        project_done_count = 'project_done_count'  # 已完成的项目数量
+        return {
+            projects_status_count: OrderedDict([
+                (project_pending_count, data.get('PE')),
+                (project_started_count, data.get('SD')),
+                (project_done_count, data.get('DO'))
+            ])
+        }
+
+    def get_projects_and_status_count_data(self, project, count):
+
+        return {'result_projects': project,
+                'status_count': count}
 
 
 class ProjectPlanCreateView(BaseAPIView):
