@@ -182,7 +182,7 @@ INSTALLED_APPS = [
     'nmis.devices',
     'nmis.projects',
 
-    'runtests',
+    # 'runtests',
 ]
 
 
