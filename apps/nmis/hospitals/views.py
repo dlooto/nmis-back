@@ -81,7 +81,6 @@ class HospitalView(BaseAPIView):
     """
     单个企业的get/update/delete操作
     """
-    permission_classes = (AllowAny,)
 
     def get(self, req, hid):
         organ = self.get_object_or_404(hid, Hospital)
@@ -96,12 +95,16 @@ class HospitalView(BaseAPIView):
         if opt_type not in ('auth_approved', ):
             return resp.failed('请求参数错误')
 
-        organ = self.get_object_or_404(hid)
+        organ = Hospital.objects.get_cached(hid)
+        if not organ:
+            return resp.object_not_found()
 
         if opt_type == 'auth_approved':
             organ.accept()
             return resp.serialize_response(organ)
 
+        # if opt_type == 'xxxx_option':
+        #   do something...
         return resp.failed()
 
 
@@ -572,3 +575,10 @@ class RoleListView(BaseAPIView):
         roles = Role.objects.all()
         roles = RoleSerializer.setup_eager_loading(roles)
         return resp.serialize_response(roles, srl_cls_name='ChunkRoleSerializer', results_name='roles')
+
+
+
+
+
+
+

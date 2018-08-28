@@ -216,14 +216,14 @@ class Mailbox(object):
         return '<Mailbox object - {} mails with {}>'.format(self.get_count(), self._username)
 
 
-def verify(email, password, pop3=''):
-    """
-    输入邮件地址和密码检验是否可以登录到邮件服务器
-    """
-    pop3 = pop3 or get_pop3_by_email(email)
-    if not pop3:
-        return False
-
-    mail_box = Mailbox(username=email, password=password, server=pop3)
-    return mail_box.is_alive()
+# def verify(email, password, pop3=''):
+#     """
+#     输入邮件地址和密码检验是否可以登录到邮件服务器
+#     """
+#     pop3 = pop3 or get_pop3_by_email(email)
+#     if not pop3:
+#         return False
+#
+#     mail_box = Mailbox(username=email, password=password, server=pop3)
+#     return mail_box.is_alive()
 

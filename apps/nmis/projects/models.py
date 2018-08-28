@@ -69,6 +69,10 @@ class ProjectPlan(BaseModel):
     expired_time = models.DateTimeField(u'项目截止时间', null=True, blank=True)
     project_cate = models.CharField('项目类型', max_length=2, choices=PROJECT_CATE_CHOICES, default=PRO_CATE_HARDWARE)
 
+    project_introduce = models.CharField('项目介绍/项目描述', max_length=200, null=True, blank=True)
+    pre_amount = models.CharField('项目预估总价', max_length=10, null=True, blank=True)
+    procurement_method = models.CharField('采购方法', max_length= 20, null=True, blank=True)
+
     objects = ProjectPlanManager()
 
     class Meta:
@@ -268,6 +272,7 @@ class ProjectFlow(BaseModel):
     title = models.CharField('流程名称', max_length=30, default='默认')
     type = models.CharField('流程类型', max_length=3, null=True, blank=True, default='')
     pre_defined = models.BooleanField('是否预定义', default=False) # 机构初始创建时, 为机构默认生成预定义的流程
+    default_flow = models.BooleanField('是否为默认流程', default=True)
 
     objects = ProjectFlowManager()
 
@@ -324,6 +329,9 @@ class Milestone(BaseModel):
     index = models.SmallIntegerField('索引顺序', default=1)
     desc = models.CharField('描述', max_length=20, default='')
 
+    # 用于标示此里程碑是否为子里程碑，parent_milestone不为Null，则此里程碑为子里程碑
+    parent_milestone = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
+
     class Meta:
         verbose_name = '里程碑项'
         verbose_name_plural = '里程碑项'
@@ -365,7 +373,12 @@ class ProjectMilestoneRecord(BaseModel):
         'projects.Milestone', verbose_name='里程碑节点', on_delete=models.SET_NULL,
         related_name='project_milestone_records', null=True, blank=True
     )
-    # doc_list = models.CharField()  # 文档列表
+
+    # 记录在每个里程碑下操作文件上传后形成的文档集合
+    doc_list = models.CharField('文档列表', max_length=100, null=True, blank=True)
+
+    # 记录各里程碑下的一个总结性说明概述
+    summary = models.CharField('总结说明', max_length=200, null=True, blank=True)
 
     class Meta:
         verbose_name = '项目里程碑记录'
