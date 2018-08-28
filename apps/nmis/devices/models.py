@@ -64,6 +64,9 @@ class SoftwareDevice(Device):
     )
     purpose = models.CharField('用途', max_length=20, null=True, blank=True, default='')
 
+    real_price = models.FloatField('实际单价', default=0.00, null=True, blank=True)
+    planned_price = models.FloatField('预算单价', default=0.00)
+
     class Meta:
         verbose_name = '申购的软件设备'
         verbose_name_plural = verbose_name
