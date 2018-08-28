@@ -9,8 +9,6 @@
 
 import logging
 
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-
 from django.db import models, transaction
 
 from base.models import BaseModel

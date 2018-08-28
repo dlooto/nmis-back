@@ -13,7 +13,6 @@ from base import resp
 
 from base.views import BaseAPIView
 from users.permissions import IsSuperAdmin
-from nmis.channels.models import Channel
 
 logs = logging.getLogger(__name__)
 
