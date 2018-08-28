@@ -8,11 +8,10 @@
 """
 
 import logging
-import settings
 
 from django.contrib import admin
 
-from nmis.hospitals.models import Role
+from nmis.hospitals.models import Role, UserRoleShip
 from .models import Hospital, Staff, Department, Group
 
 logs = logging.getLogger(__name__)
@@ -78,11 +77,17 @@ class RoleAdmin(admin.ModelAdmin):
     list_display_links = ('name', 'codename')
 
 
+class UserRoleShipAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', )
+    list_display_links = ('user', 'role',)
+
+
 admin.site.register(Hospital, HospitalAdmin)
 admin.site.register(Staff, StaffAdmin)
 admin.site.register(Department, DepartmentAdmin)
 admin.site.register(Group, GroupAdmin)
 admin.site.register(Role, RoleAdmin)
+admin.site.register(UserRoleShip, UserRoleShipAdmin)
 
 from django.contrib.auth.models import Group as _Group
 from django.contrib.sites.models import Site as _Site

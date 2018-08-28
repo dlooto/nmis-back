@@ -14,11 +14,9 @@ from base.common.param_utils import get_id_list
 from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
-
-from base.resp import Response
+from base.common.permissions import CustomerAllPermission, CustomerAnyPermission
 from nmis.hospitals.serializers import StaffSerializer, RoleSerializer, \
     DepartmentStaffsCountSerializer, StaffWithRoleSerializer
-from utils.eggs import make_instance
 
 from utils.files import ExcelBasedOXL
 
@@ -267,15 +265,17 @@ class StaffView(BaseAPIView):
 class StaffListView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+    # permission_codes = ('GNS', 'GPA', 'GAD')
+    # permission_classes = (CustomerAnyPermission,)
 
     def get(self, req, hid):
         """
         查询某机构下员工列表
         """
+        # permission_codes = ('s', )
+        # self.check_object_permissions(req, {'permission_codes': permission_codes})
+
         organ = self.get_object_or_404(hid, Hospital)
-
-        self.check_object_any_permissions(req, organ)
-
         staff_list = organ.get_staffs()
         staff_list = StaffSerializer.setup_eager_loading(staff_list)
 
