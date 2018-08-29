@@ -20,6 +20,9 @@ logs = logging.getLogger(__name__)
 urlpatterns = [
     path('',         views.ProjectPlanListView.as_view(), ),
 
+    # 已分配项目列表
+    path('dispatched', views.ProjectPlanDispatchedView.as_view(), ),
+
     # 新建项目申请
     path('create',            views.ProjectPlanCreateView.as_view(), ),
 

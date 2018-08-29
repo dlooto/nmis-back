@@ -14,7 +14,8 @@ from utils import times
 from base.models import BaseModel
 from nmis.devices.models import OrderedDevice, SoftwareDevice
 
-from .managers import ProjectPlanManager, ProjectFlowManager
+from .managers import ProjectPlanManager, ProjectFlowManager, \
+    ProjectOperationRecordManager
 from .consts import *
 
 
@@ -141,14 +142,16 @@ class ProjectPlan(BaseModel):
     def create_device(self, **device_data):
         return OrderedDevice.objects.create(project=self, **device_data)
 
-    def change_status(self, status):
+    def change_status(self, status, **data):
         """
         改变项目状态
         """
         try:
-            self.status = status
-            self.save()
-            self.cache()
+            with transaction.atomic():
+                self.status = status
+                self.save()
+                ProjectOperationRecord.objects.add_operation_records(**data)
+                self.cache()
             return True
         except Exception as e:
             logs.exception(e)
@@ -599,6 +602,8 @@ class ProjectOperationRecord(BaseModel):
     # 操作驳回和挂起时填写的原因
     reason = models.TextField('原因')
     operation = models.CharField('操作方式', max_length=10, choices=PROJECT_OPERATION_CHOICES)
+
+    objects = ProjectOperationRecordManager()
 
     class Meta:
         verbose_name = u'项目操作日志'

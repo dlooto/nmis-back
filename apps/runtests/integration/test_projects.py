@@ -9,7 +9,7 @@ import logging
 
 from nmis.projects.consts import (PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED,
                                   PRO_CATE_SOFTWARE, PRO_CATE_HARDWARE,
-                                  PRO_STATUS_OVERRULE)
+                                  PRO_STATUS_OVERRULE, PRO_OPERATION_OVERRULE)
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
 from utils.times import now, yesterday, tomorrow
@@ -491,9 +491,41 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.login_with_username(self.user)
         # 创建项目
         project = self.create_project(self.admin_staff, self.dept, project_cate="SW", title="测试被驳回项目")
-
-        response = self.put(api.format(project.id))
+        data = {
+            'project': project.id,
+            'reason': '预算太高',
+            'operation': PRO_OPERATION_OVERRULE
+        }
+        response = self.put(api.format(project.id), data=data)
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('project'))
         self.assertEquals(response.get('project').get('status'), PRO_STATUS_OVERRULE)
+
+    def test_dispatched_project_list(self):
+        """
+        API测试: 获取已分配项目列表
+        """
+        api = '/api/v1/projects/dispatched'
+
+        self.login(self.user)
+        projects = []
+        # 创建项目
+        for index in range(0, 5):
+            project = self.create_project(
+                self.admin_staff, self.dept, title='测试项目_{}'.format(self.get_random_suffix())
+            )
+            projects.append(project)
+
+        project_data = {
+            'page': 1,
+            'size': 4
+        }
+        # 分配项目
+        for index in range(len(projects)):
+            projects[index].dispatch(self.admin_staff.id)
+
+        response = self.get(api, data=project_data)
+
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('projects'))
