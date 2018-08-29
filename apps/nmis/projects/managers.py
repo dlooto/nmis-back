@@ -251,9 +251,3 @@ class ProjectFlowManager(BaseManager):
             return None
 
         return flow
-
-    def get_default_flow(self):
-        """
-        返回默认流程
-        """
-        return self.filter(default_flow=True)[0]

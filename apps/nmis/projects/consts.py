@@ -14,11 +14,15 @@ logs = logging.getLogger(__name__)
 PRO_STATUS_PENDING = 'PE'
 PRO_STATUS_STARTED = 'SD'
 PRO_STATUS_DONE = 'DO'
+PRO_STATUS_OVERRULE = 'OR'
+PRO_STATUS_PAUSE = 'PA'
 
 PROJECT_STATUS_CHOICES = (
     (PRO_STATUS_PENDING,    '未开始'),
     (PRO_STATUS_STARTED,    '已启动'),
     (PRO_STATUS_DONE,       '已完成'),
+    (PRO_STATUS_OVERRULE,    '已驳回'),
+    (PRO_STATUS_PAUSE,       '已挂起'),
 )
 
 # 项目申请办理方式

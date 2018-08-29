@@ -7,7 +7,9 @@
 
 import logging
 
-from nmis.projects.consts import PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED, PRO_CATE_SOFTWARE, PRO_CATE_HARDWARE
+from nmis.projects.consts import (PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED,
+                                  PRO_CATE_SOFTWARE, PRO_CATE_HARDWARE,
+                                  PRO_STATUS_OVERRULE)
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
 from utils.times import now, yesterday, tomorrow
@@ -480,3 +482,18 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         projects = response.get('projects')
         self.assertIsNotNone(projects)
         self.assertEquals(len(projects), 3)
+
+    def test_projects_overrule(self):
+        """
+        API测试: 项目负责人驳回项目申请
+        """
+        api = '/api/v1/projects/{}/overrule'
+        self.login_with_username(self.user)
+        # 创建项目
+        project = self.create_project(self.admin_staff, self.dept, project_cate="SW", title="测试被驳回项目")
+
+        response = self.put(api.format(project.id))
+
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('project'))
+        self.assertEquals(response.get('project').get('status'), PRO_STATUS_OVERRULE)

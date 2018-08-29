@@ -42,7 +42,8 @@ from nmis.projects.consts import (
     FLOW_UNDONE,
     PROJECT_CATE_CHOICES,
     PRO_CATE_HARDWARE,
-    PRO_CATE_SOFTWARE)
+    PRO_CATE_SOFTWARE,
+    PRO_STATUS_OVERRULE)
 
 logs = logging.getLogger(__name__)
 
@@ -438,6 +439,26 @@ class ProjectPlanRedispatchView(BaseAPIView):
             results_name="project",
             srl_cls_name='ProjectPlanSerializer'
         ) if success else resp.failed("操作失败")
+
+
+class ProjectPlanOverruleView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission,)
+
+    def put(self, req, project_id):
+        """
+        项目负责人驳回项目
+        """
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        if project.status == PRO_STATUS_OVERRULE:
+            return resp.failed('项目状态为驳回状态')
+        if project.change_status(status=PRO_STATUS_OVERRULE):
+            project_queryset = ProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)).first()
+            return resp.serialize_response(project_queryset, results_name='project')
+        else:
+            return resp.failed("操作失败")
 
 
 class ProjectPlanStartupView(BaseAPIView):
