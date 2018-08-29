@@ -329,7 +329,6 @@ class Milestone(BaseModel):
     index = models.SmallIntegerField('索引顺序', default=1)
     desc = models.CharField('描述', max_length=20, default='')
 
-    # 用于标示此里程碑是否为子里程碑，parent_milestone不为Null，则此里程碑为子里程碑
     parent_milestone = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
 
     class Meta:
@@ -378,7 +377,7 @@ class ProjectMilestoneRecord(BaseModel):
     doc_list = models.CharField('文档列表', max_length=100, null=True, blank=True)
 
     # 记录各里程碑下的一个总结性说明概述
-    summary = models.CharField('总结说明', max_length=200, null=True, blank=True)
+    summary = models.TextField('总结说明', max_length=200, null=True, blank=True)
 
     class Meta:
         verbose_name = '项目里程碑记录'
@@ -388,24 +387,170 @@ class ProjectMilestoneRecord(BaseModel):
     def __str__(self):
         return '%s %s' % (self.project_id, self.milestone_id)
 
+    def get_doc_list(self):
+        """
+        获取当前节点下的所有文档资料
+        :return:
+        """
+        pass
 
-# class Contract(BaseModel):
-#     """
-#     采购合同
-#     """
-#
-#     class Meta:
-#         verbose_name = u'采购合同'
-#         verbose_name_plural = u'采购合同'
-#         db_table = 'projects_contract'
-#
-#
-# class Supplier(BaseModel):
-#     """
-#     供应商
-#     """
-#
-#     class Meta:
-#         verbose_name = u'供应商'
-#         verbose_name_plural = u'供应商'
-#         db_table = 'projects_supplier'
+    def get_supplier_selection_plans(self):
+        """
+        获取当前节点下供应商选择方案列表
+        """
+        pass
+
+    def get_purchase_contract(self):
+        """
+        获取当前节点下采购合同信息
+        :return:
+        """
+        pass
+
+    def get_receipt(self):
+        """
+        获取当前节点下的收货确认单
+        :return:
+        """
+        pass
+
+
+class ProjectDocument(BaseModel):
+    """
+    项目文档数据模型
+    """
+    name = models.CharField('文档名称', max_length=80, null=False, blank=False)
+    category = models.CharField('文档类别', max_length=30, null=False, blank=False)
+    path = models.CharField('存放路径', max_length=255, null=False, blank=False)
+
+    class Meta:
+        verbose_name = '文档资料'
+        verbose_name_plural = verbose_name
+        db_table = 'projects_project_document'
+
+    VALID_ATTRS = [
+        'name', 'category', 'path'
+    ]
+
+    def __str__(self):
+        return '%s %s' % (self.id, self.name)
+
+
+class Supplier(BaseModel):
+    """
+    供应商
+    """
+    name = models.CharField('供应商名称', max_length=100, null=False, blank=False)
+    contact = models.CharField('联系人', max_length=50, null=True, blank=True)
+    contact_tel = models.CharField('联系电话', max_length=12, null=True, blank=True)
+
+    class Meta:
+        verbose_name = '供应商'
+        verbose_name_plural = verbose_name
+        db_table = 'projects_supplier'
+
+    VALID_ATTRS = [
+        'name', 'contact', 'contact_tel',
+    ]
+
+    def __str__(self):
+        return '%s %s' % (self.id, self.name)
+
+
+class SupplierSelectionPlan(BaseModel):
+    """
+    供应商选择方案
+    """
+    project_milestone_record = models.ForeignKey(
+        'projects.ProjectMilestoneRecord', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
+        null=False, blank=False
+    )
+    supplier = models.ForeignKey(
+        Supplier, verbose_name='供应商', on_delete=models.CASCADE,
+        null=False, blank=False
+    )
+    total_amount = models.FloatField('方案总价', default=0.00, null=False, blank=False)
+    remark = models.CharField('备注', max_length=255, null=True, blank=True)
+    # ProjectDocument对象ID集，每个id之间用'|'字符进行分割(目前包含方案资料和其他资料)
+    doc_list = models.CharField('方案文档列表', max_length=32, null=True, blank=True)
+    selected = models.BooleanField('是否为最终选定方案', default=False, null=False, blank=True)
+
+    class Meta:
+        verbose_name = '供应商选择方案'
+        verbose_name_plural = verbose_name
+        db_table = 'projects_supplier_selection_plan'
+
+    VALID_ATTRS = [
+        'total_amount', 'remark', 'doc_list', 'selected'
+    ]
+
+    def __str__(self):
+        return '%s' % (self.id,)
+
+    def is_selected(self):
+        return self.selected
+
+
+class PurchaseContract(BaseModel):
+    """
+    采购合同
+    """
+    project_milestone_record = models.ForeignKey(
+        'projects.ProjectMilestoneRecord', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
+        null=False, blank=False
+    )
+    contract_no = models.CharField('合同编号', max_length=30, null=False, blank=False)
+    title = models.CharField('合同名称', max_length=100, null=False, blank=False)
+    signed_date = models.DateField('签订时间', null=False, blank=False)
+    buyer = models.CharField('买方/甲方单位', max_length=128, null=False, blank=False)
+    buyer_contact = models.CharField('买方/甲方联系人', max_length=50, null=False, blank=False)
+    buyer_tel = models.CharField('买方/甲方联系电话', max_length=11, null=False, blank=False)
+    seller = models.CharField('卖方/乙方单位', max_length=128, null=False, blank=False)
+    seller_contact = models.CharField('卖方/乙方联系人', max_length=50, null=False, blank=False)
+    seller_tel = models.CharField('卖方/乙方联系电话', max_length=11, null=False, blank=False)
+    total_amount = models.FloatField('合同总价', default=0.00, null=False, blank=False)
+    delivery_date = models.DateField('交货时间', null=False, blank=False)
+    # 合同文档附件-ProjectDocument对象ID集，每个id之间用'|'字符进行分割
+    doc_list = models.CharField('合同文档列表', max_length=20, null=True, blank=True)
+
+    class Meta:
+        verbose_name = u'采购合同'
+        verbose_name_plural = verbose_name
+        db_table = 'projects_purchase_contract'
+
+    VALID_ATTRS = [
+        'contract_no', 'title', 'signed_date',
+        'buyer', 'buyer_contact', 'buyer_tel',
+        'seller', 'seller_contact', 'seller_tel',
+        'total_amount', 'delivery_date', 'doc_list',
+    ]
+
+    def __str__(self):
+        return '%s %s' % (self.id, self.contract_no)
+
+
+class Receipt(BaseModel):
+    """
+    收货确认单
+    """
+    project_milestone_record = models.ForeignKey(
+        'projects.ProjectMilestoneRecord', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
+        null=False, blank=False
+    )
+    served_date = models.DateField('到货时间', null=False, blank=False)
+    delivery_man = models.CharField('送货人', max_length=50, null=False, blank=False)
+    contact_phone = models.CharField('联系电话', max_length=11, null=True, blank=True)
+    # 送货单附件-ProjectDocument对象ID集，每个id之间用'|'字符进行分割
+    doc_list = models.CharField('送货单附件', max_length=10, null=True, blank=True)
+
+    class Meta:
+        verbose_name = u'收货确认单'
+        verbose_name_plural = verbose_name
+        db_table = 'projects_receipt'
+
+    VALID_ATTRS = [
+        'served_date', 'delivery_man', 'contact_phone', 'doc_list'
+    ]
+
+    def __str__(self):
+        return '%s %s' % (self.id, )
