@@ -212,7 +212,6 @@ class ProjectPlan(BaseModel):
                 self.expired_time = expired_time
                 self.startup_time = times.now()
                 self.status = PRO_STATUS_STARTED
-
                 self.current_stone = self.attached_flow.get_first_milestone()
                 self.add_milestone_record(self.current_stone)
                 self.save()
