@@ -395,7 +395,7 @@ class ProjectPlanView(BaseAPIView):
 
 class ProjectPlanDispatchView(BaseAPIView):
     """
-    项目分配责任人(管理员或项目分配者才可分配负责人，不改变项目状态，启动项目才改变项目状态)
+    项目分配责任人(管理员或项目分配者才可分配负责人，分配默认流程，改变项目状态，项目直接进入默认流程的需求论证里程碑)
     """
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, )
 
@@ -409,6 +409,30 @@ class ProjectPlanDispatchView(BaseAPIView):
 
         success = project.dispatch(staff)
         project_queryset = ProjectPlanSerializer.setup_eager_loading(ProjectPlan.objects.filter(id=project_id)).first()
+        return resp.serialize_response(
+            project_queryset,
+            results_name="project",
+            srl_cls_name='ProjectPlanSerializer'
+        ) if success else resp.failed("操作失败")
+
+
+class ProjectPlanRedispatchView(BaseAPIView):
+    """
+    重新分配项目负责人（不改变项目里程碑状态，只改变负责人信息）
+    """
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission,)
+
+    @check_id('performer_id')
+    def put(self, req, project_id):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        staff = self.get_object_or_404(req.data.get('performer_id'), Staff, )
+
+        # 检查当前操作者是否具有管理员和项目分配者权限
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
+
+        success = project.redispatch(staff)
+        project_queryset = ProjectPlanSerializer.setup_eager_loading(
+            ProjectPlan.objects.filter(id=project_id)).first()
         return resp.serialize_response(
             project_queryset,
             results_name="project",

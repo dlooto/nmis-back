@@ -332,21 +332,55 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertEquals(len(results), 2)
         self.assert_object_in_results({'title': project1.title}, results)
 
-    def test_project_dispatch(self):
+    def test_project_redispatch(self):
         """
-        API测试：分配项目给负责人接口测试(只需分配项目负责人，不改变项目状态)
+        API测试：重新分配项目给负责人接口测试(只需分配项目负责人，不改变里程碑状态， 只改变项目负责人信息)
         """
-        api = '/api/v1/projects/{}/dispatch'
+        api = '/api/v1/projects/{}/redispatch'
         self.login_with_username(self.user)
         # 创建项目
         project_plan = self.create_project(self.admin_staff, self.dept, title='待分配项目')
 
-        data = {
-            'performer_id': self.admin_staff.id,
-        }
+        # 分配项目
+        success = project_plan.dispatch(self.admin_staff)
+        self.assertTrue(success)
+        self.assertIsNotNone(project_plan.performer)
+        self.assertEquals(self.admin_staff.id, project_plan.performer.id)
 
+        # 重新分配项目
+        # 初始化staff相应数据
+        staff_data = {
+            'title': '主治医师',
+            'contact': '19822012220',
+            'email': 'ceshi01@test.com',
+        }
+        staff = self.create_completed_staff(self.organ, self.dept, name='负责人', **staff_data)
+
+        data = {
+            'performer_id': staff.id,
+        }
         response = self.put(api.format(project_plan.id), data=data)
 
+        self.assert_response_success(response)
+        project = response.get('project')
+        self.assertIsNotNone(project.get('performer_id'))
+        self.assertEquals(staff.id, project.get('performer_id'))
+
+    def test_project_dispatch(self):
+        """
+        API测试：分配项目负责人（分配默认流程，改变项目状态，项目直接进入默认流程的需求论证里程碑）
+        """
+        api = '/api/v1/projects/{}/dispatch'
+
+        self.login_with_username(self.user)
+
+        # 创建项目
+        project_plan = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='新建项目申请')
+
+        data={
+            'performer_id': self.admin_staff.id,
+        }
+        response = self.put(api.format(project_plan.id), data=data)
         self.assert_response_success(response)
         project = response.get('project')
         self.assertIsNotNone(project.get('performer_id'))

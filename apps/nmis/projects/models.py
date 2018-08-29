@@ -70,8 +70,8 @@ class ProjectPlan(BaseModel):
     project_cate = models.CharField('项目类型', max_length=2, choices=PROJECT_CATE_CHOICES, default=PRO_CATE_HARDWARE)
 
     project_introduce = models.CharField('项目介绍/项目描述', max_length=200, null=True, blank=True)
-    pre_amount = models.CharField('项目预估总价', max_length=10, null=True, blank=True)
-    procurement_method = models.CharField('采购方法', max_length= 20, null=True, blank=True)
+    pre_amount = models.FloatField('项目预估总价', null=True, blank=True)
+    procurement_method = models.CharField('采购方法', max_length=20, null=True, blank=True)
 
     objects = ProjectPlanManager()
 
@@ -143,20 +143,36 @@ class ProjectPlan(BaseModel):
 
     def dispatch(self, performer):
         """
-        分派项目给某个员工作为责任人. 项目状态不改变，处于未启动状态，启动项目时改变项目状态
+        分派项目给某个员工作为责任人.项目状态改变，项目直接进入第一个里程碑
         :param performer:  要分派的责任人, staff object
         """
         try:
             with transaction.atomic():
                 self.performer = performer
-                # self.attached_flow = data.pop("flow")
-                # self.expired_time = data.pop("expired_time")
-                # self.status = PRO_STATUS_STARTED
-                # self.startup_time = times.now()
 
-                # self.current_stone = self.attached_flow.get_first_milestone()
-                # self.add_milestone_record(self.current_stone)
+                self.attached_flow = ProjectFlow.objects.get_default_flow()
 
+                self.status = PRO_STATUS_STARTED
+                self.startup_time = times.now()
+
+                self.current_stone = self.attached_flow.get_first_milestone()
+                self.add_milestone_record(self.current_stone)
+
+                self.save()
+                self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
+
+    def redispatch(self, performer):
+        """
+        分派项目给某个员工作为责任人.项目状态改变，项目直接进入第一个里程碑
+        :param performer:  要分派的责任人, staff object
+        """
+        try:
+            with transaction.atomic():
+                self.performer = performer
                 self.save()
                 self.cache()
             return True
@@ -289,11 +305,11 @@ class ProjectFlow(BaseModel):
         return "%s %s" % (self.id, self.title)
 
     def get_milestones(self):
-        """ 流程内含的里程碑列表 """
+        """ 流程内含的父里程碑列表 """
         return self.milestones.all()
 
     def get_first_milestone(self):
-        """ 返回流程中的第1个里程碑项 """
+        """ 返回流程中的第1个父里程碑项 """
         return self.get_milestones().order_by('index')[:1][0]
 
     def contains(self, milestone):
@@ -320,7 +336,7 @@ class Milestone(BaseModel):
     项目里程碑结点
     """
     flow = models.ForeignKey(
-        'projects.ProjectFlow', verbose_name='归属流程',
+        'projects.ProjectFlow', verbose_name='归属流程', null=True,
         related_name='milestones', on_delete=models.CASCADE
     )
     title = models.CharField('里程碑标题', max_length=10, )

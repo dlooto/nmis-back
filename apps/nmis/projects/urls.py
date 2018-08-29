@@ -29,6 +29,9 @@ urlpatterns = [
     # 分配项目责任人
     path('<int:project_id>/dispatch',       views.ProjectPlanDispatchView.as_view(), ),
 
+    # 重新分配项目负责人
+    path('<int:project_id>/redispatch', views.ProjectPlanRedispatchView.as_view(), ),
+
     # 责任人启动项目
     path('<int:project_id>/startup',       views.ProjectPlanStartupView.as_view(),),
 
