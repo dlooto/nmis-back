@@ -24,6 +24,14 @@ PROJECT_STATUS_CHOICES = (
     (PRO_STATUS_OVERRULE,    '已驳回'),
     (PRO_STATUS_PAUSE,       '已挂起'),
 )
+# 项目操作日志类型
+PRO_OPERATION_OVERRULE = 'overrule'
+PRO_OPERATION_PAUSE = 'pause'
+
+PROJECT_OPERATION_CHOICES = (
+    (PRO_OPERATION_OVERRULE,    '驳回'),
+    (PRO_OPERATION_PAUSE,    '挂起'),
+)
 
 # 项目申请办理方式
 PRO_HANDING_TYPE_SELF = 'SE'

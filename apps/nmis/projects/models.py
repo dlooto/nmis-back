@@ -588,4 +588,19 @@ class Receipt(BaseModel):
     ]
 
     def __str__(self):
-        return '%s %s' % (self.id, )
+        return '%d' % (self.id, )
+
+
+class ProjectOperationRecord(BaseModel):
+    """
+    项目操作日志
+    """
+    project = models.IntegerField('项目')
+    # 操作驳回和挂起时填写的原因
+    reason = models.TextField('原因')
+    operation = models.CharField('操作方式', max_length=10, choices=PROJECT_OPERATION_CHOICES)
+
+    class Meta:
+        verbose_name = u'项目操作日志'
+        verbose_name_plural = verbose_name
+        db_table = 'projects_operation_record'

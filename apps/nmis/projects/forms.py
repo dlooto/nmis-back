@@ -100,6 +100,7 @@ class ProjectPlanCreateForm(BaseForm):
             'creator': self.creator,
             'related_dept': self.related_dept,
             'project_cate': self.data.get('pro_type'),
+            'project_introduce': self.data.get('project_introduce'),
             'pre_amount': self.data.get('pre_amount')
         }
         if data.get('handing_type') == PRO_HANDING_TYPE_SELF:
