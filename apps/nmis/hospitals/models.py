@@ -251,6 +251,9 @@ class Staff(BaseStaff):
     class Meta:
         verbose_name = 'C 员工'
         verbose_name_plural = 'C 员工'
+        permissions = (
+            ('view_staff', 'can view staffs'),
+        )
         db_table = 'hosp_staff'
 
     def __str__(self):
@@ -322,16 +325,17 @@ class Role(BaseModel):
 
     def set_permissions(self, perms):
         """
-        为权限组初始化设置权限集
+        为角色设置权限集
         """
-        pass
+        self.permissions.set(perms)
+        self.save()
 
     def add_permission(self, perm):
         """
-        权限组内新加权限
+        角色内新加权限
         :param perm: 权限对象,
         """
-        pass
+        self.permissions.set(perm)
 
     def get_permissions(self):
         """获取去角色下的权限"""
