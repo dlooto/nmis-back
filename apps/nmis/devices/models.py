@@ -91,3 +91,36 @@ class SoftwareDevice(Device):
 #         verbose_name_plural = u'医疗设备'
 #         db_table = 'devices_medical_device'
 
+
+class ContractDevice(Device):
+    """
+    软硬件产品信息, 作为合同明细条目
+    """
+    contract = models.ForeignKey(
+        'projects.PurchaseContract', verbose_name='所属采购合同', on_delete=models.CASCADE,
+        related_name='contract_devices',
+        null=True, blank=True
+    )
+    supplier = models.CharField('供应商', max_length=100, null=True, blank=True)
+    planned_price = models.FloatField('预算单价', default=0.00)
+    real_price = models.FloatField('实际单价', default=0.00, null=True, blank=True)
+    num = models.IntegerField('预购数量', default=1)
+    real_total_amount = models.FloatField('总价', default=0.00, null=True, blank=True)
+    measure = models.CharField('度量/单位', max_length=5, null=True, blank=True)
+    type_spec = models.CharField('规格/型号', max_length=20, null=True, blank=True)
+    purpose = models.CharField('用途', max_length=20, null=True, blank=True, default='')
+
+    class Meta:
+        verbose_name = '采购合同产品明细'
+        verbose_name_plural = verbose_name
+        db_table = 'devices_contract_device'
+
+    VALID_ATTRS = [
+        'name', 'cate', 'supplier',
+        "real_price", "num", "real_total_amount",
+        'producer',
+
+    ]
+
+    def __str__(self):
+        return '%s %s' % (self.id, self.name)
