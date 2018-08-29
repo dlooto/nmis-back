@@ -252,8 +252,11 @@ class ProjectFlowManager(BaseManager):
 
         return flow
 
-    def get_default_flow(self):
-        """
-        返回默认流程
-        """
-        return self.filter(default_flow=True).first()
+
+class ProjectOperationRecordManager(BaseManager):
+
+    def add_operation_records(self, **data):
+        project_operation_record = self.model(**data)
+        project_operation_record.save()
+        project_operation_record.cache()
+        return project_operation_record

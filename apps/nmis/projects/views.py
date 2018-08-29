@@ -42,7 +42,9 @@ from nmis.projects.consts import (
     FLOW_UNDONE,
     PROJECT_CATE_CHOICES,
     PRO_CATE_HARDWARE,
-    PRO_CATE_SOFTWARE)
+    PRO_CATE_SOFTWARE,
+    PRO_STATUS_OVERRULE,
+    PRO_OPERATION_OVERRULE)
 
 logs = logging.getLogger(__name__)
 
@@ -58,7 +60,7 @@ class ProjectPlanListView(BaseAPIView):
         参数列表：
             type:       string    项目类型
             organ_id:   int       当前医院ID
-            pro_status: string    项目状态（PE：未启动，SD：已启动，DO：已完成）,为None查看全部
+            pro_status: string    项目状态（PE：未启动，SD：已启动，DO：已完成，OR：已驳回，PA：已挂起）,为None查看全部
             search_key: string    项目名称/项目申请人关键字
         """
         hospital = self.get_object_or_404(req.GET.get('organ_id'), Hospital)
@@ -440,6 +442,31 @@ class ProjectPlanRedispatchView(BaseAPIView):
         ) if success else resp.failed("操作失败")
 
 
+class ProjectPlanOverruleView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission,)
+
+    def put(self, req, project_id):
+        """
+        项目负责人驳回项目
+        """
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        if project.status == PRO_STATUS_OVERRULE:
+            return resp.failed('项目状态为驳回状态')
+        operation_record_data = {
+            'project': project_id,
+            'reason': req.data.get('reason'),
+            'operation': PRO_OPERATION_OVERRULE
+        }
+        if project.change_status(status=PRO_STATUS_OVERRULE, **operation_record_data):
+            project_queryset = ProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)).first()
+            return resp.serialize_response(project_queryset, results_name='project')
+        else:
+            return resp.failed("操作失败")
+
+
 class ProjectPlanStartupView(BaseAPIView):
     """
     启动项目
@@ -679,6 +706,26 @@ class ProjectFlowView(BaseAPIView):
             logs.info(e)
             return resp.failed('操作失败')
         return resp.ok('操作成功')
+
+
+class ProjectPlanDispatchedView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+
+    def get(self, req):
+        """
+        获取已分配项目列表
+        """
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
+
+        dispatched_projects = ProjectPlan.objects.get_dispatched_projects(req.user.get_profile().organ)
+
+        result_projects = ChunkProjectPlanSerializer.setup_eager_loading(dispatched_projects)
+
+        return self.get_pages(
+            result_projects, srl_cls_name='ChunkProjectPlanSerializer',
+            results_name='projects'
+        )
 
 
 class MilestoneCreateView(BaseAPIView):

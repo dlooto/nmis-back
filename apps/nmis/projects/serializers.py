@@ -101,6 +101,7 @@ class ProjectPlanSerializer(BaseModelSerializer):
         fields = (
             'id', 'title', 'handing_type', 'purpose', 'status',
             'creator_id', 'creator_name', 'related_dept_id', 'related_dept_name',
+            'project_introduce', 'pre_amount', 'procurement_method',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
             'attached_flow_id', 'current_stone_id',
             'startup_time', 'expired_time', 'created_time',
