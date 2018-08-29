@@ -256,4 +256,4 @@ class ProjectFlowManager(BaseManager):
         """
         返回默认流程
         """
-        return self.filter(default_flow=True)[0]
+        return self.filter(default_flow=True).first()

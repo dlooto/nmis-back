@@ -288,7 +288,7 @@ class ProjectFlow(BaseModel):
     title = models.CharField('流程名称', max_length=30, default='默认')
     type = models.CharField('流程类型', max_length=3, null=True, blank=True, default='')
     pre_defined = models.BooleanField('是否预定义', default=False) # 机构初始创建时, 为机构默认生成预定义的流程
-    default_flow = models.BooleanField('是否为默认流程', default=True)
+    default_flow = models.BooleanField('是否为默认流程', default=False)
 
     objects = ProjectFlowManager()
 
@@ -345,7 +345,7 @@ class Milestone(BaseModel):
     index = models.SmallIntegerField('索引顺序', default=1)
     desc = models.CharField('描述', max_length=20, default='')
 
-    parent_milestone = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = '里程碑项'
@@ -373,6 +373,16 @@ class Milestone(BaseModel):
     def previous(self):
         """ 上一个里程碑项 """
         pass
+
+    def children(self):
+        """
+        查找当前里程碑所有子里程碑项，只会找到直接的孩子里程碑项，不会返回所有子孙里程碑项
+        :return: milestone list
+        """
+        milestones = Milestone.objects.filter(parent=self).order_by('index')
+        if milestones is None:
+            return []
+        return milestones
 
 
 class ProjectMilestoneRecord(BaseModel):
@@ -569,4 +579,4 @@ class Receipt(BaseModel):
     ]
 
     def __str__(self):
-        return '%s %s' % (self.id, )
+        return '%s' % (self.id, )
