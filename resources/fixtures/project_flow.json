@@ -1,0 +1,171 @@
+[
+
+    {
+      "pk": 20010001,
+      "model": "projects.projectFlow",
+      "fields": {
+        "organ": 20040001,
+        "title": "默认流程",
+        "type": "",
+        "pre_defined": false,
+        "default_flow": true,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010001,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": 20010001,
+        "title": "需求论证",
+        "index": 0,
+        "desc": "",
+        "parent_milestone": null,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010002,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": 20010001,
+        "title": "圈定方案",
+        "index": 1,
+        "desc": "",
+        "parent_milestone": null,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010003,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": 20010001,
+        "title": "采购管理",
+        "index": 2,
+        "desc": "",
+        "parent_milestone": null,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010004,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": 20010001,
+        "title": "实施验收",
+        "index": 3,
+        "desc": "",
+        "parent_milestone": null,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010005,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": null,
+        "title": "调研",
+        "index": 0,
+        "desc": "",
+        "parent_milestone": 30010001,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010006,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": null,
+        "title": "方案收集",
+        "index": 1,
+        "desc": "",
+        "parent_milestone": 30010001,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010007,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": null,
+        "title": "方案论证",
+        "index": 2,
+        "desc": "",
+        "parent_milestone": 30010001,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010008,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": null,
+        "title": "确定采购方式",
+        "index": 0,
+        "desc": "",
+        "parent_milestone": 30010002,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010009,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": null,
+        "title": "启动采购",
+        "index": 1,
+        "desc": "",
+        "parent_milestone": 30010002,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010010,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": null,
+        "title": "合同管理",
+        "index": 2,
+        "desc": "",
+        "parent_milestone": 30010002,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010011,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": null,
+        "title": "到货",
+        "index": 0,
+        "desc": "",
+        "parent_milestone": 30010003,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010012,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": null,
+        "title": "实施调试",
+        "index": 1,
+        "desc": "",
+        "parent_milestone": 30010003,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 30010013,
+      "model": "projects.milestone",
+      "fields": {
+        "flow": null,
+        "title": "项目验收",
+        "index": 2,
+        "desc": "",
+        "parent_milestone": 30010003,
+        "created_time": "2018-6-6 15:00"
+      }
+    }
+]
