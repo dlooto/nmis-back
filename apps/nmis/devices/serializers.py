@@ -30,7 +30,7 @@ class SoftwareDeviceSerializer(BaseModelSerializer):
     class Meta:
         model = SoftwareDevice
         fields = (
-            'id', 'name', 'cate', 'purpose', 'producer', 'created_time'
+            'id', 'name', 'cate', 'purpose', 'producer', 'created_time', 'planned_price'
         )
 
     @staticmethod

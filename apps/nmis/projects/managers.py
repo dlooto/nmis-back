@@ -31,7 +31,6 @@ class ProjectPlanManager(BaseManager):
         try:
             with transaction.atomic():
                 project = self.model(**data)
-                print(data)
                 project.save()
 
                 # 批量创建设备明细
@@ -252,3 +251,9 @@ class ProjectFlowManager(BaseManager):
             return None
 
         return flow
+
+    def get_default_flow(self):
+        """
+        返回默认流程
+        """
+        return self.filter(default_flow=True)[0]

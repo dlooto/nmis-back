@@ -25,7 +25,7 @@ ORDERED_DEVICES = [
     {
         "name": "理疗仪",
         "type_spec": "ST19-1399",
-        "num": 5,
+        "num": 4,
         "measure": "台",
         "purpose": "心理科室需要",
         "planned_price": 25000.0
@@ -35,11 +35,13 @@ ORDERED_DEVICES = [
 SOFTWARE_DEVICES = [
     {
         "name": "易冉单点登录",
-        "purpose": "统一登录，统一管理"
+        "purpose": "统一登录，统一管理",
+        "planned_price": 100000.0
     },
     {
         "name": "易冉运维信息服务系统",
-        "purpose": "解决医院设备管理"
+        "purpose": "解决医院设备管理",
+        "planned_price": 200000.0
     }
 ]
 
@@ -78,7 +80,7 @@ class ProjectPlanMixin(object):
         :param dept: 项目归属科室
         :param project_cate: 项目类型（HW：医疗器械项目，SW：信息化项目，默认为医疗器械项目）
         :param title: 项目名称
-        :param handing_type: 项目办理类型
+        :param handing_type: 项目办理类型(AG: 转交办理，SE: 自主办理)
         :param ordered_devices: 硬件设备
         :param software_devices: 软件设备
         :return:
@@ -88,8 +90,10 @@ class ProjectPlanMixin(object):
             'handing_type': handing_type,
             'project_cate': project_cate,
             'purpose': "设备老旧换新",
+            'project_introduce': '项目介绍',
             'creator': creator,
             'related_dept': dept,
+            'pre_amount': 430000.0
         }
 
         if handing_type == PRO_HANDING_TYPE_SELF:

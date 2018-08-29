@@ -25,15 +25,31 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
 
     def test_project_dispatch(self):
         """
-        测试: 项目分配(只负责分配负责人，项目状态不改变)
-        :return:
+        测试: 项目分配(分配项目负责人，分配默认流程，项目直接进入需求论证里程碑)
         """
         self.assertTrue(self.project.is_unstarted())
 
         success = self.project.dispatch(self.performer)
         self.assertTrue(success)
-        self.assertTrue(self.project.is_unstarted())  # 分配后项目后状态不发生改变
+        self.assertFalse(self.project.is_unstarted())  # 分配后项目后状态发生改变(变成已启动状态)
         self.assertIsNotNone(self.project.performer)
+
+    def test_project_redispatch(self):
+        """
+        测试: 项目重新分配(不改变项目的里程碑状态，只改变项目负责人信息)
+        """
+        self.assertTrue(self.project.is_unstarted())
+        # 先分配项目负责人
+        dispatch_success = self.project.dispatch(self.performer)
+        self.assertTrue(dispatch_success)
+        self.assertFalse(self.project.is_unstarted())
+        self.assertIsNotNone(self.project.performer)
+
+        # 重新分配项目负责人
+        redispatch_success = self.project.redispatch(self.admin_staff)
+        self.assertTrue(redispatch_success)
+        self.assertFalse(self.project.is_unstarted())
+        self.assertEquals(self.admin_staff, self.project.performer)
 
     def test_change_milestone(self):
         """
