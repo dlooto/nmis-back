@@ -29,5 +29,14 @@ class SoftwareDeviceAdmin(admin.ModelAdmin):
     )
 
 
+class ContractDevice(admin.ModelAdmin):
+    list_display = (
+        'id', 'name', 'contract', 'supplier'
+        'real_price', 'num', 'real_total_amount',
+        'purpose', 'producer'
+        'type_spec', 'measure', 'planned_price',
+    )
+
+
 admin.site.register(OrderedDevice, OrderedDeviceAdmin)
 admin.site.register(SoftwareDevice, SoftwareDeviceAdmin)
