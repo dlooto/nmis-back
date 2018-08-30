@@ -20,7 +20,7 @@
         "title": "需求论证",
         "index": 0,
         "desc": "",
-        "parent_milestone": null,
+        "parent": null,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -32,7 +32,7 @@
         "title": "圈定方案",
         "index": 1,
         "desc": "",
-        "parent_milestone": null,
+        "parent": null,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -44,7 +44,7 @@
         "title": "采购管理",
         "index": 2,
         "desc": "",
-        "parent_milestone": null,
+        "parent": null,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -56,7 +56,7 @@
         "title": "实施验收",
         "index": 3,
         "desc": "",
-        "parent_milestone": null,
+        "parent": null,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -68,7 +68,7 @@
         "title": "调研",
         "index": 0,
         "desc": "",
-        "parent_milestone": 30010002,
+        "parent": 30010002,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -80,7 +80,7 @@
         "title": "方案收集",
         "index": 1,
         "desc": "",
-        "parent_milestone": 30010002,
+        "parent": 30010002,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -92,7 +92,7 @@
         "title": "方案论证",
         "index": 2,
         "desc": "",
-        "parent_milestone": 30010002,
+        "parent": 30010002,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -104,7 +104,7 @@
         "title": "确定采购方式",
         "index": 0,
         "desc": "",
-        "parent_milestone": 30010003,
+        "parent": 30010003,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -116,7 +116,7 @@
         "title": "启动采购",
         "index": 1,
         "desc": "",
-        "parent_milestone": 30010003,
+        "parent": 30010003,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -128,7 +128,7 @@
         "title": "合同管理",
         "index": 2,
         "desc": "",
-        "parent_milestone": 30010003,
+        "parent": 30010003,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -140,7 +140,7 @@
         "title": "到货",
         "index": 0,
         "desc": "",
-        "parent_milestone": 30010004,
+        "parent": 30010004,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -152,7 +152,7 @@
         "title": "实施调试",
         "index": 1,
         "desc": "",
-        "parent_milestone": 30010004,
+        "parent": 30010004,
         "created_time": "2018-6-6 15:00"
       }
     },
@@ -164,7 +164,7 @@
         "title": "项目验收",
         "index": 2,
         "desc": "",
-        "parent_milestone": 30010004,
+        "parent": 30010004,
         "created_time": "2018-6-6 15:00"
       }
     }

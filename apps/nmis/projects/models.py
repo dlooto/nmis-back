@@ -351,7 +351,7 @@ class Milestone(BaseModel):
     index = models.SmallIntegerField('索引顺序', default=1)
     desc = models.CharField('描述', max_length=20, default='')
 
-    parent_milestone = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = '里程碑项'
