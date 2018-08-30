@@ -44,7 +44,9 @@ from nmis.projects.consts import (
     PRO_CATE_HARDWARE,
     PRO_CATE_SOFTWARE,
     PRO_STATUS_OVERRULE,
-    PRO_OPERATION_OVERRULE)
+    PRO_OPERATION_OVERRULE,
+    PRO_STATUS_PAUSE,
+    PRO_OPERATION_PAUSE)
 
 logs = logging.getLogger(__name__)
 
@@ -446,25 +448,63 @@ class ProjectPlanOverruleView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission,)
 
+    @check_params_not_null(['reason'])
     def put(self, req, project_id):
         """
-        项目负责人驳回项目
+        项目分配者驳回项目
         """
         self.check_object_any_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
-        if project.status == PRO_STATUS_OVERRULE:
-            return resp.failed('项目状态为驳回状态')
+
         operation_record_data = {
             'project': project_id,
-            'reason': req.data.get('reason'),
+            'reason': req.data.get('reason', '').strip(),
             'operation': PRO_OPERATION_OVERRULE
         }
         if project.change_status(status=PRO_STATUS_OVERRULE, **operation_record_data):
-            project_queryset = ProjectPlanSerializer.setup_eager_loading(
-                ProjectPlan.objects.filter(id=project_id)).first()
-            return resp.serialize_response(project_queryset, results_name='project')
+
+            return resp.ok('操作成功')
         else:
             return resp.failed("操作失败")
+
+
+class ProjectPlanPauseView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+
+    @check_params_not_null(['reason'])
+    def put(self, req, project_id):
+        """
+        项目负责人挂起项目
+        """
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+
+        operation_record_data = {
+            'project': project_id,
+            'reason': req.data.get('reason', '').strip(),
+            'operation': PRO_OPERATION_PAUSE
+        }
+        if project.change_status(status=PRO_STATUS_PAUSE, **operation_record_data):
+
+            return resp.ok('操作成功')
+        else:
+            return resp.failed("操作失败")
+
+
+class ProjectPlanCancelPauseView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+
+    def put(self, req, project_id):
+        """
+        项目负责人取消挂起的项目
+        """
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        project.status = PRO_STATUS_STARTED
+        project.save()
+        return resp.ok('操作成功')
 
 
 class ProjectPlanStartupView(BaseAPIView):

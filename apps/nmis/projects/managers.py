@@ -12,7 +12,10 @@ from django_bulk_update import helper
 
 from base.models import BaseManager
 from nmis.devices.models import OrderedDevice, SoftwareDevice
-from nmis.projects.consts import PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, PRO_STATUS_STARTED
+from nmis.projects.consts import (PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE,
+                                  PRO_STATUS_STARTED, PRO_STATUS_OVERRULE,
+                                  PRO_STATUS_PAUSE, PRO_OPERATION_OVERRULE,
+                                  PRO_OPERATION_PAUSE)
 
 logger = logging.getLogger(__name__)
 
@@ -267,4 +270,35 @@ class ProjectOperationRecordManager(BaseManager):
         project_operation_record = self.model(**data)
         project_operation_record.save()
         project_operation_record.cache()
+
         return project_operation_record
+
+    def get_reason(self, project_id, status):
+        """
+        获取项目被挂起/被驳回的原因
+        :param project_id: 项目ID
+        :param status: 项目状态
+        """
+        if status == PRO_STATUS_OVERRULE:
+
+            project_operation_record = self.filter(
+                project=project_id, operation=PRO_OPERATION_OVERRULE
+            ).order_by("-created_time")
+
+        else:
+            project_operation_record = self.filter(
+                project=project_id, operation=PRO_OPERATION_PAUSE
+            ).order_by('-created_time')
+
+        return project_operation_record
+
+    def get_operation(self, project_id):
+        """
+        获取项目被挂起/被驳回的操作方式
+        :param project_id: 查看项目ID
+        """
+        project_operation_record = self.filter(project=project_id).first()
+
+        if project_operation_record:
+            return project_operation_record.operation
+        return None

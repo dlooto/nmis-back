@@ -14,7 +14,7 @@ from rest_framework import serializers
 from base import resp
 from base.serializers import BaseModelSerializer
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
-    ProjectMilestoneRecord
+    ProjectMilestoneRecord, ProjectOperationRecord
 
 logs = logging.getLogger(__name__)
 
@@ -147,6 +147,8 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     startup_time = serializers.SerializerMethodField("str_startup_time")
     expired_time = serializers.SerializerMethodField("str_expired_time")
 
+    operation_record = serializers.SerializerMethodField("_get_projects_operation")
+
     # attached_flow = serializers.SerializerMethodField('_get_attached_flow')
     attached_flow = ProjectFlowSerializer(many=False)
     hardware_devices = serializers.SerializerMethodField('_get_hardware_devices')
@@ -174,7 +176,7 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
             'project_introduce', 'pre_amount', 'procurement_method', 'current_stone_id',
             'attached_flow', 'hardware_devices', 'software_devices', 'milestone_records',
-            'startup_time', 'expired_time', 'created_time'
+            'startup_time', 'expired_time', 'created_time', 'operation_record',
         )
 
     def _get_creator_name(self, obj):
@@ -220,3 +222,15 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         # return resp.serialize_data(records) if records else []
         records = obj.project_milestone_records.all()
         return resp.serialize_data(records) if records else []
+
+    def _get_projects_operation(self, obj):
+
+        project_operation_record = ProjectOperationRecord.objects.get_reason(project_id=obj.id, status=obj.status)
+        return resp.serialize_data(project_operation_record) if project_operation_record else []
+
+
+class ProjectOperationRecordSerializer(BaseModelSerializer):
+
+    class Meta:
+        model = ProjectOperationRecord
+        fields = '__all__'

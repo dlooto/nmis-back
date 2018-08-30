@@ -516,16 +516,20 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                 self.admin_staff, self.dept, title='测试项目_{}'.format(self.get_random_suffix())
             )
             projects.append(project)
+        # 创建默认流程
+        defalut_flow = self.create_flow(self.organ)
 
         project_data = {
             'page': 1,
             'size': 4
         }
+
         # 分配项目
         for index in range(len(projects)):
-            projects[index].dispatch(self.admin_staff.id)
+            projects[index].dispatch(self.admin_staff)
 
         response = self.get(api, data=project_data)
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('projects'))
+        self.assertEquals(len(response.get('projects')), 4)
