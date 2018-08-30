@@ -348,8 +348,9 @@ class ProjectPlanView(BaseAPIView):
 
         self.check_object_any_permissions(req, hospital)
         if old_project.project_cate == PRO_CATE_HARDWARE:
-            if not old_project.is_unstarted():
-                return resp.failed('项目已启动或已完成, 无法修改')
+
+            if not old_project.is_unstarted() or old_project.is_paused():
+                return resp.failed('项目已启动或已完成或被挂起, 无法修改')
 
             form = ProjectPlanUpdateForm(old_project, data=req.data)
             if not form.is_valid():
@@ -365,8 +366,8 @@ class ProjectPlanView(BaseAPIView):
                 new_project_queryset, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
             )
         else:
-            if not old_project.is_unstarted():
-                return resp.failed('项目已启动或完成，无法修改')
+            if not old_project.is_unstarted or old_project.is_paused():
+                return resp.failed('项目已启动或完成或被挂起，无法修改')
             form = ProjectPlanUpdateForm(old_project, data=req.data)
             if not form.is_valid():
                 return resp.form_err(form.errors)
@@ -463,7 +464,9 @@ class ProjectPlanOverruleView(BaseAPIView):
         }
         if project.change_status(status=PRO_STATUS_OVERRULE, **operation_record_data):
 
-            return resp.ok('操作成功')
+            project_queryset = ProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)).first()
+            return resp.serialize_response(project_queryset, results_name='project')
         else:
             return resp.failed("操作失败")
 
@@ -486,8 +489,9 @@ class ProjectPlanPauseView(BaseAPIView):
             'operation': PRO_OPERATION_PAUSE
         }
         if project.change_status(status=PRO_STATUS_PAUSE, **operation_record_data):
-
-            return resp.ok('操作成功')
+            project_queryset = ProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)).first()
+            return resp.serialize_response(project_queryset, results_name='project')
         else:
             return resp.failed("操作失败")
 
@@ -501,10 +505,16 @@ class ProjectPlanCancelPauseView(BaseAPIView):
         项目负责人取消挂起的项目
         """
         self.check_object_any_permissions(req, req.user.get_profile().organ)
+
         project = self.get_object_or_404(project_id, ProjectPlan)
-        project.status = PRO_STATUS_STARTED
-        project.save()
-        return resp.ok('操作成功')
+        if project.status == PRO_STATUS_DONE:
+            return resp.failed('项目已完成，不能进行该操作')
+        if project.cancel_pause():
+            project_queryset = ProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)).first()
+            return resp.serialize_response(project_queryset, results_name='project')
+        else:
+            return resp.failed('操作失败')
 
 
 class ProjectPlanStartupView(BaseAPIView):

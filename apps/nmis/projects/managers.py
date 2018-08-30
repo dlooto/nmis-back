@@ -15,7 +15,7 @@ from nmis.devices.models import OrderedDevice, SoftwareDevice
 from nmis.projects.consts import (PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE,
                                   PRO_STATUS_STARTED, PRO_STATUS_OVERRULE,
                                   PRO_STATUS_PAUSE, PRO_OPERATION_OVERRULE,
-                                  PRO_OPERATION_PAUSE)
+                                  PRO_OPERATION_PAUSE, PRO_STATUS_DONE)
 
 logger = logging.getLogger(__name__)
 
