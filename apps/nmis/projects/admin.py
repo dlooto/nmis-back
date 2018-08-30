@@ -32,7 +32,7 @@ class ProjectFlowAdmin(admin.ModelAdmin):
 
 
 class MilestoneAdmin(admin.ModelAdmin):
-    list_display = ('id', 'flow', 'title', 'index', 'parent', 'created_time')
+    list_display = ('id', 'flow', 'title', 'index', 'created_time')
 
 
 class ProjectMilestoneRecordAdmin(admin.ModelAdmin):
