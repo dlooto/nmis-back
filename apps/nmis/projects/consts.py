@@ -58,3 +58,6 @@ PROJECT_CATE_CHOICES = (
     (PRO_CATE_SOFTWARE,    '信息化项目'),
     (PRO_CATE_HARDWARE,    '医疗器械项目'),
 )
+
+
+project_document_dir = '/upload/project/document'

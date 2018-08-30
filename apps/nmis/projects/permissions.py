@@ -50,3 +50,19 @@ class ProjectCreatorPermission(BasePermission):
         staff = request.user.get_profile()
         return obj.creator == staff if staff else False
 
+
+class ProjectAssistantPermission(BasePermission):
+    """
+    项目协助人权限
+    """
+    message = '仅允许项目负责人进行操作'
+
+    def has_permission(self, request, view):
+        return is_login(request)
+
+    def has_object_permission(self, request, view, project):
+        """
+        :param obj: 为project object
+        """
+        staff = request.user.get_profile()
+        return project.assistant == staff if staff else False

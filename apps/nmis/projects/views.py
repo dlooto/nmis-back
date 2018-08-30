@@ -3,10 +3,15 @@
 # Created by junn, on 2018/6/7
 #
 
-# 
-
+#
+import base64
 import logging
+import os
 from collections import OrderedDict
+
+from django.core.files.uploadedfile import UploadedFile
+
+import settings
 from base import resp
 from base.common.decorators import (
     check_id, check_id_list, check_params_not_null, check_params_not_all_null
@@ -26,14 +31,15 @@ from nmis.projects.forms import (
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
     ProjectFlowUpdateForm, )
-from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
-from nmis.projects.permissions import ProjectPerformerPermission
+from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument
+from nmis.projects.permissions import ProjectPerformerPermission, \
+    ProjectAssistantPermission
 from nmis.projects.serializers import ChunkProjectPlanSerializer, ProjectPlanSerializer
 
 from nmis.hospitals.consts import (
     GROUP_CATE_PROJECT_APPROVER,
-    GROUP_CATE_NORMAL_STAFF
-)
+    GROUP_CATE_NORMAL_STAFF,
+    ARCHIVE)
 from nmis.projects.consts import (
     PROJECT_STATUS_CHOICES,
     PRO_STATUS_STARTED,
@@ -44,9 +50,12 @@ from nmis.projects.consts import (
     PRO_CATE_HARDWARE,
     PRO_CATE_SOFTWARE,
     PRO_STATUS_OVERRULE,
-    PRO_OPERATION_OVERRULE)
+    PRO_OPERATION_OVERRULE, project_document_dir)
+from utils import files, times
+from utils.files import upload_file
+from utils.times import datetime_to_str
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ProjectPlanListView(BaseAPIView):
@@ -588,7 +597,7 @@ class ProjectDeviceView(BaseAPIView):
             device.delete()
             return resp.ok("操作成功")
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return resp.failed("操作失败")
 
 
@@ -703,7 +712,7 @@ class ProjectFlowView(BaseAPIView):
         try:
             flow.delete()
         except Exception as e:
-            logs.info(e)
+            logger.info(e)
             return resp.failed('操作失败')
         return resp.ok('操作成功')
 
@@ -750,3 +759,43 @@ class MilestoneView(BaseAPIView):
     def delete(self, req, flow_id, mid):
         """ 删除里程碑项 """
         pass
+
+
+class ProjectFlowNodeOperations(BaseAPIView):
+    # permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+
+    """
+    项目流程节点操作
+
+    项目负责人 上传文件并保存相关业务数据、变更节点并提交说明信息
+    项目协助人 上传文件并保存相关业务数据
+    """
+
+
+
+    def post(self, req, project_id, milestone_id,):
+        file_obj = req.FILES.get('upload_file')
+        if not file_obj:
+            return resp.failed('请选择要上传的文件')
+
+        if file_obj.content_type not in ARCHIVE.keys:
+            return resp.failed('系统不支持上传文件文件类型')
+        # old_name = file_obj.name
+        # file_obj.name = '%s%s' % (old_name, datetime_to_str(times.now(), '-yyyyMMdd-hhmmss'))
+        # result_name = files.save_file(file=file_obj, base_dir=project_document_dir, file_name=file_obj.name)
+
+        stored_file_name = '%s%s%s' % (base64.b64encode(file_obj.name), '-', datetime_to_str(times.now(), 'yyyyMMddhhmmss'))
+        result = upload_file(file_obj, project_document_dir, stored_file_name)
+
+        if result is None:
+            return resp.failed('上传失败')
+        logger.info(result)
+        return resp.ok('上传成功')
+
+        # doc = ProjectDocument(name=result[0], category='证书', path=result[1])
+        # doc.save()
+
+
+
+
+

@@ -13,7 +13,7 @@ from openpyxl.worksheet import Worksheet
 import settings
 from openpyxl import Workbook, load_workbook
 
-logs = logging.getLogger('django')
+logger = logging.getLogger('django')
 
 
 def is_file_exist(path):
@@ -32,7 +32,7 @@ def remove(path, fileName=None):
         os.remove(fullpath)
         return True
     except OSError as e:
-        logs.error("delete file %s error: %s" % (fullpath, e))
+        logger.error("delete file %s error: %s" % (fullpath, e))
         return False
 
 
@@ -49,10 +49,34 @@ def save_file(file, base_dir, file_name):
             dest.write(chunk)
         dest.close()
     except Exception as e:
-        logs.exception(e)
+        logger.exception(e)
         dest.close()
 
     return file_name
+
+
+def upload_file(file, base_dir, stored_file_name):
+    """
+
+    :param file:
+    :param base_dir:
+    :param storge_file_name:
+    :return:
+    """
+    try:
+        path = os.path.join(settings.MEDIA_ROOT, base_dir)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        else:
+            file_path = '%s%s' % (path, stored_file_name)
+            destination = open(file_path, 'wb+')
+            for chunk in file.chunks():
+                destination.write(chunk)
+            destination.close()
+    except Exception as e:
+        logger.debug(e)
+        return None
+    return file.name, '%s%s' % (base_dir, stored_file_name)
 
 
 def get_file_extension(path):
@@ -83,10 +107,10 @@ class ExcelBasedOXL(object):
             workbook = load_workbook(path, read_only=True, data_only=True)
             return True, workbook
         except (InvalidFileException, BadZipFile) as iex:
-            logs.exception(iex)
+            logger.exception(iex)
             return False, '文件格式异常或文件损坏'
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False, '文件读取异常'
 
     @staticmethod
@@ -151,7 +175,7 @@ class ExcelBasedOXL(object):
                     excel_data.append(sheet_data)
             return True, excel_data
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False, "表头数据和指定的标准不一致或excel解析错误"
 
     @staticmethod
