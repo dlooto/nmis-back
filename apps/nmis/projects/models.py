@@ -142,6 +142,21 @@ class ProjectPlan(BaseModel):
     def create_device(self, **device_data):
         return OrderedDevice.objects.create(project=self, **device_data)
 
+    def change_status(self, status, **data):
+        """
+        改变项目状态
+        """
+        try:
+            with transaction.atomic():
+                self.status = status
+                self.save()
+                ProjectOperationRecord.objects.add_operation_records(**data)
+                self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
+
     def dispatch(self, performer):
         """
         分派项目给某个员工作为责任人.项目状态改变，项目直接进入第一个里程碑
