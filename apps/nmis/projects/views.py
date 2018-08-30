@@ -632,6 +632,25 @@ class ProjectDeviceView(BaseAPIView):
             return resp.failed("操作失败")
 
 
+class ProjectFlowChildMilestones(BaseAPIView):
+    """
+    获取项目流程某里程碑项的所有直接子里程碑项
+    """
+
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+
+    def get(self, req, project_id, flow_id, milestone_id):
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        flow = self.get_object_or_404(flow_id, ProjectFlow)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        attached_flow = project.attached_flow
+        if flow.id != attached_flow.id or not attached_flow.contains(milestone):
+            return resp.failed("参数数据异常")
+        child_milestones = milestone.children()
+        return resp.serialize_response(child_milestones, results_name='milestones', srl_cls_name='MilestoneSerializer')
+
+
 class ProjectFlowCreateView(BaseAPIView):
     """
     创建项目流程对象

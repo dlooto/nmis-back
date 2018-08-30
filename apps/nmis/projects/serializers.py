@@ -29,7 +29,7 @@ class MilestoneSerializer(BaseModelSerializer):
     class Meta:
         model = Milestone
         fields = (
-            'id', 'title', 'index', 'flow_id', 'desc', 'created_time',
+            'id', 'title', 'index', 'flow_id', 'desc', 'parent_id', 'created_time',
         )
 
 
