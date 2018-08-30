@@ -151,7 +151,7 @@ class ProjectPlan(BaseModel):
             with transaction.atomic():
                 self.performer = performer
 
-                self.attached_flow = ProjectFlow.objects.get_default_flow()
+                self.attached_flow = self.get_default_flow()
 
                 self.status = PRO_STATUS_STARTED
                 self.startup_time = times.now()
@@ -165,6 +165,12 @@ class ProjectPlan(BaseModel):
         except Exception as e:
             logs.exception(e)
             return False
+
+    def get_default_flow(self):
+        """
+        返回默认流程
+        """
+        return ProjectFlow.objects.filter(default_flow=True).first()
 
     def redispatch(self, performer):
         """

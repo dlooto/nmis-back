@@ -12,7 +12,7 @@ from django_bulk_update import helper
 
 from base.models import BaseManager
 from nmis.devices.models import OrderedDevice, SoftwareDevice
-from nmis.projects.consts import PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE
+from nmis.projects.consts import PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, PRO_STATUS_STARTED
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +132,14 @@ class ProjectPlanManager(BaseManager):
             query_set = query_set.filter(
                 Q(title__contains=project_title) | Q(creator__in=creators)
             ).distinct()
+        return query_set.order_by('-created_time')
+
+    def get_dispatched_projects(self, organ):
+        """
+        获取已分配项目列表
+        """
+        query_set = self.filter(related_dept__organ=organ, status=PRO_STATUS_STARTED)
+
         return query_set.order_by('-created_time')
 
     def start_project(self):
