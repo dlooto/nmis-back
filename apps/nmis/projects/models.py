@@ -166,7 +166,7 @@ class ProjectPlan(BaseModel):
         取消挂起的项目
         """
         try:
-            self.status = PRO_STATUS_DONE
+            self.status = PRO_STATUS_STARTED
             self.save()
             self.cache()
             return True

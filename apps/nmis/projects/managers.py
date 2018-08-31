@@ -15,7 +15,8 @@ from nmis.devices.models import OrderedDevice, SoftwareDevice
 from nmis.projects.consts import (PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE,
                                   PRO_STATUS_STARTED, PRO_STATUS_OVERRULE,
                                   PRO_STATUS_PAUSE, PRO_OPERATION_OVERRULE,
-                                  PRO_OPERATION_PAUSE, PRO_STATUS_DONE)
+                                  PRO_OPERATION_PAUSE, PRO_STATUS_DONE,
+                                  PRO_STATUS_PENDING)
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class ProjectPlanManager(BaseManager):
         """
         from django.db.models import Q
 
-        query_set = self.filter(related_dept__organ=organ, related_dept_id__in=dept_id_list, performer=None)
+        query_set = self.filter(related_dept__organ=organ, related_dept_id__in=dept_id_list, status=PRO_STATUS_PENDING)
         if project_title or creators:
             query_set = query_set.filter(
                 Q(title__contains=project_title) | Q(creator__in=creators)

@@ -578,4 +578,4 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('project'))
-        self.assertEquals(response.get('project').get('status'), PRO_STATUS_DONE)
+        self.assertEquals(response.get('project').get('status'), PRO_STATUS_STARTED)

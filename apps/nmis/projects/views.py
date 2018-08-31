@@ -94,8 +94,10 @@ class ProjectPlanListView(BaseAPIView):
             result_data = self.get_undispatch_project_list(req, hospital=hospital)
 
         elif action_type == 'total_projects':
-            # 检查管理员权限,只允许管理员操作
-            self.check_object_permissions(req, hospital)
+            # 检查管理员权限,允许管理员/项目分配者操作
+            if not (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER):
+                self.check_object_permissions(req, hospital)
+
             result_data = self.get_total_project_list(
                 search_key, status, staffs=staffs, hospital=hospital)
 
@@ -128,6 +130,7 @@ class ProjectPlanListView(BaseAPIView):
         """
         # 获取项目各状态条数
         status_count = ProjectPlan.objects.get_group_by_status(search_key=search_key)
+        print(status_count)
 
         result_projects = ProjectPlan.objects.get_by_search_key(
             hospital, project_title=search_key, performers=staffs, status=status
@@ -167,6 +170,10 @@ class ProjectPlanListView(BaseAPIView):
             status_count_data['PE'] = 0
         if not status_count_data.get('DO'):
             status_count_data['DO'] = 0
+        if not status_count_data.get('OR'):
+            status_count_data['OR'] = 0
+        if not status_count_data.get('PA'):
+            status_count_data['PA'] = 0
 
         result_projects = ChunkProjectPlanSerializer.setup_eager_loading(
             result_data.get('result_projects'))
@@ -193,11 +200,15 @@ class ProjectPlanListView(BaseAPIView):
         project_started_count = 'project_started_count'  # 进行中项目数量
         project_pending_count = 'project_pending_count'  # 待启动项目数量
         project_done_count = 'project_done_count'  # 已完成的项目数量
+        project_overruled_count = 'project_overruled_count'  # 待启动项目数量
+        project_paused_count = 'project_paused_count'  # 已完成的项目数量
         return {
             projects_status_count: OrderedDict([
                 (project_pending_count, data.get('PE')),
                 (project_started_count, data.get('SD')),
-                (project_done_count, data.get('DO'))
+                (project_done_count, data.get('DO')),
+                (project_overruled_count, data.get('OR')),
+                (project_paused_count, data.get('PA'))
             ])
         }
 
