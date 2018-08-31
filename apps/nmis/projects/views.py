@@ -4,14 +4,11 @@
 #
 
 #
-import base64
 import logging
-import os
 from collections import OrderedDict
 
-from django.core.files.uploadedfile import UploadedFile
+from django.db import transaction
 
-import settings
 from base import resp
 from base.common.decorators import (
     check_id, check_id_list, check_params_not_null, check_params_not_all_null
@@ -50,10 +47,11 @@ from nmis.projects.consts import (
     PRO_CATE_HARDWARE,
     PRO_CATE_SOFTWARE,
     PRO_STATUS_OVERRULE,
-    PRO_OPERATION_OVERRULE, project_document_dir)
-from utils import files, times
+    PRO_OPERATION_OVERRULE,
+    PRO_STATUS_PAUSE,
+    PRO_OPERATION_PAUSE,
+    PROJECT_DOCUMENT_DIR)
 from utils.files import upload_file
-from utils.times import datetime_to_str
 
 logger = logging.getLogger(__name__)
 
@@ -455,25 +453,63 @@ class ProjectPlanOverruleView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission,)
 
+    @check_params_not_null(['reason'])
     def put(self, req, project_id):
         """
-        项目负责人驳回项目
+        项目分配者驳回项目
         """
         self.check_object_any_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
-        if project.status == PRO_STATUS_OVERRULE:
-            return resp.failed('项目状态为驳回状态')
+
         operation_record_data = {
             'project': project_id,
-            'reason': req.data.get('reason'),
+            'reason': req.data.get('reason', '').strip(),
             'operation': PRO_OPERATION_OVERRULE
         }
         if project.change_status(status=PRO_STATUS_OVERRULE, **operation_record_data):
-            project_queryset = ProjectPlanSerializer.setup_eager_loading(
-                ProjectPlan.objects.filter(id=project_id)).first()
-            return resp.serialize_response(project_queryset, results_name='project')
+
+            return resp.ok('操作成功')
         else:
             return resp.failed("操作失败")
+
+
+class ProjectPlanPauseView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+
+    @check_params_not_null(['reason'])
+    def put(self, req, project_id):
+        """
+        项目负责人挂起项目
+        """
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+
+        operation_record_data = {
+            'project': project_id,
+            'reason': req.data.get('reason', '').strip(),
+            'operation': PRO_OPERATION_PAUSE
+        }
+        if project.change_status(status=PRO_STATUS_PAUSE, **operation_record_data):
+
+            return resp.ok('操作成功')
+        else:
+            return resp.failed("操作失败")
+
+
+class ProjectPlanCancelPauseView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+
+    def put(self, req, project_id):
+        """
+        项目负责人取消挂起的项目
+        """
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        project.status = PRO_STATUS_STARTED
+        project.save()
+        return resp.ok('操作成功')
 
 
 class ProjectPlanStartupView(BaseAPIView):
@@ -771,29 +807,37 @@ class ProjectFlowNodeOperations(BaseAPIView):
     项目协助人 上传文件并保存相关业务数据
     """
 
-
-
-    def post(self, req, project_id, milestone_id,):
-        file_obj = req.FILES.get('upload_file')
-        if not file_obj:
+    @transaction.atomic
+    def post(self, req, project_id, flow_id, milestone_id, ):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        logger.info(req.FILES)
+        if not req.FILES:
             return resp.failed('请选择要上传的文件')
+        for name, file_obj in req.FILES.items():
+            if not name or not file_obj:
+                return resp.failed('请选择要上传的文件')
+            if file_obj.content_type not in ARCHIVE.values():
+                return resp.failed('系统不支持上传文件文件类型')
 
-        if file_obj.content_type not in ARCHIVE.keys:
-            return resp.failed('系统不支持上传文件文件类型')
-        # old_name = file_obj.name
-        # file_obj.name = '%s%s' % (old_name, datetime_to_str(times.now(), '-yyyyMMdd-hhmmss'))
-        # result_name = files.save_file(file=file_obj, base_dir=project_document_dir, file_name=file_obj.name)
-
-        stored_file_name = '%s%s%s' % (base64.b64encode(file_obj.name), '-', datetime_to_str(times.now(), 'yyyyMMddhhmmss'))
-        result = upload_file(file_obj, project_document_dir, stored_file_name)
-
-        if result is None:
-            return resp.failed('上传失败')
-        logger.info(result)
-        return resp.ok('上传成功')
-
-        # doc = ProjectDocument(name=result[0], category='证书', path=result[1])
-        # doc.save()
+        result_dict = {}
+        for name, file_obj in req.FILES.items():
+            # stored_file_name = '%s%s%s' % (file_obj.name, '-', datetime_to_str(times.now(), format='%Y%m%d%H%M%S'))
+            stored_file_name = file_obj.name
+            result = upload_file(file_obj, PROJECT_DOCUMENT_DIR, stored_file_name)
+            if not result:
+                return resp.failed('%s%s' % (file_obj.name, '上传失败'))
+                logger.info(result)
+            result_dict[name] = result
+        # 上传文件成功后，保存文件记录
+        doc_id_list = []
+        for name, (doc_name, path) in result_dict.items():
+            doc, is_success = ProjectDocument.objects.update_or_create(name=doc_name, category=name, path=path)
+            if is_success:
+                doc.cache()
+            doc_id_list.append(doc_id)
+        doc_ids_str = ','.join(doc_id_list)
+        project.change_milestone()
+        return resp.ok('操作成功')
 
 
 

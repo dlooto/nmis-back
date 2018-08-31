@@ -39,6 +39,12 @@ urlpatterns = [
     # 分配者驳回项目
     path('<int:project_id>/overrule', views.ProjectPlanOverruleView.as_view()),
 
+    # 项目负责人挂起项目
+    path('<int:project_id>/pause', views.ProjectPlanPauseView.as_view(), ),
+
+    # 项目负责人取消挂起项目
+    path('<int:project_id>/cancel-pause', views.ProjectPlanCancelPauseView.as_view(), ),
+
     # 责任人启动项目
     path('<int:project_id>/startup',       views.ProjectPlanStartupView.as_view(),),
 

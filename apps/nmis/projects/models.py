@@ -10,6 +10,7 @@ import logging
 from collections import OrderedDict
 from django.db import models, transaction
 
+from nmis.projects.managers import ProjectDocumentManager
 from utils import times
 from base.models import BaseModel
 from nmis.devices.models import OrderedDevice, SoftwareDevice
@@ -142,6 +143,21 @@ class ProjectPlan(BaseModel):
     def create_device(self, **device_data):
         return OrderedDevice.objects.create(project=self, **device_data)
 
+    def change_status(self, status, **data):
+        """
+        改变项目状态
+        """
+        try:
+            with transaction.atomic():
+                self.status = status
+                self.save()
+                ProjectOperationRecord.objects.add_operation_records(**data)
+                self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
+
     def dispatch(self, performer):
         """
         分派项目给某个员工作为责任人.项目状态改变，项目直接进入第一个里程碑
@@ -156,7 +172,7 @@ class ProjectPlan(BaseModel):
                 self.status = PRO_STATUS_STARTED
                 self.startup_time = times.now()
 
-                self.current_stone = self.attached_flow.get_first_milestone()
+                self.current_stone = self.attached_flow.get_first_main_milestone()
                 self.add_milestone_record(self.current_stone)
 
                 self.save()
@@ -203,7 +219,7 @@ class ProjectPlan(BaseModel):
                 self.expired_time = expired_time
                 self.startup_time = times.now()
                 self.status = PRO_STATUS_STARTED
-                self.current_stone = self.attached_flow.get_first_milestone()
+                self.current_stone = self.attached_flow.get_first_main_milestone()
                 self.add_milestone_record(self.current_stone)
                 self.save()
                 self.cache()
@@ -268,7 +284,7 @@ class ProjectPlan(BaseModel):
         if new_milestone == self.current_stone:
             if done_sign == FLOW_UNDONE:
                 return False, "数据异常"
-            if done_sign == FLOW_DONE and self.attached_flow.get_last_milestone() == new_milestone:
+            if done_sign == FLOW_DONE and self.attached_flow.get_last_mian_milestone() == new_milestone:
                 self.status = PRO_STATUS_DONE
                 self.save()
                 self.cache()
@@ -294,7 +310,7 @@ class ProjectFlow(BaseModel):
     title = models.CharField('流程名称', max_length=30, default='默认')
     type = models.CharField('流程类型', max_length=3, null=True, blank=True, default='')
     pre_defined = models.BooleanField('是否预定义', default=False) # 机构初始创建时, 为机构默认生成预定义的流程
-    default_flow = models.BooleanField('是否为默认流程', default=True)
+    default_flow = models.BooleanField('是否为默认流程', default=False)
 
     objects = ProjectFlowManager()
 
@@ -311,12 +327,29 @@ class ProjectFlow(BaseModel):
         return "%s %s" % (self.id, self.title)
 
     def get_milestones(self):
-        """ 流程内含的父里程碑列表 """
+        """ 流程内含的所有里程碑列表 """
         return self.milestones.all()
 
-    def get_first_milestone(self):
+    def get_main_milestones(self):
+        """ 流程内含的父里程碑列表 """
+        return self.milestones.filter(parent=None).all()
+
+    def get_first_main_milestone(self):
         """ 返回流程中的第1个父里程碑项 """
-        return self.get_milestones().order_by('index')[:1][0]
+        return self.get_main_milestones().order_by('index')[:1][0]
+
+    def get_first_child_milestone(self, milestone):
+        """
+        获取流程某父里程碑项的第一个子里程碑
+        :param parent:
+        :return:
+        """
+        milestones = self.get_milestones()
+        if milestone not in milestones:
+            return None
+        if not milestone.children():
+            return None
+        return milestone.children().first()
 
     def contains(self, milestone):
         """
@@ -326,9 +359,25 @@ class ProjectFlow(BaseModel):
         """
         return milestone in self.get_milestones()
 
+    def get_last_main_milestone(self):
+        """ 返回流程中的最后一个父里程碑项 """
+        return self.get_main_milestones().order_by('-index')[:1][0]
+
     def get_last_milestone(self):
-        """ 返回流程中的最后一个里程碑项 """
-        return self.get_milestones().order_by('-index')[:1][0]
+        """返回流程中最后一个子孙里程碑"""
+        pass
+
+    def get_last_child_milestone(self, milestone):
+        """
+         获取流程某父里程碑项的最后一个子里程碑
+        :return:
+        """
+        milestones = self.get_milestones()
+        if milestone not in milestones:
+            return None
+        if not milestone.children():
+            return None
+        milestone.children().last()
 
     def is_used(self):
         query_set = ProjectPlan.objects.filter(attached_flow=self)
@@ -342,7 +391,7 @@ class Milestone(BaseModel):
     项目里程碑结点
     """
     flow = models.ForeignKey(
-        'projects.ProjectFlow', verbose_name='归属流程', null=True,
+        'projects.ProjectFlow', verbose_name='归属流程', null=False,
         related_name='milestones', on_delete=models.CASCADE
     )
     title = models.CharField('里程碑标题', max_length=10, )
@@ -351,7 +400,7 @@ class Milestone(BaseModel):
     index = models.SmallIntegerField('索引顺序', default=1)
     desc = models.CharField('描述', max_length=20, default='')
 
-    parent_milestone = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = '里程碑项'
@@ -380,6 +429,16 @@ class Milestone(BaseModel):
         """ 上一个里程碑项 """
         pass
 
+    def children(self):
+        """
+        查找当前里程碑所有子里程碑项，只会找到直接的子里程碑项，不会返回所有子孙里程碑项
+        :return: milestone list
+        """
+        milestones = self.flow.get_milestones().filter(parent=self).order_by('index')
+        if milestones is None:
+            return []
+        return milestones
+
 
 class ProjectMilestoneRecord(BaseModel):
     """
@@ -400,6 +459,8 @@ class ProjectMilestoneRecord(BaseModel):
 
     # 记录各里程碑下的一个总结性说明概述
     summary = models.TextField('总结说明', max_length=200, null=True, blank=True)
+
+    finished = models.BooleanField("节点任务是否完结", default=False, )
 
     class Meta:
         verbose_name = '项目里程碑记录'
@@ -442,8 +503,13 @@ class ProjectDocument(BaseModel):
     项目文档数据模型
     """
     name = models.CharField('文档名称', max_length=80, null=False, blank=False)
-    category = models.CharField('文档类别', max_length=30, null=False, blank=False)
+    category = models.CharField(
+        '文档类别', max_length=30, choices=PROJECT_DOCUMENT_CATE_CHOICES,
+        null=False, blank=False
+    )
     path = models.CharField('存放路径', max_length=255, null=False, blank=False)
+
+    objects = ProjectDocumentManager
 
     class Meta:
         verbose_name = '文档资料'

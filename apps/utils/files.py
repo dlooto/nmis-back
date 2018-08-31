@@ -67,16 +67,45 @@ def upload_file(file, base_dir, stored_file_name):
         path = os.path.join(settings.MEDIA_ROOT, base_dir)
         if not os.path.exists(path):
             os.makedirs(path)
-        else:
-            file_path = '%s%s' % (path, stored_file_name)
-            destination = open(file_path, 'wb+')
-            for chunk in file.chunks():
-                destination.write(chunk)
-            destination.close()
+        file_path = '%s/%s' % (path, stored_file_name)
+        destination = open(file_path, 'wb+')
+        for chunk in file.chunks():
+            destination.write(chunk)
+        destination.close()
     except Exception as e:
-        logger.debug(e)
+        logger.info(e)
         return None
     return file.name, '%s%s' % (base_dir, stored_file_name)
+
+
+# def batch_update_files(file_dict, base_dir):
+#
+#     if not file_dict:
+#         return None
+#     path = None
+#     try:
+#         path = os.path.join(settings.MEDIA_ROOT, base_dir)
+#         if not os.path.exists(path):
+#             os.makedirs(path)
+#     except Exception as e:
+#         logger.info(e)
+#         return None
+#     try:
+#         for file, stored_file_name in file_dict.items():
+#             file_path = '%s/%s' % (path, stored_file_name)
+#             destination = open(file_path, 'wb+')
+#             for chunk in file.chunks():
+#                 destination.write(chunk)
+#             destination.close()
+#     except Exception as e:
+#         logger.info(e)
+#         return None
+#
+#     return file.name, '%s%s' % (base_dir, stored_file_name)
+
+
+
+
 
 
 def get_file_extension(path):
