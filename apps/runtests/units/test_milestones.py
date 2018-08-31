@@ -68,7 +68,7 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
             )
         )
 
-        self.assertEquals(self.project.current_stone, self.flow.get_first_milestone())
+        self.assertEquals(self.project.current_stone, self.flow.get_first_main_milestone())
 
         # new_milestone = self.project.current_stone
         # success, msg = self.project.change_milestone(new_milestone)

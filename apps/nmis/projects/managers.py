@@ -340,3 +340,25 @@ class ProjectOperationRecordManager(BaseManager):
         if project_operation_record:
             return project_operation_record.operation
         return None
+
+
+class ProjectDocumentManager(BaseManager):
+
+    def get_project_document(self, name, category):
+        return self.filter(name=name, category=category).first()
+
+    def add_project_document(self, name, category, path):
+        old_doc = self.get_project_document(name, category)
+        if old_doc:
+            return False, '已存在相同资料类别的同名文件'
+        doc = self.model(name=name, category=category, path=path)
+        doc.save()
+        doc.cache()
+        return True, doc
+
+    def update_project_ducument(self, ):
+        pass
+
+
+class ProjectMilestoneRecordManager(BaseManager):
+    pass

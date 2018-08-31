@@ -3,10 +3,12 @@
 # Created by junn, on 2018/6/7
 #
 
-# 
-
+#
 import logging
 from collections import OrderedDict
+
+from django.db import transaction
+
 from base import resp
 from base.common.decorators import (
     check_id, check_id_list, check_params_not_null, check_params_not_all_null
@@ -26,14 +28,16 @@ from nmis.projects.forms import (
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
     ProjectFlowUpdateForm, )
-from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone
-from nmis.projects.permissions import ProjectPerformerPermission
+from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
+    ProjectMilestoneRecord
+from nmis.projects.permissions import ProjectPerformerPermission, \
+    ProjectAssistantPermission
 from nmis.projects.serializers import ChunkProjectPlanSerializer, ProjectPlanSerializer
 
 from nmis.hospitals.consts import (
     GROUP_CATE_PROJECT_APPROVER,
-    GROUP_CATE_NORMAL_STAFF
-)
+    GROUP_CATE_NORMAL_STAFF,
+    ARCHIVE)
 from nmis.projects.consts import (
     PROJECT_STATUS_CHOICES,
     PRO_STATUS_STARTED,
@@ -46,9 +50,11 @@ from nmis.projects.consts import (
     PRO_STATUS_OVERRULE,
     PRO_OPERATION_OVERRULE,
     PRO_STATUS_PAUSE,
-    PRO_OPERATION_PAUSE)
+    PRO_OPERATION_PAUSE,
+    PROJECT_DOCUMENT_DIR)
+from utils.files import upload_file
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ProjectPlanListView(BaseAPIView):
@@ -705,7 +711,7 @@ class ProjectDeviceView(BaseAPIView):
             device.delete()
             return resp.ok("操作成功")
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return resp.failed("操作失败")
 
 
@@ -820,7 +826,7 @@ class ProjectFlowView(BaseAPIView):
         try:
             flow.delete()
         except Exception as e:
-            logs.info(e)
+            logger.info(e)
             return resp.failed('操作失败')
         return resp.ok('操作成功')
 
@@ -867,3 +873,59 @@ class MilestoneView(BaseAPIView):
     def delete(self, req, flow_id, mid):
         """ 删除里程碑项 """
         pass
+
+
+class ProjectFlowNodeOperations(BaseAPIView):
+    # permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+
+    """
+    项目流程节点操作
+
+    项目负责人 上传文件并保存相关业务数据、变更节点并提交说明信息
+    项目协助人 上传文件并保存相关业务数据
+    """
+
+    @transaction.atomic
+    def post(self, req, project_id, flow_id, milestone_id, ):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        logger.info(req.FILES)
+        if not req.FILES:
+            return resp.failed('请选择要上传的文件')
+        for name, file_obj in req.FILES.items():
+            if not name or not file_obj:
+                return resp.failed('请选择要上传的文件')
+            if file_obj.content_type not in ARCHIVE.values():
+                return resp.failed('系统不支持上传文件文件类型')
+
+        result_dict = {}
+        for name, file_obj in req.FILES.items():
+            # stored_file_name = '%s%s%s' % (file_obj.name, '-', datetime_to_str(times.now(), format='%Y%m%d%H%M%S'))
+            stored_file_name = file_obj.name
+            result = upload_file(file_obj, PROJECT_DOCUMENT_DIR, stored_file_name)
+            if not result:
+                return resp.failed('%s%s' % (file_obj.name, '上传失败'))
+                logger.info(result)
+            result_dict[name] = result
+        # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord中
+        doc_id_list = []
+        for name, (doc_name, path) in result_dict.items():
+            doc, is_success = ProjectDocument.objects.update_or_create(name=doc_name, category=name, path=path)
+            if is_success:
+                doc.cache()
+            doc_id_list.append(doc.id)
+        logger.info(doc_id_list)
+        doc_ids_str = ','.join('%s' % id for id in doc_id_list)
+        record, success = ProjectMilestoneRecord.objects.update_or_create(project=project, milestone=milestone)
+        if not success:
+            resp.ok('操作失败')
+        record.doc_list = doc_ids_str
+        record.save()
+        record.cache()
+
+        return resp.ok('操作成功')
+
+
+
+
+
