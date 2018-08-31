@@ -200,6 +200,9 @@ class ProjectPlanUpdateForm(BaseForm):
         if self.data.get('purpose'):
             pro_data['purpose'] = self.data.get('purpose').strip()
 
+        if self.data.get('project_introduce'):
+            pro_data['project_introduce'] = self.data.get('project_introduce').strip()
+
         if self.data.get('handing_type'):
             pro_data['handing_type'] = self.data.get('handing_type').strip()
 

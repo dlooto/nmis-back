@@ -124,8 +124,8 @@ class ProjectPlanManager(BaseManager):
         :param organ:
         :param staff: 当前登录系统用户
         :param project_title: 项目名称
-        :param creators 项目申请人Staff集合
-        :param status 项目状态
+        :param creators: 项目申请人Staff集合
+        :param status: 项目状态
         :param
         """
         query_set = self.filter(related_dept__organ=organ, performer=staff)
@@ -138,6 +138,26 @@ class ProjectPlanManager(BaseManager):
             ).distinct()
         return query_set.order_by('-created_time')
 
+    def get_my_assistant_projects(self, organ, assistant, performer=None, project_title=None, status=None):
+        """
+        按关键字:(项目名/项目申请人)查询机构所有我协助的项目列表
+        :param organ:
+        :param assistant: 项目协助人
+        :param performer: 项目负责人
+        :param project_title: 项目名称
+        :param status: 项目状态
+        """
+        query_set = self.filter(related_dept__organ=organ, assistant=assistant)
+        if status:
+            query_set = query_set.filter(status=status)
+
+        if project_title or performer:
+            from django.db.models import Q
+            query_set = query_set.filter(
+                Q(title__contains=project_title) | Q(performer__in=performer)
+            ).distinct()
+        return query_set.order_by('-created_time')
+
     def get_dispatched_projects(self, organ):
         """
         获取已分配项目列表
@@ -145,6 +165,20 @@ class ProjectPlanManager(BaseManager):
         query_set = self.filter(related_dept__organ=organ, status=PRO_STATUS_STARTED)
 
         return query_set.order_by('-created_time')
+
+    def dispatched_assistant(self, project, assistant):
+        """
+        项目负责人分配项目协助人
+        :param: assistant: 项目协助人
+        """
+        try:
+            project.assistant = assistant
+            project.save()
+            project.cache()
+            return True
+        except Exception as e:
+            logger.exception(e)
+            return False
 
     def start_project(self):
         """
@@ -168,6 +202,8 @@ class ProjectPlanManager(BaseManager):
                     pro_base_data['handing_type'] = data.get('handing_type')
                 if data.get('purpose'):
                     pro_base_data['purpose'] = data.get('purpose')
+                if data.get('project_introduce'):
+                    pro_base_data['project_introduce'] = data.get('project_introduce').strip()
                 if pro_base_data:
                     new_project = old_project.update(pro_base_data)
 
@@ -235,6 +271,7 @@ class ProjectPlanManager(BaseManager):
         if performer:
             return self.filter(performer=performer, title__contains=search_key)\
                 .values_list('status').annotate(models.Count('id'))
+
         return self.filter(title__contains=search_key).values_list('status').annotate(models.Count('id'))
 
 

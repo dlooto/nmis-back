@@ -24,6 +24,12 @@ urlpatterns = [
     # 已分配项目列表
     path('dispatched', views.ProjectPlanDispatchedView.as_view(), ),
 
+    # 获取协助的项目列表
+    path('assisted', views.ProjectPlanAssistedListView.as_view(), ),
+
+    # 分配项目协助人员/辅助人员
+    path('<int:project_id>/dispatch-assistant', views.ProjectPlanDispatchAssistantView.as_view(), ),
+
     # 新建项目申请
     path('create',            views.ProjectPlanCreateView.as_view(), ),
 
