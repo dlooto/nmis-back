@@ -321,3 +321,7 @@ class ProjectDocumentManager(BaseManager):
 
     def update_project_ducument(self, ):
         pass
+
+
+class ProjectMilestoneRecordManager(BaseManager):
+    pass

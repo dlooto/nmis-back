@@ -28,7 +28,8 @@ from nmis.projects.forms import (
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
     ProjectFlowUpdateForm, )
-from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument
+from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
+    ProjectMilestoneRecord
 from nmis.projects.permissions import ProjectPerformerPermission, \
     ProjectAssistantPermission
 from nmis.projects.serializers import ChunkProjectPlanSerializer, ProjectPlanSerializer
@@ -831,6 +832,7 @@ class ProjectFlowNodeOperations(BaseAPIView):
     @transaction.atomic
     def post(self, req, project_id, flow_id, milestone_id, ):
         project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
         logger.info(req.FILES)
         if not req.FILES:
             return resp.failed('请选择要上传的文件')
@@ -849,15 +851,22 @@ class ProjectFlowNodeOperations(BaseAPIView):
                 return resp.failed('%s%s' % (file_obj.name, '上传失败'))
                 logger.info(result)
             result_dict[name] = result
-        # 上传文件成功后，保存文件记录
+        # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord中
         doc_id_list = []
         for name, (doc_name, path) in result_dict.items():
             doc, is_success = ProjectDocument.objects.update_or_create(name=doc_name, category=name, path=path)
             if is_success:
                 doc.cache()
-            doc_id_list.append(doc_id)
-        doc_ids_str = ','.join(doc_id_list)
-        project.change_milestone()
+            doc_id_list.append(doc.id)
+        logger.info(doc_id_list)
+        doc_ids_str = ','.join('%s' % id for id in doc_id_list)
+        record, success = ProjectMilestoneRecord.objects.update_or_create(project=project, milestone=milestone)
+        if not success:
+            resp.ok('操作失败')
+        record.doc_list = doc_ids_str
+        record.save()
+        record.cache()
+
         return resp.ok('操作成功')
 
 

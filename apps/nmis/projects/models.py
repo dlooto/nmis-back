@@ -10,7 +10,7 @@ import logging
 from collections import OrderedDict
 from django.db import models, transaction
 
-from nmis.projects.managers import ProjectDocumentManager
+from nmis.projects.managers import ProjectDocumentManager, ProjectMilestoneRecordManager
 from utils import times
 from base.models import BaseModel
 from nmis.devices.models import OrderedDevice, SoftwareDevice
@@ -252,11 +252,11 @@ class ProjectPlan(BaseModel):
         :return: True or False
         """
         try:
-            ProjectMilestoneRecord.objects.create(project=self, milestone=milestone)
-            return True
+            record = ProjectMilestoneRecord.objects.create(project=self, milestone=milestone)
+            return True, record
         except Exception as e:
             logs.exception(e)
-            return False
+            return False, "添加失败"
 
     def get_recorded_milestones(self):
         """
@@ -282,7 +282,7 @@ class ProjectPlan(BaseModel):
             return True
         return False
 
-    def change_milestone(self, new_milestone, done_sign):
+    def change_milestone(self, new_milestone, done_sign, finished=False):
         """
         变更项目里程碑状态
         :param new_milestone: 新的里程碑状态对象
@@ -479,6 +479,8 @@ class ProjectMilestoneRecord(BaseModel):
 
     finished = models.BooleanField("节点任务是否完结", default=False, )
 
+    objects = ProjectMilestoneRecordManager()
+
     class Meta:
         verbose_name = '项目里程碑记录'
         verbose_name_plural = '项目里程碑记录'
@@ -526,7 +528,7 @@ class ProjectDocument(BaseModel):
     )
     path = models.CharField('存放路径', max_length=255, null=False, blank=False)
 
-    objects = ProjectDocumentManager
+    objects = ProjectDocumentManager()
 
     class Meta:
         verbose_name = '文档资料'
