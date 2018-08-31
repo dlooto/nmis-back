@@ -130,7 +130,6 @@ class ProjectPlanListView(BaseAPIView):
         """
         # 获取项目各状态条数
         status_count = ProjectPlan.objects.get_group_by_status(search_key=search_key)
-        print(status_count)
 
         result_projects = ProjectPlan.objects.get_by_search_key(
             hospital, project_title=search_key, performers=staffs, status=status
@@ -528,6 +527,63 @@ class ProjectPlanCancelPauseView(BaseAPIView):
             return resp.failed('操作失败')
 
 
+class ProjectPlanDispatchAssistantView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    @check_id('assistant_id')
+    def put(self, req, project_id):
+        """
+        项目负责人分配项目协助办理人
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+
+        staff = self.get_object_or_404(req.data.get('assistant_id'), Staff)
+
+        if ProjectPlan.objects.dispatched_assistant(project, staff):
+            return resp.ok("操作成功")
+
+        return resp.ok('操作失败')
+
+
+class ProjectPlanAssistedListView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    def get(self, req):
+        """
+        获取我协助的项目列表
+        参数列表：
+            pro_status: string    项目状态（SD：已启动，DO：已完成，PA：已挂起）
+            search_key: string    项目名称/项目申请人关键字
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        search_key = req.GET.get('search_key', '').strip()
+        status = req.GET.get('pro_status', '').strip()
+        # 项目状态校验
+        if status:
+            if status not in dict(PROJECT_STATUS_CHOICES):
+                return resp.form_err({'err_status': '项目状态异常'})
+        performer_staffs = None
+        if search_key:
+            performer_staffs = Staff.objects.get_by_name(req.user.get_profile().organ, search_key)
+
+        query_set = ProjectPlan.objects.get_my_assistant_projects(
+            organ=req.user.get_profile().organ, assistant=req.user.get_profile(),
+            performer=performer_staffs, project_title=search_key, status=status)
+        result_projects = ChunkProjectPlanSerializer.setup_eager_loading(query_set)
+
+        project_status_count = ProjectPlan.objects.get_group_by_status(
+            search_key=search_key, performer=performer_staffs)
+        print(project_status_count)
+
+        return self.get_pages(
+            result_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+        )
+
+
 class ProjectPlanStartupView(BaseAPIView):
     """
     启动项目
@@ -535,7 +591,7 @@ class ProjectPlanStartupView(BaseAPIView):
     """
     permission_classes = (IsHospitalAdmin, HospitalStaffPermission, ProjectDispatcherPermission)
 
-    @check_id_list(['flow_id',])
+    @check_id_list(['flow_id', ])
     @check_params_not_null(["expired_time"])
     def put(self, req, project_id):
         self.check_object_any_permissions(req, req.user.get_profile().organ)

@@ -579,3 +579,32 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('project'))
         self.assertEquals(response.get('project').get('status'), PRO_STATUS_STARTED)
+
+    def test_dispatched_assistant(self):
+        """
+        API测试: 测试负责人分配项目的协助办理人
+        """
+        api = '/api/v1/projects/{}/dispatch-assistant'
+
+        self.login_with_username(self.user)
+
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='分配项目协助办理人')
+
+        # 创建项目协助人
+        staff_data = {
+            'title': '主治医师',
+            'contact': '19822012220',
+            'email': 'ceshi01@test.com',
+        }
+        staff = self.create_completed_staff(self.organ, self.dept, name='负责人', **staff_data)
+
+        defalut_flow = self.create_flow(self.organ)
+        # 分配项目负责人
+        self.assertTrue(project.dispatch(self.admin_staff))
+        data = {
+            'assistant_id': staff.id
+        }
+        response = self.put(api.format(project.id), data=data)
+
+        self.assert_response_success(response)
+        self.assertEquals(response.get('code'), 10000)
