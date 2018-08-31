@@ -99,8 +99,10 @@ class ProjectPlanListView(BaseAPIView):
             result_data = self.get_undispatch_project_list(req, hospital=hospital)
 
         elif action_type == 'total_projects':
-            # 检查管理员权限,只允许管理员操作
-            self.check_object_permissions(req, hospital)
+            # 检查管理员权限,允许管理员/项目分配者操作
+            if not (login_staff.group.cate == GROUP_CATE_PROJECT_APPROVER):
+                self.check_object_permissions(req, hospital)
+
             result_data = self.get_total_project_list(
                 search_key, status, staffs=staffs, hospital=hospital)
 
@@ -133,6 +135,7 @@ class ProjectPlanListView(BaseAPIView):
         """
         # 获取项目各状态条数
         status_count = ProjectPlan.objects.get_group_by_status(search_key=search_key)
+        print(status_count)
 
         result_projects = ProjectPlan.objects.get_by_search_key(
             hospital, project_title=search_key, performers=staffs, status=status
@@ -172,6 +175,10 @@ class ProjectPlanListView(BaseAPIView):
             status_count_data['PE'] = 0
         if not status_count_data.get('DO'):
             status_count_data['DO'] = 0
+        if not status_count_data.get('OR'):
+            status_count_data['OR'] = 0
+        if not status_count_data.get('PA'):
+            status_count_data['PA'] = 0
 
         result_projects = ChunkProjectPlanSerializer.setup_eager_loading(
             result_data.get('result_projects'))
@@ -198,11 +205,15 @@ class ProjectPlanListView(BaseAPIView):
         project_started_count = 'project_started_count'  # 进行中项目数量
         project_pending_count = 'project_pending_count'  # 待启动项目数量
         project_done_count = 'project_done_count'  # 已完成的项目数量
+        project_overruled_count = 'project_overruled_count'  # 待启动项目数量
+        project_paused_count = 'project_paused_count'  # 已完成的项目数量
         return {
             projects_status_count: OrderedDict([
                 (project_pending_count, data.get('PE')),
                 (project_started_count, data.get('SD')),
-                (project_done_count, data.get('DO'))
+                (project_done_count, data.get('DO')),
+                (project_overruled_count, data.get('OR')),
+                (project_paused_count, data.get('PA'))
             ])
         }
 
@@ -353,8 +364,9 @@ class ProjectPlanView(BaseAPIView):
 
         self.check_object_any_permissions(req, hospital)
         if old_project.project_cate == PRO_CATE_HARDWARE:
-            if not old_project.is_unstarted():
-                return resp.failed('项目已启动或已完成, 无法修改')
+
+            if not old_project.is_unstarted() or old_project.is_paused():
+                return resp.failed('项目已启动或已完成或被挂起, 无法修改')
 
             form = ProjectPlanUpdateForm(old_project, data=req.data)
             if not form.is_valid():
@@ -370,8 +382,8 @@ class ProjectPlanView(BaseAPIView):
                 new_project_queryset, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
             )
         else:
-            if not old_project.is_unstarted():
-                return resp.failed('项目已启动或完成，无法修改')
+            if not old_project.is_unstarted or old_project.is_paused():
+                return resp.failed('项目已启动或完成或被挂起，无法修改')
             form = ProjectPlanUpdateForm(old_project, data=req.data)
             if not form.is_valid():
                 return resp.form_err(form.errors)
@@ -468,7 +480,9 @@ class ProjectPlanOverruleView(BaseAPIView):
         }
         if project.change_status(status=PRO_STATUS_OVERRULE, **operation_record_data):
 
-            return resp.ok('操作成功')
+            project_queryset = ProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)).first()
+            return resp.serialize_response(project_queryset, results_name='project')
         else:
             return resp.failed("操作失败")
 
@@ -491,8 +505,9 @@ class ProjectPlanPauseView(BaseAPIView):
             'operation': PRO_OPERATION_PAUSE
         }
         if project.change_status(status=PRO_STATUS_PAUSE, **operation_record_data):
-
-            return resp.ok('操作成功')
+            project_queryset = ProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)).first()
+            return resp.serialize_response(project_queryset, results_name='project')
         else:
             return resp.failed("操作失败")
 
@@ -506,10 +521,16 @@ class ProjectPlanCancelPauseView(BaseAPIView):
         项目负责人取消挂起的项目
         """
         self.check_object_any_permissions(req, req.user.get_profile().organ)
+
         project = self.get_object_or_404(project_id, ProjectPlan)
-        project.status = PRO_STATUS_STARTED
-        project.save()
-        return resp.ok('操作成功')
+        if project.status == PRO_STATUS_DONE:
+            return resp.failed('项目已完成，不能进行该操作')
+        if project.cancel_pause():
+            project_queryset = ProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)).first()
+            return resp.serialize_response(project_queryset, results_name='project')
+        else:
+            return resp.failed('操作失败')
 
 
 class ProjectPlanStartupView(BaseAPIView):

@@ -9,7 +9,8 @@ import logging
 
 from nmis.projects.consts import (PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED,
                                   PRO_CATE_SOFTWARE, PRO_CATE_HARDWARE,
-                                  PRO_STATUS_OVERRULE, PRO_OPERATION_OVERRULE)
+                                  PRO_STATUS_OVERRULE, PRO_OPERATION_OVERRULE,
+                                  PRO_OPERATION_PAUSE, PRO_STATUS_PAUSE, PRO_STATUS_DONE)
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
 from utils.times import now, yesterday, tomorrow
@@ -533,3 +534,48 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('projects'))
         self.assertEquals(len(response.get('projects')), 4)
+
+    def test_pause_project(self):
+        """
+        API测试:测试项目负责人挂起项目
+        """
+        api = '/api/v1/projects/{}/pause'
+
+        self.login_with_username(self.user)
+
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试挂起项目')
+
+        # 分配项目负责人
+        project.dispatch(self.admin_staff)
+
+        data = {
+            'project': project.id,
+            'reason': '由于供应商原因导致项目被挂起',
+            'operation': PRO_OPERATION_PAUSE
+        }
+
+        response = self.put(api.format(project.id), data=data)
+
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('project'))
+        self.assertEquals(response.get('project').get('status'), PRO_STATUS_PAUSE)
+
+    def test_cancel_pause_project(self):
+        """
+        API测试:测试项目负责人取消项目挂起
+        """
+        api = '/api/v1/projects/{}/cancel-pause'
+
+        self.login_with_username(self.user)
+        # 创建测试项目
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+        # 创建测试项目默认流程
+        defalut_flow = self.create_flow(self.organ)
+        # 分配项目
+        self.assertTrue(project.dispatch(self.admin_staff))
+
+        response = self.put(api.format(project.id))
+
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('project'))
+        self.assertEquals(response.get('project').get('status'), PRO_STATUS_STARTED)

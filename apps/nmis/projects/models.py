@@ -106,6 +106,10 @@ class ProjectPlan(BaseModel):
         """ 项目是否未启动 """
         return self.status == PRO_STATUS_PENDING
 
+    def is_paused(self):
+        """ 项目是否被挂起 """
+        return self.status == PRO_STATUS_PAUSE
+
     def is_undispatched(self):
         """
         是否待分配负责人状态
@@ -153,6 +157,19 @@ class ProjectPlan(BaseModel):
                 self.save()
                 ProjectOperationRecord.objects.add_operation_records(**data)
                 self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
+
+    def cancel_pause(self):
+        """
+        取消挂起的项目
+        """
+        try:
+            self.status = PRO_STATUS_STARTED
+            self.save()
+            self.cache()
             return True
         except Exception as e:
             logs.exception(e)
