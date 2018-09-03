@@ -64,7 +64,7 @@
       "pk": 30010005,
       "model": "projects.milestone",
       "fields": {
-        "flow": null,
+        "flow": 20010001,
         "title": "调研",
         "index": 0,
         "desc": "",
@@ -76,7 +76,7 @@
       "pk": 30010006,
       "model": "projects.milestone",
       "fields": {
-        "flow": null,
+        "flow": 20010001,
         "title": "方案收集",
         "index": 1,
         "desc": "",
@@ -88,7 +88,7 @@
       "pk": 30010007,
       "model": "projects.milestone",
       "fields": {
-        "flow": null,
+        "flow": 20010001,
         "title": "方案论证",
         "index": 2,
         "desc": "",
@@ -100,7 +100,7 @@
       "pk": 30010008,
       "model": "projects.milestone",
       "fields": {
-        "flow": null,
+        "flow": 20010001,
         "title": "确定采购方式",
         "index": 0,
         "desc": "",
@@ -112,7 +112,7 @@
       "pk": 30010009,
       "model": "projects.milestone",
       "fields": {
-        "flow": null,
+        "flow": 20010001,
         "title": "启动采购",
         "index": 1,
         "desc": "",
@@ -124,7 +124,7 @@
       "pk": 30010010,
       "model": "projects.milestone",
       "fields": {
-        "flow": null,
+        "flow": 20010001,
         "title": "合同管理",
         "index": 2,
         "desc": "",
@@ -136,7 +136,7 @@
       "pk": 30010011,
       "model": "projects.milestone",
       "fields": {
-        "flow": null,
+        "flow": 20010001,
         "title": "到货",
         "index": 0,
         "desc": "",
@@ -148,7 +148,7 @@
       "pk": 30010012,
       "model": "projects.milestone",
       "fields": {
-        "flow": null,
+        "flow": 20010001,
         "title": "实施调试",
         "index": 1,
         "desc": "",
@@ -160,7 +160,7 @@
       "pk": 30010013,
       "model": "projects.milestone",
       "fields": {
-        "flow": null,
+        "flow": 20010001,
         "title": "项目验收",
         "index": 2,
         "desc": "",

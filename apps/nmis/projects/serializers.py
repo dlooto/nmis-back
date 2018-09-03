@@ -234,3 +234,37 @@ class ProjectOperationRecordSerializer(BaseModelSerializer):
     class Meta:
         model = ProjectOperationRecord
         fields = '__all__'
+
+
+def get_project_status_count(**data):
+
+    """
+    返回项目各个状态数量序列化字段
+    """
+    projects_status_count = 'project_status_count'  # 项目数量块标示
+    project_started_count = 'project_started_count'  # 进行中项目数量
+    project_pending_count = 'project_pending_count'  # 待启动项目数量
+    project_done_count = 'project_done_count'  # 已完成的项目数量
+    project_overruled_count = 'project_overruled_count'  # 待启动项目数量
+    project_paused_count = 'project_paused_count'  # 已完成的项目数量
+
+    if not data.get('SD'):
+        data['SD'] = 0
+    if not data.get('PE'):
+        data['PE'] = 0
+    if not data.get('DO'):
+        data['DO'] = 0
+    if not data.get('OR'):
+        data['OR'] = 0
+    if not data.get('PA'):
+        data['PA'] = 0
+
+    return {
+        projects_status_count: OrderedDict([
+            (project_pending_count, data.get('PE')),
+            (project_started_count, data.get('SD')),
+            (project_done_count, data.get('DO')),
+            (project_overruled_count, data.get('OR')),
+            (project_paused_count, data.get('PA'))
+        ])
+    }

@@ -84,9 +84,17 @@ class ProjectPlanManager(BaseManager):
             ).distinct()
         return query_set.order_by('-created_time')
 
+    def get_dispatched_projects(self, dept_id_list, organ):
+        """
+        获取已分配项目列表
+        """
+        query_set = self.filter(related_dept__organ=organ, related_dept_id__in=dept_id_list, status=PRO_STATUS_STARTED)
+
+        return query_set.order_by('-created_time')
+
     def get_by_search_key(self, organ, project_title=None, performers=None, status=None):
         """
-        按关键字(项目名/项目负责人名)查询机构所有的项目列表
+        按关键字(项目名/项目负责人)查询机构所有的项目列表
         """
         from django.db.models import Q
 
@@ -150,35 +158,13 @@ class ProjectPlanManager(BaseManager):
         query_set = self.filter(related_dept__organ=organ, assistant=assistant)
         if status:
             query_set = query_set.filter(status=status)
-
         if project_title or performer:
             from django.db.models import Q
             query_set = query_set.filter(
                 Q(title__contains=project_title) | Q(performer__in=performer)
             ).distinct()
-        return query_set.order_by('-created_time')
-
-    def get_dispatched_projects(self, organ):
-        """
-        获取已分配项目列表
-        """
-        query_set = self.filter(related_dept__organ=organ, status=PRO_STATUS_STARTED)
 
         return query_set.order_by('-created_time')
-
-    def dispatched_assistant(self, project, assistant):
-        """
-        项目负责人分配项目协助人
-        :param: assistant: 项目协助人
-        """
-        try:
-            project.assistant = assistant
-            project.save()
-            project.cache()
-            return True
-        except Exception as e:
-            logger.exception(e)
-            return False
 
     def start_project(self):
         """
@@ -257,22 +243,23 @@ class ProjectPlanManager(BaseManager):
 
         return new_project
 
-    def get_group_by_status(self, search_key=None, status=None, creator=None, performer=None):
+    def get_group_by_status(self, search_key=None, creator=None, performer=None, assistant=None):
         """
         根据项目状态返回每个状态下项目数量(项目总览各状态条数，我申请的项目各状态条数，我负责的各状态条数)
         :return:
         """
-        if status:
-            return self.filter(status=status)\
-                .values_list('status').annotate(models.Count('id'))
+        results = self.filter(title__contains=search_key).values_list('status').annotate(
+            models.Count('id'))
         if creator:
-            return self.filter(creator=creator, title__contains=search_key)\
+            results = self.filter(creator=creator, title__contains=search_key)\
                 .values_list('status').annotate(models.Count('id'))
         if performer:
-            return self.filter(performer=performer, title__contains=search_key)\
+            results = self.filter(performer=performer, title__contains=search_key)\
                 .values_list('status').annotate(models.Count('id'))
-
-        return self.filter(title__contains=search_key).values_list('status').annotate(models.Count('id'))
+        if assistant:
+            results = self.filter(assistant=assistant, title__contains=search_key)\
+                .values_list('status').annotate(models.Count('id'))
+        return results
 
 
 class ProjectFlowManager(BaseManager):

@@ -202,6 +202,20 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return False
 
+    def dispatched_assistant(self, assistant):
+        """
+        项目负责人分配项目协助人
+        :param: assistant: 项目协助人
+        """
+        try:
+            self.assistant = assistant
+            self.save()
+            self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
+
     def get_default_flow(self):
         """
         返回默认流程
