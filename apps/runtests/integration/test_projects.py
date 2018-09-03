@@ -284,7 +284,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
     def test_my_project_list(self):
         """
-        api测试：项目列表(带筛选)api接口测试(项目总览、待分配项目、我申请项目、我负责的项目)
+        api测试：项目总览列表
         """
         api = "/api/v1/projects/"
 
@@ -295,10 +295,8 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             )
 
         project_data = {
-            'organ_id': self.organ.id,
             'pro_status': 'PE',
             'search_key': '测试',
-            'type': 'total_projects',
             'page': 1,
             'size': 4
         }
@@ -316,24 +314,75 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         """
         api测试：待分配项目api接口测试
         """
-        api = "/api/v1/projects/"
+        api = "/api/v1/projects/undispatched"
 
         self.login_with_username(self.user)
         # 创建一个待分配项目
         project1 = self.create_project(self.admin_staff, self.dept, title='我是待分配项目1')
         project2 = self.create_project(self.admin_staff, self.dept, title='我是待分配项目2')
 
-        project_data = {
-            'organ_id': self.organ.id,
-            'type': 'undispatch'
-        }
-        response = self.get(api, data=project_data)
+        response = self.get(api)
 
         self.assert_response_success(response)
         results = response.get('projects')
         self.assertIsNotNone(results)
         self.assertEquals(len(results), 2)
         self.assert_object_in_results({'title': project1.title}, results)
+
+    def test_performed_list(self):
+        """
+        API测试: 测试我负责的项目申请列表
+        """
+        api = '/api/v1/projects/performed'
+
+        self.login_with_username(self.user)
+        # 创建项目列表
+        projects = []
+        for index in range(0, 5):
+            project = self.create_project(self.admin_staff, self.dept, project_cate='SW',
+                                          title='测试项目{}'.format(self.get_random_suffix()))
+            projects.append(project)
+        # 分配项目负责人
+        for i in range(len(projects)):
+            projects[i].dispatch(self.admin_staff)
+        data = {
+            'search_key': '项目',
+            'pro_status': 'SD'
+        }
+
+        response = self.get(api, data=data)
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('projects'))
+        self.assertEquals(len(response.get('projects')), 5)
+        self.assert_object_in_results({'performer_name': self.admin_staff.name}, response.get('projects'))
+
+    def test_applied_projects(self):
+        """
+        API测试: 测试我申请的项目列表
+        """
+        api = '/api/v1/projects/applied'
+
+        self.login_with_username(self.user)
+        projects = []
+        for i in range(0, 5):
+            project = self.create_project(
+                self.admin_staff, self.dept, project_cate='SW', title='测试项目{}'.format(self.get_random_suffix())
+            )
+            projects.append(project)
+
+        data = {
+            'pro_status': 'PE',
+            'search_key': '项目'
+        }
+
+        response = self.get(api, data=data)
+
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('projects'))
+        self.assertEquals(len(response.get('projects')), 5)
+        self.assert_object_in_results(
+            {'creator_name': self.admin_staff.name}, response.get('projects')
+        )
 
     def test_project_redispatch(self):
         """
@@ -380,7 +429,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         # 创建项目
         project_plan = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='新建项目申请')
 
-        data={
+        data = {
             'performer_id': self.admin_staff.id,
         }
         response = self.put(api.format(project_plan.id), data=data)
@@ -608,3 +657,34 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.assert_response_success(response)
         self.assertEquals(response.get('code'), 10000)
+
+    def test_assisted_projects(self):
+        """
+        API测试: 测试获取我协助的项目列表
+        """
+        api = "/api/v1/projects/assisted"
+
+        self.login_with_username(self.user)
+
+        # 创建项目
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+        # 创建默认流程
+        defalut_flow = self.create_flow(self.organ)
+        # 创建项目负责人
+        staff_data = {
+            'title': '主治医师',
+            'contact': '19822012220',
+            'email': 'ceshi01@test.com',
+        }
+        performer_staff = self.create_completed_staff(self.organ, self.dept, name="协助人",
+                                                      **staff_data)
+        # 分配项目负责人
+        self.assertTrue(project.dispatch(performer_staff))
+
+        # 分配项目协助人
+        self.assertTrue(project.dispatched_assistant(self.admin_staff))
+
+        response = self.get(api)
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('projects'))
+        self.assertEquals(response.get('projects')[0].get('assistant_id'), self.admin_staff.id)

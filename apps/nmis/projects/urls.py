@@ -19,13 +19,23 @@ logs = logging.getLogger(__name__)
 
 # /api/v1/projects/
 urlpatterns = [
+    # 获取项目总览列表
     path('',         views.ProjectPlanListView.as_view(), ),
 
+    # 获取待分配的项目列表
+    path('undispatched', views.ProjectPlanUndispatchedListView.as_view(), ),
+
     # 已分配项目列表
-    path('dispatched', views.ProjectPlanDispatchedView.as_view(), ),
+    path('dispatched', views.ProjectPlanDispatchedListView.as_view(), ),
 
     # 获取协助的项目列表
     path('assisted', views.ProjectPlanAssistedListView.as_view(), ),
+
+    # 获取我负责的项目列表
+    path('performed', views.ProjectPlanPerformedListView.as_view(), ),
+
+    # 获取我申请的项目列表
+    path('applied', views.ProjectPlanAppliedListView.as_view(), ),
 
     # 分配项目协助人员/辅助人员
     path('<int:project_id>/dispatch-assistant', views.ProjectPlanDispatchAssistantView.as_view(), ),
