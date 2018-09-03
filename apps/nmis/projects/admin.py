@@ -28,15 +28,15 @@ class ProjectPlanAdmin(admin.ModelAdmin):
 
 
 class ProjectFlowAdmin(admin.ModelAdmin):
-    list_display = ('id', 'organ', 'title', 'type', 'pre_defined', 'created_time')
+    list_display = ('id', 'organ', 'title', 'type', 'pre_defined', 'default_flow', 'created_time')
 
 
 class MilestoneAdmin(admin.ModelAdmin):
-    list_display = ('id', 'flow', 'title', 'index', 'parent', 'created_time')
+    list_display = ('id', 'flow', 'title', 'index', 'parent', 'parent_path', 'created_time')
 
 
 class ProjectMilestoneRecordAdmin(admin.ModelAdmin):
-    list_display = ('id', 'project', 'milestone', 'summary', 'created_time')
+    list_display = ('id', 'project', 'milestone', 'doc_list', 'summary', 'finished', 'created_time')
 
 
 class ProjectDocumentAdmin(admin.ModelAdmin):

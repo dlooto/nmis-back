@@ -359,6 +359,25 @@ class ProjectDocumentManager(BaseManager):
     def update_project_ducument(self, ):
         pass
 
+    def batch_save_upload_project_doc(self, tag_upload_result_dict):
+        """
+        批量保存或更新上传的project_document
+        :param tag_upload_result_dict:
+            文档资料类别标识（k）-文档上传结果(v)键值对字典
+        :return: 返回保存或更新ProjectDocument对象的List集合
+        """
+        doc_list = []
+        for tag, results in tag_upload_result_dict.items():
+            for (doc_name, path) in results:
+                doc, is_success = self.update_or_create(
+                    name=doc_name, category=tag, path=path
+                )
+                if is_success:
+                    doc.cache()
+                    doc_list.append(doc)
+        return doc_list
+
 
 class ProjectMilestoneRecordManager(BaseManager):
+
     pass
