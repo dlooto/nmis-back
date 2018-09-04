@@ -882,33 +882,31 @@ class ProjectFlowNodeOperations(BaseAPIView):
     def post(self, req, project_id, flow_id, milestone_id, ):
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone = self.get_object_or_404(milestone_id, Milestone)
-        logger.info(req.FILES)
         if not req.FILES:
             return resp.failed('请选择要上传的文件')
-        for name, file_obj in req.FILES.items():
-            if not name or not file_obj:
-                return resp.failed('请选择要上传的文件')
-            if file_obj.content_type not in ARCHIVE.values():
-                return resp.failed('系统不支持上传文件文件类型')
+
+        tags = req.FILES.keys()
+        for tag in tags:
+            files = req.FILES.getlist(tag)
+            for file in files:
+                if file.content_type not in ARCHIVE.values():
+                    return resp.failed('系统不支持上传文件文件类型')
 
         result_dict = {}
-        for name, file_obj in req.FILES.items():
-            # stored_file_name = '%s%s%s' % (file_obj.name, '-', datetime_to_str(times.now(), format='%Y%m%d%H%M%S'))
-            stored_file_name = file_obj.name
-            result = upload_file(file_obj, PROJECT_DOCUMENT_DIR, stored_file_name)
-            if not result:
-                return resp.failed('%s%s' % (file_obj.name, '上传失败'))
-                logger.info(result)
-            result_dict[name] = result
+        for tag in tags:
+            files = req.FILES.getlist(tag)
+            results = []
+            for file in files:
+                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
+                if not result:
+                    return resp.failed('%s%s' % (file.name, '上传失败'))
+                    logger.info(result)
+                results.append(result)
+                logger.info(results)
+            result_dict[tag] = results
         # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord中
-        doc_id_list = []
-        for name, (doc_name, path) in result_dict.items():
-            doc, is_success = ProjectDocument.objects.update_or_create(name=doc_name, category=name, path=path)
-            if is_success:
-                doc.cache()
-            doc_id_list.append(doc.id)
-        logger.info(doc_id_list)
-        doc_ids_str = ','.join('%s' % id for id in doc_id_list)
+        doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_dict)
+        doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
         record, success = ProjectMilestoneRecord.objects.update_or_create(project=project, milestone=milestone)
         if not success:
             resp.ok('操作失败')
@@ -917,8 +915,4 @@ class ProjectFlowNodeOperations(BaseAPIView):
         record.cache()
 
         return resp.ok('操作成功')
-
-
-
-
 

@@ -73,7 +73,10 @@ class ProjectPlan(BaseModel):
 
     project_introduce = models.CharField('项目介绍/项目描述', max_length=200, null=True, blank=True)
     pre_amount = models.FloatField('项目预估总价', null=True, blank=True)
-    procurement_method = models.CharField('采购方法', max_length=20, null=True, blank=True)
+    procurement_method = models.CharField(
+        '采购方式', max_length=20, choices=PORJECT_PROCUREMENT_METHOD_CHOICES,
+        null=True, blank=True
+    )
 
     objects = ProjectPlanManager()
 
@@ -362,14 +365,14 @@ class ProjectFlow(BaseModel):
         return self.milestones.all()
 
     def get_main_milestones(self):
-        """ 流程内含的父里程碑列表 """
-        return self.milestones.filter(parent=None).all()
+        """ 流程内含的祖里程碑列表 """
+        return self.milestones.filter(parent=None).order_by('index')
 
     def get_first_main_milestone(self):
-        """ 返回流程中的第1个父里程碑项 """
+        """ 返回流程中的第1个主里程碑项 """
         return self.get_main_milestones().order_by('index')[:1][0]
 
-    def get_first_child_milestone(self, milestone):
+    def get_first_child(self, milestone):
         """
         获取流程某父里程碑项的第一个子里程碑
         :param parent:
@@ -391,14 +394,25 @@ class ProjectFlow(BaseModel):
         return milestone in self.get_milestones()
 
     def get_last_main_milestone(self):
-        """ 返回流程中的最后一个父里程碑项 """
+        """ 返回流程中的最后一个主里程碑项 """
         return self.get_main_milestones().order_by('-index')[:1][0]
 
-    def get_last_milestone(self):
+    def get_last_descendant(self):
         """返回流程中最后一个子孙里程碑"""
-        pass
+        last_main_milestone = self.get_last_main_milestone()
+        if not last_main_milestone:
+            return None
+        return self.get_milestone_last_descendant(last_main_milestone)
 
-    def get_last_child_milestone(self, milestone):
+    def get_milestone_last_descendant(self, milestone):
+        """返回流程中某一父里程碑最后一个子孙里程碑"""
+        if not milestone:
+            return None
+        if not milestone.has_children():
+            return milestone
+        return self.get_milestone_last_descendant(milestone.last_child())
+
+    def get_last_child(self, milestone):
         """
          获取流程某父里程碑项的最后一个子里程碑
         :return:
@@ -431,7 +445,9 @@ class Milestone(BaseModel):
     index = models.SmallIntegerField('索引顺序', default=1)
     desc = models.CharField('描述', max_length=20, default='')
 
-    parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', verbose_name='父里程碑', null=True, on_delete=models.CASCADE)
+    # 祖里程碑到当前里程碑最短路径, 由各里程碑项id的字符串组成，每个id,之间用‘-’进行分隔
+    parent_path = models.CharField('父里程碑路径', max_length=1024, default='', null=False, blank=False)
 
     class Meta:
         verbose_name = '里程碑项'
@@ -462,13 +478,100 @@ class Milestone(BaseModel):
 
     def children(self):
         """
-        查找当前里程碑所有子里程碑项，只会找到直接的子里程碑项，不会返回所有子孙里程碑项
+        返回当前里程碑项在流程中的所有直接子里程碑项
         :return: milestone list
         """
         milestones = self.flow.get_milestones().filter(parent=self).order_by('index')
         if milestones is None:
             return []
         return milestones
+
+    def last_child(self):
+        """返回当前里程碑项中index值最大的子里程碑项"""
+        milestones = self.flow.get_milestones().filter(parent=self).order_by('-index')
+        if milestones is None:
+            return []
+        return milestones.first()
+
+    def descendants(self):
+        """
+        返回当前里程碑项在流程中的所有子孙里程碑项
+        :return: milestones list
+        """
+        milestones = self.flow.get_milestones()
+        descendants = []
+        for milestone in milestones:
+            if self.id in milestone.parent_path.split('-'):
+                descendants.append(milestone)
+        return descendants
+
+    def ancestors(self):
+        """
+        返回当前里程碑项在流程中的所有祖先里程碑项
+        :return: milestones list
+        """
+        if not self.parent_path:
+            return []
+
+        descendant_ids = self.parent_path.split('-')
+        milestones = self.flow.get_milestones()
+        ancestors = []
+        for milestone in milestones:
+            if milestone.id in descendant_ids:
+                ancestors.append(milestone)
+        return ancestors
+
+    def has_children(self):
+        """
+        当前里程碑项在流程中是否有子里程碑项
+        :return: True/False
+        """
+        if not self.children():
+            return False
+        return True
+
+    def is_flow_last_descendant(self):
+        """
+        当前里程碑项是否为流程中最后一个子孙里程碑项
+        :return:
+        """
+        last_descendant = self.flow.get_last_descendant()
+        if not last_descendant:
+            return False
+        return True
+
+    def is_last_descendant(self):
+        """
+        当前里程碑项是否为某里程碑最后一个子孙里程碑项
+        :return:
+        """
+        if not self.parent:
+            return False
+        last_descendant = self.flow.get_milestone_last_descendant(milestone=self)
+        if not last_descendant:
+            return False
+        return True
+
+    def is_last_child(self):
+        """
+        当前里程碑项是否为父里程碑下最后一个子里程碑项
+        :return:
+        """
+        if not self.parent:
+            return False
+        if not self == self.parent.children().last():
+            return False
+        return True
+
+    def is_last_main_milstone(self):
+        """
+        当前里程碑项是否为流程中最后一个主里程碑项
+        :return:
+        """
+        last = self.flow.get_main_milestones().last()
+        if not self == last:
+            return False
+        return True
 
 
 class ProjectMilestoneRecord(BaseModel):

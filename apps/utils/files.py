@@ -61,7 +61,7 @@ def upload_file(file, base_dir, stored_file_name):
     :param file:
     :param base_dir:
     :param storge_file_name:
-    :return:
+    :return: 由上传的文件名和
     """
     try:
         path = os.path.join(settings.MEDIA_ROOT, base_dir)
