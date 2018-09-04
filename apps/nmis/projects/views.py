@@ -52,7 +52,7 @@ from nmis.projects.consts import (
     PRO_OPERATION_OVERRULE,
     PRO_STATUS_PAUSE,
     PRO_OPERATION_PAUSE,
-    PROJECT_DOCUMENT_DIR)
+    PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES)
 from utils.files import upload_file
 
 logger = logging.getLogger(__name__)
@@ -325,11 +325,13 @@ class ProjectPlanRedispatchView(BaseAPIView):
 
     @check_id('performer_id')
     def put(self, req, project_id):
-        project = self.get_object_or_404(project_id, ProjectPlan)
-        staff = self.get_object_or_404(req.data.get('performer_id'), Staff, )
-
         # 检查当前操作者是否具有管理员和项目分配者权限
         self.check_object_any_permissions(req, req.user.get_profile().organ)
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        staff = self.get_object_or_404(req.data.get('performer_id'), Staff, )
+        if project.status == PRO_STATUS_PAUSE:
+            return resp.failed('挂起项目不能重新分配')
 
         success = project.redispatch(staff)
         project_queryset = ProjectPlanSerializer.setup_eager_loading(
@@ -489,9 +491,9 @@ class ProjectPlanPerformedListView(BaseAPIView):
 
         search_key = req.GET.get('search_key', '').strip()
         status = req.GET.get('pro_status', '').strip()
-
-        if status not in dict(PROJECT_STATUS_CHOICES):
-            return resp.form_err({'status_err': '项目状态异常'})
+        if status:
+            if status not in dict(PROJECT_STATUS_CHOICES):
+                return resp.form_err({'status_err': '项目状态异常'})
 
         creators_staffs = None
         if search_key:
@@ -899,8 +901,8 @@ class ProjectFlowNodeOperations(BaseAPIView):
             for file in files:
                 result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
                 if not result:
-                    return resp.failed('%s%s' % (file.name, '上传失败'))
                     logger.info(result)
+                    return resp.failed('%s%s' % (file.name, '上传失败'))
                 results.append(result)
                 logger.info(results)
             result_dict[tag] = results
@@ -915,4 +917,50 @@ class ProjectFlowNodeOperations(BaseAPIView):
         record.cache()
 
         return resp.ok('操作成功')
+
+
+class MilestoneRecordPurchase(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    @transaction.atomic
+    def post(self, req, project_id, flow_id, milestone_id):
+        """
+        确定采购方式子里程碑记录操作（包括确定采购的方式，保存采购方式决策论证类附件，保存说明等操作）
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        flow = self.get_object_or_404(flow_id, ProjectFlow)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+
+        purchase_method = req.data.get('purchase_method', '').strip()
+
+        if not purchase_method:
+            return resp.form_err({'purchase_method_err': '选择采购方式'})
+        elif purchase_method not in dict(PROJECT_PURCHASE_METHOD_CHOICES):
+            return resp.form_err({'purchase_method_err': '采购方式类型错误'})
+
+        if not req.FILES:
+            return resp.form_err({'files_err': '未上传任务文件'})
+        # 确定项目采购方式
+        success = project.determining_purchase_method(purchase_method)
+
+        if success:
+            # 保存采购决策论证类附件
+            tags = req.FILES.keys()
+            for tag in tags:
+                file = req.FILES.get(tag)
+                if file.content_type not in ARCHIVE.values():
+                    return resp.failed('系统不支持上传文件文件类型')
+            for tag in tags:
+                file = req.FILES.get(tag)
+                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
+                if not result:
+                    return resp.failed('%s%s' % (file.name, '上传失败'))
+
+            # files = req.FILES.getlist('file')
+            # for file in files:
+            #     print(file.name)
+            return resp.ok('OK')
+        return resp.failed('False')
 

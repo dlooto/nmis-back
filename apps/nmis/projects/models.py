@@ -73,8 +73,8 @@ class ProjectPlan(BaseModel):
 
     project_introduce = models.CharField('项目介绍/项目描述', max_length=200, null=True, blank=True)
     pre_amount = models.FloatField('项目预估总价', null=True, blank=True)
-    procurement_method = models.CharField(
-        '采购方式', max_length=20, choices=PORJECT_PROCUREMENT_METHOD_CHOICES,
+    purchase_method = models.CharField(
+        '采购方式', max_length=20, choices=PROJECT_PURCHASE_METHOD_CHOICES,
         null=True, blank=True
     )
 
@@ -160,6 +160,19 @@ class ProjectPlan(BaseModel):
                 self.save()
                 ProjectOperationRecord.objects.add_operation_records(**data)
                 self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
+
+    def determining_purchase_method(self, purchase_method):
+        """
+        确定采购方式
+        """
+        try:
+            self.purchase_method = purchase_method
+            self.save()
+            self.cache()
             return True
         except Exception as e:
             logs.exception(e)
