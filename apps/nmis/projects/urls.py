@@ -46,7 +46,7 @@ urlpatterns = [
     # 单个项目操作 get/update/delete
     path('<int:project_id>',      views.ProjectPlanView.as_view(), ),
 
-    # 分配项目责任人
+    # 分配项目负责人
     path('<int:project_id>/dispatch',       views.ProjectPlanDispatchView.as_view(), ),
 
     # 重新分配项目负责人
@@ -96,4 +96,8 @@ urlpatterns = [
     path('flows/<int:flow_id>/milestones/create',   views.MilestoneCreateView.as_view(), ),   # Create
     path('flows/<int:flow_id>/milestones/<int:mid>', views.MilestoneView.as_view(), ),         # put/delete
 
+
+    # 确定采购方式
+    path('<int:project_id>/flow/<int:flow_id>/milestone/<int:milestone_id>/record-purchase',
+         views.MilestoneRecordPurchase.as_view(), )
 ]

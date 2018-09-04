@@ -49,7 +49,10 @@ class ProjectFlowSerializer(BaseModelSerializer):
         return queryset
 
     def _get_milestones(self, obj):
-        return resp.serialize_data(obj.milestones.all())
+        """
+        当前流程的主里程碑
+        """
+        return resp.serialize_data(obj.get_main_milestones())
 
 
 class ProjectMilestoneRecordSerializer(BaseModelSerializer):
@@ -101,7 +104,7 @@ class ProjectPlanSerializer(BaseModelSerializer):
         fields = (
             'id', 'title', 'handing_type', 'purpose', 'status',
             'creator_id', 'creator_name', 'related_dept_id', 'related_dept_name',
-            'project_introduce', 'pre_amount', 'procurement_method',
+            'project_introduce', 'pre_amount', 'purchase_method',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
             'attached_flow_id', 'current_stone_id',
             'startup_time', 'expired_time', 'created_time',
@@ -174,7 +177,7 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
             'creator_id', 'creator_name',
             'related_dept_id', 'related_dept_name',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
-            'project_introduce', 'pre_amount', 'procurement_method', 'current_stone_id',
+            'project_introduce', 'pre_amount', 'purchase_method', 'current_stone_id',
             'attached_flow', 'hardware_devices', 'software_devices', 'milestone_records',
             'startup_time', 'expired_time', 'created_time', 'operation_record',
         )

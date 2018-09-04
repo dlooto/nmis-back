@@ -88,7 +88,9 @@ class ProjectPlanManager(BaseManager):
         """
         获取已分配项目列表
         """
-        query_set = self.filter(related_dept__organ=organ, related_dept_id__in=dept_id_list, status=PRO_STATUS_STARTED)
+        query_set = self.filter(
+            related_dept__organ=organ, related_dept_id__in=dept_id_list,
+            status__in=[PRO_STATUS_STARTED, PRO_STATUS_PAUSE])
 
         return query_set.order_by('-created_time')
 
