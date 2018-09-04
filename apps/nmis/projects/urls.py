@@ -67,6 +67,10 @@ urlpatterns = [
     # 责任人变更项目里程碑状态
     path('<int:project_id>/change-milestone', views.ProjectPlanChangeMilestoneView.as_view(), ),
 
+    # 责任人变更项目里程碑状态
+    path('<int:project_id>/milestones/<int:milestone_id>/finish-milestone',
+         views.ProjectPlanFinishMilestoneView.as_view(), ),
+
     # 为指定项目添加新设备
     path('<int:project_id>/devices/create',      views.ProjectDeviceCreateView.as_view(), ),
 
@@ -75,11 +79,11 @@ urlpatterns = [
 
     # 获取项目流程某里程碑节点下的所有直接子里程碑项
     path(
-        '<int:project_id>/flow/<int:flow_id>/milestones/<int:milestone_id>/get_children',
+        '<int:project_id>/flow/<int:flow_id>/milestones/<int:milestone_id>/get-children',
         views.ProjectFlowChildMilestones.as_view(),
     ),
     path(
-        '<int:project_id>/flow/<int:flow_id>/milestones/<int:milestone_id>/record_research',
+        '<int:project_id>/flow/<int:flow_id>/milestones/<int:milestone_id>/record-research',
         ProjectFlowNodeOperations.as_view(),
     ),
 
