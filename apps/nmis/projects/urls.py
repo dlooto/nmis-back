@@ -12,7 +12,8 @@ import logging
 from django.urls import path
 
 from nmis.projects import views
-from nmis.projects.views import ProjectMilestoneResearchInfoCreateView
+from nmis.projects.views import ProjectMilestoneResearchInfoCreateView, \
+    ProjectMilestoneResearchInfoView, ProjectMilestonePlanGatheredCreateView
 
 logs = logging.getLogger(__name__)
 
@@ -79,12 +80,23 @@ urlpatterns = [
 
     # 获取项目流程某里程碑节点下的所有直接子里程碑项
     path(
-        '<int:project_id>/flow/<int:flow_id>/milestones/<int:milestone_id>/get-children',
+        '<int:project_id>/milestones/<int:milestone_id>/children',
         views.ProjectFlowChildMilestones.as_view(),
     ),
+    # 保存项目中【调研】里程碑下的任务信息
     path(
-        '<int:project_id>/flow/<int:flow_id>/milestones/<int:milestone_id>/save-research-info',
+        '<int:project_id>/milestones/<int:milestone_id>/save-research-info',
         ProjectMilestoneResearchInfoCreateView.as_view(),
+    ),
+    # 获取项目中【调研】里程碑下的任务信息
+    path(
+        '<int:project_id>/milestones/<int:milestone_id>/get-research-info',
+        ProjectMilestoneResearchInfoView.as_view(),
+    ),
+    # 获取项目中【调研】里程碑下的任务信息
+    path(
+        '<int:project_id>/milestones/<int:milestone_id>/save-plan-gather-info',
+        ProjectMilestonePlanGatheredCreateView.as_view(),
     ),
 
 
