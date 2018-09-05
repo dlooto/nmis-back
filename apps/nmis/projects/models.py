@@ -344,12 +344,11 @@ class ProjectPlan(BaseModel):
         return False
 
     def finish_project_milestone(self, current_milestone):
-        """
-        变更项目里程碑状态
-        默认里程碑节点深度为2，大于2须进行重构
-        :param current_milestone: 新的里程碑状态对象
+        """ 变更项目里程碑状态 默认里程碑节点深度为2，大于2须进行重构
+        :param current_milestone: 当前里程碑状态对象
         :return: True or False
         """
+
         if self.is_unstarted():
             return False, "项目尚未启动无法操作。"
 
@@ -362,12 +361,21 @@ class ProjectPlan(BaseModel):
         if not self.attached_flow.contains(current_milestone):
             return False, "里程碑项不属于当前所用流程, 请检查数据是否异常。"
 
-        record_query = ProjectMilestoneRecord.objects.filter(project=self, milestone=current_milestone)
+        record_query = ProjectMilestoneRecord.objects.filter(project=self,
+                                                             milestone=current_milestone)
         if not record_query:
-            return False, '未匹配到项目里程碑变更记录，请检查数据是否异。'
+            return False, '未匹配到项目里程碑变更记录，请检查数据是否异常。'
         record = record_query.first()
         if record.finished:
             return False, '该里程碑状态已完结，无法操作。'
+
+        if current_milestone.has_children():
+            children = current_milestone.children()
+            record_query = ProjectMilestoneRecord.objects.filter(project=self,
+                                                                 milestone__in=children)
+            for query in record_query:
+                if not query.finished:
+                    return False, '当前里程碑存在未完结的子里程碑，无法操作。'
 
         try:
             with transaction.atomic():
@@ -381,18 +389,24 @@ class ProjectPlan(BaseModel):
                         for milestone_record in ancestor_milestone_records:
                             milestone_record.finished = True
                             milestone_record.save()
+                            milestone_record.cache()
                     self.status = PRO_STATUS_DONE
                     self.save()
                     self.cache()
                 else:
+                    if current_milestone.is_last_descendant(
+                            current_milestone.first_ancestor()):
+                        ancestor_milestone_records = ProjectMilestoneRecord.objects.filter(
+                            project=self, milestone__in=current_milestone.ancestors()
+                        )
+                        if ancestor_milestone_records:
+                            for milestone_record in ancestor_milestone_records:
+                                milestone_record.finished = True
+                                milestone_record.save()
+                                milestone_record.cache()
                     next_stone = current_milestone.next()
-                    logs.info('---------------')
-
-                    logs.info(next_stone)
-                    #             return True, [record, child_record]
-                    success, pro_milestone_records = self.add_or_update_milestone_record(next_stone)
-                    # for record, result in pro_milestone_records:
-                    logs.info(pro_milestone_records)
+                    success, pro_milestone_records = self.add_or_update_milestone_record(
+                        next_stone)
                     pro_milestone_record, result = pro_milestone_records[-1]
                     self.current_stone = pro_milestone_record.milestone
                     self.save()
@@ -650,13 +664,26 @@ class Milestone(BaseModel):
         if not self.parent_path:
             return []
 
-        descendant_ids = self.parent_path.split('-')
+        ancestors_ids = self.parent_path.split('-')
         milestones = self.flow.get_milestones()
         ancestors = []
         for milestone in milestones:
-            if milestone.id in descendant_ids:
+            if str(milestone.id) in ancestors_ids:
                 ancestors.append(milestone)
         return ancestors
+
+    def first_ancestor(self):
+        """
+        返回当前里程碑的始祖里程碑
+        :return:
+        """
+        if not self.parent_path:
+            return None
+        descendant_ids = self.parent_path.split('-')
+        milestones = self.flow.get_milestones()
+        for milestone in milestones:
+            if int(descendant_ids[0]) == milestone.id:
+                return milestone
 
     def has_children(self):
         """
@@ -677,14 +704,14 @@ class Milestone(BaseModel):
             return False
         return True
 
-    def is_last_descendant(self):
+    def is_last_descendant(self, milestone):
         """
         当前里程碑项是否为某里程碑最后一个子孙里程碑项
         :return:
         """
         if not self.parent:
             return False
-        last_descendant = self.flow.get_milestone_last_descendant(milestone=self)
+        last_descendant = self.flow.get_milestone_last_descendant(milestone=milestone)
         if not last_descendant == self:
             return False
         return True
@@ -749,7 +776,10 @@ class ProjectMilestoneRecord(BaseModel):
         获取当前节点下的所有文档资料
         :return:
         """
-        pass
+        doc_id_strs = self.doc_list.split(',')
+        doc_ids = [int(id_str) for id_str in doc_id_strs]
+        doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
+        return doc_list
 
     def get_supplier_selection_plans(self):
         """

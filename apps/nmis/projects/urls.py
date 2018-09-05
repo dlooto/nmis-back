@@ -12,7 +12,7 @@ import logging
 from django.urls import path
 
 from nmis.projects import views
-from nmis.projects.views import ProjectFlowNodeOperations
+from nmis.projects.views import ProjectMilestoneResearchInfoCreateView
 
 logs = logging.getLogger(__name__)
 
@@ -83,8 +83,8 @@ urlpatterns = [
         views.ProjectFlowChildMilestones.as_view(),
     ),
     path(
-        '<int:project_id>/flow/<int:flow_id>/milestones/<int:milestone_id>/record-research',
-        ProjectFlowNodeOperations.as_view(),
+        '<int:project_id>/flow/<int:flow_id>/milestones/<int:milestone_id>/save-research-info',
+        ProjectMilestoneResearchInfoCreateView.as_view(),
     ),
 
 

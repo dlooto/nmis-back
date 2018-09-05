@@ -14,7 +14,7 @@ from rest_framework import serializers
 from base import resp
 from base.serializers import BaseModelSerializer
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
-    ProjectMilestoneRecord, ProjectOperationRecord
+    ProjectMilestoneRecord, ProjectOperationRecord, ProjectDocument
 
 logs = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
 
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
+    doc_list = serializers.SerializerMethodField('_get_milestone_doc_list')
 
     @staticmethod
     def setup_eager_loading(queryset):
@@ -67,7 +68,9 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
     class Meta:
         model = ProjectMilestoneRecord
         fields = (
-            'id', 'milestone_id', 'milestone_title', 'milestone_index', 'created_time',
+            'id', 'milestone_id', 'milestone_title',
+            'milestone_index', 'created_time', 'doc_list',
+            'finished', 'summary'
         )
 
     def _get_milestone_title(self, obj):
@@ -77,6 +80,15 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
     def _get_milestone_index(self, obj):
         stone = Milestone.objects.get_cached(obj.milestone_id)
         return stone.index if stone else -1
+
+    def _get_milestone_doc_list(self, obj):
+        if not obj.doc_list:
+            return []
+        doc_ids_str = obj.doc_list.split(',')
+        logs.info(doc_ids_str)
+        doc_ids = [int(id_str) for id_str in doc_ids_str]
+        doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
+        return resp.serialize_data(doc_list) if doc_list else []
 
 
 class ProjectPlanSerializer(BaseModelSerializer):
@@ -230,6 +242,15 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
 
         project_operation_record = ProjectOperationRecord.objects.get_reason(project_id=obj.id, status=obj.status)
         return resp.serialize_data(project_operation_record) if project_operation_record else []
+
+
+class ProjectDocumentSerializer(BaseModelSerializer):
+
+    class Meta:
+        model = ProjectDocument
+        fields = (
+            'id', 'name', 'category',
+        )
 
 
 class ProjectOperationRecordSerializer(BaseModelSerializer):
