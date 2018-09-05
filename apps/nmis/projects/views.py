@@ -896,23 +896,21 @@ class MilestoneView(BaseAPIView):
         pass
 
 
-class ProjectFlowNodeOperations(BaseAPIView):
+class ProjectMilestoneResearchInfoCreateView(BaseAPIView):
     # permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     """
-    项目流程节点操作
-
-    项目负责人 上传文件并保存相关业务数据、变更节点并提交说明信息
-    项目协助人 上传文件并保存相关业务数据
+    项目负责人/项目协助人保存/修改调研信息
     """
 
     @transaction.atomic
     def post(self, req, project_id, flow_id, milestone_id, ):
         project = self.get_object_or_404(project_id, ProjectPlan)
+        flow = self.get_object_or_404(flow_id, ProjectFlow)
         milestone = self.get_object_or_404(milestone_id, Milestone)
-        if not req.FILES:
-            return resp.failed('请选择要上传的文件')
 
+        if not req.FILES or (req.FILES and not req.FILES.keys()):
+            return resp.failed('请选择要上传的文件')
         tags = req.FILES.keys()
         for tag in tags:
             files = req.FILES.getlist(tag)
@@ -927,29 +925,29 @@ class ProjectFlowNodeOperations(BaseAPIView):
             for file in files:
                 result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
                 if not result:
-                    logger.info(result)
-                    return resp.failed('%s%s' % (file.name, '上传失败'))
+                    return resp.failed('%s%s' % (file.name, '文件上传失败'))
                 results.append(result)
-                logger.info(results)
             result_dict[tag] = results
 
         # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord/或关联的数据模型对象中
-        doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_dict)
-        doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-        record, success = ProjectMilestoneRecord.objects.update_or_create(project=project, milestone=milestone)
-        if not success:
-            resp.ok('操作失败')
-        record.doc_list = doc_ids_str
+        new_doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_dict)
+        new_doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
+        record, created = ProjectMilestoneRecord.objects.update_or_create(project=project, milestone=milestone)
+        if created:
+            record.doc_list = new_doc_ids_str
+        if new_doc_ids_str:
+            if record.doc_list:
+                record.doc_list = '%s%s%s' % (record.doc_list, ',', new_doc_ids_str)
+            record.doc_list = new_doc_ids_str
         record.save()
         record.cache()
 
         # 根据执行人身份进行状态操作
         if project.performer == req.user.get_profile():
             record.summary = req.data.get('summary')
-            record.finished = True
             record.save()
-
-        return resp.ok('操作成功')
+        # record记录（文档，节点说明）
+        return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordSerializer')
 
 
 class ProjectDocumentView(BaseAPIView):
