@@ -10,7 +10,8 @@ import logging
 from collections import OrderedDict
 from django.db import models, transaction
 
-from nmis.projects.managers import ProjectDocumentManager, ProjectMilestoneRecordManager
+from nmis.projects.managers import ProjectDocumentManager, ProjectMilestoneRecordManager, \
+    SupplierSelectionPlanManager
 from utils import times
 from base.models import BaseModel
 from nmis.devices.models import OrderedDevice, SoftwareDevice
@@ -325,6 +326,14 @@ class ProjectPlan(BaseModel):
         :return:
         """
         return self.milestones.all()
+
+    def get_milestone_record(self, milestone):
+        """
+        返回当前项目流程中某个里程碑下的ProjectMilestoneRecord记录
+        :param milestone:
+        :return:
+        """
+        return ProjectMilestoneRecord.objects.filter(project=self, milestone=milestone).first()
 
     def get_milestone_changed_records(self):
         """
@@ -866,6 +875,8 @@ class SupplierSelectionPlan(BaseModel):
     # ProjectDocument对象ID集，每个id之间用'|'字符进行分割(目前包含方案资料和其他资料)
     doc_list = models.CharField('方案文档列表', max_length=32, null=True, blank=True)
     selected = models.BooleanField('是否为最终选定方案', default=False, null=False, blank=True)
+
+    objects = SupplierSelectionPlanManager()
 
     class Meta:
         verbose_name = '供应商选择方案'

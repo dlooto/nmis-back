@@ -370,3 +370,19 @@ class ProjectDocumentManager(BaseManager):
 class ProjectMilestoneRecordManager(BaseManager):
 
     pass
+
+
+class SupplierSelectionPlanManager(BaseManager):
+
+    def get_one(self, **data):
+        self.filter(data).first()
+
+    def get_list(self, **data):
+        self.filter(data)
+
+    def create_plan(self, **data):
+        return self.create(self.model(data))
+
+    def bulk_create_plan(self, plan_list):
+        return self.bulk_create(plan_list)
+

@@ -29,7 +29,7 @@ from nmis.projects.forms import (
     ProjectFlowCreateForm,
     ProjectFlowUpdateForm, )
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
-    ProjectMilestoneRecord
+    ProjectMilestoneRecord, SupplierSelectionPlan, Supplier
 from nmis.projects.permissions import ProjectPerformerPermission, \
     ProjectAssistantPermission
 from nmis.projects.serializers import ChunkProjectPlanSerializer, ProjectPlanSerializer, \
@@ -713,15 +713,14 @@ class ProjectFlowChildMilestones(BaseAPIView):
     获取项目流程某里程碑项的所有直接子里程碑项
     """
 
-    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+    # permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
-    def get(self, req, project_id, flow_id, milestone_id):
+    def get(self, req, project_id, milestone_id):
 
         project = self.get_object_or_404(project_id, ProjectPlan)
-        flow = self.get_object_or_404(flow_id, ProjectFlow)
         milestone = self.get_object_or_404(milestone_id, Milestone)
         attached_flow = project.attached_flow
-        if flow.id != attached_flow.id or not attached_flow.contains(milestone):
+        if milestone.flow != attached_flow or not attached_flow.contains(milestone):
             return resp.failed("参数数据异常")
         child_milestones = milestone.children()
         return resp.serialize_response(child_milestones, results_name='milestones', srl_cls_name='MilestoneSerializer')
@@ -872,6 +871,7 @@ class ProjectPlanUndispatchedListView(BaseAPIView):
 
         return self.get_pages(result_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects')
 
+
 class MilestoneCreateView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin,)
@@ -904,9 +904,8 @@ class ProjectMilestoneResearchInfoCreateView(BaseAPIView):
     """
 
     @transaction.atomic
-    def post(self, req, project_id, flow_id, milestone_id, ):
+    def post(self, req, project_id, milestone_id, ):
         project = self.get_object_or_404(project_id, ProjectPlan)
-        flow = self.get_object_or_404(flow_id, ProjectFlow)
         milestone = self.get_object_or_404(milestone_id, Milestone)
 
         if not req.FILES or (req.FILES and not req.FILES.keys()):
@@ -948,6 +947,78 @@ class ProjectMilestoneResearchInfoCreateView(BaseAPIView):
             record.save()
         # record记录（文档，节点说明）
         return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordSerializer')
+
+
+class ProjectMilestoneResearchInfoView(BaseAPIView):
+    """
+    查询调研数据
+    """
+    def get(self, req, project_id, milestone_id):
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        record = project.get_milestone_record(milestone)
+
+        return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordSerializer')
+
+
+class ProjectMilestonePlanGatheredCreateView(BaseAPIView):
+    """
+    创建方案收集数据
+    """
+    def post(self, req, project_id, milestone_id):
+        """
+        批量保存供应商选择方案
+        批量上传文档，创建文档记录
+        将文档关联到对应的方案
+        根据用户身份保存说明信息
+        :return:
+        """
+        # plan_list = req.data.get('plan_list')
+        # for plan in plan_list:
+        #     plan
+        logger.info(req.data)
+        suppliers = req.data.getlist('supplier')
+        total_amounts = req.data.getlist('total_amount')
+        remarks = req.data.getlist('remark')
+        supplier_selection_plans = req.data.getlist('supplier_selection_plan')
+        others_arr = req.data.getlist('others')
+
+
+        # 批量创建供应商
+        # 批量创建
+        plans = []
+        for index in range(len(suppliers)):
+            supplier, created = Supplier.objects.update_or_create(name=suppliers[index])
+            supplier.cache()
+            plan = SupplierSelectionPlan(supplier=supplier, total_amount=total_amounts[index], remark=remarks[index])
+            plans.append(plan)
+        logger.info('-------------------')
+        logger.info(suppliers)
+        return resp.ok()
+
+
+
+class ProjectMilestonePlanGatheredView(BaseAPIView):
+    """
+    查询方案收集数据
+    """
+    def get(self, req, project_id, milestone_id):
+        pass
+
+class ProjectMilestonePlanSelectedView(BaseAPIView):
+    """
+    创建方案选定数据
+    """
+    def post(self, req, ):
+        pass
+
+
+class ProjectMilestonePlanSelectedView(BaseAPIView):
+    """
+    查看方案选定数据
+    """
+    pass
 
 
 class ProjectDocumentView(BaseAPIView):
