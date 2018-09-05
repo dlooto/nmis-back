@@ -9,10 +9,13 @@ import logging
 from itertools import chain
 from base.forms import BaseForm
 from nmis.devices.models import OrderedDevice, SoftwareDevice
+from nmis.hospitals.consts import ARCHIVE
 from nmis.projects.models import ProjectPlan, ProjectFlow
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
-    PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE
+    PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, \
+    PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR
 from nmis.hospitals.models import Staff
+from utils.files import upload_file
 
 logs = logging.getLogger(__name__)
 
@@ -466,4 +469,56 @@ class ProjectPlanListForm(BaseForm):
         return ProjectPlan.objects.get_by_search_key(
             self.hospital, project_title=search_key, performers=performers, **data
         )
+
+
+class UploadFileForm(BaseForm):
+
+    def __init__(self, req, *args, **kwargs):
+        BaseForm.__init__(self, req, *args, **kwargs)
+        self.req = req
+
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'file_type_err': '文件类型错误',
+            'file_key_err': 'key类型错误'
+        })
+
+    def is_valid(self):
+        if not self.check_file_type() or not self.check_file_key():
+            return False
+        return True
+
+    def check_file_type(self):
+        for tag in self.req.FILES.keys():
+            files = self.req.FILES.getlist(tag)
+            for file in files:
+                if file.content_type not in ARCHIVE.values():
+                    self.update_errors('%s' % file.name, 'file_type_err')
+                    return False
+        return True
+
+    def check_file_key(self):
+        for tag in self.req.FILES.keys():
+            if tag not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
+                self.update_errors('file_key', 'file_key_err')
+                return False
+        return True
+
+    def save(self):
+        file_name_path_data = {}
+
+        for tag in self.req.FILES.keys():
+            files = self.req.FILES.getlist(tag)
+            result_files = []
+            for file in files:
+                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
+                if not result:
+                    return '%s%s' % (file.name, '上传失败'), False
+
+                result_files.append(result)
+                file_name_path_data[tag] = result_files
+
+        return file_name_path_data, True
 

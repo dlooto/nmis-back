@@ -93,7 +93,11 @@ urlpatterns = [
     path('flows/<int:flow_id>/milestones/<int:mid>', views.MilestoneView.as_view(), ),         # put/delete
 
 
-    # 确定采购方式
+    # 确定采购方式里程碑(采购方式，文件附件，说明操作)接口
     path('<int:project_id>/flow/<int:flow_id>/milestone/<int:milestone_id>/record-purchase',
-         views.MilestoneRecordPurchase.as_view(), )
+         views.MilestoneRecordPurchaseCreateView.as_view(), ),
+
+    # 获取确定采购方式里程碑中所有的信息
+    path('<int:project_id>/flow/<int:flow_id>/milestone/<int:milestone_id>',
+         views.MilestoneRecordPurchaseView.as_view(),)
 ]
