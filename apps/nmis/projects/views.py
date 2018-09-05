@@ -967,13 +967,12 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
     permission_classes = (HospitalStaffPermission,)
 
     @transaction.atomic
-    def post(self, req, project_id, flow_id, milestone_id):
+    def post(self, req, project_id, milestone_id):
         """
         确定采购方式子里程碑记录操作（包括确定采购的方式，保存采购方式决策论证类附件，保存说明等操作）
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
-        flow = self.get_object_or_404(flow_id, ProjectFlow)
         milestone = self.get_object_or_404(milestone_id, Milestone)
 
         purchase_method = req.data.get('purchase_method', '').strip()
@@ -1016,7 +1015,8 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
                     record.summary = summary
             record.save()
             record.cache()
-            return resp.ok('OK')
+
+            return resp.serialize_response(record, results_name='milestone_record')
 
         return resp.failed('保存失败')
 
@@ -1025,25 +1025,79 @@ class MilestoneRecordPurchaseView(BaseAPIView):
 
     permission_classes = (HospitalStaffPermission, )
 
-    def get(self, req, project_id, flow_id, milestone_id):
+    def get(self, req, project_id, milestone_id):
         """
         获取确定采购方案信息(包括:采购方式、决策论证资料、说明等)
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
 
         project = self.get_object_or_404(project_id, ProjectPlan)
-        flow = self.get_object_or_404(flow_id, ProjectFlow)
         milestone = self.get_object_or_404(milestone_id, Milestone)
 
-        purchase_method = project.purchase_method
+        milestone_record = ProjectMilestoneRecord.objects.get_milestone_record(project, milestone)
 
-        project_milestone_record = ProjectMilestoneRecord.objects.filter(project=project, milestone=milestone)
-        if project_milestone_record:
+        return resp.serialize_response(milestone_record, results_name='milestone_record')
 
-            related_doc_list = project_milestone_record.first().doc_list
-            doc_id_list = get_id_list(related_doc_list)
-            project_document = ProjectDocument.objects.filter(id__in=doc_id_list)
-            for i in range(len(project_document)):
-                print(project_document[i].name)
 
-        return resp.serialize_response(project_milestone_record, results_name='project_record')
+class MilestoneStartUpPurchaseCreateView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    @transaction.atomic
+    def post(self, req, project_id, milestone_id):
+
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+
+        if not req.FILES and not req.data.get('summary'):
+            return resp.failed('请输入保存内容')
+
+        # 上传文件保存到服务器
+        form = UploadFileForm(req)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        result_data, success = form.save()
+        if not success:
+            return resp.failed(result_data)
+
+        # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord中
+        doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_data)
+        doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
+        record, is_created = ProjectMilestoneRecord.objects.update_or_create(
+            project=project, milestone=milestone)
+
+        if is_created:
+            record.doc_list = doc_ids_str
+        else:
+            if doc_ids_str:
+                if record.doc_list:
+                    record.doc_list = '%s%s%s' % (record.doc_list, ',', doc_ids_str)
+                else:
+                    record.doc_list = doc_ids_str
+
+        if req.user.get_profile().id == project.performer.id:
+
+            summary = req.data.get('summary', '').strip()
+            if summary:
+                record.summary = summary
+        record.save()
+        record.cache()
+
+        return resp.serialize_response(record, results_name='milestone_record')
+
+
+class MilestoneStartUpPurchaseView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    def get(self, req, project_id, milestone_id):
+        """
+        获取启动采购中附件和说明相关信息
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)

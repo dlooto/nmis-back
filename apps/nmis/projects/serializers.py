@@ -60,6 +60,7 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
     doc_list = serializers.SerializerMethodField('_get_milestone_doc_list')
+    purchase_method = serializers.SerializerMethodField('_get_purchase_method')
 
     @staticmethod
     def setup_eager_loading(queryset):
@@ -68,9 +69,9 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
     class Meta:
         model = ProjectMilestoneRecord
         fields = (
-            'id', 'milestone_id', 'milestone_title',
+            'id', 'milestone_id', 'purchase_method', 'milestone_title',
             'milestone_index', 'created_time', 'doc_list',
-            'finished', 'summary'
+            'finished', 'summary', 'purchase_method'
         )
 
     def _get_milestone_title(self, obj):
@@ -89,6 +90,13 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
         doc_ids = [int(id_str) for id_str in doc_ids_str]
         doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
         return resp.serialize_data(doc_list) if doc_list else []
+
+    def _get_purchase_method(self, obj):
+        """
+        获取采购方法
+        """
+        purchase_method = obj.get_project_purchase_method()
+        return purchase_method if purchase_method else ''
 
 
 class ProjectPlanSerializer(BaseModelSerializer):

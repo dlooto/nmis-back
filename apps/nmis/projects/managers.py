@@ -369,4 +369,9 @@ class ProjectDocumentManager(BaseManager):
 
 class ProjectMilestoneRecordManager(BaseManager):
 
-    pass
+    def get_milestone_record(self, project, milestone):
+        """
+        获取每个子里程碑的记录
+        """
+        return self.filter(project=project, milestone=milestone).first()
+
