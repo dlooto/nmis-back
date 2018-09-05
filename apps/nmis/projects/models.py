@@ -461,6 +461,12 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return False, "数据异常"
 
+    def get_purchase_method(self):
+        """
+        获取项目采购方法
+        """
+        return self.purchase_method
+
 
 class ProjectFlow(BaseModel):
     """
@@ -779,6 +785,12 @@ class ProjectMilestoneRecord(BaseModel):
 
     def __str__(self):
         return '%s %s' % (self.project_id, self.milestone_id)
+
+    def get_project_purchase_method(self):
+        """
+        获取当前记录的项目
+        """
+        return self.project.purchase_method
 
     def get_doc_list(self):
         """

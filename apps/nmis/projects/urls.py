@@ -109,7 +109,21 @@ urlpatterns = [
     path('flows/<int:flow_id>/milestones/<int:mid>', views.MilestoneView.as_view(), ),         # put/delete
 
 
-    # 确定采购方式
-    path('<int:project_id>/flow/<int:flow_id>/milestone/<int:milestone_id>/record-purchase',
-         views.MilestoneRecordPurchase.as_view(), )
+    # 确定采购方式里程碑(采购方式，文件附件，说明操作)接口
+    path('<int:project_id>/milestone/<int:milestone_id>/record-purchase',
+         views.MilestoneRecordPurchaseCreateView.as_view(), ),
+
+    # 获取确定采购方式里程碑中所有的信息
+    path('<int:project_id>/milestone/<int:milestone_id>',
+         views.MilestoneRecordPurchaseView.as_view(),),
+
+    # 启动采购的相关操作接口（保存上传附件，说明）
+    path('<int:project_id>/milestone/<int:milestone_id>/save-startup-purchase-info',
+         views.MilestoneStartUpPurchaseCreateView.as_view(), ),
+
+    # 获取启动采购中附件和说明信息
+    path('<int:project_id>/milestone/<int:milestone_id>',
+         views.MilestoneStartUpPurchaseView.as_view(), )
+
+
 ]

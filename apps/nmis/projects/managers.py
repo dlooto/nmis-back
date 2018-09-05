@@ -16,7 +16,7 @@ from nmis.projects.consts import (PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE,
                                   PRO_STATUS_STARTED, PRO_STATUS_OVERRULE,
                                   PRO_STATUS_PAUSE, PRO_OPERATION_OVERRULE,
                                   PRO_OPERATION_PAUSE, PRO_STATUS_DONE,
-                                  PRO_STATUS_PENDING)
+                                  PRO_STATUS_PENDING,)
 
 logger = logging.getLogger(__name__)
 
@@ -369,7 +369,12 @@ class ProjectDocumentManager(BaseManager):
 
 class ProjectMilestoneRecordManager(BaseManager):
 
-    pass
+    def get_milestone_record(self, project, milestone):
+        """
+        获取每个子里程碑的记录
+        """
+        return self.filter(project=project, milestone=milestone).first()
+
 
 
 class SupplierSelectionPlanManager(BaseManager):

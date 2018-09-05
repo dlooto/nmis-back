@@ -13,6 +13,7 @@ from base import resp
 from base.common.decorators import (
     check_id, check_id_list, check_params_not_null, check_params_not_all_null
 )
+from base.common.param_utils import get_id_list
 
 from base.views import BaseAPIView
 
@@ -27,7 +28,7 @@ from nmis.projects.forms import (
     OrderedDeviceCreateForm,
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
-    ProjectFlowUpdateForm, )
+    ProjectFlowUpdateForm, UploadFileForm)
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
     ProjectMilestoneRecord, SupplierSelectionPlan, Supplier
 from nmis.projects.permissions import ProjectPerformerPermission, \
@@ -52,7 +53,7 @@ from nmis.projects.consts import (
     PRO_OPERATION_OVERRULE,
     PRO_STATUS_PAUSE,
     PRO_OPERATION_PAUSE,
-    PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES)
+    PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PROJECT_DOCUMENT_CATE_CHOICES)
 from utils.files import upload_file
 
 logger = logging.getLogger(__name__)
@@ -1032,48 +1033,142 @@ class ProjectDocumentView(BaseAPIView):
         pass
 
 
-class MilestoneRecordPurchase(BaseAPIView):
+class MilestoneRecordPurchaseCreateView(BaseAPIView):
 
-    permission_classes = (HospitalStaffPermission, )
+    permission_classes = (HospitalStaffPermission,)
 
     @transaction.atomic
-    def post(self, req, project_id, flow_id, milestone_id):
+    def post(self, req, project_id, milestone_id):
         """
         确定采购方式子里程碑记录操作（包括确定采购的方式，保存采购方式决策论证类附件，保存说明等操作）
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
-        flow = self.get_object_or_404(flow_id, ProjectFlow)
         milestone = self.get_object_or_404(milestone_id, Milestone)
 
         purchase_method = req.data.get('purchase_method', '').strip()
-
         if not purchase_method:
-            return resp.form_err({'purchase_method_err': '选择采购方式'})
+            return resp.failed('请选择采购方式')
         elif purchase_method not in dict(PROJECT_PURCHASE_METHOD_CHOICES):
             return resp.form_err({'purchase_method_err': '采购方式类型错误'})
 
-        if not req.FILES:
-            return resp.form_err({'files_err': '未上传任务文件'})
-        # 确定项目采购方式
+        form = UploadFileForm(req)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        result, success = form.save()
+        if not success:
+            return resp.failed(result)
+
         success = project.determining_purchase_method(purchase_method)
 
         if success:
-            # 保存采购决策论证类附件
-            tags = req.FILES.keys()
-            for tag in tags:
-                file = req.FILES.get(tag)
-                if file.content_type not in ARCHIVE.values():
-                    return resp.failed('系统不支持上传文件文件类型')
-            for tag in tags:
-                file = req.FILES.get(tag)
-                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
-                if not result:
-                    return resp.failed('%s%s' % (file.name, '上传失败'))
+            # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord中
+            doc_list = ProjectDocument.objects.batch_save_upload_project_doc(
+                result)
+            doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
+            record, is_created = ProjectMilestoneRecord.objects.update_or_create(
+                project=project, milestone=milestone)
 
-            # files = req.FILES.getlist('file')
-            # for file in files:
-            #     print(file.name)
-            return resp.ok('OK')
-        return resp.failed('False')
+            if is_created:
+                record.doc_list = doc_ids_str
+            else:
+                if doc_ids_str:
+                    if record.doc_list:
+                        record.doc_list = '%s%s%s' % (record.doc_list, ',', doc_ids_str)
+                    else:
+                        record.doc_list = doc_ids_str
 
+            if req.user.get_profile().id == project.performer.id:
+
+                summary = req.data.get('summary', '').strip()
+                if summary:
+                    record.summary = summary
+            record.save()
+            record.cache()
+
+            return resp.serialize_response(record, results_name='milestone_record')
+
+        return resp.failed('保存失败')
+
+
+class MilestoneRecordPurchaseView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    def get(self, req, project_id, milestone_id):
+        """
+        获取确定采购方案信息(包括:采购方式、决策论证资料、说明等)
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+
+        milestone_record = ProjectMilestoneRecord.objects.get_milestone_record(project, milestone)
+
+        return resp.serialize_response(milestone_record, results_name='milestone_record')
+
+
+class MilestoneStartUpPurchaseCreateView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    @transaction.atomic
+    def post(self, req, project_id, milestone_id):
+
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+
+        if not req.FILES and not req.data.get('summary'):
+            return resp.failed('请输入保存内容')
+
+        # 上传文件保存到服务器
+        form = UploadFileForm(req)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        result_data, success = form.save()
+        if not success:
+            return resp.failed(result_data)
+
+        # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord中
+        doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_data)
+        doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
+        record, is_created = ProjectMilestoneRecord.objects.update_or_create(
+            project=project, milestone=milestone)
+
+        if is_created:
+            record.doc_list = doc_ids_str
+        else:
+            if doc_ids_str:
+                if record.doc_list:
+                    record.doc_list = '%s%s%s' % (record.doc_list, ',', doc_ids_str)
+                else:
+                    record.doc_list = doc_ids_str
+
+        if req.user.get_profile().id == project.performer.id:
+
+            summary = req.data.get('summary', '').strip()
+            if summary:
+                record.summary = summary
+        record.save()
+        record.cache()
+
+        return resp.serialize_response(record, results_name='milestone_record')
+
+
+class MilestoneStartUpPurchaseView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    def get(self, req, project_id, milestone_id):
+        """
+        获取启动采购中附件和说明相关信息
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
