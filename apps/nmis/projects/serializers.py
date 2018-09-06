@@ -86,7 +86,6 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
         if not obj.doc_list:
             return []
         doc_ids_str = obj.doc_list.split(',')
-        logs.info(doc_ids_str)
         doc_ids = [int(id_str) for id_str in doc_ids_str]
         doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
         return resp.serialize_data(doc_list) if doc_list else []

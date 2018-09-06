@@ -15,6 +15,7 @@ from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CH
     PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, \
     PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR
 from nmis.hospitals.models import Staff
+from utils import eggs
 from utils.files import upload_file
 
 logs = logging.getLogger(__name__)
@@ -473,9 +474,10 @@ class ProjectPlanListForm(BaseForm):
 
 class UploadFileForm(BaseForm):
 
-    def __init__(self, req, *args, **kwargs):
-        BaseForm.__init__(self, req, *args, **kwargs)
+    def __init__(self, req, project_id, *args, **kwargs):
+        BaseForm.__init__(self, req, project_id, *args, **kwargs)
         self.req = req
+        self.project_id = project_id
 
         self.init_err_codes()
 
@@ -513,7 +515,7 @@ class UploadFileForm(BaseForm):
             files = self.req.FILES.getlist(tag)
             result_files = []
             for file in files:
-                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
+                result = upload_file(file, PROJECT_DOCUMENT_DIR+str(self.project_id)+'/', file.name)
                 if not result:
                     return '%s%s' % (file.name, '上传失败'), False
 
@@ -522,3 +524,19 @@ class UploadFileForm(BaseForm):
 
         return file_name_path_data, True
 
+
+class PurchaseContractCreateForm(BaseForm):
+
+    def __init__(self, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.data = data
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'seller_tel_err': '乙方电话错误',
+        })
+
+    def is_valid(self):
+        if not self.check_seller_tel():
+            return False
+        return True

@@ -1101,3 +1101,57 @@ class MilestoneStartUpPurchaseView(BaseAPIView):
 
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone = self.get_object_or_404(milestone_id, Milestone)
+
+        milestone_record = ProjectMilestoneRecord.objects.get_milestone_record(project, milestone)
+
+        return resp.serialize_response(milestone_record, results_name='milestone_record')
+
+
+class MilestonePurchaseContractCreateView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    @transaction.atomic
+    @check_params_not_null(['contract_no', 'title', 'signed_date', 'buyer_contact',
+                            'seller-contact', 'seller', 'seller_tel', 'total_amount',
+                            'delivery_date', 'contract_device'])
+    def post(self, req, project_id, milestone_id):
+
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        logger.info(req.data.get('contract_device'))
+        if not req.FILES and not req.data.get('summary'):
+            return resp.failed('请输入内容')
+        form = UploadFileForm(req, project_id)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        result_data, success = form.save()
+        if not success:
+            return resp.failed('文件上传失败')
+        # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord中
+        doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_data)
+        doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
+        record, is_created = ProjectMilestoneRecord.objects.update_or_create(
+            project=project, milestone=milestone)
+
+        if is_created:
+            record.doc_list = doc_ids_str
+        else:
+            if doc_ids_str:
+                if record.doc_list:
+                    record.doc_list = '%s%s%s' % (record.doc_list, ',', doc_ids_str)
+                else:
+                    record.doc_list = doc_ids_str
+
+        if req.user.get_profile().id == project.performer.id:
+
+            summary = req.data.get('summary', '').strip()
+            if summary:
+                record.summary = summary
+        record.save()
+        record.cache()
+        print(PROJECT_DOCUMENT_DIR+str(project_id)+'/')
+        return resp.serialize_response(record, results_name='milestone_record')
+
