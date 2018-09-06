@@ -14,7 +14,7 @@ from rest_framework import serializers
 from base import resp
 from base.serializers import BaseModelSerializer
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
-    ProjectMilestoneRecord, ProjectOperationRecord, ProjectDocument
+    ProjectMilestoneRecord, ProjectOperationRecord, ProjectDocument, SupplierSelectionPlan
 
 logs = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class MilestoneSerializer(BaseModelSerializer):
 
 class ProjectFlowSerializer(BaseModelSerializer):
     milestones = serializers.SerializerMethodField('_get_milestones')
-    #milestones = MilestoneSerializer(many=True)
+    # milestones = MilestoneSerializer(many=True)
 
     class Meta:
         model = ProjectFlow
@@ -55,6 +55,30 @@ class ProjectFlowSerializer(BaseModelSerializer):
         return resp.serialize_data(obj.get_main_milestones())
 
 
+class SupplierSelectionPlanSerializer(BaseModelSerializer):
+    supplier_name = serializers.SerializerMethodField('_get_supplier_name')
+    doc_list = serializers.SerializerMethodField('_get_plan_doc_list')
+
+    class Meta:
+        model = SupplierSelectionPlan
+        fields = (
+            'id', 'project_milestone_record_id',
+            'supplier_id', 'supplier_name', 'total_amount',
+            'remark', 'doc_list', 'selected',
+        )
+
+    def _get_supplier_name(self, obj):
+        return obj.supplier.name if obj.supplier else ''
+
+    def _get_plan_doc_list(self, obj):
+        if not obj.doc_list:
+            return []
+        doc_ids_str = obj.doc_list.split(',')
+        doc_ids = [int(id_str) for id_str in doc_ids_str]
+        doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
+        return resp.serialize_data(doc_list) if doc_list else []
+
+
 class ProjectMilestoneRecordSerializer(BaseModelSerializer):
 
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
@@ -71,7 +95,7 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
         fields = (
             'id', 'milestone_id', 'purchase_method', 'milestone_title',
             'milestone_index', 'created_time', 'doc_list',
-            'finished', 'summary', 'purchase_method'
+            'finished', 'summary'
         )
 
     def _get_milestone_title(self, obj):
@@ -86,7 +110,6 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
         if not obj.doc_list:
             return []
         doc_ids_str = obj.doc_list.split(',')
-        logs.info(doc_ids_str)
         doc_ids = [int(id_str) for id_str in doc_ids_str]
         doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
         return resp.serialize_data(doc_list) if doc_list else []
@@ -97,6 +120,34 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
         """
         purchase_method = obj.get_project_purchase_method()
         return purchase_method if purchase_method else ''
+
+
+class ProjectMilestoneRecordWithSupplierSelectionPlanSerializer(ProjectMilestoneRecordSerializer):
+    supplier_selection_plans = serializers.SerializerMethodField('_get_supplier_selection_plans')
+
+    class Meta:
+        model = ProjectMilestoneRecord
+        fields = (
+            'id', 'milestone_id',  'milestone_title',
+            'milestone_index', 'created_time', 'doc_list',
+            'finished', 'summary', 'supplier_selection_plans'
+        )
+
+    def _get_supplier_selection_plans(self, obj):
+        plans = SupplierSelectionPlan.objects.filter(project_milestone_record=obj)
+        return resp.serialize_data(plans) if plans else []
+
+
+class ProjectMilestoneRecordWithSupplierSelectionPlanToConfirmSerializer(ProjectMilestoneRecordSerializer):
+    supplier_selection_plans = SupplierSelectionPlanSerializer(many=True)
+
+    class Meta:
+        model = ProjectMilestoneRecord
+        fields = (
+            'id', 'milestone_id',  'milestone_title',
+            'milestone_index', 'created_time', 'doc_list',
+            'finished', 'summary', 'supplier_selection_plans'
+        )
 
 
 class ProjectPlanSerializer(BaseModelSerializer):

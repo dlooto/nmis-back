@@ -53,7 +53,8 @@ from nmis.projects.consts import (
     PRO_OPERATION_OVERRULE,
     PRO_STATUS_PAUSE,
     PRO_OPERATION_PAUSE,
-    PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PROJECT_DOCUMENT_CATE_CHOICES)
+    PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PROJECT_DOCUMENT_CATE_CHOICES,
+    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS)
 from utils.files import upload_file
 
 logger = logging.getLogger(__name__)
@@ -946,6 +947,7 @@ class ProjectMilestoneResearchInfoCreateView(BaseAPIView):
         if project.performer == req.user.get_profile():
             record.summary = req.data.get('summary')
             record.save()
+            record.cache()
         # record记录（文档，节点说明）
         return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordSerializer')
 
@@ -969,12 +971,17 @@ class ProjectMilestonePlanGatheredCreateView(BaseAPIView):
     """
     def post(self, req, project_id, milestone_id):
         """
+        批量创建供应商
         批量保存供应商选择方案
         批量上传文档，创建文档记录
         将文档关联到对应的方案
         根据用户身份保存说明信息
         :return:
         """
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        record = ProjectMilestoneRecord.objects.filter(project=project, milestone=milestone).first()
         # plan_list = req.data.get('plan_list')
         # for plan in plan_list:
         #     plan
@@ -987,39 +994,166 @@ class ProjectMilestonePlanGatheredCreateView(BaseAPIView):
 
 
         # 批量创建供应商
-        # 批量创建
+        # 批量上传文档，添加项目文档记录
+        # 批量创建供应商选择方案
         plans = []
-        for index in range(len(suppliers)):
-            supplier, created = Supplier.objects.update_or_create(name=suppliers[index])
-            supplier.cache()
-            plan = SupplierSelectionPlan(supplier=supplier, total_amount=total_amounts[index], remark=remarks[index])
-            plans.append(plan)
-        logger.info('-------------------')
-        logger.info(suppliers)
-        return resp.ok()
+        try:
+            with transaction.atomic():
+                for index in range(len(suppliers)):
+                    supplier, created = Supplier.objects.update_or_create(name=suppliers[index])
+                    supplier.cache()
+                    plan, created = SupplierSelectionPlan.objects.update_or_create(project_milestone_record=record, supplier=supplier, total_amount=total_amounts[index], remark=remarks[index])
+                    plans.append(plan)
+        except Exception as e:
+            logger.exception(e)
+            return resp.failed("操作失败")
 
+        if not req.FILES or (req.FILES and not req.FILES.keys()):
+            return resp.failed('请选择要上传的文件')
+        tags = req.FILES.keys()
+        for tag in tags:
+            files = req.FILES.getlist(tag)
+            for file in files:
+                if file.content_type not in ARCHIVE.values():
+                    return resp.failed('系统不支持上传文件文件类型')
+
+        result_dict = {}
+        for tag in tags:
+            files = req.FILES.getlist(tag)
+            results = []
+            for file in files:
+                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
+                if not result:
+                    return resp.failed('%s%s' % (file.name, '文件上传失败'))
+                results.append(result)
+            result_dict[tag] = results
+        plan_file_results = result_dict.get(PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN)
+        for index in range(len(plan_file_results)):
+            name, path = plan_file_results[index]
+            doc, created = ProjectDocument.objects.update_or_create(name=name, category=PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN,path=path)
+            old_doc_list = plans[index].doc_list
+            if not old_doc_list:
+                plans[index].doc_list = str(doc.id)
+            plans[index].doc_list = '%s%s%s' % (old_doc_list, ',', str(doc.id))
+            plans[index].save()
+            plans[index].cache()
+
+
+        others_file_results =result_dict.get(PRO_DOC_CATE_OTHERS)
+        for index in range(len(others_file_results)):
+            name, path = plan_file_results[index]
+            doc, created = ProjectDocument.objects.update_or_create(name=name, category=PRO_DOC_CATE_OTHERS,path=path)
+            old_doc_list = plans[index].doc_list
+            if not old_doc_list:
+                plans[index].doc_list = str(doc.id)
+            plans[index].doc_list = '%s%s%s' % (old_doc_list, ',', str(doc.id))
+            plans[index].save()
+            plans[index].cache()
+
+
+        # 根据执行人身份进行状态操作
+        if project.performer == req.user.get_profile():
+            record.summary = req.data.get('summary')
+            record.save()
+            record.cache()
+        # record记录（文档，节点说明）
+        return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSerializer')
 
 
 class ProjectMilestonePlanGatheredView(BaseAPIView):
     """
-    查询方案收集数据
+    查询方案收集数据()
     """
     def get(self, req, project_id, milestone_id):
-        pass
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        record = project.get_milestone_record(milestone)
+        return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSerializer')
 
-class ProjectMilestonePlanSelectedView(BaseAPIView):
+
+class ProjectMilestoneConfirmSupplierSelectionPlanView(BaseAPIView):
     """
-    创建方案选定数据
+    圈定供应商选择方案
     """
-    def post(self, req, ):
-        pass
+
+    @check_id('supplier_selection_plan_id')
+    def post(self, req, project_id, milestone_id):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+
+        plan = self.get_object_or_404(req.data.get('supplier_selection_plan_id'), SupplierSelectionPlan)
+        plan.selected = True
+        plan.save()
+        plan.cache()
+
+        if not req.FILES or (req.FILES and not req.FILES.keys()):
+            return resp.failed('请选择要上传的文件')
+        tags = req.FILES.keys()
+        for tag in tags:
+            files = req.FILES.getlist(tag)
+            for file in files:
+                if file.content_type not in ARCHIVE.values():
+                    return resp.failed('系统不支持上传文件文件类型')
+
+        result_dict = {}
+        for tag in tags:
+            files = req.FILES.getlist(tag)
+            results = []
+            for file in files:
+                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
+                if not result:
+                    return resp.failed('%s%s' % (file.name, '文件上传失败'))
+                results.append(result)
+            result_dict[tag] = results
+
+        # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord/或关联的数据模型对象中
+        new_doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_dict)
+        new_doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
+        record, created = ProjectMilestoneRecord.objects.update_or_create(project=project, milestone=milestone)
+        if created:
+            record.doc_list = new_doc_ids_str
+        if new_doc_ids_str:
+            if record.doc_list:
+                record.doc_list = '%s%s%s' % (record.doc_list, ',', new_doc_ids_str)
+            record.doc_list = new_doc_ids_str
+        record.save()
+        record.cache()
+
+        # 根据执行人身份进行状态操作
+        if project.performer == req.user.get_profile():
+            record.summary = req.data.get('summary')
+            record.save()
+            record.cache()
+        # record记录（文档，节点说明）
+
+        plans = SupplierSelectionPlan.objects.filter(project_milestone_record=plan.project_milestone_record)
+        record.supplier_selection_plans = plans
+
+        return resp.serialize_response(
+            record, results_name='milestone_record',
+            srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSerializer'
+        )
 
 
 class ProjectMilestonePlanSelectedView(BaseAPIView):
     """
     查看方案选定数据
     """
-    pass
+    def get(self, req, project_id, milestone_id):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        current_milestone = self.get_object_or_404(milestone_id, Milestone)
+        current_milestone_record = ProjectMilestoneRecord.objects.filter(project=project, milestone=current_milestone).first()
+        supplier_plan_related_milestone_record_id = req.GET.get('supplier_plan_related_milestone_record_id')
+        supplier_plan_related_milestone_record = self.get_object_or_404(supplier_plan_related_milestone_record_id, ProjectMilestoneRecord)
+
+        plans = SupplierSelectionPlan.objects.filter(project_milestone_record=supplier_plan_related_milestone_record)
+        current_milestone_record.supplier_selection_plans = plans
+
+        return resp.serialize_response(
+            current_milestone_record,
+            results_name='milestone_record',
+            srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanToConfirmSerializer'
+        )
 
 
 class ProjectDocumentView(BaseAPIView):
