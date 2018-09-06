@@ -126,7 +126,7 @@ urlpatterns = [
          views.MilestoneRecordPurchaseCreateView.as_view(), ),
 
     # 获取确定采购方式里程碑中所有的信息
-    path('<int:project_id>/milestone/<int:milestone_id>',
+    path('<int:project_id>/milestone/<int:milestone_id>/determining-purchase-method',
          views.MilestoneRecordPurchaseView.as_view(),),
 
     # 启动采购的相关操作接口（保存上传附件，说明）
@@ -134,8 +134,12 @@ urlpatterns = [
          views.MilestoneStartUpPurchaseCreateView.as_view(), ),
 
     # 获取启动采购中附件和说明信息
-    path('<int:project_id>/milestone/<int:milestone_id>',
-         views.MilestoneStartUpPurchaseView.as_view(), )
+    path('<int:project_id>/milestone/<int:milestone_id>/startup-purchase',
+         views.MilestoneStartUpPurchaseView.as_view(), ),
+
+    # 合同管理子里程碑保存操作
+    path('<int:project_id>/milestone/<int:milestone_id>/purchase-contract',
+         views.MilestonePurchaseContractCreateView.as_view(), )
 
 
 ]

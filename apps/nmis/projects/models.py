@@ -925,7 +925,7 @@ class PurchaseContract(BaseModel):
     seller_tel = models.CharField('卖方/乙方联系电话', max_length=11, null=False, blank=False)
     total_amount = models.FloatField('合同总价', default=0.00, null=False, blank=False)
     delivery_date = models.DateField('交货时间', null=False, blank=False)
-    # 合同文档附件-ProjectDocument对象ID集，每个id之间用'|'字符进行分割
+    # 合同文档附件-ProjectDocument对象ID集，每个id之间用','字符进行分割
     doc_list = models.CharField('合同文档列表', max_length=20, null=True, blank=True)
 
     class Meta:
