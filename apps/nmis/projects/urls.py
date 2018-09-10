@@ -13,7 +13,8 @@ from django.urls import path
 
 from nmis.projects import views
 from nmis.projects.views import ProjectMilestoneResearchInfoCreateView, \
-    ProjectMilestoneResearchInfoView, ProjectMilestonePlanGatheredCreateView
+    ProjectMilestoneResearchInfoView, ProjectMilestonePlanGatheredCreateView, ProjectMilestonePlanGatheredView, \
+    ProjectMilestoneConfirmSupplierSelectionPlanView, ProjectMilestonePlanSelectedView
 
 logs = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ urlpatterns = [
     # 项目具体的某个设备get/update/delete操作
     path('<int:project_id>/devices/<int:device_id>',      views.ProjectDeviceView.as_view(), ),
 
-    # 获取项目流程某里程碑节点下的所有直接子里程碑项
+    # 获取项目流程某里程碑下的所有直接子里程碑项
     path(
         '<int:project_id>/milestones/<int:milestone_id>/children',
         views.ProjectFlowChildMilestones.as_view(),
@@ -93,11 +94,22 @@ urlpatterns = [
         '<int:project_id>/milestones/<int:milestone_id>/get-research-info',
         ProjectMilestoneResearchInfoView.as_view(),
     ),
-    # 获取项目中【调研】里程碑下的任务信息
+    # 保存【方案收集】里程碑下的任务
     path(
         '<int:project_id>/milestones/<int:milestone_id>/save-plan-gather-info',
         ProjectMilestonePlanGatheredCreateView.as_view(),
     ),
+    # 项目中【方案收集】里程碑下圈定供应商选择方案
+    path(
+        '<int:project_id>/milestones/<int:milestone_id>/confirm-supplier-selection-plan',
+        ProjectMilestoneConfirmSupplierSelectionPlanView.as_view(),
+    ),
+    # 获取项目中【方案论证】信息
+    path(
+        '<int:project_id>/milestones/<int:milestone_id>/get-plan-argument-info',
+        ProjectMilestonePlanSelectedView.as_view(),
+    ),
+
 
 
     # 项目流程接口
@@ -127,7 +139,9 @@ urlpatterns = [
 
     # 合同管理子里程碑保存操作
     path('<int:project_id>/milestone/<int:milestone_id>/purchase-contract',
-         views.MilestonePurchaseContractCreateView.as_view(), )
+         views.MilestonePurchaseContractCreateView.as_view(), ),
 
+    # 流程中各里程碑下文件上传
+    path('<int:project_id>/single-upload-file', views.UploadFileView().as_view(), ),
 
 ]

@@ -11,7 +11,7 @@ from collections import OrderedDict
 from django.db import models, transaction
 
 from nmis.projects.managers import ProjectDocumentManager, ProjectMilestoneRecordManager, \
-    SupplierSelectionPlanManager
+    SupplierSelectionPlanManager, PurchaseContractManager
 from utils import times
 from base.models import BaseModel
 from nmis.devices.models import OrderedDevice, SoftwareDevice
@@ -927,6 +927,8 @@ class PurchaseContract(BaseModel):
     delivery_date = models.DateField('交货时间', null=False, blank=False)
     # 合同文档附件-ProjectDocument对象ID集，每个id之间用','字符进行分割
     doc_list = models.CharField('合同文档列表', max_length=20, null=True, blank=True)
+
+    objects = PurchaseContractManager()
 
     class Meta:
         verbose_name = u'采购合同'

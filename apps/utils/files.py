@@ -78,6 +78,34 @@ def upload_file(file, base_dir, stored_file_name):
     return file.name, '%s%s' % (base_dir, stored_file_name)
 
 
+def single_upload_file(file, base_dir, stored_file_name):
+    """
+
+    :param file:
+    :param base_dir:
+    :param storge_file_name:
+    :return: 由上传的文件名和
+    """
+    try:
+        path = os.path.join(settings.MEDIA_ROOT, base_dir)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        file_path = '%s/%s' % (path, stored_file_name)
+        destination = open(file_path, 'wb+')
+        for chunk in file.chunks():
+            destination.write(chunk)
+        destination.close()
+    except Exception as e:
+        logger.info(e)
+        return None
+
+    # 文件名称对应保存路径
+    file_name_url_data = {
+        file.name: '%s%s' % (base_dir, stored_file_name)
+    }
+    return file_name_url_data
+
+
 # def batch_update_files(file_dict, base_dir):
 #
 #     if not file_dict:

@@ -8,6 +8,7 @@ import logging
 from collections import OrderedDict
 
 from django.db import transaction
+from rest_framework.response import Response
 
 from base import resp
 from base.common.decorators import (
@@ -28,9 +29,10 @@ from nmis.projects.forms import (
     OrderedDeviceCreateForm,
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
-    ProjectFlowUpdateForm, UploadFileForm)
+    ProjectFlowUpdateForm, UploadFileForm, PurchaseContractCreateForm,
+    SingleUploadFileForm)
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
-    ProjectMilestoneRecord
+    ProjectMilestoneRecord, SupplierSelectionPlan, Supplier
 from nmis.projects.permissions import ProjectPerformerPermission, \
     ProjectAssistantPermission
 from nmis.projects.serializers import ChunkProjectPlanSerializer, ProjectPlanSerializer, \
@@ -53,7 +55,8 @@ from nmis.projects.consts import (
     PRO_OPERATION_OVERRULE,
     PRO_STATUS_PAUSE,
     PRO_OPERATION_PAUSE,
-    PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PROJECT_DOCUMENT_CATE_CHOICES)
+    PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PROJECT_DOCUMENT_CATE_CHOICES,
+    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS)
 from utils.files import upload_file
 
 logger = logging.getLogger(__name__)
@@ -714,15 +717,14 @@ class ProjectFlowChildMilestones(BaseAPIView):
     获取项目流程某里程碑项的所有直接子里程碑项
     """
 
-    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+    # permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
 
-    def get(self, req, project_id, flow_id, milestone_id):
+    def get(self, req, project_id, milestone_id):
 
         project = self.get_object_or_404(project_id, ProjectPlan)
-        flow = self.get_object_or_404(flow_id, ProjectFlow)
         milestone = self.get_object_or_404(milestone_id, Milestone)
         attached_flow = project.attached_flow
-        if flow.id != attached_flow.id or not attached_flow.contains(milestone):
+        if milestone.flow != attached_flow or not attached_flow.contains(milestone):
             return resp.failed("参数数据异常")
         child_milestones = milestone.children()
         return resp.serialize_response(child_milestones, results_name='milestones', srl_cls_name='MilestoneSerializer')
@@ -873,6 +875,7 @@ class ProjectPlanUndispatchedListView(BaseAPIView):
 
         return self.get_pages(result_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects')
 
+
 class MilestoneCreateView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin,)
@@ -905,9 +908,8 @@ class ProjectMilestoneResearchInfoCreateView(BaseAPIView):
     """
 
     @transaction.atomic
-    def post(self, req, project_id, flow_id, milestone_id, ):
+    def post(self, req, project_id, milestone_id, ):
         project = self.get_object_or_404(project_id, ProjectPlan)
-        flow = self.get_object_or_404(flow_id, ProjectFlow)
         milestone = self.get_object_or_404(milestone_id, Milestone)
 
         if not req.FILES or (req.FILES and not req.FILES.keys()):
@@ -947,8 +949,213 @@ class ProjectMilestoneResearchInfoCreateView(BaseAPIView):
         if project.performer == req.user.get_profile():
             record.summary = req.data.get('summary')
             record.save()
+            record.cache()
         # record记录（文档，节点说明）
         return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordSerializer')
+
+
+class ProjectMilestoneResearchInfoView(BaseAPIView):
+    """
+    查询调研数据
+    """
+    def get(self, req, project_id, milestone_id):
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        record = project.get_milestone_record(milestone)
+
+        return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordSerializer')
+
+
+class ProjectMilestonePlanGatheredCreateView(BaseAPIView):
+    """
+    创建方案收集数据
+    """
+    def post(self, req, project_id, milestone_id):
+        """
+        批量创建供应商
+        批量保存供应商选择方案
+        批量上传文档，创建文档记录
+        将文档关联到对应的方案
+        根据用户身份保存说明信息
+        :return:
+        """
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        record = ProjectMilestoneRecord.objects.filter(project=project, milestone=milestone).first()
+        # plan_list = req.data.get('plan_list')
+        # for plan in plan_list:
+        #     plan
+        logger.info(req.data)
+        suppliers = req.data.getlist('supplier')
+        total_amounts = req.data.getlist('total_amount')
+        remarks = req.data.getlist('remark')
+        supplier_selection_plans = req.data.getlist('supplier_selection_plan')
+        others_arr = req.data.getlist('others')
+
+
+        # 批量创建供应商
+        # 批量上传文档，添加项目文档记录
+        # 批量创建供应商选择方案
+        plans = []
+        try:
+            with transaction.atomic():
+                for index in range(len(suppliers)):
+                    supplier, created = Supplier.objects.update_or_create(name=suppliers[index])
+                    supplier.cache()
+                    plan, created = SupplierSelectionPlan.objects.update_or_create(project_milestone_record=record, supplier=supplier, total_amount=total_amounts[index], remark=remarks[index])
+                    plans.append(plan)
+        except Exception as e:
+            logger.exception(e)
+            return resp.failed("操作失败")
+
+        if not req.FILES or (req.FILES and not req.FILES.keys()):
+            return resp.failed('请选择要上传的文件')
+        tags = req.FILES.keys()
+        for tag in tags:
+            files = req.FILES.getlist(tag)
+            for file in files:
+                if file.content_type not in ARCHIVE.values():
+                    return resp.failed('系统不支持上传文件文件类型')
+
+        result_dict = {}
+        for tag in tags:
+            files = req.FILES.getlist(tag)
+            results = []
+            for file in files:
+                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
+                if not result:
+                    return resp.failed('%s%s' % (file.name, '文件上传失败'))
+                results.append(result)
+            result_dict[tag] = results
+        plan_file_results = result_dict.get(PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN)
+        for index in range(len(plan_file_results)):
+            name, path = plan_file_results[index]
+            doc, created = ProjectDocument.objects.update_or_create(name=name, category=PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN,path=path)
+            old_doc_list = plans[index].doc_list
+            if not old_doc_list:
+                plans[index].doc_list = str(doc.id)
+            plans[index].doc_list = '%s%s%s' % (old_doc_list, ',', str(doc.id))
+            plans[index].save()
+            plans[index].cache()
+
+
+        others_file_results =result_dict.get(PRO_DOC_CATE_OTHERS)
+        for index in range(len(others_file_results)):
+            name, path = plan_file_results[index]
+            doc, created = ProjectDocument.objects.update_or_create(name=name, category=PRO_DOC_CATE_OTHERS,path=path)
+            old_doc_list = plans[index].doc_list
+            if not old_doc_list:
+                plans[index].doc_list = str(doc.id)
+            plans[index].doc_list = '%s%s%s' % (old_doc_list, ',', str(doc.id))
+            plans[index].save()
+            plans[index].cache()
+
+
+        # 根据执行人身份进行状态操作
+        if project.performer == req.user.get_profile():
+            record.summary = req.data.get('summary')
+            record.save()
+            record.cache()
+        # record记录（文档，节点说明）
+        return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSerializer')
+
+
+class ProjectMilestonePlanGatheredView(BaseAPIView):
+    """
+    查询方案收集数据()
+    """
+    def get(self, req, project_id, milestone_id):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        record = project.get_milestone_record(milestone)
+        return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSerializer')
+
+
+class ProjectMilestoneConfirmSupplierSelectionPlanView(BaseAPIView):
+    """
+    圈定供应商选择方案
+    """
+
+    @check_id('supplier_selection_plan_id')
+    def post(self, req, project_id, milestone_id):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+
+        plan = self.get_object_or_404(req.data.get('supplier_selection_plan_id'), SupplierSelectionPlan)
+        plan.selected = True
+        plan.save()
+        plan.cache()
+
+        if not req.FILES or (req.FILES and not req.FILES.keys()):
+            return resp.failed('请选择要上传的文件')
+        tags = req.FILES.keys()
+        for tag in tags:
+            files = req.FILES.getlist(tag)
+            for file in files:
+                if file.content_type not in ARCHIVE.values():
+                    return resp.failed('系统不支持上传文件文件类型')
+
+        result_dict = {}
+        for tag in tags:
+            files = req.FILES.getlist(tag)
+            results = []
+            for file in files:
+                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
+                if not result:
+                    return resp.failed('%s%s' % (file.name, '文件上传失败'))
+                results.append(result)
+            result_dict[tag] = results
+
+        # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord/或关联的数据模型对象中
+        new_doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_dict)
+        new_doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
+        record, created = ProjectMilestoneRecord.objects.update_or_create(project=project, milestone=milestone)
+        if created:
+            record.doc_list = new_doc_ids_str
+        if new_doc_ids_str:
+            if record.doc_list:
+                record.doc_list = '%s%s%s' % (record.doc_list, ',', new_doc_ids_str)
+            record.doc_list = new_doc_ids_str
+        record.save()
+        record.cache()
+
+        # 根据执行人身份进行状态操作
+        if project.performer == req.user.get_profile():
+            record.summary = req.data.get('summary')
+            record.save()
+            record.cache()
+        # record记录（文档，节点说明）
+
+        plans = SupplierSelectionPlan.objects.filter(project_milestone_record=plan.project_milestone_record)
+        record.supplier_selection_plans = plans
+
+        return resp.serialize_response(
+            record, results_name='milestone_record',
+            srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSerializer'
+        )
+
+
+class ProjectMilestonePlanSelectedView(BaseAPIView):
+    """
+    查看方案选定数据
+    """
+    def get(self, req, project_id, milestone_id):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        current_milestone = self.get_object_or_404(milestone_id, Milestone)
+        current_milestone_record = ProjectMilestoneRecord.objects.filter(project=project, milestone=current_milestone).first()
+        supplier_plan_related_milestone_record_id = req.GET.get('supplier_plan_related_milestone_record_id')
+        supplier_plan_related_milestone_record = self.get_object_or_404(supplier_plan_related_milestone_record_id, ProjectMilestoneRecord)
+
+        plans = SupplierSelectionPlan.objects.filter(project_milestone_record=supplier_plan_related_milestone_record)
+        current_milestone_record.supplier_selection_plans = plans
+
+        return resp.serialize_response(
+            current_milestone_record,
+            results_name='milestone_record',
+            srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanToConfirmSerializer'
+        )
 
 
 class ProjectDocumentView(BaseAPIView):
@@ -1113,8 +1320,8 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
 
     @transaction.atomic
     @check_params_not_null(['contract_no', 'title', 'signed_date', 'buyer_contact',
-                            'seller-contact', 'seller', 'seller_tel', 'total_amount',
-                            'delivery_date'])
+                            'seller_contact', 'seller', 'seller_tel', 'total_amount',
+                            'delivery_date', 'contract_device'])
     def post(self, req, project_id, milestone_id):
 
         self.check_object_permissions(req, req.user.get_profile().organ)
@@ -1122,7 +1329,12 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone = self.get_object_or_404(milestone_id, Milestone)
         logger.info(req.data.get('contract_device'))
-        if not req.FILES and not req.data.get('summary'):
+
+        purchase_form = PurchaseContractCreateForm(req.data)
+        if not purchase_form.is_valid():
+            return resp.form_err(purchase_form.errors)
+
+        if not req.FILES and not req.data:
             return resp.failed('请输入内容')
         form = UploadFileForm(req, project_id)
         if not form.is_valid():
@@ -1152,6 +1364,30 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
                 record.summary = summary
         record.save()
         record.cache()
-        print(PROJECT_DOCUMENT_DIR+str(project_id)+'/')
         return resp.serialize_response(record, results_name='milestone_record')
 
+
+class UploadFileView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    def post(self, req, project_id):
+        """
+        流程中每个子里程碑中的文件上传
+        :return: 保存至服务器，返回保存路径
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+
+        form = SingleUploadFileForm(req, project_id)
+
+        if not form.is_valid():
+            return resp.failed(form.errors)
+        result, file_name, success = form.save()
+        if not success:
+            return resp.failed(result)
+        file_url = {
+            'file_url': result.get(file_name)
+        }
+        return resp.ok(data=file_url)
