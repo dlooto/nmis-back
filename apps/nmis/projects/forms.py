@@ -4,9 +4,8 @@
 #
 
 #
-import copy
 import logging
-from itertools import chain
+
 from base.forms import BaseForm
 from nmis.devices.models import OrderedDevice, SoftwareDevice
 from nmis.hospitals.consts import ARCHIVE
@@ -16,7 +15,7 @@ from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CH
     PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR
 from nmis.hospitals.models import Staff
 from utils import eggs
-from utils.files import upload_file
+from utils.files import upload_file, single_upload_file
 
 logs = logging.getLogger(__name__)
 
@@ -516,6 +515,7 @@ class UploadFileForm(BaseForm):
             result_files = []
             for file in files:
                 result = upload_file(file, PROJECT_DOCUMENT_DIR+str(self.project_id)+'/', file.name)
+                print(result)
                 if not result:
                     return '%s%s' % (file.name, '上传失败'), False
 
@@ -525,18 +525,146 @@ class UploadFileForm(BaseForm):
         return file_name_path_data, True
 
 
+class SingleUploadFileForm(BaseForm):
+
+    def __init__(self, req, project_id, *args, **kwargs):
+        BaseForm.__init__(self, req, project_id, *args, **kwargs)
+        self.req = req
+        self.project_id = project_id
+
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'file_type_err': '文件类型错误',
+            'file_key_err': 'key类型错误'
+        })
+
+    def is_valid(self):
+        if not self.check_file_type() or not self.check_file_key():
+            return False
+        return True
+
+    def check_file_type(self):
+        for tag in self.req.FILES.keys():
+            files = self.req.FILES.getlist(tag)
+            for file in files:
+                if file.content_type not in ARCHIVE.values():
+                    self.update_errors('%s' % file.name, 'file_type_err')
+                    return False
+        return True
+
+    def check_file_key(self):
+        for tag in self.req.FILES.keys():
+            if tag not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
+                self.update_errors('file_key', 'file_key_err')
+                return False
+        return True
+
+    def save(self):
+
+        for tag in self.req.FILES.keys():
+            file = self.req.FILES.get(tag)
+            result = single_upload_file(file, PROJECT_DOCUMENT_DIR + str(self.project_id) + '/',
+                                 file.name)
+            if not result:
+                return '%s%s' % (file.name, '上传失败'), False
+
+            return result, file.name, True
+
+
 class PurchaseContractCreateForm(BaseForm):
 
     def __init__(self, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.data = data
 
+        self.init_err_codes()
+
     def init_err_codes(self):
         self.ERR_CODES.update({
             'seller_tel_err': '乙方电话错误',
+            'device_num_err': '设备数量错误',
+            'device_name_err': '设备名称错误',
+            'device_measure': '设备单位错误',
+            'device_producer_err': '设备生产商错误',
+            'device_amount_err': '设备总价错误',
+            'device_supplier_err': '供应商错误'
         })
 
     def is_valid(self):
-        if not self.check_seller_tel():
+        if not self.check_seller_tel() or not self.check_device():
             return False
         return True
+
+    def check_device(self):
+        """
+        校验设备数量
+        """
+        contract_device_list = self.data.get('contract_device')
+        for device in contract_device_list:
+            print(device)
+            if not device.get('num'):
+                self.update_errors('device_num', 'device_num_err')
+
+                return False
+            else:
+                if not isinstance(device.get('num'), int):
+                    self.update_errors('device_num', 'device_num_err')
+                    return False
+
+            if not device.get('name', '').strip():
+                self.update_errors('device_name', 'device_name_err')
+                return False
+            if not device.get('supplier', '').strip():
+                self.update_errors('device_supplier', 'device_supplier_err')
+                return False
+            if not device.get('measure', '').strip():
+                self.update_errors('device_measure', 'device_measure_err')
+                return False
+            if not device.get('real_total_amount'):
+                self.update_errors('device_amount', 'device_amount_err')
+                return False
+            else:
+                if not isinstance(device.get('real_total_amount'), float)\
+                        and not isinstance(device.get('real_total_amount'), int):
+                    self.update_errors('device_amount', 'device_amount_err')
+                    return False
+
+            if not device.get('producer', '').strip():
+                self.update_errors('device_producer', 'device_producer_err')
+                return False
+        return True
+
+    def check_seller_tel(self):
+        """
+        校验乙方联系人手机号
+        """
+        contact_phone = self.data.get('seller_tel', '').strip()
+        if not eggs.is_phone_valid(contact_phone):
+            self.update_errors('seller_tel', 'seller_tel_err')
+            return False
+        return True
+
+    def save(self):
+        contract_data = {}
+        if self.data.get('contract_no', ).strip():
+            contract_data['contract_no'] = self.data.get('contract_no', ).strip()
+        if self.data.get('title', ).strip():
+            contract_data['title'] = self.data.get('title', ).strip()
+        if self.data.get('signed_date', ).strip():
+            contract_data['signed_date'] = self.data.get('signed_date', ).strip()
+        if self.data.get('buyer_contact', ).strip():
+            contract_data['buyer_contact'] = self.data.get('buyer_contact', ).strip()
+        if self.data.get('seller_contact', ).strip():
+            contract_data['seller_contact'] = self.data.get('seller_contact', ).strip()
+        if self.data.get('seller', ).strip():
+            contract_data['seller'] = self.data.get('seller', ).strip()
+        if self.data.get('seller_tel', ).strip():
+            contract_data['seller_tel'] = self.data.get('seller_tel', ).strip()
+        if self.data.get('total_amount', ).strip():
+            contract_data['total_amount'] = self.data.get('total_amount', ).strip()
+        if self.data.get('delivery_date', ).strip():
+            contract_data['delivery_date'] = self.data.get('delivery_date', ).strip()
+
+        pass

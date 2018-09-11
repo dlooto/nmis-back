@@ -8,6 +8,7 @@ import logging
 from collections import OrderedDict
 
 from django.db import transaction
+from rest_framework.response import Response
 
 from base import resp
 from base.common.decorators import (
@@ -28,7 +29,8 @@ from nmis.projects.forms import (
     OrderedDeviceCreateForm,
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
-    ProjectFlowUpdateForm, UploadFileForm)
+    ProjectFlowUpdateForm, UploadFileForm, PurchaseContractCreateForm,
+    SingleUploadFileForm)
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
     ProjectMilestoneRecord, SupplierSelectionPlan, Supplier
 from nmis.projects.permissions import ProjectPerformerPermission, \
@@ -1492,7 +1494,7 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
 
     @transaction.atomic
     @check_params_not_null(['contract_no', 'title', 'signed_date', 'buyer_contact',
-                            'seller-contact', 'seller', 'seller_tel', 'total_amount',
+                            'seller_contact', 'seller', 'seller_tel', 'total_amount',
                             'delivery_date', 'contract_device'])
     def post(self, req, project_id, milestone_id):
 
@@ -1501,7 +1503,12 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone = self.get_object_or_404(milestone_id, Milestone)
         logger.info(req.data.get('contract_device'))
-        if not req.FILES and not req.data.get('summary'):
+
+        purchase_form = PurchaseContractCreateForm(req.data)
+        if not purchase_form.is_valid():
+            return resp.form_err(purchase_form.errors)
+
+        if not req.FILES and not req.data:
             return resp.failed('请输入内容')
         form = UploadFileForm(req, project_id)
         if not form.is_valid():
@@ -1531,6 +1538,30 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
                 record.summary = summary
         record.save()
         record.cache()
-        print(PROJECT_DOCUMENT_DIR+str(project_id)+'/')
         return resp.serialize_response(record, results_name='milestone_record')
 
+
+class UploadFileView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    def post(self, req, project_id):
+        """
+        流程中每个子里程碑中的文件上传
+        :return: 保存至服务器，返回保存路径
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+
+        form = SingleUploadFileForm(req, project_id)
+
+        if not form.is_valid():
+            return resp.failed(form.errors)
+        result, file_name, success = form.save()
+        if not success:
+            return resp.failed(result)
+        file_url = {
+            'file_url': result.get(file_name)
+        }
+        return resp.ok(data=file_url)

@@ -376,7 +376,6 @@ class ProjectMilestoneRecordManager(BaseManager):
         return self.filter(project=project, milestone=milestone).first()
 
 
-
 class SupplierSelectionPlanManager(BaseManager):
 
     def get_one(self, **data):
@@ -391,3 +390,11 @@ class SupplierSelectionPlanManager(BaseManager):
     def bulk_create_plan(self, plan_list):
         return self.bulk_create(plan_list)
 
+
+class PurchaseContractManager(BaseManager):
+
+    def create_purchase_contract(self):
+        """
+        创建采购合同
+        """
+        pass

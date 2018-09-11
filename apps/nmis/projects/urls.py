@@ -141,7 +141,9 @@ urlpatterns = [
 
     # 合同管理子里程碑保存操作
     path('<int:project_id>/milestone/<int:milestone_id>/purchase-contract',
-         views.MilestonePurchaseContractCreateView.as_view(), )
+         views.MilestonePurchaseContractCreateView.as_view(), ),
 
+    # 流程中各里程碑下文件上传
+    path('<int:project_id>/single-upload-file', views.UploadFileView().as_view(), ),
 
 ]
