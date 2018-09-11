@@ -320,6 +320,12 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return False, "添加失败"
 
+    def get_main_milestone_records(self):
+        """获取项目主里程碑项"""
+        milestones = self.attached_flow.get_main_milestones()
+        milestone_records = ProjectMilestoneRecord.objects.filter(project=self, milestone__in=milestones)
+        return milestone_records
+
     def get_recorded_milestones(self):
         """
         返回已进行到的里程碑节点列表
@@ -375,20 +381,20 @@ class ProjectPlan(BaseModel):
         if not record_query:
             return False, '未匹配到项目里程碑变更记录，请检查数据是否异常。'
         record = record_query.first()
-        if record.finished:
+        if record.is_finished():
             return False, '该里程碑状态已完结，无法操作。'
 
         if current_milestone.has_children():
             children = current_milestone.children()
             record_query = ProjectMilestoneRecord.objects.filter(project=self,
-                                                                 milestone__in=children)
+                                                                 milestone__in=children).all()
             for query in record_query:
-                if not query.finished:
+                if not query.is_finished():
                     return False, '当前里程碑存在未完结的子里程碑，无法操作。'
 
         try:
             with transaction.atomic():
-                record.finished = True
+                record.status = PRO_MILESTONE_DONE
                 record.save()
                 if current_milestone.is_flow_last_descendant():
                     ancestor_milestone_records = ProjectMilestoneRecord.objects.filter(
@@ -396,7 +402,7 @@ class ProjectPlan(BaseModel):
                     )
                     if ancestor_milestone_records:
                         for milestone_record in ancestor_milestone_records:
-                            milestone_record.finished = True
+                            milestone_record.status = PRO_MILESTONE_DONE
                             milestone_record.save()
                             milestone_record.cache()
                     self.status = PRO_STATUS_DONE
@@ -410,7 +416,7 @@ class ProjectPlan(BaseModel):
                         )
                         if ancestor_milestone_records:
                             for milestone_record in ancestor_milestone_records:
-                                milestone_record.finished = True
+                                milestone_record.status = PRO_MILESTONE_DONE
                                 milestone_record.save()
                                 milestone_record.cache()
                     next_stone = current_milestone.next()
@@ -425,7 +431,7 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return False, "数据异常"
 
-    def change_milestone(self, new_milestone, done_sign, finished=False):
+    def change_milestone(self, new_milestone, done_sign,):
         """
         变更项目里程碑状态
         :param new_milestone: 新的里程碑状态对象
@@ -774,7 +780,8 @@ class ProjectMilestoneRecord(BaseModel):
     # 记录各里程碑下的一个总结性说明概述
     summary = models.TextField('总结说明', max_length=200, null=True, blank=True)
 
-    finished = models.BooleanField("节点任务是否完结", default=False, )
+    #finished = models.BooleanField("节点任务是否完结", default=False, )
+    status = models.CharField('项目里程碑状态', max_length=10, choices=PROJECT_MILESTONE_STATUS, default=PRO_MILESTONE_TODO)
 
     objects = ProjectMilestoneRecordManager()
 
@@ -821,6 +828,9 @@ class ProjectMilestoneRecord(BaseModel):
         :return:
         """
         pass
+
+    def is_finished(self):
+        return True if self.status == PRO_MILESTONE_DONE else False
 
 
 class ProjectDocument(BaseModel):
