@@ -36,7 +36,7 @@ class MilestoneAdmin(admin.ModelAdmin):
 
 
 class ProjectMilestoneRecordAdmin(admin.ModelAdmin):
-    list_display = ('id', 'project', 'milestone', 'doc_list', 'summary', 'finished', 'created_time')
+    list_display = ('id', 'project', 'milestone', 'doc_list', 'summary', 'status', 'created_time')
 
 
 class ProjectDocumentAdmin(admin.ModelAdmin):

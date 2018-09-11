@@ -82,7 +82,8 @@ class BaseAPIView(GenericAPIView):
             obj = model.objects.get_by_id(obj_id)
         if obj:
             return obj
-        raise NotFound('Object Not Found:%s %s' % (type(model), obj_id))
+        # raise NotFound('Object Not Found:%s %s' % (type(model), obj_id))
+        raise NotFound('Object Not Found:%s %s' % (str(model).split('.').pop(-1).replace("'>", ''), obj_id))
 
     def get_objects_or_404(self, pk_key_cls_dict, use_cache=True):
         """
@@ -175,7 +176,8 @@ class BaseAPIView(GenericAPIView):
             return Response(codes.get('throttled'), status=exc.status_code, exception=True)
 
         elif isinstance(exc, (Http404, NotFound)):
-            return Response(codes.get('object_not_found'), status=status.HTTP_404_NOT_FOUND, exception=True)
+            # return Response(codes.get('object_not_found'), status=status.HTTP_404_NOT_FOUND, exception=True)
+            return Response(codes.format('object_not_found', exc.detail), status=status.HTTP_404_NOT_FOUND, exception=True)
 
         elif isinstance(exc, exceptions.PermissionDenied):
             return Response(codes.get('permission_denied'), status=status.HTTP_403_FORBIDDEN, exception=True)

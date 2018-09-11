@@ -619,7 +619,7 @@ class ProjectPlanFinishMilestoneView(BaseAPIView):
     完结项目里程碑
     """
     # permission_classes = (ProjectPerformerPermission, )
-    def get(self, req, project_id, milestone_id):
+    def post(self, req, project_id, milestone_id):
 
         project = self.get_object_or_404(project_id, ProjectPlan)
         self.check_object_permissions(req, project)
@@ -710,7 +710,7 @@ class ProjectDeviceView(BaseAPIView):
             return resp.failed("操作失败")
 
 
-class ProjectFlowChildMilestones(BaseAPIView):
+class ProjectChildMilestonesView(BaseAPIView):
     """
     获取项目流程某里程碑项的所有直接子里程碑项
     """
@@ -825,6 +825,23 @@ class ProjectFlowView(BaseAPIView):
         return resp.ok('操作成功')
 
 
+class FlowChildMilestonesView(BaseAPIView):
+    """
+    获取流程某里程碑项的所有直接子里程碑项
+    """
+
+    # permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
+
+    def get(self, req, flow_id, mid):
+
+        flow = self.get_object_or_404(flow_id, ProjectFlow)
+        milestone = self.get_object_or_404(mid, Milestone)
+        if milestone.flow != flow or not flow.contains(milestone):
+            return resp.failed("参数数据异常")
+        child_milestones = milestone.children()
+        return resp.serialize_response(child_milestones, results_name='milestones', srl_cls_name='MilestoneSerializer')
+
+
 class ProjectPlanDispatchedListView(BaseAPIView):
 
     permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission)
@@ -902,72 +919,107 @@ class ProjectMilestoneResearchInfoCreateView(BaseAPIView):
     # permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     """
-    项目负责人/项目协助人保存/修改调研信息
+    项目负责人/项目协助人保存/修改调研里程碑下的信息
     """
-
-    @transaction.atomic
+    @check_params_not_all_null(['product', 'producer', 'others', 'summary'])
     def post(self, req, project_id, milestone_id, ):
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone = self.get_object_or_404(milestone_id, Milestone)
+        record = ProjectMilestoneRecord.objects.filter(project=project, milestone=milestone).first()
+        if not milestone.title == '调研':
+            return resp.failed('操作失败，当前里程碑不是【调研】里程碑')
+        if record.finished:
+            return resp.failed('操作失败，当前里程碑已完结')
 
-        if not req.FILES or (req.FILES and not req.FILES.keys()):
-            return resp.failed('请选择要上传的文件')
-        tags = req.FILES.keys()
-        for tag in tags:
-            files = req.FILES.getlist(tag)
-            for file in files:
-                if file.content_type not in ARCHIVE.values():
-                    return resp.failed('系统不支持上传文件文件类型')
-
-        result_dict = {}
-        for tag in tags:
-            files = req.FILES.getlist(tag)
-            results = []
-            for file in files:
-                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
-                if not result:
-                    return resp.failed('%s%s' % (file.name, '文件上传失败'))
-                results.append(result)
-            result_dict[tag] = results
-
-        # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord/或关联的数据模型对象中
-        new_doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_dict)
-        new_doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
-        record, created = ProjectMilestoneRecord.objects.update_or_create(project=project, milestone=milestone)
-        if created:
-            record.doc_list = new_doc_ids_str
-        if new_doc_ids_str:
-            if record.doc_list:
-                record.doc_list = '%s%s%s' % (record.doc_list, ',', new_doc_ids_str)
-            record.doc_list = new_doc_ids_str
-        record.save()
-        record.cache()
-
-        # 根据执行人身份进行状态操作
         if project.performer == req.user.get_profile():
-            record.summary = req.data.get('summary')
+            if req.data.get('summary'):
+                record.summary = req.data.get('summary')
             record.save()
             record.cache()
-        # record记录（文档，节点说明）
+
+        # 处理上传文件
+        if req.FILES:
+            tags = req.FILES.keys()
+            for tag in tags:
+                for file in req.FILES.getlist(tag):
+                    if file.content_type not in ARCHIVE.values():
+                        return resp.failed('系统不支持上传文件文件类型')
+
+            upload_result_dict = {}
+            for tag in tags:
+                files = req.FILES.getlist(tag)
+                results = []
+                for file in files:
+                    result = upload_file(file, PROJECT_DOCUMENT_DIR+str(project_id)+'/', file.name)
+                    if not result:
+                        return resp.failed('%s%s' % (file.name, '文件上传失败'))
+                    results.append(result)
+                upload_result_dict[tag] = results
+
+            # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord或关联的数据模型对象中
+
+            try:
+                with transaction.atomic():
+                    new_doc_list = ProjectDocument.objects.batch_save_upload_project_doc(upload_result_dict)
+                    if new_doc_list:
+                        new_doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
+                        if not record.doc_list:
+                            record.doc_list = new_doc_ids_str
+                        record.doc_list = '%s%s%s' % (record.doc_list, ',', new_doc_ids_str)
+                        record.save()
+                        record.cache()
+            except Exception as e:
+                logger.exception(e)
+                return resp.failed("文档操作失败，请重新上传")
+
         return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordSerializer')
+
+    def batch_upload_project_file(self, file_multi_value_dict, base_dir):
+        """
+
+        :param file_multi_value_dict: request.FILES
+        :param base_dir:
+        :return:
+        """
+        if not file_multi_value_dict:
+            return False, "参数不能为空"
+        tags = file_multi_value_dict.keys()
+
+        for tag in tags:
+            for file in file_multi_value_dict.getlist(tag):
+                if file.content_type not in ARCHIVE.values():
+                    return False, '系统不支持上传文件文件类型'
+
+        upload_result_dict = {}
+        for tag in tags:
+            files = file_multi_value_dict.getlist(tag)
+            results = []
+            for file in files:
+                result = upload_file(file, base_dir, file.name)
+                if not result:
+                    return False, '%s%s' % (file.name, '文件上传失败')
+                results.append(result)
+            upload_result_dict[tag] = results
+        return True, upload_result_dict
 
 
 class ProjectMilestoneResearchInfoView(BaseAPIView):
     """
-    查询调研数据
+    查看调研里程碑下的信息
     """
     def get(self, req, project_id, milestone_id):
 
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone = self.get_object_or_404(milestone_id, Milestone)
         record = project.get_milestone_record(milestone)
-
+        if not milestone.title == '调研':
+            return resp.failed('操作失败，当前里程碑不是【调研】里程碑')
         return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordSerializer')
 
 
 class ProjectMilestonePlanGatheredCreateView(BaseAPIView):
     """
-    创建方案收集数据
+    保存方案收集里程碑下的信息 处理方式1
     """
     def post(self, req, project_id, milestone_id):
         """
@@ -982,20 +1034,22 @@ class ProjectMilestonePlanGatheredCreateView(BaseAPIView):
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone = self.get_object_or_404(milestone_id, Milestone)
         record = ProjectMilestoneRecord.objects.filter(project=project, milestone=milestone).first()
-        # plan_list = req.data.get('plan_list')
-        # for plan in plan_list:
-        #     plan
-        logger.info(req.data)
+        if not milestone.title == '方案收集':
+            return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
+        if record.finished:
+            return resp.failed("操作失败，当前里程碑已完结")
+
+        if project.performer == req.user.get_profile():
+            if req.data.get('summary'):
+                record.summary = req.data.get('summary')
+            record.save()
+            record.cache()
         suppliers = req.data.getlist('supplier')
         total_amounts = req.data.getlist('total_amount')
         remarks = req.data.getlist('remark')
         supplier_selection_plans = req.data.getlist('supplier_selection_plan')
         others_arr = req.data.getlist('others')
 
-
-        # 批量创建供应商
-        # 批量上传文档，添加项目文档记录
-        # 批量创建供应商选择方案
         plans = []
         try:
             with transaction.atomic():
@@ -1008,141 +1062,257 @@ class ProjectMilestonePlanGatheredCreateView(BaseAPIView):
             logger.exception(e)
             return resp.failed("操作失败")
 
-        if not req.FILES or (req.FILES and not req.FILES.keys()):
-            return resp.failed('请选择要上传的文件')
-        tags = req.FILES.keys()
-        for tag in tags:
-            files = req.FILES.getlist(tag)
-            for file in files:
-                if file.content_type not in ARCHIVE.values():
-                    return resp.failed('系统不支持上传文件文件类型')
+        # 处理上传文件
+        if req.FILES is not None:
+            tags = req.FILES.keys()
+            for tag in tags:
+                for file in req.FILES.getlist(tag):
+                    if file.content_type not in ARCHIVE.values():
+                        return resp.failed('系统不支持上传文件文件类型')
 
-        result_dict = {}
-        for tag in tags:
-            files = req.FILES.getlist(tag)
-            results = []
-            for file in files:
-                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
-                if not result:
-                    return resp.failed('%s%s' % (file.name, '文件上传失败'))
-                results.append(result)
-            result_dict[tag] = results
-        plan_file_results = result_dict.get(PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN)
-        for index in range(len(plan_file_results)):
-            name, path = plan_file_results[index]
-            doc, created = ProjectDocument.objects.update_or_create(name=name, category=PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN,path=path)
-            old_doc_list = plans[index].doc_list
-            if not old_doc_list:
-                plans[index].doc_list = str(doc.id)
-            plans[index].doc_list = '%s%s%s' % (old_doc_list, ',', str(doc.id))
-            plans[index].save()
-            plans[index].cache()
+            upload_result_dict = {}
+            for tag in tags:
+                files = req.FILES.getlist(tag)
+                results = []
+                for file in files:
+                    result = upload_file(file, PROJECT_DOCUMENT_DIR+str(project_id)+'/', file.name)
+                    if not result:
+                        return resp.failed('%s%s' % (file.name, '文件上传失败'))
+                    results.append(result)
+                upload_result_dict[tag] = results
+
+            # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord或关联的数据模型对象中
+            plan_file_results = upload_result_dict.get(PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN)
+            others_file_results = upload_result_dict.get(PRO_DOC_CATE_OTHERS)
+            try:
+                with transaction.atomic():
+                    for index in range(len(plan_file_results)):
+                        name, path = plan_file_results[index]
+                        doc, created = ProjectDocument.objects.update_or_create(name=name,
+                                                                                category=PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN,
+                                                                                path=path)
+                        old_doc_list = plans[index].doc_list
+                        if not old_doc_list:
+                            plans[index].doc_list = str(doc.id)
+                        plans[index].doc_list = '%s%s%s' % (old_doc_list, ',', str(doc.id))
+                        plans[index].save()
+                        plans[index].cache()
+
+                    for index in range(len(others_file_results)):
+                        name, path = plan_file_results[index]
+                        doc, created = ProjectDocument.objects.update_or_create(name=name, category=PRO_DOC_CATE_OTHERS,
+                                                                                path=path)
+                        old_doc_list = plans[index].doc_list
+                        if not old_doc_list:
+                            plans[index].doc_list = str(doc.id)
+                        plans[index].doc_list = '%s%s%s' % (old_doc_list, ',', str(doc.id))
+                        plans[index].save()
+                        plans[index].cache()
+            except Exception as e:
+                logger.exception(e)
+                return resp.failed("文档操作失败，请重新上传")
+
+        return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSerializer')
 
 
-        others_file_results =result_dict.get(PRO_DOC_CATE_OTHERS)
-        for index in range(len(others_file_results)):
-            name, path = plan_file_results[index]
-            doc, created = ProjectDocument.objects.update_or_create(name=name, category=PRO_DOC_CATE_OTHERS,path=path)
-            old_doc_list = plans[index].doc_list
-            if not old_doc_list:
-                plans[index].doc_list = str(doc.id)
-            plans[index].doc_list = '%s%s%s' % (old_doc_list, ',', str(doc.id))
-            plans[index].save()
-            plans[index].cache()
+class ProjectMilestonePlanGatheredCreateView2(BaseAPIView):
+    """保存方案收集里程碑下的信息 处理方式2"""
 
+    @check_params_not_all_null(['plan_list', 'summary'])
+    def post(self, req, project_id, milestone_id):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        record = ProjectMilestoneRecord.objects.filter(project=project, milestone=milestone).first()
+        if not milestone.title == '方案收集':
+            return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
+        if record.finished:
+            return resp.failed("操作失败，当前里程碑已完结")
 
-        # 根据执行人身份进行状态操作
         if project.performer == req.user.get_profile():
-            record.summary = req.data.get('summary')
+            if req.data.get('summary'):
+                record.summary = req.data.get('summary')
             record.save()
             record.cache()
-        # record记录（文档，节点说明）
+        plan_list = req.data.getlist("plan_list")
+        if plan_list:
+            plan_obj_plan_file_dict = {}
+            plan_obj_others_file_dict = {}
+
+            try:
+                with transaction.atomic():
+
+                    for item in plan_list:
+                        supplier = item.get('supplier')
+                        total_amount = item.get('total_amount')
+                        remark = item.get('remark')
+                        plan_files = item.get('supplier_selection_plan')
+                        others_files = item.get('others')
+                        supplier, created = Supplier.objects.update_or_create(name=supplier)
+                        supplier.cache()
+                        plan = SupplierSelectionPlan.objects.update_or_create(project_milestone_record=record, supplier=supplier)
+                        if not total_amount:
+                            plan.total_amount = total_amount
+                        if not remark:
+                            plan.remark = remark
+                        plan.save()
+                        plan.cache()
+                        plan_obj_plan_file_dict[plan] = plan_files
+                        plan_obj_others_file_dict[plan] = others_files
+            except Exception as e:
+                logger.exception(e)
+                return resp.failed('操作失败')
+            upload_result_dict = {}
+            for plan, plan_files in plan_obj_plan_file_dict.items():
+                results = []
+                for file in plan_files.get(PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN):
+                    result = upload_file(file, PROJECT_DOCUMENT_DIR + str(project_id) + '/', file.name)
+                    if not result:
+                        return resp.failed('%s%s' % (file.name, '文件上传失败'))
+                    results.append(result)
+                upload_result_dict[PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN] = results
+                try:
+                    with transaction.atomic():
+                        new_doc_list = ProjectDocument.objects.batch_save_upload_project_doc(upload_result_dict)
+                        if new_doc_list:
+                            new_doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
+                            if not plan.doc_list:
+                                plan.doc_list = new_doc_ids_str
+                                plan.doc_list = '%s%s%s' % (plan.doc_list, ',', new_doc_ids_str)
+                            plan.save()
+                            plan.cache()
+                except Exception as e:
+                    logger.exception(e)
+                    return resp.failed("文件处理异常，请重新上传文件")
+
+            for plan, others_files in plan_obj_others_file_dict.items():
+                results = []
+                for file in others_files.get(PRO_DOC_CATE_OTHERS):
+                    result = upload_file(file, PROJECT_DOCUMENT_DIR + str(project_id) + '/', file.name)
+                    if not result:
+                        return resp.failed('%s%s' % (file.name, '文件上传失败'))
+                    results.append(result)
+                upload_result_dict[PRO_DOC_CATE_OTHERS] = results
+                try:
+                    with transaction.atomic():
+                        new_doc_list = ProjectDocument.objects.batch_save_upload_project_doc(upload_result_dict)
+                        if new_doc_list:
+                            new_doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
+                            if not plan.doc_list:
+                                plan.doc_list = new_doc_ids_str
+                                plan.doc_list = '%s%s%s' % (plan.doc_list, ',', new_doc_ids_str)
+                            plan.save()
+                            plan.cache()
+                except Exception as e:
+                    logger.exception(e)
+                    return resp.failed("文件处理异常，请重新上传文件")
         return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSerializer')
 
 
 class ProjectMilestonePlanGatheredView(BaseAPIView):
     """
-    查询方案收集数据()
+    查询方案收集里程碑下的信息
     """
     def get(self, req, project_id, milestone_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone = self.get_object_or_404(milestone_id, Milestone)
         record = project.get_milestone_record(milestone)
+        if not milestone.title == '方案收集':
+            return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
         return resp.serialize_response(record, results_name='milestone_record', srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSerializer')
 
 
-class ProjectMilestoneConfirmSupplierSelectionPlanView(BaseAPIView):
+class ProjectMilestonePlanArgumentCreateView(BaseAPIView):
     """
-    圈定供应商选择方案
+    保存方案论证里程碑下的信息
     """
 
-    @check_id('supplier_selection_plan_id')
+    @check_id('selected_plan_id')
     def post(self, req, project_id, milestone_id):
+        """
+        圈定选择的供应商待选方案
+        :param req: Request对象
+        :param project_id: 当前项目id
+        :param milestone_id: 当前里程碑信息
+        :return: 返回当前里程碑记录信息，包括供应商选择方案，文档资料附件等
+        """
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone = self.get_object_or_404(milestone_id, Milestone)
+        record = ProjectMilestoneRecord.objects.filter(project=project, milestone=milestone).first()
+        if not milestone.title == '方案论证':
+            return resp.failed('操作失败，当前里程碑不是【方案论证】里程碑')
+        if record.finished:
+            return resp.failed("操作失败，当前里程碑已完结")
 
-        plan = self.get_object_or_404(req.data.get('supplier_selection_plan_id'), SupplierSelectionPlan)
-        plan.selected = True
-        plan.save()
-        plan.cache()
+        try:
+            with transaction.atomic():
+                selected_plan = self.get_object_or_404(req.data.get('selected_plan_id'), SupplierSelectionPlan)
+                selected_plan.selected = True
+                selected_plan.save()
+                selected_plan.cache()
 
-        if not req.FILES or (req.FILES and not req.FILES.keys()):
-            return resp.failed('请选择要上传的文件')
-        tags = req.FILES.keys()
-        for tag in tags:
-            files = req.FILES.getlist(tag)
-            for file in files:
-                if file.content_type not in ARCHIVE.values():
-                    return resp.failed('系统不支持上传文件文件类型')
+                if project.performer == req.user.get_profile():
+                    if req.data.get('summary'):
+                        record.summary = req.data.get('summary')
+                    record.save()
+                    record.cache()
 
-        result_dict = {}
-        for tag in tags:
-            files = req.FILES.getlist(tag)
-            results = []
-            for file in files:
-                result = upload_file(file, PROJECT_DOCUMENT_DIR, file.name)
-                if not result:
-                    return resp.failed('%s%s' % (file.name, '文件上传失败'))
-                results.append(result)
-            result_dict[tag] = results
+                plans = SupplierSelectionPlan.objects.filter(project_milestone_record=selected_plan.project_milestone_record)
+                record.supplier_selection_plans = plans
+        except Exception as e:
+            logger.exception(e)
+            return resp.failed('操作失败')
 
-        # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord/或关联的数据模型对象中
-        new_doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_dict)
-        new_doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
-        record, created = ProjectMilestoneRecord.objects.update_or_create(project=project, milestone=milestone)
-        if created:
-            record.doc_list = new_doc_ids_str
-        if new_doc_ids_str:
-            if record.doc_list:
-                record.doc_list = '%s%s%s' % (record.doc_list, ',', new_doc_ids_str)
-            record.doc_list = new_doc_ids_str
-        record.save()
-        record.cache()
+        # 处理上传文件
+        if req.FILES:
+            tags = req.FILES.keys()
+            for tag in tags:
+                for file in req.FILES.getlist(tag):
+                    if file.content_type not in ARCHIVE.values():
+                        return resp.failed('系统不支持上传文件文件类型')
 
-        # 根据执行人身份进行状态操作
-        if project.performer == req.user.get_profile():
-            record.summary = req.data.get('summary')
-            record.save()
-            record.cache()
-        # record记录（文档，节点说明）
+            upload_result_dict = {}
+            for tag in tags:
+                files = req.FILES.getlist(tag)
+                results = []
+                for file in files:
+                    result = upload_file(file, PROJECT_DOCUMENT_DIR+str(project_id)+'/', file.name)
+                    if not result:
+                        return resp.failed('%s%s' % (file.name, '文件上传失败'))
+                    results.append(result)
+                upload_result_dict[tag] = results
 
-        plans = SupplierSelectionPlan.objects.filter(project_milestone_record=plan.project_milestone_record)
-        record.supplier_selection_plans = plans
+            # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord或关联的数据模型对象中
+
+            try:
+                with transaction.atomic():
+                    new_doc_list = ProjectDocument.objects.batch_save_upload_project_doc(upload_result_dict)
+                    if new_doc_list:
+                        new_doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
+                        if not record.doc_list:
+                            record.doc_list = new_doc_ids_str
+                        record.doc_list = '%s%s%s' % (record.doc_list, ',', new_doc_ids_str)
+                        record.save()
+                        record.cache()
+            except Exception as e:
+                logger.exception(e)
+                return resp.failed("文档操作失败，请重新上传")
 
         return resp.serialize_response(
             record, results_name='milestone_record',
-            srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSerializer'
+            srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSelectedSerializer'
         )
 
 
-class ProjectMilestonePlanSelectedView(BaseAPIView):
+class ProjectMilestonePlanArgumentView(BaseAPIView):
     """
-    查看方案选定数据
+    查看方案论证里程碑下的信息
     """
     def get(self, req, project_id, milestone_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
         current_milestone = self.get_object_or_404(milestone_id, Milestone)
         current_milestone_record = ProjectMilestoneRecord.objects.filter(project=project, milestone=current_milestone).first()
+        if not current_milestone.title == '方案论证':
+            return resp.failed('操作失败，当前里程碑不是【方案论证】里程碑')
         supplier_plan_related_milestone_record_id = req.GET.get('supplier_plan_related_milestone_record_id')
         supplier_plan_related_milestone_record = self.get_object_or_404(supplier_plan_related_milestone_record_id, ProjectMilestoneRecord)
 
@@ -1152,7 +1322,7 @@ class ProjectMilestonePlanSelectedView(BaseAPIView):
         return resp.serialize_response(
             current_milestone_record,
             results_name='milestone_record',
-            srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanToConfirmSerializer'
+            srl_cls_name='ProjectMilestoneRecordWithSupplierSelectionPlanSelectedSerializer'
         )
 
 
@@ -1163,8 +1333,12 @@ class ProjectDocumentView(BaseAPIView):
     3.删除项目中合同中的文档
     4.删除项目中收货记录文档
     """
-    def delete(self):
-        pass
+    def delete(self, project_id, milestone_id, document_id):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone = self.get_object_or_404(milestone_id, Milestone)
+        record = ProjectMilestoneRecord.objects.filter(project=project, milestone=milestone).first()
+        if not milestone.title == '方案论证':
+            pass
 
 
 class MilestoneRecordPurchaseCreateView(BaseAPIView):

@@ -95,7 +95,7 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
         fields = (
             'id', 'milestone_id', 'purchase_method', 'milestone_title',
             'milestone_index', 'created_time', 'doc_list',
-            'finished', 'summary'
+            'summary', 'status'
         )
 
     def _get_milestone_title(self, obj):
@@ -138,7 +138,7 @@ class ProjectMilestoneRecordWithSupplierSelectionPlanSerializer(ProjectMilestone
         return resp.serialize_data(plans) if plans else []
 
 
-class ProjectMilestoneRecordWithSupplierSelectionPlanToConfirmSerializer(ProjectMilestoneRecordSerializer):
+class ProjectMilestoneRecordWithSupplierSelectionPlanSelectedSerializer(ProjectMilestoneRecordSerializer):
     supplier_selection_plans = SupplierSelectionPlanSerializer(many=True)
 
     class Meta:
@@ -224,11 +224,12 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     operation_record = serializers.SerializerMethodField("_get_projects_operation")
 
     # attached_flow = serializers.SerializerMethodField('_get_attached_flow')
-    attached_flow = ProjectFlowSerializer(many=False)
+    # attached_flow = ProjectFlowSerializer(many=False)
     hardware_devices = serializers.SerializerMethodField('_get_hardware_devices')
     software_devices = serializers.SerializerMethodField('_get_software_devices')
 
-    milestone_records = serializers.SerializerMethodField('_get_milestone_records')
+    # project_milestones = serializers.SerializerMethodField('_get_milestone_records')
+    main_project_milestones = serializers.SerializerMethodField('_get_main_milestone_records')
 
     @staticmethod
     def setup_eager_loading(queryset):
@@ -249,7 +250,7 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
             'related_dept_id', 'related_dept_name',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
             'project_introduce', 'pre_amount', 'purchase_method', 'current_stone_id',
-            'attached_flow', 'hardware_devices', 'software_devices', 'milestone_records',
+            'attached_flow_id', 'hardware_devices', 'software_devices', 'main_project_milestones',
             'startup_time', 'expired_time', 'created_time', 'operation_record',
         )
 
@@ -290,8 +291,16 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         # return resp.serialize_data(obj.get_software_devices())
         return resp.serialize_data(obj.software_devices.all())
 
+    def _get_main_milestone_records(self, obj):
+
+        records = obj.project_milestone_records.all()
+        main_milestone_records = []
+        for record in records:
+            if record.milestone.parent is None:
+                main_milestone_records.append(record)
+        return resp.serialize_data(main_milestone_records) if records else []
+
     def _get_milestone_records(self, obj):
-        # TODO: 已完成部分优化，还需优化，需要去掉根据流程ID查询milestone数据
         # records = obj.get_milestone_changed_records()
         # return resp.serialize_data(records) if records else []
         records = obj.project_milestone_records.all()

@@ -89,7 +89,7 @@ def check_params_not_all_null(key_list=None):
                     value = request.data.get(key) or request.GET.get(key)
                     if value:
                         return mtd(obj, request, *args, **kwargs)
-                return resp.params_err({','.join(key_list): u'参数为空'})
+                return resp.params_err({','.join(key_list): u'参数错误，至少有一个参数不能为空'})
         return check
     return _check
 
