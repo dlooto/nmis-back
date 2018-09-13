@@ -11,7 +11,7 @@ import logging
 import settings
 
 from django.contrib import admin
-from nmis.projects.models import ProjectFlow, ProjectMilestoneRecord, ProjectDocument, \
+from nmis.projects.models import ProjectFlow, ProjectMilestoneState, ProjectDocument, \
     Supplier, SupplierSelectionPlan, PurchaseContract, Receipt
 
 from .models import ProjectPlan, Milestone
@@ -35,7 +35,7 @@ class MilestoneAdmin(admin.ModelAdmin):
     list_display = ('id', 'flow', 'title', 'index', 'parent', 'parent_path', 'created_time')
 
 
-class ProjectMilestoneRecordAdmin(admin.ModelAdmin):
+class ProjectMilestoneStateAdmin(admin.ModelAdmin):
     list_display = ('id', 'project', 'milestone', 'doc_list', 'summary', 'status', 'created_time')
 
 
@@ -51,16 +51,16 @@ class SupplierAdmin(admin.ModelAdmin):
 
 
 class SupplierSelectionPlanAdmin(admin.ModelAdmin):
-    list_display = ('id', 'project_milestone_record', 'supplier', 'total_amount', 'remark', 'selected')
-    search_fields = ('project_milestone_record', 'supplier')
-    list_display_links = ('project_milestone_record', 'supplier')
+    list_display = ('id', 'project_milestone_state', 'supplier', 'total_amount', 'remark', 'selected')
+    search_fields = ('project_milestone_state', 'supplier')
+    list_display_links = ('project_milestone_state', 'supplier')
     list_filter = ('selected', )
 
 
 class PurchaseContractAdmin(admin.ModelAdmin):
-    list_display = ('id', 'project_milestone_record', 'contract_no', 'title', 'buyer', 'seller', 'total_amount')
+    list_display = ('id', 'project_milestone_state', 'contract_no', 'title', 'buyer', 'seller', 'total_amount')
     search_fields = ('contract_no', 'title')
-    list_display_links = ('project_milestone_record',)
+    list_display_links = ('project_milestone_state',)
     list_filter = ('buyer', 'seller', 'total_amount')
 
 
@@ -72,7 +72,7 @@ class ReceiptAdmin(admin.ModelAdmin):
 admin.site.register(ProjectPlan, ProjectPlanAdmin)
 admin.site.register(ProjectFlow, ProjectFlowAdmin)
 admin.site.register(Milestone, MilestoneAdmin)
-admin.site.register(ProjectMilestoneRecord, ProjectMilestoneRecordAdmin)
+admin.site.register(ProjectMilestoneState, ProjectMilestoneStateAdmin)
 admin.site.register(ProjectDocument, ProjectDocumentAdmin)
 admin.site.register(Supplier, SupplierAdmin)
 admin.site.register(SupplierSelectionPlan, SupplierSelectionPlanAdmin)
