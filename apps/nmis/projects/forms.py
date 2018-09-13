@@ -536,12 +536,12 @@ class SingleUploadFileForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'file_type_err': '文件类型错误',
+            'file_type_err': '不支持的文件类型',
             'file_key_err': 'key类型错误'
         })
 
     def is_valid(self):
-        if not self.check_file_type() or not self.check_file_key():
+        if not self.check_file_type():
             return False
         return True
 
