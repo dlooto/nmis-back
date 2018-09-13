@@ -217,7 +217,11 @@ class ProjectPlan(BaseModel):
                 self.startup_time = times.now()
 
                 self.current_stone = self.attached_flow.get_first_main_milestone()
-                self.add_milestone_state(self.current_stone)
+                # self.add_milestone_state(self.current_stone)
+                self.bulk_add_milestone_states()
+
+                pro_milestone_states = ProjectMilestoneState.objects.get_pro_milestone_states_by_milestone(self.current_stone)
+                pro_milestone_states.change_first_pro_milestone_state_status()
 
                 self.save()
                 self.cache()
@@ -288,7 +292,7 @@ class ProjectPlan(BaseModel):
 
     def add_milestone_state(self, milestone):
         """
-        添加项目里程碑
+        添加项目当前里程碑
         默认里程碑节点深度为2，大于2须进行重构
         :param milestone: Milestone object
         :return: True or False
@@ -304,6 +308,15 @@ class ProjectPlan(BaseModel):
         except Exception as e:
             logs.exception(e)
             return False, "添加失败"
+
+    def bulk_add_milestone_states(self):
+        """
+        添加项目所有里程碑
+        流程为默认流程（存在自定义流程需要重构）
+        """
+        milestones = self.attached_flow.get_milestones()
+        ProjectMilestoneState.objects.bulk_create_project_milestone_states(project=self, milestones=milestones)
+
 
     # def add_milestone_record(self, milestone):
     #     """
@@ -492,7 +505,7 @@ class ProjectFlow(BaseModel):
 
     def get_milestones(self):
         """ 流程内含的所有里程碑列表 """
-        return self.milestones.all()
+        return self.milestones.order_by('id').all()
 
     def get_main_milestones(self):
         """ 流程内含的祖里程碑列表 """
@@ -784,6 +797,19 @@ class ProjectMilestoneState(BaseModel):
 
     def __str__(self):
         return '%s %s' % (self.project_id, self.milestone_id)
+
+    def change_first_pro_milestone_state_status(self):
+        """
+        分配项目之后设置第一个项目里程碑的状态为已完结
+        """
+        try:
+            self.status = PRO_MILESTONE_DONE
+            self.save()
+            self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
 
     def get_project_purchase_method(self):
         """
