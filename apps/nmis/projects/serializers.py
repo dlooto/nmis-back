@@ -14,7 +14,7 @@ from rest_framework import serializers
 from base import resp
 from base.serializers import BaseModelSerializer
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
-    ProjectMilestoneRecord, ProjectOperationRecord, ProjectDocument, SupplierSelectionPlan
+    ProjectMilestoneState, ProjectOperationRecord, ProjectDocument, SupplierSelectionPlan
 
 logs = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class SupplierSelectionPlanSerializer(BaseModelSerializer):
     class Meta:
         model = SupplierSelectionPlan
         fields = (
-            'id', 'project_milestone_record_id',
+            'id', 'project_milestone_state_id',
             'supplier_id', 'supplier_name', 'total_amount',
             'remark', 'doc_list', 'selected',
         )
@@ -79,7 +79,7 @@ class SupplierSelectionPlanSerializer(BaseModelSerializer):
         return resp.serialize_data(doc_list) if doc_list else []
 
 
-class ProjectMilestoneRecordSerializer(BaseModelSerializer):
+class ProjectMilestoneStateSerializer(BaseModelSerializer):
 
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
@@ -91,7 +91,7 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
         return queryset.select_related('milestone')
 
     class Meta:
-        model = ProjectMilestoneRecord
+        model = ProjectMilestoneState
         fields = (
             'id', 'milestone_id', 'purchase_method', 'milestone_title',
             'milestone_index', 'created_time', 'doc_list',
@@ -122,31 +122,31 @@ class ProjectMilestoneRecordSerializer(BaseModelSerializer):
         return purchase_method if purchase_method else ''
 
 
-class ProjectMilestoneRecordWithSupplierSelectionPlanSerializer(ProjectMilestoneRecordSerializer):
+class ProjectMilestoneStateWithSupplierSelectionPlanSerializer(ProjectMilestoneStateSerializer):
     supplier_selection_plans = serializers.SerializerMethodField('_get_supplier_selection_plans')
 
     class Meta:
-        model = ProjectMilestoneRecord
+        model = ProjectMilestoneState
         fields = (
             'id', 'milestone_id',  'milestone_title',
             'milestone_index', 'created_time', 'doc_list',
-            'finished', 'summary', 'supplier_selection_plans'
+            'status', 'summary', 'supplier_selection_plans'
         )
 
     def _get_supplier_selection_plans(self, obj):
-        plans = SupplierSelectionPlan.objects.filter(project_milestone_record=obj)
+        plans = SupplierSelectionPlan.objects.filter(project_milestone_state=obj)
         return resp.serialize_data(plans) if plans else []
 
 
-class ProjectMilestoneRecordWithSupplierSelectionPlanSelectedSerializer(ProjectMilestoneRecordSerializer):
+class ProjectMilestoneStateWithSupplierSelectionPlanSelectedSerializer(ProjectMilestoneStateSerializer):
     supplier_selection_plans = SupplierSelectionPlanSerializer(many=True)
 
     class Meta:
-        model = ProjectMilestoneRecord
+        model = ProjectMilestoneState
         fields = (
             'id', 'milestone_id',  'milestone_title',
             'milestone_index', 'created_time', 'doc_list',
-            'finished', 'summary', 'supplier_selection_plans'
+            'status', 'summary', 'supplier_selection_plans'
         )
 
 
@@ -228,8 +228,8 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     hardware_devices = serializers.SerializerMethodField('_get_hardware_devices')
     software_devices = serializers.SerializerMethodField('_get_software_devices')
 
-    # project_milestones = serializers.SerializerMethodField('_get_milestone_records')
-    main_project_milestones = serializers.SerializerMethodField('_get_main_milestone_records')
+    # project_milestones = serializers.SerializerMethodField('_get_milestone_states')
+    main_project_milestones = serializers.SerializerMethodField('_get_pro_main_milestone_states')
 
     @staticmethod
     def setup_eager_loading(queryset):
@@ -238,7 +238,7 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         )
         queryset = queryset.prefetch_related(
             'ordered_devices', 'software_devices',
-            'project_milestone_records', 'attached_flow__milestones',
+            'pro_milestone_states_related', 'attached_flow__milestones',
         )
         return queryset
 
@@ -291,20 +291,18 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         # return resp.serialize_data(obj.get_software_devices())
         return resp.serialize_data(obj.software_devices.all())
 
-    def _get_main_milestone_records(self, obj):
+    def _get_pro_main_milestone_states(self, obj):
 
-        records = obj.project_milestone_records.all()
-        main_milestone_records = []
-        for record in records:
-            if record.milestone.parent is None:
-                main_milestone_records.append(record)
-        return resp.serialize_data(main_milestone_records) if records else []
+        states = obj.pro_milestone_states_related.all()
+        main_milestone_states = []
+        for state in states:
+            if state.milestone.parent is None:
+                main_milestone_states.append(state)
+        return resp.serialize_data(main_milestone_states) if states else []
 
-    def _get_milestone_records(self, obj):
-        # records = obj.get_milestone_changed_records()
-        # return resp.serialize_data(records) if records else []
-        records = obj.project_milestone_records.all()
-        return resp.serialize_data(records) if records else []
+    def _get_milestone_states(self, obj):
+        pro_milestone_states = obj.pro_milestone_states_related.all()
+        return resp.serialize_data(pro_milestone_states) if pro_milestone_states else []
 
     def _get_projects_operation(self, obj):
 

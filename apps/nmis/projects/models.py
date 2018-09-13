@@ -7,10 +7,9 @@
 
 import logging
 
-from collections import OrderedDict
 from django.db import models, transaction
 
-from nmis.projects.managers import ProjectDocumentManager, ProjectMilestoneRecordManager, \
+from nmis.projects.managers import ProjectDocumentManager, ProjectMilestoneStateManager, \
     SupplierSelectionPlanManager, PurchaseContractManager
 from utils import times
 from base.models import BaseModel
@@ -60,12 +59,19 @@ class ProjectPlan(BaseModel):
         null=True, blank=True, on_delete=models.SET_NULL
     )
 
-    # 项目里程碑状态变更记录轨迹, 项目每次变更里程碑状态时添加一条记录数据
-    milestones = models.ManyToManyField(
-        'projects.Milestone', verbose_name=u'里程碑轨迹',
-        through='projects.ProjectMilestoneRecord', through_fields=('project', 'milestone'),
+    # 项目里程碑，项目使用的流程中每个里程碑对应一个项目里程碑
+    pro_milestone_states = models.ManyToManyField(
+        'projects.Milestone', verbose_name=u'项目里程碑',
+        through='projects.ProjectMilestoneState', through_fields=('project', 'milestone'),
         related_name="projects", related_query_name="project", blank=True
     )
+
+    # 项目里程碑变更轨迹, 项目每次变更里程碑节点时添加一条记录数据
+    # pro_milestone_records = models.ManyToManyField(
+    #     'projects.Milestone', verbose_name=u'里程碑轨迹',
+    #     through='projects.ProjectMilestoneRecord', through_fields=('project', 'milestone'),
+    #     related_name="projects", related_query_name="project", blank=True
+    # )
 
     status = models.CharField('项目状态', max_length=2, choices=PROJECT_STATUS_CHOICES, default=PRO_STATUS_PENDING)
     startup_time = models.DateTimeField(u'项目启动时间', null=True, blank=True)  # 项目分配负责人的时刻即为启动时间
@@ -211,7 +217,7 @@ class ProjectPlan(BaseModel):
                 self.startup_time = times.now()
 
                 self.current_stone = self.attached_flow.get_first_main_milestone()
-                self.add_milestone_record(self.current_stone)
+                self.add_milestone_state(self.current_stone)
 
                 self.save()
                 self.cache()
@@ -272,7 +278,7 @@ class ProjectPlan(BaseModel):
                 self.startup_time = times.now()
                 self.status = PRO_STATUS_STARTED
                 self.current_stone = self.attached_flow.get_first_main_milestone()
-                self.add_milestone_record(self.current_stone)
+                self.add_milestone_state(self.current_stone)
                 self.save()
                 self.cache()
             return True
@@ -280,26 +286,45 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return False
 
-    def add_milestone_record(self, milestone):
+    def add_milestone_state(self, milestone):
         """
-        项目每变更一次里程碑状态, 则添加一条里程碑状态记录
+        添加项目里程碑
         默认里程碑节点深度为2，大于2须进行重构
         :param milestone: Milestone object
         :return: True or False
         """
         try:
-            record = ProjectMilestoneRecord.objects.create(project=self, milestone=milestone)
+            pro_milestone_state = ProjectMilestoneState.objects.create(project=self, milestone=milestone)
             if not milestone.has_children():
-                return True, [record, ]
+                return True, [pro_milestone_state, ]
             first_child = milestone.flow.get_first_child(milestone=milestone)
-            child_record = ProjectMilestoneRecord.objects.create(project=self, milestone=first_child)
-            return True, [record, child_record]
+            child_milestone_state = ProjectMilestoneState.objects.create(project=self, milestone=first_child)
+            return True, [pro_milestone_state, child_milestone_state]
 
         except Exception as e:
             logs.exception(e)
             return False, "添加失败"
 
-    def add_or_update_milestone_record(self, milestone):
+    # def add_milestone_record(self, milestone):
+    #     """
+    #     项目每变更一次里程碑状态, 则添加一条里程碑状态记录
+    #     默认里程碑节点深度为2，大于2须进行重构
+    #     :param milestone: Milestone object
+    #     :return: True or False
+    #     """
+    #     try:
+    #         record = ProjectMilestoneState.objects.create(project=self, milestone=milestone)
+    #         if not milestone.has_children():
+    #             return True, [record, ]
+    #         first_child = milestone.flow.get_first_child(milestone=milestone)
+    #         child_record = ProjectMilestoneState.objects.create(project=self, milestone=first_child)
+    #         return True, [record, child_record]
+    #
+    #     except Exception as e:
+    #         logs.exception(e)
+    #         return False, "添加失败"
+
+    def add_or_update_milestone_state(self, milestone):
         """
         项目每变更一次里程碑状态, 则没有添加一条里程碑状态记录，有就更新
         默认里程碑节点深度为2，大于2须进行重构
@@ -309,163 +334,130 @@ class ProjectPlan(BaseModel):
         if not milestone:
             return False, "milestone参数不能为空"
         try:
-            record = ProjectMilestoneRecord.objects.update_or_create(project=self, milestone=milestone)
+            pro_milestone_state = ProjectMilestoneState.objects.update_or_create(project=self, milestone=milestone)
             if not milestone.has_children():
-                return True, [record, ]
+                return True, [pro_milestone_state, ]
             first_child = milestone.flow.get_first_child(milestone=milestone)
-            child_record = ProjectMilestoneRecord.objects.update_or_create(project=self, milestone=first_child)
-            return True, [record, child_record]
+            child_pro_milestone_state = ProjectMilestoneState.objects.update_or_create(project=self, milestone=first_child)
+            return True, [pro_milestone_state, child_pro_milestone_state]
 
         except Exception as e:
             logs.exception(e)
             return False, "添加失败"
 
-    def get_main_milestone_records(self):
+    def get_main_milestone_states(self):
         """获取项目主里程碑项"""
         milestones = self.attached_flow.get_main_milestones()
-        milestone_records = ProjectMilestoneRecord.objects.filter(project=self, milestone__in=milestones)
-        return milestone_records
+        pro_milestone_states = ProjectMilestoneState.objects.filter(project=self, milestone__in=milestones)
+        return pro_milestone_states
 
-    def get_recorded_milestones(self):
+    def get_all_project_milestone_states(self):
         """
         返回已进行到的里程碑节点列表
         :return:
         """
-        return self.milestones.all()
+        return self.pro_milestone_states.all()
 
-    def get_milestone_record(self, milestone):
+    def get_milestone_state(self, milestone):
         """
-        返回当前项目流程中某个里程碑下的ProjectMilestoneRecord记录
+        返回当前项目流程中某个里程碑下的ProjectMilestoneState记录
         :param milestone:
         :return:
         """
-        return ProjectMilestoneRecord.objects.filter(project=self, milestone=milestone).first()
+        return ProjectMilestoneState.objects.filter(project=self, milestone=milestone).first()
 
-    def get_milestone_changed_records(self):
-        """
-        返回项目里程碑变更记录列表
-        :return: ProjectMilestoneRecord object
-        """
-        return ProjectMilestoneRecord.objects.filter(project=self)
-
-    def contains_recorded_milestone(self, milestone):
+    def contains_project_milestone_state(self, milestone):
         """
         判断里程碑状态是否存在项目状态列表记录中
         :param milestone:
         :return:
         """
-        if milestone in self.get_recorded_milestones():
+        if milestone in self.get_all_project_milestone_states():
             return True
         return False
 
-    def finish_project_milestone(self, current_milestone):
+    def change_project_milestone(self, project_milestone_state):
         """ 变更项目里程碑状态 默认里程碑节点深度为2，大于2须进行重构
-        :param current_milestone: 当前里程碑状态对象
+        :param project_milestone_state: 当前项目里程碑对象(ProjectMilestoneState)
         :return: True or False
         """
-
+        curr_stone_state = project_milestone_state
         if self.is_unstarted():
-            return False, "项目尚未启动无法操作。"
+            return False, "操作失败，项目尚未启动。"
 
         if self.is_finished():
-            return False, "项目已完成，无法操作。"
+            return False, "操作失败，项目已完成。"
 
         if self.is_paused():
-            return False, "项目已挂起，无法操作。"
+            return False, "操作失败，项目已挂起。"
 
-        if not self.attached_flow.contains(current_milestone):
-            return False, "里程碑项不属于当前所用流程, 请检查数据是否异常。"
+        if not self.attached_flow.contains(curr_stone_state.milestone):
+            return False, "操作失败，该项目里程碑项不属于当前所用流程, 请检查数据是否异常。"
 
-        record_query = ProjectMilestoneRecord.objects.filter(project=self,
-                                                             milestone=current_milestone)
-        if not record_query:
-            return False, '未匹配到项目里程碑变更记录，请检查数据是否异常。'
-        record = record_query.first()
-        if record.is_finished():
-            return False, '该里程碑状态已完结，无法操作。'
+        if curr_stone_state.is_finished():
+            return False, '操作失败，当前里程碑状态已完结'
 
-        if current_milestone.has_children():
-            children = current_milestone.children()
-            record_query = ProjectMilestoneRecord.objects.filter(project=self,
-                                                                 milestone__in=children).all()
-            for query in record_query:
+        if curr_stone_state.milestone.has_children():
+            children = curr_stone_state.milestone.children()
+            milestone_state_query = ProjectMilestoneState.objects.filter(project=self,
+                                                                milestone__in=children).all()
+            for query in milestone_state_query:
                 if not query.is_finished():
-                    return False, '当前里程碑存在未完结的子里程碑，无法操作。'
+                    return False, '操作失败，当前里程碑存在未完结的子里程碑。'
 
         try:
             with transaction.atomic():
-                record.status = PRO_MILESTONE_DONE
-                record.save()
-                if current_milestone.is_flow_last_descendant():
-                    ancestor_milestone_records = ProjectMilestoneRecord.objects.filter(
-                        project=self, milestone__in=current_milestone.ancestors()
-                    )
-                    if ancestor_milestone_records:
-                        for milestone_record in ancestor_milestone_records:
-                            milestone_record.status = PRO_MILESTONE_DONE
-                            milestone_record.save()
-                            milestone_record.cache()
-                    self.status = PRO_STATUS_DONE
-                    self.save()
-                    self.cache()
-                else:
-                    if current_milestone.is_last_descendant(
-                            current_milestone.first_ancestor()):
-                        ancestor_milestone_records = ProjectMilestoneRecord.objects.filter(
-                            project=self, milestone__in=current_milestone.ancestors()
+                curr_stone_state.status = PRO_MILESTONE_DONE
+                curr_stone_state.save()
+                # 当前里程碑为某始祖里程碑最后一个子孙里程碑
+                if curr_stone_state.milestone.is_last_descendant(curr_stone_state.milestone.first_ancestor()):
+                    # 当前里程碑为流程中最后一个子孙里程碑
+                    if curr_stone_state.milestone.is_flow_last_descendant():
+                        self.status = PRO_STATUS_DONE
+                        self.save()
+                        self.cache()
+                    else:
+                        ancestor_milestone_states = ProjectMilestoneState.objects.filter(
+                            project=self, milestone__in=curr_stone_state.milestone.ancestors()
                         )
-                        if ancestor_milestone_records:
-                            for milestone_record in ancestor_milestone_records:
-                                milestone_record.status = PRO_MILESTONE_DONE
-                                milestone_record.save()
-                                milestone_record.cache()
-                    next_stone = current_milestone.next()
-                    success, pro_milestone_records = self.add_or_update_milestone_record(
-                        next_stone)
-                    pro_milestone_record, result = pro_milestone_records[-1]
-                    self.current_stone = pro_milestone_record.milestone
-                    self.save()
-                    self.cache()
-                return True, "变更成功"
+                        if ancestor_milestone_states:
+                            for anc_stone_state in ancestor_milestone_states:
+                                anc_stone_state.status = PRO_MILESTONE_DONE
+                                anc_stone_state.save()
+                                anc_stone_state.cache()
+                        next_ancestor_milestone = curr_stone_state.milestone.first_ancestor().next()
+                        if not next_ancestor_milestone:
+                            pass
+                        next_ancestor_stone_state = ProjectMilestoneState.objects.filter(project=self, milestone=next_ancestor_milestone)
+                        self.start_next_project_milestone_state(next_ancestor_stone_state)
+                else:
+                    self.start_next_project_milestone_state(curr_stone_state)
+                return True, "操作成功"
         except Exception as e:
             logs.exception(e)
-            return False, "数据异常"
+            return False, "操作失败，数据异常"
 
-    def change_milestone(self, new_milestone, done_sign,):
+    def start_next_project_milestone_state(self, current_milestone_state):
         """
-        变更项目里程碑状态
-        :param new_milestone: 新的里程碑状态对象
-        :return: True or False
+        点亮下一个项目里程碑
+        :param current_milestone_state: 当前项目里程碑
+        :return: 无返回值
         """
-        if self.is_unstarted():
-            return False, "项目尚未启动"
-
-        if not self.attached_flow.contains(new_milestone):
-            return False, "里程碑项不属于当前所用流程, 请检查数据是否异常"
-
-        if not new_milestone == self.current_stone and \
-                new_milestone in self.get_recorded_milestones():
-            return False, "里程碑已存在项目状态记录中"
-
-        if new_milestone == self.current_stone:
-            if done_sign == FLOW_UNDONE:
-                return False, "数据异常"
-            if done_sign == FLOW_DONE and self.attached_flow.get_last_main_milestone() == new_milestone:
-                self.status = PRO_STATUS_DONE
-                self.save()
-                self.cache()
-                return True, "变更成功"
-            return False, "数据异常"
-        try:
-            with transaction.atomic():
-                self.add_milestone_record(new_milestone)
-                self.current_stone = new_milestone
-                self.save()
-                self.cache()
-            return True, "变更成功"
-        except Exception as e:
-            logs.exception(e)
-            return False, "数据异常"
+        next_milestone = current_milestone_state.milestone.next()
+        next_stone_state = ProjectMilestoneState.objects.filter(project=self, milestone=next_milestone)
+        next_stone_state.status = PRO_MILESTONE_DOING
+        next_stone_state.save()
+        next_stone_state.cache()
+        self.current_stone = next_milestone
+        if next_milestone.has_children():
+            first_child_milestone = next_milestone.flow.get_get_first_child(milestone=next_milestone)
+            first_child_stone_state = ProjectMilestoneState.objects.filter(project=self, milestone=first_child_milestone)
+            first_child_stone_state.status = PRO_MILESTONE_DOING
+            first_child_stone_state.save()
+            first_child_stone_state.cache()
+            self.current_stone = first_child_milestone
+        self.save()
+        self.cache()
 
     def get_purchase_method(self):
         """
@@ -760,18 +752,18 @@ class Milestone(BaseModel):
         return True
 
 
-class ProjectMilestoneRecord(BaseModel):
+class ProjectMilestoneState(BaseModel):
     """
-    项目里程碑变更记录. m/m关系: 一个项目的生命周期内, 有多条变更记录存在. 一个里程碑项可被多个项目
-     使用.
+    项目里程碑.
+    项目和里程碑的关联关系 , m/n关系: 一个项目里程碑项对应一个流程中的程碑项
     """
     project = models.ForeignKey(
         'projects.ProjectPlan', verbose_name='项目', on_delete=models.CASCADE,
-        related_name='project_milestone_records',
+        related_name='pro_milestone_states_related',
     )
     milestone = models.ForeignKey(
         'projects.Milestone', verbose_name='里程碑节点', on_delete=models.SET_NULL,
-        related_name='project_milestone_records', null=True, blank=True
+        related_name='pro_milestone_states_related', null=True, blank=True
     )
 
     # 记录在每个里程碑下操作文件上传后形成的文档集合
@@ -780,28 +772,28 @@ class ProjectMilestoneRecord(BaseModel):
     # 记录各里程碑下的一个总结性说明概述
     summary = models.TextField('总结说明', max_length=200, null=True, blank=True)
 
-    #finished = models.BooleanField("节点任务是否完结", default=False, )
     status = models.CharField('项目里程碑状态', max_length=10, choices=PROJECT_MILESTONE_STATUS, default=PRO_MILESTONE_TODO)
 
-    objects = ProjectMilestoneRecordManager()
+    objects = ProjectMilestoneStateManager()
 
     class Meta:
-        verbose_name = '项目里程碑记录'
-        verbose_name_plural = '项目里程碑记录'
-        db_table = 'projects_project_milestone_record'
+        verbose_name = '项目里程碑'
+        verbose_name_plural = '项目里程碑'
+        unique_together = ('project', 'milestone')
+        db_table = 'projects_project_milestone_state'
 
     def __str__(self):
         return '%s %s' % (self.project_id, self.milestone_id)
 
     def get_project_purchase_method(self):
         """
-        获取当前记录的项目
+        获取项目采购方式
         """
         return self.project.purchase_method
 
     def get_doc_list(self):
         """
-        获取当前节点下的所有文档资料
+        获取当前里程碑下的所有文档资料
         :return:
         """
         doc_id_strs = self.doc_list.split(',')
@@ -811,26 +803,53 @@ class ProjectMilestoneRecord(BaseModel):
 
     def get_supplier_selection_plans(self):
         """
-        获取当前节点下供应商选择方案列表
+        获取当前里程碑下供应商选择方案列表
         """
         pass
 
     def get_purchase_contract(self):
         """
-        获取当前节点下采购合同信息
+        获取当前里程碑下采购合同信息
         :return:
         """
         pass
 
     def get_receipt(self):
         """
-        获取当前节点下的收货确认单
+        获取当前里程碑下的收货确认单
         :return:
         """
         pass
 
     def is_finished(self):
+        """
+        当前里程碑是否完结.
+        :return: 返回True/False; 已完结返回True, 否则返回False
+        """
         return True if self.status == PRO_MILESTONE_DONE else False
+
+# class ProjectMilestoneRecord(BaseModel):
+#     """
+#     项目里程碑节点流转记录.
+#     用于记录项目里程碑节点流转记录
+#     m/n关系: 一个项目的生命周期内, 有多条变更记录存在. 一个里程碑项可被多个项目使用.
+#     """
+#     project = models.ForeignKey(
+#         'projects.ProjectPlan', verbose_name='项目', on_delete=models.CASCADE,
+#         related_name='project_milestone_records',
+#     )
+#     milestone = models.ForeignKey(
+#         'projects.Milestone', verbose_name='里程碑节点', on_delete=models.SET_NULL,
+#         related_name='project_milestone_records', null=True, blank=True
+#     )
+#
+#     class Meta:
+#         verbose_name = '项目里程碑记录'
+#         verbose_name_plural = '项目里程碑记录'
+#         db_table = 'projects_project_milestone_record'
+#
+#     def __str__(self):
+#         return '%s %s' % (self.project_id, self.milestone_id)
 
 
 class ProjectDocument(BaseModel):
@@ -884,9 +903,9 @@ class SupplierSelectionPlan(BaseModel):
     """
     供应商选择方案
     """
-    project_milestone_record = models.ForeignKey(
-        'projects.ProjectMilestoneRecord', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
-        null=False, blank=False
+    project_milestone_state = models.ForeignKey(
+        'projects.ProjectMilestoneState', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
+        null=True, blank=True
     )
     supplier = models.ForeignKey(
         Supplier, verbose_name='供应商', on_delete=models.CASCADE,
@@ -920,9 +939,9 @@ class PurchaseContract(BaseModel):
     """
     采购合同
     """
-    project_milestone_record = models.ForeignKey(
-        'projects.ProjectMilestoneRecord', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
-        null=False, blank=False
+    project_milestone_state = models.ForeignKey(
+        'projects.ProjectMilestoneState', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
+        null=True, blank=True
     )
     contract_no = models.CharField('合同编号', max_length=30, null=False, blank=False)
     title = models.CharField('合同名称', max_length=100, null=False, blank=False)
@@ -960,9 +979,9 @@ class Receipt(BaseModel):
     """
     收货确认单
     """
-    project_milestone_record = models.ForeignKey(
-        'projects.ProjectMilestoneRecord', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
-        null=False, blank=False
+    project_milestone_state = models.ForeignKey(
+        'projects.ProjectMilestoneState', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
+        null=True, blank=True
     )
     served_date = models.DateField('到货时间', null=False, blank=False)
     delivery_man = models.CharField('送货人', max_length=50, null=False, blank=False)

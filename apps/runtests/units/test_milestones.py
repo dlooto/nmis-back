@@ -51,33 +51,33 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertFalse(self.project.is_unstarted())
         self.assertEquals(self.admin_staff, self.project.performer)
 
-    def test_change_milestone(self):
-        """
-        测试: 变更项目里程碑项
-        """
-        # 分配负责人
-        self.assertTrue(
-            self.project.dispatch(self.performer)
-        )
-        # 启动项目
-        self.assertTrue(
-            self.project.startup(
-                assistant=self.admin_staff,
-                flow=self.flow,
-                expired_time=times.tomorrow()
-            )
-        )
-
-        self.assertEquals(self.project.current_stone, self.flow.get_first_main_milestone())
-
-        # new_milestone = self.project.current_stone
-        # success, msg = self.project.change_milestone(new_milestone)
-        # self.assertFalse(success)
-
-        new_milestone = self.project.current_stone.next()
-        success, msg = self.project.change_milestone(new_milestone, done_sign='UN')
-        self.assertTrue(success)
-        self.assertEquals(self.project.current_stone, new_milestone)
-        self.assertTrue(self.project.contains_recorded_milestone(new_milestone))
+    # def test_change_milestone(self):
+    #     """
+    #     测试: 变更项目里程碑项
+    #     """
+    #     # 分配负责人
+    #     self.assertTrue(
+    #         self.project.dispatch(self.performer)
+    #     )
+    #     # 启动项目
+    #     self.assertTrue(
+    #         self.project.startup(
+    #             assistant=self.admin_staff,
+    #             flow=self.flow,
+    #             expired_time=times.tomorrow()
+    #         )
+    #     )
+    #
+    #     self.assertEquals(self.project.current_stone, self.flow.get_first_main_milestone())
+    #
+    #     # new_milestone = self.project.current_stone
+    #     # success, msg = self.project.change_milestone(new_milestone)
+    #     # self.assertFalse(success)
+    #
+    #     new_milestone = self.project.current_stone.next()
+    #     success, msg = self.project.change_milestone(new_milestone, done_sign='UN')
+    #     self.assertTrue(success)
+    #     self.assertEquals(self.project.current_stone, new_milestone)
+    #     self.assertTrue(self.project.contains_project_milestone_state(new_milestone))
 
 
