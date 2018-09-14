@@ -121,7 +121,7 @@ urlpatterns = [
     path('flows/<int:flow_id>/milestones/<int:mid>/children', views.FlowChildMilestonesView.as_view(), ),  # put/delete
 
     # 确定采购方式里程碑(采购方式，文件附件，说明操作)接口
-    path('<int:project_id>/milestone/<int:milestone_id>/record-purchase',
+    path('<int:project_id>/project_milestone_states/<int:pro_milestone_states_id>/record-purchase',
          views.MilestoneRecordPurchaseCreateView.as_view(), ),
 
     # 获取确定采购方式里程碑中所有的信息
@@ -140,7 +140,10 @@ urlpatterns = [
     path('<int:project_id>/milestone/<int:milestone_id>/purchase-contract',
          views.MilestonePurchaseContractCreateView.as_view(), ),
 
-    # 流程中各里程碑下文件上传
-    path('<int:project_id>/single-upload-file', views.UploadFileView().as_view(), ),
+    # 流程中各里程碑下单个文件上传
+    path('<int:project_id>/single-upload-file', views.UploadFileView.as_view(), ),
+
+    # 删除项目里程碑中附件接口
+    path('/single-delete-file/<int:doc_id>', views.DeleteFileView.as_view())
 
 ]

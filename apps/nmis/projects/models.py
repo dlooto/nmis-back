@@ -216,8 +216,10 @@ class ProjectPlan(BaseModel):
                 self.status = PRO_STATUS_STARTED
                 self.startup_time = times.now()
 
-                self.current_stone = self.attached_flow.get_first_main_milestone()
-                self.add_milestone_state(self.current_stone)
+                # self.add_milestone_state(self.current_stone)
+                self.bulk_add_milestone_states()
+
+                # self.change_project_milestone(self.attached_flow.get_first_main_milestone())
 
                 self.save()
                 self.cache()
@@ -846,6 +848,49 @@ class ProjectMilestoneState(BaseModel):
             state_children = child_stone_state.children()
             child_stone_state.children = state_children
 
+    def save_doc_list(self, doc_id_str):
+        """
+        项目里程碑保存/修改操作后，重新保存项目里程碑文档资料列表
+        """
+        try:
+            if not self.doc_list:
+                self.doc_list = doc_id_str
+            else:
+                self.doc_list = '%s%s%s' % (self.doc_list, ',', doc_id_str)
+            self.save()
+            self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+        return False
+
+    def update_doc_list(self, doc_id_str):
+        """
+        删除醒目文档后，更新项目里程碑文档资料列表
+        """
+        try:
+
+            self.doc_list = doc_id_str
+            self.save()
+            self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+        return False
+
+    def update_summary(self, summary):
+        """
+         项目负责人里程碑保存操作后，更新项目里程碑中总结说明
+        """
+        try:
+            self.summary = summary
+            self.save()
+            self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+        return False
+
     def change_first_pro_milestone_state_status(self):
         """
         分配项目之后设置第一个项目里程碑的状态为已完结
@@ -954,6 +999,19 @@ class ProjectDocument(BaseModel):
 
     def __str__(self):
         return '%s %s' % (self.id, self.name)
+
+    def deleted(self):
+        """
+        删除项目文档
+        :return:
+        """
+        try:
+            self.clear_cache()
+            self.delete()
+            return True
+        except Exception as e:
+            logs.exception(e)
+        return False
 
 
 class Supplier(BaseModel):
