@@ -74,7 +74,7 @@ class BaseAPIView(GenericAPIView):
         :param obj_id: 对象id
         :param model:  对象对应的类类型
         :param use_cache: 是否优先从缓存中获取数据, 默认优先从缓存中取
-        :return:
+        :return:distinct_fields
         """
         if use_cache:
             obj = model.objects.get_cached(obj_id)

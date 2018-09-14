@@ -407,7 +407,7 @@ class ProjectPlan(BaseModel):
 
     def change_project_milestone_state(self, project_milestone_state):
         """
-        变更项目里程碑节点，项目里程碑流转到下个李里程碑节点。
+        变更项目里程碑节点，项目里程碑流转到下个里程碑节点。
         默认里程碑节点深度为2，大于2须进行重构
         :param project_milestone_state: 当前项目里程碑 ProjectMilestoneState对象
         :return:
@@ -416,8 +416,18 @@ class ProjectPlan(BaseModel):
             msg: String字符串，用于记录操作失败的原因
         """
         curr_stone_state = project_milestone_state
+
         if self.is_unstarted():
-            return False, "操作失败，项目尚未启动。"
+            return False, "操作失败，项目尚未分配。"  # 项目分配后进入启动状态
+
+        if project_milestone_state.milestone == self.attached_flow.get_first_main_milestone() and self.is_unstarted():
+            try:
+                with transaction.atomic():
+                    self.start_next_project_milestone_state(project_milestone_state)
+                    return True, "操作成功"
+            except Exception as e:
+                logs.exception(e)
+                return False, "操作失败"
 
         if self.is_finished():
             return False, "操作失败，项目已完成。"
@@ -426,15 +436,18 @@ class ProjectPlan(BaseModel):
             return False, "操作失败，项目已挂起。"
 
         if not self.attached_flow.contains(curr_stone_state.milestone):
-            return False, "操作失败，该项目里程碑项不属于当前所用流程, 请检查数据是否异常。"
+            return False, "操作失败，该项目里程碑项不属于该项目流程, 请检查数据是否异常。"
 
         if curr_stone_state.is_finished():
-            return False, '操作失败，当前里程碑状态已完结'
+            return False, '操作失败，当前里程碑已完结。'
+
+        if curr_stone_state.is_unstarted():
+            return False, '操作失败，尚未进行到当前里程碑。'
 
         if curr_stone_state.milestone.has_children():
             children = curr_stone_state.milestone.children()
-            milestone_state_query = ProjectMilestoneState.objects.filter(project=self,
-                                                                milestone__in=children).all()
+            milestone_state_query = ProjectMilestoneState.objects.filter(project=self, milestone__in=children).all()
+            # milestone_state_query = ProjectMilestoneState.objects.filter(project=self, milestone__in=children).all()
             for query in milestone_state_query:
                 if not query.is_finished():
                     return False, '操作失败，当前里程碑存在未完结的子里程碑。'
@@ -446,58 +459,50 @@ class ProjectPlan(BaseModel):
                 # 当前里程碑为某始祖里程碑最后一个子孙里程碑
                 if curr_stone_state.milestone.is_last_descendant(curr_stone_state.milestone.first_ancestor()):
                     # 当前里程碑为流程中最后一个子孙里程碑
-                    if curr_stone_state.milestone.is_flow_last_descendant():
-                        self.status = PRO_STATUS_DONE
-                        self.save()
-                        self.cache()
-                    else:
-                        ancestor_milestone_states = ProjectMilestoneState.objects.filter(
-                            project=self, milestone__in=curr_stone_state.milestone.ancestors()
-                        )
-                        if ancestor_milestone_states:
-                            for anc_stone_state in ancestor_milestone_states:
-                                anc_stone_state.status = PRO_MILESTONE_DONE
-                                anc_stone_state.save()
-                                anc_stone_state.cache()
-                        next_ancestor_milestone = curr_stone_state.milestone.first_ancestor().next()
-                        if not next_ancestor_milestone:
-                            pass
-                        next_ancestor_stone_state = ProjectMilestoneState.objects.filter(project=self, milestone=next_ancestor_milestone)
-                        self.start_next_project_milestone_state(next_ancestor_stone_state)
+                    ancestor_milestone_states = ProjectMilestoneState.objects.filter(
+                        project=self, milestone__in=curr_stone_state.milestone.ancestors()
+                    )
+                    if ancestor_milestone_states:
+                        for anc_stone_state in ancestor_milestone_states:
+                            anc_stone_state.status = PRO_MILESTONE_DONE
+                            anc_stone_state.save()
+                            anc_stone_state.cache()
+                    if not curr_stone_state.milestone.is_flow_last_descendant():
+                        next_milestone = curr_stone_state.milestone.next()
+                        next_stone_state = ProjectMilestoneState.objects.filter(project=self,
+                                                                                milestone=next_milestone).first()
+                        self.start_next_project_milestone_state(next_stone_state)
                 else:
-                    self.start_next_project_milestone_state(curr_stone_state)
+                    next_milestone = curr_stone_state.milestone.next()
+                    next_stone_state = ProjectMilestoneState.objects.filter(
+                        project=self,
+                        milestone=next_milestone
+                    ).first()
+                    self.start_next_project_milestone_state(next_stone_state)
                 return True, "操作成功"
         except Exception as e:
             logs.exception(e)
             return False, "操作失败，数据异常"
 
-    def start_next_project_milestone_state(self, current_milestone_state):
+    def start_next_project_milestone_state(self, next_milestone_state):
         """
-        点亮下一个项目里程碑
-        :param current_milestone_state: 当前项目里程碑
+        开启下一个项目里程碑
+        :param next_milestone_state: 下一个项目里程碑
         :return:
         """
-        next_milestone = current_milestone_state.milestone.next()
-        next_stone_state = ProjectMilestoneState.objects.filter(project=self, milestone=next_milestone)
-        next_stone_state.status = PRO_MILESTONE_DOING
-        next_stone_state.save()
-        next_stone_state.cache()
-        self.current_stone = next_milestone
+        next_milestone_state.status = PRO_MILESTONE_DOING
+        next_milestone_state.save()
+        next_milestone_state.cache()
+        next_milestone = next_milestone_state.milestone
         if next_milestone.has_children():
-            first_child_milestone = next_milestone.flow.get_get_first_child(milestone=next_milestone)
-            first_child_stone_state = ProjectMilestoneState.objects.filter(project=self, milestone=first_child_milestone)
+            first_child_milestone = next_milestone.flow.get_first_child(milestone=next_milestone)
+            first_child_stone_state = ProjectMilestoneState.objects.filter(project=self, milestone=first_child_milestone).first()
             first_child_stone_state.status = PRO_MILESTONE_DOING
             first_child_stone_state.save()
             first_child_stone_state.cache()
             self.current_stone = first_child_milestone
         self.save()
         self.cache()
-
-    def get_purchase_method(self):
-        """
-        获取项目采购方法
-        """
-        return self.purchase_method
 
 
 class ProjectFlow(BaseModel):
@@ -775,7 +780,7 @@ class Milestone(BaseModel):
             return False
         return True
 
-    def is_last_main_milstone(self):
+    def is_last_main_milestone(self):
         """
         当前里程碑项是否为流程中最后一个主里程碑项
         :return:
@@ -896,6 +901,10 @@ class ProjectMilestoneState(BaseModel):
         :return: 返回True/False; 已完结返回True, 否则返回False
         """
         return True if self.status == PRO_MILESTONE_DONE else False
+
+    def is_unstarted(self):
+        return True if self.status == PRO_MILESTONE_TODO else False
+
 
 # class ProjectMilestoneRecord(BaseModel):
 #     """

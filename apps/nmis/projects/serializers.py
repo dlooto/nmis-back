@@ -83,6 +83,53 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
 
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
+    children = serializers.SerializerMethodField('_get_children')
+    created_time = serializers.SerializerMethodField('_get_created_time')
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        return queryset.select_related('milestone',)
+
+    class Meta:
+        model = ProjectMilestoneState
+        fields = (
+            'id', 'milestone_title', 'milestone_index',
+            'has_children', 'children', 'status', 'created_time',
+        )
+
+    def _get_milestone_title(self, obj):
+        if not hasattr(obj, 'milestone'):
+            return ''
+        stone = obj.milestone
+        return stone.title if stone else ''
+
+    def _get_milestone_index(self, obj):
+        if not hasattr(obj, 'milestone'):
+            return ''
+        stone = obj.milestone
+        return stone.index if stone else -1
+
+    def _get_created_time(self, obj):
+        """
+
+        :param obj:
+        :return:
+        """
+        if not hasattr(obj, 'created_time'):
+            return ''
+        return obj.created_time
+
+    def _get_children(self, obj):
+        if not hasattr(obj, 'children'):
+            return []
+        children = obj.children
+        return resp.serialize_data(children, srl_cls_name='ProjectMilestoneStateSerializer') if children else []
+
+
+class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
+
+    milestone_title = serializers.SerializerMethodField('_get_milestone_title')
+    milestone_index = serializers.SerializerMethodField('_get_milestone_index')
     doc_list = serializers.SerializerMethodField('_get_doc_list')
     purchase_method = serializers.SerializerMethodField('_get_purchase_method')
     children = serializers.SerializerMethodField('_get_children')
@@ -95,12 +142,9 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
     class Meta:
         model = ProjectMilestoneState
         fields = (
-            'id', 'milestone_id', 'milestone_title',
-            'milestone_index', 'doc_list',
-            'summary',
-            'purchase_method',
-            'status', 'created_time', 'has_children',
-            'children',
+            'id', 'milestone_title', 'milestone_index',
+            'doc_list', 'summary', 'purchase_method',
+            'has_children', 'children', 'status', 'created_time',
         )
 
     def _get_milestone_title(self, obj):

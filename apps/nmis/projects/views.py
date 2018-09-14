@@ -599,12 +599,13 @@ class ProjectPlanChangeMilestoneView(BaseAPIView):
     完结当前项目里程碑，同时点亮下一个里程碑(如果下一个里程碑有子里程碑，同时点亮下一个里程碑的第一个子里程碑）
     """
     # permission_classes = (ProjectPerformerPermission, )
-    def post(self, req, project_id, project_milestone_id):
+    @check_id('project_milestone_state_id')
+    def post(self, req, project_id, ):
 
         project = self.get_object_or_404(project_id, ProjectPlan)
         self.check_object_permissions(req, project)
-        current_milestone = self.get_object_or_404(project_milestone_id, Milestone)
-        success, msg = project.change_project_milestone_state(current_milestone)
+        curr_milestone_state = self.get_object_or_404(req.data.get('project_milestone_state_id'), ProjectMilestoneState)
+        success, msg = project.change_project_milestone_state(curr_milestone_state)
         if not success:
             return resp.failed(msg)
         return resp.serialize_response(

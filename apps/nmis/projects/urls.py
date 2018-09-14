@@ -64,7 +64,7 @@ urlpatterns = [
     path('<int:project_id>/startup',       views.ProjectPlanStartupView.as_view(),),
 
     # 责任人变更项目里程碑状态
-    path('<int:project_id>/project_milestones/<int:project_milestone_id>/change-milestone',
+    path('<int:project_id>/change-milestone',
          views.ProjectPlanChangeMilestoneView.as_view(), ),
 
     # 为指定项目添加新设备
