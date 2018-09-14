@@ -346,40 +346,61 @@ class ProjectPlan(BaseModel):
             return False, "添加失败"
 
     def get_main_milestone_states(self):
-        """获取项目主里程碑项"""
+        """
+        返回项目主流程中的里程碑项
+        :return: ProjectMilestoneState对象列表
+        """
         milestones = self.attached_flow.get_main_milestones()
         pro_milestone_states = ProjectMilestoneState.objects.filter(project=self, milestone__in=milestones)
         return pro_milestone_states
 
-    def get_all_project_milestone_states(self):
+    def get_project_milestone_states_structured(self):
         """
-        返回已进行到的里程碑节点列表
+        返回当前项目所有项目里程碑项（里程碑经过结构化处理）
         :return:
+        """
+        milestones = self.attached_flow.get_main_milestones()
+        pro_milestone_states = ProjectMilestoneState.objects.filter(project=self, milestone__in=milestones)
+
+        main_milestone_states = self.get_main_milestone_states()
+        for main_stone_state in main_milestone_states:
+            main_stone_state.structure_descendants()
+        return main_milestone_states
+
+    def get_project_milestone_states(self):
+        """
+        返回当前项目所有项目里程碑项
+        :return: ProjectMilestoneState对象列表
         """
         return self.pro_milestone_states.all()
 
     def get_milestone_state(self, milestone):
         """
         返回当前项目流程中某个里程碑下的ProjectMilestoneState记录
-        :param milestone:
-        :return:
+        :param milestone: Milestone对象
+        :return: ProjectMilestoneState对象
         """
         return ProjectMilestoneState.objects.filter(project=self, milestone=milestone).first()
 
-    def contains_project_milestone_state(self, milestone):
+    def contains_project_milestone_state(self, project_milestone_state):
         """
-        判断里程碑状态是否存在项目状态列表记录中
-        :param milestone:
-        :return:
+        判断某项目里程碑是否属于当前项目的项目里程碑
+        :param project_milestone_state: ProjectMilestoneState对象
+        :return: True or False
         """
-        if milestone in self.get_all_project_milestone_states():
+        if project_milestone_state in self.get_project_milestone_states():
             return True
         return False
 
-    def change_project_milestone(self, project_milestone_state):
-        """ 变更项目里程碑状态 默认里程碑节点深度为2，大于2须进行重构
-        :param project_milestone_state: 当前项目里程碑对象(ProjectMilestoneState)
-        :return: True or False
+    def change_project_milestone_state(self, project_milestone_state):
+        """
+        变更项目里程碑节点，项目里程碑流转到下个李里程碑节点。
+        默认里程碑节点深度为2，大于2须进行重构
+        :param project_milestone_state: 当前项目里程碑 ProjectMilestoneState对象
+        :return:
+            返回(success, msg)元祖对象;
+            操作成功，success=True,否则success=False;
+            msg: String字符串，用于记录操作失败的原因
         """
         curr_stone_state = project_milestone_state
         if self.is_unstarted():
@@ -441,7 +462,7 @@ class ProjectPlan(BaseModel):
         """
         点亮下一个项目里程碑
         :param current_milestone_state: 当前项目里程碑
-        :return: 无返回值
+        :return:
         """
         next_milestone = current_milestone_state.milestone.next()
         next_stone_state = ProjectMilestoneState.objects.filter(project=self, milestone=next_milestone)
@@ -576,8 +597,9 @@ class Milestone(BaseModel):
     desc = models.CharField('描述', max_length=20, default='')
 
     parent = models.ForeignKey('self', verbose_name='父里程碑', null=True, on_delete=models.CASCADE)
-    # 祖里程碑到当前里程碑最短路径, 由各里程碑项id的字符串组成，每个id,之间用‘-’进行分隔
+    # 祖里程碑到当前里程碑的父节点最短路径, 由各里程碑项id的字符串组成，每个id,之间用‘-’进行分隔
     parent_path = models.CharField('父里程碑路径', max_length=1024, default='', null=False, blank=False)
+
 
     class Meta:
         verbose_name = '里程碑项'
@@ -784,6 +806,28 @@ class ProjectMilestoneState(BaseModel):
 
     def __str__(self):
         return '%s %s' % (self.project_id, self.milestone_id)
+
+    @property
+    def has_children(self):
+        return self.milestone.has_children()
+
+    def children(self):
+        if not self.has_children:
+            return []
+        children = self.milestone.children()
+        milestone_state_children = self.project.pro_milestone_states_related.filter(milestone__in=children)
+        return milestone_state_children
+
+    def structure_descendants(self):
+        """结构化子孙里程碑"""
+        if not self.has_children:
+            self.children = []
+            return self
+        milestone_state_children = self.children()
+        self.children = milestone_state_children
+        for child_stone_state in milestone_state_children:
+            state_children = child_stone_state.children()
+            child_stone_state.children = state_children
 
     def get_project_purchase_method(self):
         """
