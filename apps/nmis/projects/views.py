@@ -608,7 +608,7 @@ class ProjectPlanChangeMilestoneView(BaseAPIView):
         project = self.get_object_or_404(project_id, ProjectPlan)
         self.check_object_permissions(req, project)
         current_milestone = self.get_object_or_404(project_milestone_id, Milestone)
-        success, msg = project.change_project_milestone(current_milestone)
+        success, msg = project.change_project_milestone_state(current_milestone)
         if not success:
             return resp.failed(msg)
         return resp.serialize_response(

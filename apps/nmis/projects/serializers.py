@@ -83,30 +83,41 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
 
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
-    doc_list = serializers.SerializerMethodField('_get_milestone_doc_list')
+    doc_list = serializers.SerializerMethodField('_get_doc_list')
     purchase_method = serializers.SerializerMethodField('_get_purchase_method')
+    children = serializers.SerializerMethodField('_get_children')
+    created_time = serializers.SerializerMethodField('_get_created_time')
 
     @staticmethod
     def setup_eager_loading(queryset):
-        return queryset.select_related('milestone')
+        return queryset.select_related('milestone',)
 
     class Meta:
         model = ProjectMilestoneState
         fields = (
-            'id', 'milestone_id', 'purchase_method', 'milestone_title',
-            'milestone_index', 'created_time', 'doc_list',
-            'summary', 'status'
+            'id', 'milestone_id', 'milestone_title',
+            'milestone_index', 'doc_list',
+            'summary',
+            'purchase_method',
+            'status', 'created_time', 'has_children',
+            'children',
         )
 
     def _get_milestone_title(self, obj):
-        stone = Milestone.objects.get_cached(obj.milestone_id)
+        if not hasattr(obj, 'milestone'):
+            return ''
+        stone = obj.milestone
         return stone.title if stone else ''
 
     def _get_milestone_index(self, obj):
-        stone = Milestone.objects.get_cached(obj.milestone_id)
+        if not hasattr(obj, 'milestone'):
+            return ''
+        stone = obj.milestone
         return stone.index if stone else -1
 
-    def _get_milestone_doc_list(self, obj):
+    def _get_doc_list(self, obj):
+        if not hasattr(obj, 'doc_list'):
+            return []
         if not obj.doc_list:
             return []
         doc_ids_str = obj.doc_list.split(',')
@@ -118,8 +129,26 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
         """
         获取采购方法
         """
+        if not hasattr(obj, 'get_project_purchase_method'):
+            return ''
         purchase_method = obj.get_project_purchase_method()
         return purchase_method if purchase_method else ''
+
+    def _get_created_time(self, obj):
+        """
+
+        :param obj:
+        :return:
+        """
+        if not hasattr(obj, 'created_time'):
+            return ''
+        return obj.created_time
+
+    def _get_children(self, obj):
+        if not hasattr(obj, 'children'):
+            return []
+        children = obj.children
+        return resp.serialize_data(children, srl_cls_name='ProjectMilestoneStateSerializer') if children else []
 
 
 class ProjectMilestoneStateWithSupplierSelectionPlanSerializer(ProjectMilestoneStateSerializer):
@@ -229,7 +258,8 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     software_devices = serializers.SerializerMethodField('_get_software_devices')
 
     # project_milestones = serializers.SerializerMethodField('_get_milestone_states')
-    main_project_milestones = serializers.SerializerMethodField('_get_pro_main_milestone_states')
+    # main_project_milestones = serializers.SerializerMethodField('_get_pro_main_milestone_states')
+    project_milestone_states = serializers.SerializerMethodField('_get_pro_milestone_states_structured')
 
     @staticmethod
     def setup_eager_loading(queryset):
@@ -250,7 +280,7 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
             'related_dept_id', 'related_dept_name',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
             'project_introduce', 'pre_amount', 'purchase_method', 'current_stone_id',
-            'attached_flow_id', 'hardware_devices', 'software_devices', 'main_project_milestones',
+            'attached_flow_id', 'project_milestone_states', 'hardware_devices', 'software_devices',
             'startup_time', 'expired_time', 'created_time', 'operation_record',
         )
 
@@ -299,6 +329,11 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
             if state.milestone.parent is None:
                 main_milestone_states.append(state)
         return resp.serialize_data(main_milestone_states) if states else []
+
+    def _get_pro_milestone_states_structured(self, obj):
+        states = obj.get_project_milestone_states_structured()
+        return resp.serialize_data(states) if states else []
+
 
     def _get_milestone_states(self, obj):
         pro_milestone_states = obj.pro_milestone_states_related.all()
