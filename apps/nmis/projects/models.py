@@ -359,6 +359,8 @@ class ProjectPlan(BaseModel):
         返回项目主流程中的里程碑项
         :return: ProjectMilestoneState对象列表
         """
+        if not self.attached_flow:
+            return []
         milestones = self.attached_flow.get_main_milestones()
         pro_milestone_states = ProjectMilestoneState.objects.filter(project=self, milestone__in=milestones)
         return pro_milestone_states
@@ -368,6 +370,8 @@ class ProjectPlan(BaseModel):
         返回当前项目所有项目里程碑项（里程碑经过结构化处理）
         :return:
         """
+        if not self.attached_flow:
+            return []
         milestones = self.attached_flow.get_main_milestones()
         pro_milestone_states = ProjectMilestoneState.objects.filter(project=self, milestone__in=milestones)
 
