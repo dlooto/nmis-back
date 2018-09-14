@@ -375,6 +375,27 @@ class ProjectMilestoneStateManager(BaseManager):
         """
         return self.filter(project=project, milestone=milestone).first()
 
+    def bulk_create_project_milestone_states(self, project, milestones):
+        """
+        分配负责人成功之后，创建ProjectMilestoneState,绑定项目与流程下里程碑的关系，确定项目的里程碑
+        """
+        try:
+            pro_milestone_states = []
+            for milestone in milestones:
+                pro_milestone_state = self.model(milestone=milestone, project=project)
+                pro_milestone_states.append(pro_milestone_state)
+            self.bulk_create(pro_milestone_states)
+            return True
+        except Exception as e:
+            logger.exception(e)
+            return False
+
+    def get_pro_milestone_states_by_milestone(self, milestone):
+        """
+        通过流程里程碑获取项目里程碑
+        :return:
+        """
+        return self.filter(milestone=milestone).first()
 
 class SupplierSelectionPlanManager(BaseManager):
 

@@ -305,6 +305,15 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return False, "添加失败"
 
+    def bulk_add_milestone_states(self):
+        """
+        添加项目所有里程碑
+        流程为默认流程（存在自定义流程需要重构）
+        """
+        milestones = self.attached_flow.get_milestones()
+        ProjectMilestoneState.objects.bulk_create_project_milestone_states(project=self, milestones=milestones)
+
+
     # def add_milestone_record(self, milestone):
     #     """
     #     项目每变更一次里程碑状态, 则添加一条里程碑状态记录
@@ -513,7 +522,7 @@ class ProjectFlow(BaseModel):
 
     def get_milestones(self):
         """ 流程内含的所有里程碑列表 """
-        return self.milestones.all()
+        return self.milestones.order_by('id').all()
 
     def get_main_milestones(self):
         """ 流程内含的祖里程碑列表 """
@@ -599,7 +608,6 @@ class Milestone(BaseModel):
     parent = models.ForeignKey('self', verbose_name='父里程碑', null=True, on_delete=models.CASCADE)
     # 祖里程碑到当前里程碑的父节点最短路径, 由各里程碑项id的字符串组成，每个id,之间用‘-’进行分隔
     parent_path = models.CharField('父里程碑路径', max_length=1024, default='', null=False, blank=False)
-
 
     class Meta:
         verbose_name = '里程碑项'
@@ -828,6 +836,19 @@ class ProjectMilestoneState(BaseModel):
         for child_stone_state in milestone_state_children:
             state_children = child_stone_state.children()
             child_stone_state.children = state_children
+
+    def change_first_pro_milestone_state_status(self):
+        """
+        分配项目之后设置第一个项目里程碑的状态为已完结
+        """
+        try:
+            self.status = PRO_MILESTONE_DONE
+            self.save()
+            self.cache()
+            return True
+        except Exception as e:
+            logs.exception(e)
+            return False
 
     def get_project_purchase_method(self):
         """
