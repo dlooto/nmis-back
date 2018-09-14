@@ -345,7 +345,7 @@ class ProjectDocumentManager(BaseManager):
         doc.cache()
         return True, doc
 
-    def update_project_ducument(self, ):
+    def update_project_document(self, ):
         pass
 
     def batch_save_upload_project_doc(self, tag_upload_result_dict):
@@ -366,6 +366,29 @@ class ProjectDocumentManager(BaseManager):
                     doc_list.append(doc)
         return doc_list
 
+    def bulk_save_upload_project_doc(self, project_documents):
+        """
+        批量保存或更新上传的project_document
+        :param project_documents:
+            文档资料类别list
+        :return: 返回新创建的对象的List集合
+        """
+        try:
+            with transaction.atomic():
+                doc_list = []
+                for project_document in project_documents:
+                    doc, is_create = self.update_or_create(
+                        name=project_document.get('name'),
+                        category=project_document.get('category'),
+                        path=project_document.get('path')
+                    )
+                    if is_create:
+                        doc_list.append(doc)
+                return doc_list
+        except Exception as e:
+            logger.exception(e)
+            return None
+
 
 class ProjectMilestoneStateManager(BaseManager):
 
@@ -374,6 +397,12 @@ class ProjectMilestoneStateManager(BaseManager):
         根据项目和里程碑获取项目里程碑
         """
         return self.filter(project=project, milestone=milestone).first()
+
+    def get_pro_milestone_states_by_id(self, pro_milestone_states_id):
+        """
+        根据id获取项目里程碑
+        """
+        return self.filter(pk=pro_milestone_states_id).first()
 
     def bulk_create_project_milestone_states(self, project, milestones):
         """
@@ -396,6 +425,7 @@ class ProjectMilestoneStateManager(BaseManager):
         :return:
         """
         return self.filter(milestone=milestone).first()
+
 
 class SupplierSelectionPlanManager(BaseManager):
 

@@ -9,7 +9,7 @@ import logging
 from base.forms import BaseForm
 from nmis.devices.models import OrderedDevice, SoftwareDevice
 from nmis.hospitals.consts import ARCHIVE
-from nmis.projects.models import ProjectPlan, ProjectFlow
+from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectDocument
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
     PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, \
     PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR
@@ -566,11 +566,52 @@ class SingleUploadFileForm(BaseForm):
         for tag in self.req.FILES.keys():
             file = self.req.FILES.get(tag)
             result = single_upload_file(file, PROJECT_DOCUMENT_DIR + str(self.project_id) + '/',
-                                 file.name)
+                                        file.name)
             if not result:
                 return '%s%s' % (file.name, '上传失败'), False
 
             return result, file.name, True
+
+
+class ProjectDocumentBulkCreateForm(BaseForm):
+
+    def __init__(self, files, *args, **kwargs):
+        BaseForm.__init__(self, files, *args, **kwargs)
+        self.files = files
+
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'file_category_err': '文档类型错误',
+        })
+
+    def is_valid(self):
+        if not self.check_file_type():
+            return False
+        return True
+
+    def check_file_type(self):
+        for file in self.files:
+
+            if file.get('file_category') not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
+                self.update_errors('file_category', 'file_category_err')
+                return False
+
+        return True
+
+    def save(self):
+        import os
+        project_documents = []
+        for file in self.files:
+            for file_path in file.get('file_paths'):
+                project_document = {
+                    'category': file.get('file_category'),
+                    'path': file_path,
+                    'name': os.path.basename(file_path)
+                }
+                project_documents.append(project_document)
+        return ProjectDocument.objects.bulk_save_upload_project_doc(project_documents)
 
 
 class PurchaseContractCreateForm(BaseForm):

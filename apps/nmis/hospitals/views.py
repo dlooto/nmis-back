@@ -279,12 +279,8 @@ class StaffListView(BaseAPIView):
         # self.check_object_permissions(req, {'permission_codes': permission_codes})
 
         organ = self.get_object_or_404(hid, Hospital)
-        staff_list = organ.get_staffs()
+        staff_list = organ.get_staffs(search_key=req.GET.get('search_key', '').strip())
         staff_list = StaffSerializer.setup_eager_loading(staff_list)
-
-        # return resp.serialize_response(
-        #     staff_list, results_name='staffs', srl_cls_name='StaffSerializer', many=True
-        # )
         # 分页查询员工列表
         return self.get_pages(staff_list, results_name='staffs', srl_cls_name='StaffSerializer')
 

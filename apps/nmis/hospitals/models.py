@@ -96,12 +96,15 @@ class Hospital(BaseOrgan):
         """
         return Staff.objects.create_staff(self, dept, **staff_data)
 
-    def get_staffs(self, dept=None):
+    def get_staffs(self, dept=None, search_key=None):
         """
-        返回机构的员工列表
+        返回机构的员工列表（根据员工名称关键字模糊查询）
         :param dept: 科室, Department object
+        :param search_key: 员工名字关键字
         """
         staffs_queryset = Staff.objects.filter(organ=self).order_by('id')
+        if search_key:
+            staffs_queryset = staffs_queryset.filter(name__contains=search_key)
         return staffs_queryset.filter(dept=dept) if dept else staffs_queryset
 
     ################################################
