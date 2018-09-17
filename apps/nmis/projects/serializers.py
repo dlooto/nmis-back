@@ -132,8 +132,8 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
     doc_list = serializers.SerializerMethodField('_get_doc_list')
     purchase_method = serializers.SerializerMethodField('_get_purchase_method')
-    children = serializers.SerializerMethodField('_get_children')
-    created_time = serializers.SerializerMethodField('_get_created_time')
+    # children = serializers.SerializerMethodField('_get_children')
+    # created_time = serializers.SerializerMethodField('_get_created_time')
 
     @staticmethod
     def setup_eager_loading(queryset):
@@ -144,7 +144,8 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
         fields = (
             'id', 'milestone_title', 'milestone_index',
             'doc_list', 'summary', 'purchase_method',
-            'has_children', 'children', 'status', 'created_time',
+            # 'has_children', 'children',
+            'status', 'created_time',
         )
 
     def _get_milestone_title(self, obj):
@@ -188,11 +189,11 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
             return ''
         return obj.created_time
 
-    def _get_children(self, obj):
-        if not hasattr(obj, 'children'):
-            return []
-        children = obj.children
-        return resp.serialize_data(children, srl_cls_name='ProjectMilestoneStateSerializer') if children else []
+    # def _get_children(self, obj):
+    #     if not hasattr(obj, 'children'):
+    #         return []
+    #     children = obj.children
+    #     return resp.serialize_data(children, srl_cls_name='ProjectMilestoneStateSerializer') if children else []
 
 
 class ProjectMilestoneStateWithSupplierSelectionPlanSerializer(ProjectMilestoneStateSerializer):
