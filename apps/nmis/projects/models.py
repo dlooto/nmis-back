@@ -218,15 +218,16 @@ class ProjectPlan(BaseModel):
 
                 # self.add_milestone_state(self.current_stone)
                 self.bulk_add_milestone_states()
+                milestone = self.attached_flow.get_first_main_milestone()
+                project_milestone_state = ProjectMilestoneState.objects.get_project_milestone_state(project=self, milestone=milestone)
 
-                # self.change_project_milestone(self.attached_flow.get_first_main_milestone())
-
+                self.start_next_project_milestone_state(project_milestone_state)
                 self.save()
                 self.cache()
-            return True
+            return True, project_milestone_state
         except Exception as e:
             logs.exception(e)
-            return False
+            return False, "分配失败"
 
     def dispatched_assistant(self, assistant):
         """

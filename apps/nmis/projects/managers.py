@@ -392,7 +392,7 @@ class ProjectDocumentManager(BaseManager):
 
 class ProjectMilestoneStateManager(BaseManager):
 
-    def get_milestone_state(self, project, milestone):
+    def get_project_milestone_state(self, project, milestone):
         """
         根据项目和里程碑获取项目里程碑
         """

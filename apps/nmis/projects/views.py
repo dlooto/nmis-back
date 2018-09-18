@@ -312,13 +312,22 @@ class ProjectPlanDispatchView(BaseAPIView):
         # 检查当前操作者是否具有管理员和项目分配者权限
         self.check_object_any_permissions(req, req.user.get_profile().organ)
 
-        success = project.dispatch(staff)
+        if project.status in (PRO_STATUS_STARTED, PRO_STATUS_DONE, PRO_STATUS_PAUSE, PRO_STATUS_OVERRULE):
+            return resp.failed('%s %s %s' % ('项目状态:', project.status, ',无法分配'))
+
+        success, result = project.dispatch(staff)
+        if success:
+            success, result = project.change_project_milestone_state(result)
+            if not success:
+                return resp.failed(result)
+        else:
+            return resp.failed('操作失败')
         project_queryset = ProjectPlanSerializer.setup_eager_loading(ProjectPlan.objects.filter(id=project_id)).first()
         return resp.serialize_response(
             project_queryset,
             results_name="project",
             srl_cls_name='ProjectPlanSerializer'
-        ) if success else resp.failed("操作失败")
+        )
 
 
 class ProjectPlanRedispatchView(BaseAPIView):
@@ -334,17 +343,20 @@ class ProjectPlanRedispatchView(BaseAPIView):
 
         project = self.get_object_or_404(project_id, ProjectPlan)
         staff = self.get_object_or_404(req.data.get('performer_id'), Staff, )
-        if project.status == PRO_STATUS_PAUSE:
-            return resp.failed('挂起项目不能重新分配')
+
+        if project.status in (PRO_STATUS_DONE, PRO_STATUS_PAUSE, PRO_STATUS_OVERRULE):
+            return resp.failed('%s %s %s' % ('项目状态:', project.status, ',无法分配'))
 
         success = project.redispatch(staff)
-        project_queryset = ProjectPlanSerializer.setup_eager_loading(
-            ProjectPlan.objects.filter(id=project_id)).first()
-        return resp.serialize_response(
-            project_queryset,
-            results_name="project",
-            srl_cls_name='ProjectPlanSerializer'
-        ) if success else resp.failed("操作失败")
+        if success:
+            project_queryset = ProjectPlanSerializer.setup_eager_loading(
+                ProjectPlan.objects.filter(id=project_id)).first()
+            return resp.serialize_response(
+                project_queryset,
+                results_name="project",
+                srl_cls_name='ProjectPlanSerializer'
+            )
+        return resp.failed("操作失败")
 
 
 class ProjectPlanOverruleView(BaseAPIView):
