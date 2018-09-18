@@ -7,16 +7,13 @@
 import logging
 import os
 import settings
-from collections import OrderedDict
 
 from django.db import transaction
-from rest_framework.response import Response
 
 from base import resp
 from base.common.decorators import (
     check_id, check_id_list, check_params_not_null, check_params_not_all_null
 )
-from base.common.param_utils import get_id_list
 
 from base.views import BaseAPIView
 
@@ -32,7 +29,8 @@ from nmis.projects.forms import (
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
     ProjectFlowUpdateForm, UploadFileForm, PurchaseContractCreateForm,
-    SingleUploadFileForm)
+    SingleUploadFileForm,
+    ProjectDocumentBulkCreateForm)
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
     ProjectMilestoneState, SupplierSelectionPlan, Supplier
 from nmis.projects.permissions import ProjectPerformerPermission, \
@@ -60,8 +58,6 @@ from nmis.projects.consts import (
     PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PROJECT_DOCUMENT_CATE_CHOICES,
     PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS)
 from utils.files import upload_file, remove
-
-from apps.nmis.projects.forms import ProjectDocumentBulkCreateForm
 
 logger = logging.getLogger(__name__)
 
@@ -1316,13 +1312,13 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
     permission_classes = (HospitalStaffPermission,)
 
     @transaction.atomic
-    def post(self, req, project_id, pro_milestone_states_id):
+    def post(self, req, project_id, project_milestone_state_id):
         """
         确定采购方式子里程碑记录操作（包括确定采购的方式，保存采购方式决策论证类附件，保存说明等操作）
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
-        pro_milestone_states = self.get_object_or_404(pro_milestone_states_id, ProjectMilestoneState, use_cache=False)
+        pro_milestone_states = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState, use_cache=False)
 
         purchase_method = req.data.get('purchase_method', '').strip()
 
@@ -1343,7 +1339,10 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
                 return resp.form_err(form.errors)
             doc_list = form.save()
             if not doc_list:
-                return resp.serialize_response(pro_milestone_states, results_name='project_milestone_states')
+                return resp.serialize_response(
+                    pro_milestone_states,
+                    srl_cls_name='ChunkProjectMilestoneStateSerializer',
+                    results_name='project_milestone_state')
             doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
             if not pro_milestone_states.save_doc_list(doc_ids_str):
                 return resp.failed('保存失败')
@@ -1351,10 +1350,15 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
         if req.user.get_profile() == project.performer:
             if req.data.get('summary', '').strip():
                 if pro_milestone_states.update_summary(req.data.get('summary', '').strip()):
-                    return resp.serialize_response(pro_milestone_states,
-                                                   results_name='project_milestone_states')
+                    return resp.serialize_response(
+                        pro_milestone_states,
+                        srl_cls_name='ChunkProjectMilestoneStateSerializer',
+                        results_name='project_milestone_state')
         if req.user.get_profile() == project.assistant:
-            return resp.serialize_response(pro_milestone_states, results_name='project_milestone_states')
+            return resp.serialize_response(
+                pro_milestone_states,
+                srl_cls_name='ChunkProjectMilestoneStateSerializer',
+                results_name='project_milestone_state')
 
         return resp.failed('保存失败')
 
@@ -1363,18 +1367,22 @@ class MilestoneRecordPurchaseView(BaseAPIView):
 
     permission_classes = (HospitalStaffPermission, )
 
-    def get(self, req, project_id, milestone_id):
+    def get(self, req, project_milestone_state_id):
         """
         获取确定采购方案信息(包括:采购方式、决策论证资料、说明等)
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
 
-        project = self.get_object_or_404(project_id, ProjectPlan)
-        milestone = self.get_object_or_404(milestone_id, Milestone)
+        # project = self.get_object_or_404(project_id, ProjectPlan)
+        pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState, use_cache=False)
+        logger.info(pro_milestone_state.doc_list)
+        # milestone_record = ProjectMilestoneState.objects.get_milestone_state(project)
 
-        milestone_record = ProjectMilestoneState.objects.get_milestone_state(project)
-
-        return resp.serialize_response(milestone_record, results_name='milestone_record')
+        return resp.serialize_response(
+            pro_milestone_state,
+            srl_cls_name='ChunkProjectMilestoneStateSerializer',
+            results_name='project_milestone_state'
+        )
 
 
 class MilestoneStartUpPurchaseCreateView(BaseAPIView):
@@ -1382,67 +1390,66 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
     permission_classes = (HospitalStaffPermission, )
 
     @transaction.atomic
-    def post(self, req, project_id, milestone_id):
-
+    def post(self, req, project_id, project_milestone_state_id):
+        """
+        启动采购里程碑中保存操作(保存资料文档url地址，项目里程碑中的说明、文档集合)
+        """
         self.check_object_permissions(req, req.user.get_profile().organ)
 
         project = self.get_object_or_404(project_id, ProjectPlan)
-        milestone = self.get_object_or_404(milestone_id, Milestone)
+        pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
-        if not req.FILES and not req.data.get('summary'):
+        if not req.data.get('files') and not req.data.get('summary'):
             return resp.failed('请输入保存内容')
 
-        # 上传文件保存到服务器
-        form = UploadFileForm(req)
+        if req.data.get('files'):
+            form = ProjectDocumentBulkCreateForm(req.data.get('files'))
 
-        if not form.is_valid():
-            return resp.form_err(form.errors)
-        result_data, success = form.save()
-        if not success:
-            return resp.failed(result_data)
+            if not form.is_valid():
+                return resp.form_err(form.errors)
 
-        # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord中
-        doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_data)
-        doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-        record, is_created = ProjectMilestoneState.objects.update_or_create(
-            project=project, milestone=milestone)
+            doc_list = form.save()
 
-        if is_created:
-            record.doc_list = doc_ids_str
-        else:
-            if doc_ids_str:
-                if record.doc_list:
-                    record.doc_list = '%s%s%s' % (record.doc_list, ',', doc_ids_str)
-                else:
-                    record.doc_list = doc_ids_str
+            if not doc_list:
+                return resp.failed('保存失败')
 
-        if req.user.get_profile().id == project.performer.id:
+            doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
+            if not pro_milestone_state.save_doc_list(doc_ids_str):
+                return resp.failed('保存失败')
 
-            summary = req.data.get('summary', '').strip()
-            if summary:
-                record.summary = summary
-        record.save()
-        record.cache()
+        if req.user.get_profile() == project.performer:
+            if req.data.get('summary', '').strip():
+                if pro_milestone_state.update_summary(req.data.get('summary', '').strip()):
+                    return resp.serialize_response(
+                        pro_milestone_state,
+                        srl_cls_name='ChunkProjectMilestoneStateSerializer',
+                        results_name='project_milestone_state')
+        if req.user.get_profile() == project.assistant:
+            return resp.serialize_response(
+                pro_milestone_state,
+                srl_cls_name='ChunkProjectMilestoneStateSerializer',
+                results_name='project_milestone_state')
 
-        return resp.serialize_response(record, results_name='milestone_record')
+        return resp.failed('保存失败')
 
 
 class MilestoneStartUpPurchaseView(BaseAPIView):
 
     permission_classes = (HospitalStaffPermission, )
 
-    def get(self, req, project_id, milestone_id):
+    def get(self, req, project_milestone_state_id):
         """
         获取启动采购中附件和说明相关信息
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
 
-        project = self.get_object_or_404(project_id, ProjectPlan)
-        milestone = self.get_object_or_404(milestone_id, Milestone)
+        # project = self.get_object_or_404(project_id, ProjectPlan)
+        pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
-        milestone_record = ProjectMilestoneState.objects.get_milestone_state(project)
-
-        return resp.serialize_response(milestone_record, results_name='milestone_record')
+        return resp.serialize_response(
+            pro_milestone_state,
+            srl_cls_name='ChunkProjectMilestoneStateSerializer',
+            results_name='project_milestone_state')
 
 
 class MilestonePurchaseContractCreateView(BaseAPIView):
@@ -1453,12 +1460,15 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
     @check_params_not_null(['contract_no', 'title', 'signed_date', 'buyer_contact',
                             'seller_contact', 'seller', 'seller_tel', 'total_amount',
                             'delivery_date', 'contract_device'])
-    def post(self, req, project_id, milestone_id):
-
+    def post(self, req, project_id, project_milestone_state_id):
+        """
+        合同管理里程碑操作（保存合同信息、合同中设备信息、附件地址、说明信息）
+        """
         self.check_object_permissions(req, req.user.get_profile().organ)
 
         project = self.get_object_or_404(project_id, ProjectPlan)
-        milestone = self.get_object_or_404(milestone_id, Milestone)
+        pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+
         logger.info(req.data.get('contract_device'))
 
         purchase_form = PurchaseContractCreateForm(req.data)
@@ -1474,28 +1484,29 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         if not success:
             return resp.failed('文件上传失败')
         # 上传文件成功后，保存资料文档记录，并添加文档添加到ProjectMilestoneRecord中
-        doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_data)
-        doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-        record, is_created = ProjectMilestoneState.objects.update_or_create(
-            project=project, milestone=milestone)
-
-        if is_created:
-            record.doc_list = doc_ids_str
-        else:
-            if doc_ids_str:
-                if record.doc_list:
-                    record.doc_list = '%s%s%s' % (record.doc_list, ',', doc_ids_str)
-                else:
-                    record.doc_list = doc_ids_str
-
-        if req.user.get_profile().id == project.performer.id:
-
-            summary = req.data.get('summary', '').strip()
-            if summary:
-                record.summary = summary
-        record.save()
-        record.cache()
-        return resp.serialize_response(record, results_name='milestone_record')
+        # doc_list = ProjectDocument.objects.batch_save_upload_project_doc(result_data)
+        # doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
+        # record, is_created = ProjectMilestoneState.objects.update_or_create(
+        #     project=project, milestone=milestone)
+        #
+        # if is_created:
+        #     record.doc_list = doc_ids_str
+        # else:
+        #     if doc_ids_str:
+        #         if record.doc_list:
+        #             record.doc_list = '%s%s%s' % (record.doc_list, ',', doc_ids_str)
+        #         else:
+        #             record.doc_list = doc_ids_str
+        #
+        # if req.user.get_profile().id == project.performer.id:
+        #
+        #     summary = req.data.get('summary', '').strip()
+        #     if summary:
+        #         record.summary = summary
+        # record.save()
+        # record.cache()
+        # return resp.serialize_response(record, results_name='milestone_record')
+        return resp.ok('保存成功')
 
 
 class UploadFileView(BaseAPIView):
@@ -1528,9 +1539,9 @@ class DeleteFileView(BaseAPIView):
 
     permission_classes = (HospitalStaffPermission,)
 
-    @check_id('project_milestone_states_id')
+    @check_id('project_milestone_state_id')
     @transaction.atomic
-    def post(self, req, project_id, doc_id):
+    def post(self, req, doc_id):
         """
         单个文件的删除（删除project_document的记录，更新project_milestone_states中doc_list记录，从服务器中删除文件）
         :return:
@@ -1538,19 +1549,19 @@ class DeleteFileView(BaseAPIView):
         self.check_object_permissions(req, req.user.get_profile().organ)
         project_document = self.get_object_or_404(doc_id, ProjectDocument)
 
-        # 获取项目里程碑states
-        project_milestone_states = ProjectMilestoneState.objects.get_pro_milestone_states_by_id(
-            req.data.get('project_milestone_states_id')
+        # 获取项目里程碑state
+        project_milestone_state = ProjectMilestoneState.objects.get_pro_milestone_states_by_id(
+            req.data.get('project_milestone_state_id')
         )
-        if project_milestone_states:
-            doc_id_str = project_milestone_states.doc_list.split(',')
+        if project_milestone_state:
+            doc_id_str = project_milestone_state.doc_list.split(',')
 
             if str(doc_id) in doc_id_str:
                 doc_id_str.remove(str(doc_id))
-            if project_milestone_states.update_doc_list(",".join(doc_id_str)):
+            if project_milestone_state.update_doc_list(",".join(doc_id_str)):
                 path = os.path.join(settings.MEDIA_ROOT, project_document.path)
                 if remove(path):
                     if project_document.deleted():
                         return resp.ok('删除成功')
 
-        return resp.ok('系统找不到指定的路径')
+        return resp.failed('系统找不到指定的路径')
