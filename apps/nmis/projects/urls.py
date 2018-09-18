@@ -11,7 +11,7 @@ import logging
 
 from django.urls import path
 
-from nmis.projects import views
+from . import views
 
 logs = logging.getLogger(__name__)
 
@@ -131,29 +131,30 @@ urlpatterns = [
     path('flows/<int:flow_id>/milestones/<int:mid>/children', views.FlowChildMilestonesView.as_view(), ),  # put/delete
 
     # 确定采购方式里程碑(采购方式，文件附件，说明操作)接口
-    path('<int:project_id>/project_milestone_states/<int:pro_milestone_states_id>/record-purchase',
+    path('<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-confirm-purchase-info',
          views.MilestoneRecordPurchaseCreateView.as_view(), ),
 
     # 获取确定采购方式里程碑中所有的信息
-    path('<int:project_id>/milestone/<int:milestone_id>/determining-purchase-method',
+    path('project_milestone_states/<int:project_milestone_state_id>/get-confirm-purchase-info',
          views.MilestoneRecordPurchaseView.as_view(),),
 
     # 启动采购的相关操作接口（保存上传附件，说明）
-    path('<int:project_id>/milestone/<int:milestone_id>/save-startup-purchase-info',
+    path('<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-startup-purchase-info',
          views.MilestoneStartUpPurchaseCreateView.as_view(), ),
 
     # 获取启动采购中附件和说明信息
-    path('<int:project_id>/milestone/<int:milestone_id>/startup-purchase',
+    path('project_milestone_states/<int:project_milestone_state_id>/get-startup-purchase-info',
          views.MilestoneStartUpPurchaseView.as_view(), ),
 
     # 合同管理子里程碑保存操作
-    path('<int:project_id>/milestone/<int:milestone_id>/purchase-contract',
+    path('<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-purchase-contract-info',
          views.MilestonePurchaseContractCreateView.as_view(), ),
+
 
     # 流程中各里程碑下单个文件上传
     path('<int:project_id>/single-upload-file', views.UploadFileView.as_view(), ),
 
-    # 删除项目里程碑中附件接口
-    path('/single-delete-file/<int:doc_id>', views.DeleteFileView.as_view())
+    # 删除附件
+    path('single-del-file/<int:doc_id>', views.DeleteFileView.as_view())
 
 ]
