@@ -85,6 +85,7 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
     children = serializers.SerializerMethodField('_get_children')
     created_time = serializers.SerializerMethodField('_get_created_time')
+    finished_time = serializers.SerializerMethodField('_get_finished_time')
 
     @staticmethod
     def setup_eager_loading(queryset):
@@ -94,7 +95,7 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_title', 'milestone_index',
-            'has_children', 'children', 'status', 'created_time',
+            'has_children', 'children', 'status', 'created_time', 'finished_time',
         )
 
     def _get_milestone_title(self, obj):
@@ -110,14 +111,14 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
         return stone.index if stone else -1
 
     def _get_created_time(self, obj):
-        """
-
-        :param obj:
-        :return:
-        """
         if not hasattr(obj, 'created_time'):
             return ''
         return obj.created_time
+
+    def _get_finished_time(self, obj):
+        if not hasattr(obj, 'finished_time'):
+            return ''
+        return obj.finished_time
 
     def _get_children(self, obj):
         if not hasattr(obj, 'children'):
@@ -132,8 +133,6 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
     doc_list = serializers.SerializerMethodField('_get_doc_list')
     purchase_method = serializers.SerializerMethodField('_get_purchase_method')
-    # children = serializers.SerializerMethodField('_get_children')
-    # created_time = serializers.SerializerMethodField('_get_created_time')
 
     @staticmethod
     def setup_eager_loading(queryset):
@@ -144,25 +143,18 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
         fields = (
             'id', 'milestone_title', 'milestone_index',
             'doc_list', 'summary', 'purchase_method',
-            # 'has_children', 'children',
-            'status', 'created_time',
+            'status', 'created_time', 'finished_time',
         )
 
     def _get_milestone_title(self, obj):
-        if not hasattr(obj, 'milestone'):
-            return ''
         stone = obj.milestone
         return stone.title if stone else ''
 
     def _get_milestone_index(self, obj):
-        if not hasattr(obj, 'milestone'):
-            return ''
         stone = obj.milestone
         return stone.index if stone else -1
 
     def _get_doc_list(self, obj):
-        if not hasattr(obj, 'doc_list'):
-            return []
         if not obj.doc_list:
             return []
         doc_ids_str = obj.doc_list.split(',')
@@ -174,26 +166,8 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
         """
         获取采购方法
         """
-        if not hasattr(obj, 'get_project_purchase_method'):
-            return ''
         purchase_method = obj.get_project_purchase_method()
         return purchase_method if purchase_method else ''
-
-    def _get_created_time(self, obj):
-        """
-
-        :param obj:
-        :return:
-        """
-        if not hasattr(obj, 'created_time'):
-            return ''
-        return obj.created_time
-
-    # def _get_children(self, obj):
-    #     if not hasattr(obj, 'children'):
-    #         return []
-    #     children = obj.children
-    #     return resp.serialize_data(children, srl_cls_name='ProjectMilestoneStateSerializer') if children else []
 
 
 class ProjectMilestoneStateWithSupplierSelectionPlanSerializer(ProjectMilestoneStateSerializer):
@@ -204,7 +178,7 @@ class ProjectMilestoneStateWithSupplierSelectionPlanSerializer(ProjectMilestoneS
         fields = (
             'id', 'milestone_id',  'milestone_title',
             'milestone_index', 'created_time', 'doc_list',
-            'status', 'summary', 'supplier_selection_plans'
+            'status', 'summary', 'supplier_selection_plans', 'finished_time',
         )
 
     def _get_supplier_selection_plans(self, obj):
@@ -220,7 +194,7 @@ class ProjectMilestoneStateWithSupplierSelectionPlanSelectedSerializer(ProjectMi
         fields = (
             'id', 'milestone_id',  'milestone_title',
             'milestone_index', 'created_time', 'doc_list',
-            'status', 'summary', 'supplier_selection_plans'
+            'status', 'summary', 'supplier_selection_plans', 'finished_time',
         )
 
 
@@ -395,7 +369,7 @@ class ProjectDocumentSerializer(BaseModelSerializer):
     class Meta:
         model = ProjectDocument
         fields = (
-            'id', 'name', 'category',
+            'id', 'name', 'category', "path",
         )
 
 
