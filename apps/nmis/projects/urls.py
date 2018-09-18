@@ -63,9 +63,9 @@ urlpatterns = [
     # 责任人启动项目
     path('<int:project_id>/startup',       views.ProjectPlanStartupView.as_view(),),
 
-    # 责任人变更项目里程碑状态
-    path('<int:project_id>/change-milestone',
-         views.ProjectPlanChangeMilestoneView.as_view(), ),
+    # 责任人变更项目里程碑节点
+    path('<int:project_id>/change-project-milestone-state',
+         views.ProjectPlanChangeMilestoneStateView.as_view(), ),
 
     # 为指定项目添加新设备
     path('<int:project_id>/devices/create',      views.ProjectDeviceCreateView.as_view(), ),
@@ -74,39 +74,39 @@ urlpatterns = [
     path('<int:project_id>/devices/<int:device_id>',      views.ProjectDeviceView.as_view(), ),
 
     # 获取项目流程某里程碑下的所有直接子里程碑项
-    path(
-        '<int:project_id>/project_milestones/<int:project_milestone_id>/children',
-        views.ProjectChildMilestonesView.as_view(),
-    ),
+    # path(
+    #     '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/children',
+    #     views.ProjectChildMilestoneStatesView.as_view(),
+    # ),
     # 保存项目中【调研】里程碑下的信息
     path(
-        '<int:project_id>/project_milestones/<int:project_milestone_id>/save-research-info',
-        views.ProjectMilestoneResearchInfoCreateView.as_view(),
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-research-info',
+        views.ProjectMilestoneStateResearchInfoCreateView.as_view(),
     ),
     # 查看项目中【调研】里程碑下的信息
     path(
-        '<int:project_id>/project_milestones/<int:project_milestone_id>/get-research-info',
-        views.ProjectMilestoneResearchInfoView.as_view(),
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/get-research-info',
+        views.ProjectMilestoneStateResearchInfoView.as_view(),
     ),
     # 保存【方案收集】里程碑下的信息
     path(
-        '<int:project_id>/project_milestones/<int:project_milestone_id>/save-plan-gather-info',
-        views.ProjectMilestonePlanGatheredCreateView.as_view(),
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-plan-gather-info',
+        views.ProjectMilestoneStatePlanGatheredCreateView.as_view(),
     ),
     # 查看【方案收集】里程碑下的信息
     path(
-        '<int:project_id>/project_milestones/<int:project_milestone_id>/get-plan-gather-info',
-        views.ProjectMilestonePlanGatheredView.as_view(),
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/get-plan-gather-info',
+        views.ProjectMilestoneStatePlanGatheredView.as_view(),
     ),
     # 保存项目中【方案论证】里程碑下的信息
     path(
-        '<int:project_id>/project_milestones/<int:project_milestone_id>/save-plan-argument-info',
-        views.ProjectMilestonePlanArgumentCreateView.as_view(),
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-plan-argument-info',
+        views.ProjectMilestoneStatePlanArgumentCreateView.as_view(),
     ),
     # 查看项目中【方案论证】里程碑下的信息
     path(
-        '<int:project_id>/project_milestones/<int:project_milestone_id>/get-plan-argument-info',
-        views.ProjectMilestonePlanArgumentView.as_view(),
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/get-plan-argument-info',
+        views.ProjectMilestoneStatePlanArgumentView.as_view(),
     ),
 
 
