@@ -14,7 +14,8 @@ from rest_framework import serializers
 from base import resp
 from base.serializers import BaseModelSerializer
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
-    ProjectMilestoneState, ProjectOperationRecord, ProjectDocument, SupplierSelectionPlan
+    ProjectMilestoneState, ProjectOperationRecord, ProjectDocument, SupplierSelectionPlan, \
+    PurchaseContract
 
 logs = logging.getLogger(__name__)
 
@@ -395,7 +396,7 @@ class ProjectDocumentSerializer(BaseModelSerializer):
     class Meta:
         model = ProjectDocument
         fields = (
-            'id', 'name', 'category',
+            'id', 'name', 'category', 'path',
         )
 
 
@@ -404,6 +405,98 @@ class ProjectOperationRecordSerializer(BaseModelSerializer):
     class Meta:
         model = ProjectOperationRecord
         fields = '__all__'
+
+
+class PurchaseContractSerializer(BaseModelSerializer):
+
+    contract_devices = serializers.SerializerMethodField('_get_contract_devices')
+
+    class Meta:
+        model = PurchaseContract
+        fields = ('id', 'created_time', 'contract_no', 'title', 'signed_date',
+                  'buyer', 'buyer_contact', 'buyer_tel', 'seller', 'seller_contact',
+                  'seller_tel', 'total_amount', 'delivery_date', 'contract_devices')
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.prefetch_related(
+            'contract_devices',
+        )
+        return queryset
+
+    def _get_contract_devices(self, obj):
+        # return resp.serialize_data(obj.get_software_devices())
+        return resp.serialize_data(obj.contract_devices.all())
+
+
+class ProjectMilestoneStateAndPurchaseContractSerializer(ProjectMilestoneStateSerializer):
+
+    milestone_title = serializers.SerializerMethodField('_get_milestone_title')
+    milestone_index = serializers.SerializerMethodField('_get_milestone_index')
+    doc_list = serializers.SerializerMethodField('_get_doc_list')
+    purchase_method = serializers.SerializerMethodField('_get_purchase_method')
+
+    purchase_contract = serializers.SerializerMethodField('_get_purchase_contract')
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        return queryset.select_related('milestone',)
+
+    class Meta:
+        model = ProjectMilestoneState
+        fields = (
+            'id', 'milestone_title', 'milestone_index',
+            'doc_list', 'summary', 'purchase_method',
+            # 'has_children', 'children',
+            'status', 'created_time', 'purchase_contract'
+        )
+
+    def _get_milestone_title(self, obj):
+        if not hasattr(obj, 'milestone'):
+            return ''
+        stone = obj.milestone
+        return stone.title if stone else ''
+
+    def _get_milestone_index(self, obj):
+        if not hasattr(obj, 'milestone'):
+            return ''
+        stone = obj.milestone
+        return stone.index if stone else -1
+
+    def _get_doc_list(self, obj):
+        if not hasattr(obj, 'doc_list'):
+            return []
+        if not obj.doc_list:
+            return []
+        doc_ids_str = obj.doc_list.split(',')
+        doc_ids = [int(id_str) for id_str in doc_ids_str]
+        doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
+        return resp.serialize_data(doc_list) if doc_list else []
+
+    def _get_purchase_contract(self, obj):
+
+        purchase_contract = PurchaseContract.objects.get_purchase_contract_by_project_milestone_state(project_milestone_state=obj)
+
+        return resp.serialize_data(purchase_contract) if purchase_contract else []
+
+    def _get_purchase_method(self, obj):
+        """
+        获取采购方法
+        """
+        if not hasattr(obj, 'get_project_purchase_method'):
+            return ''
+        purchase_method = obj.get_project_purchase_method()
+        return purchase_method if purchase_method else ''
+
+    def _get_created_time(self, obj):
+        """
+
+        :param obj:
+        :return:
+        """
+        if not hasattr(obj, 'created_time'):
+            return ''
+        return obj.created_time
 
 
 def get_project_status_count(**data):

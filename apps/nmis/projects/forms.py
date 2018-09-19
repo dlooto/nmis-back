@@ -9,7 +9,8 @@ import logging
 from base.forms import BaseForm
 from nmis.devices.models import OrderedDevice, SoftwareDevice
 from nmis.hospitals.consts import ARCHIVE
-from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectDocument
+from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectDocument, \
+    PurchaseContract
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
     PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, \
     PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR
@@ -616,10 +617,11 @@ class ProjectDocumentBulkCreateForm(BaseForm):
 
 class PurchaseContractCreateForm(BaseForm):
 
-    def __init__(self, data, *args, **kwargs):
-        BaseForm.__init__(self, data, *args, **kwargs)
-        self.data = data
+    def __init__(self, pro_milestone_state, data, *args, **kwargs):
+        BaseForm.__init__(self, pro_milestone_state, data, *args, **kwargs)
 
+        self.project_milestone_state = pro_milestone_state
+        self.data = data
         self.init_err_codes()
 
     def init_err_codes(self):
@@ -627,27 +629,34 @@ class PurchaseContractCreateForm(BaseForm):
             'seller_tel_err': '乙方电话错误',
             'device_num_err': '设备数量错误',
             'device_name_err': '设备名称错误',
-            'device_measure': '设备单位错误',
             'device_producer_err': '设备生产商错误',
             'device_amount_err': '设备总价错误',
             'device_supplier_err': '供应商错误'
         })
 
     def is_valid(self):
-        if not self.check_seller_tel() or not self.check_device():
+        if not self.check_seller_tel() or not self.check_device() \
+                or not self.check_file_type():
             return False
+        return True
+
+    def check_file_type(self):
+        for file in self.data.get('files'):
+            if file.get('file_category') not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
+                self.update_errors('file_category', 'file_category_err')
+                return False
+
         return True
 
     def check_device(self):
         """
-        校验设备数量
+        校验设备信息
         """
-        contract_device_list = self.data.get('contract_device')
+        contract_device_list = self.data.get('contract_devices')
         for device in contract_device_list:
             print(device)
             if not device.get('num'):
                 self.update_errors('device_num', 'device_num_err')
-
                 return False
             else:
                 if not isinstance(device.get('num'), int):
@@ -659,9 +668,6 @@ class PurchaseContractCreateForm(BaseForm):
                 return False
             if not device.get('supplier', '').strip():
                 self.update_errors('device_supplier', 'device_supplier_err')
-                return False
-            if not device.get('measure', '').strip():
-                self.update_errors('device_measure', 'device_measure_err')
                 return False
             if not device.get('real_total_amount'):
                 self.update_errors('device_amount', 'device_amount_err')
@@ -689,23 +695,26 @@ class PurchaseContractCreateForm(BaseForm):
 
     def save(self):
         contract_data = {}
-        if self.data.get('contract_no', ).strip():
-            contract_data['contract_no'] = self.data.get('contract_no', ).strip()
-        if self.data.get('title', ).strip():
-            contract_data['title'] = self.data.get('title', ).strip()
-        if self.data.get('signed_date', ).strip():
-            contract_data['signed_date'] = self.data.get('signed_date', ).strip()
-        if self.data.get('buyer_contact', ).strip():
-            contract_data['buyer_contact'] = self.data.get('buyer_contact', ).strip()
-        if self.data.get('seller_contact', ).strip():
-            contract_data['seller_contact'] = self.data.get('seller_contact', ).strip()
-        if self.data.get('seller', ).strip():
-            contract_data['seller'] = self.data.get('seller', ).strip()
-        if self.data.get('seller_tel', ).strip():
-            contract_data['seller_tel'] = self.data.get('seller_tel', ).strip()
-        if self.data.get('total_amount', ).strip():
-            contract_data['total_amount'] = self.data.get('total_amount', ).strip()
-        if self.data.get('delivery_date', ).strip():
-            contract_data['delivery_date'] = self.data.get('delivery_date', ).strip()
+        if self.data.get('contract_no', '').strip():
+            contract_data['contract_no'] = self.data.get('contract_no', '').strip()
+        if self.data.get('title', '').strip():
+            contract_data['title'] = self.data.get('title', '').strip()
+        if self.data.get('signed_date', '').strip():
+            contract_data['signed_date'] = self.data.get('signed_date', '').strip()
+        if self.data.get('buyer_contact', '').strip():
+            contract_data['buyer_contact'] = self.data.get('buyer_contact', '').strip()
+        if self.data.get('seller_contact', '').strip():
+            contract_data['seller_contact'] = self.data.get('seller_contact', '').strip()
+        if self.data.get('seller', '').strip():
+            contract_data['seller'] = self.data.get('seller', '').strip()
+        if self.data.get('seller_tel', '').strip():
+            contract_data['seller_tel'] = self.data.get('seller_tel', '').strip()
+        if self.data.get('total_amount'):
+            contract_data['total_amount'] = self.data.get('total_amount',)
+        if self.data.get('delivery_date', '').strip():
+            contract_data['delivery_date'] = self.data.get('delivery_date', '').strip()
 
-        pass
+        return PurchaseContract.objects.create_purchase_contract(
+                project_milestone_state=self.project_milestone_state,
+                contract_devices=self.data.get('contract_devices'),
+                **contract_data)

@@ -11,7 +11,7 @@ from django.db import transaction, DataError, models
 from django_bulk_update import helper
 
 from base.models import BaseManager
-from nmis.devices.models import OrderedDevice, SoftwareDevice
+from nmis.devices.models import OrderedDevice, SoftwareDevice, ContractDevice
 from nmis.projects.consts import (PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE,
                                   PRO_STATUS_STARTED, PRO_STATUS_OVERRULE,
                                   PRO_STATUS_PAUSE, PRO_OPERATION_OVERRULE,
@@ -348,6 +348,26 @@ class ProjectDocumentManager(BaseManager):
     def update_project_document(self, ):
         pass
 
+    def bulk_create_project_docs(self, files):
+        try:
+            with transaction.atomic():
+                import os
+                project_documents = []
+                for file in files:
+                    for file_path in file.get('file_paths'):
+                        project_documents.append(
+                            self.model(
+                                name=os.path.basename(file_path),
+                                path=file_path,
+                                category=file.get('file_category')
+                            )
+                        )
+                self.bulk_create(project_documents)
+        except Exception as e:
+            logger.exception(e)
+            return False
+        return True
+
     def batch_save_upload_project_doc(self, tag_upload_result_dict):
         """
         批量保存或更新上传的project_document
@@ -444,8 +464,32 @@ class SupplierSelectionPlanManager(BaseManager):
 
 class PurchaseContractManager(BaseManager):
 
-    def create_purchase_contract(self):
+    def create_purchase_contract(self, project_milestone_state=None, contract_devices=None, **data):
         """
-        创建采购合同
+        创建采购合同,添加合同采购设备信息
+        :param project_milestone_state: 项目里程碑
+        :param contract_devices: 合同设备
         """
-        pass
+        try:
+            with transaction.atomic():
+                purchase_contract = self.model(project_milestone_state=project_milestone_state, **data)
+                purchase_contract.save()
+
+                # 创建合同设备信息
+                contract_devices_list = []
+                for device_data in contract_devices:
+                    contract_devices_list.append(
+                        ContractDevice(contract=purchase_contract, **device_data)
+                    )
+                ContractDevice.objects.bulk_create(contract_devices_list)
+
+        except Exception as e:
+            logger.exception(e)
+            return None
+        return purchase_contract
+
+    def get_purchase_contract_by_project_milestone_state(self, project_milestone_state):
+        """
+        通过项目里程碑获取合同信息
+        """
+        return self.filter(project_milestone_state=project_milestone_state).first()
