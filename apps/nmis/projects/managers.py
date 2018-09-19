@@ -472,16 +472,20 @@ class PurchaseContractManager(BaseManager):
         """
         try:
             with transaction.atomic():
-                purchase_contract = self.model(project_milestone_state=project_milestone_state, **data)
-                purchase_contract.save()
+                purchase_contract = self.filter(project_milestone_state=project_milestone_state).first()
+                if not purchase_contract:
+                    purchase_contract = self.model(project_milestone_state=project_milestone_state, **data)
+                    purchase_contract.save()
 
                 # 创建合同设备信息
-                contract_devices_list = []
+                contract_device_list = []
                 for device_data in contract_devices:
-                    contract_devices_list.append(
-                        ContractDevice(contract=purchase_contract, **device_data)
-                    )
-                ContractDevice.objects.bulk_create(contract_devices_list)
+                    if not device_data.get('id'):
+                        contract_device_list.append(
+                            ContractDevice(contract=purchase_contract, **device_data)
+                        )
+
+                ContractDevice.objects.bulk_create(contract_device_list)
 
         except Exception as e:
             logger.exception(e)

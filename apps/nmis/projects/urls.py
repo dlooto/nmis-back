@@ -154,6 +154,9 @@ urlpatterns = [
     path('<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/get-purchase-contract-info',
          views.MilestonePurchaseContractView.as_view(), ),
 
+    # 删除合同中的某个设备信息
+    path('<int:project_id>/purchase_contracts/<int:purchase_contract_id>/contract_devices/<int:contract_device_id>',
+         views.ContractDeviceView.as_view(), ),
 
     # 流程中各里程碑下单个文件上传
     path('<int:project_id>/single-upload-file', views.UploadFileView.as_view(), ),

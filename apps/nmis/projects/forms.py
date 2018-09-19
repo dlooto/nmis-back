@@ -10,10 +10,10 @@ from base.forms import BaseForm
 from nmis.devices.models import OrderedDevice, SoftwareDevice
 from nmis.hospitals.consts import ARCHIVE
 from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectDocument, \
-    PurchaseContract
+    PurchaseContract, ProjectMilestoneState
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
     PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, \
-    PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR
+    PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES
 from nmis.hospitals.models import Staff
 from utils import eggs
 from utils.files import upload_file, single_upload_file
@@ -631,7 +631,8 @@ class PurchaseContractCreateForm(BaseForm):
             'device_name_err': '设备名称错误',
             'device_producer_err': '设备生产商错误',
             'device_amount_err': '设备总价错误',
-            'device_supplier_err': '供应商错误'
+            'device_supplier_err': '供应商错误',
+            'file_category_err': '文件类别错误'
         })
 
     def is_valid(self):
