@@ -1018,7 +1018,7 @@ class ProjectMilestoneStatePlanGatheredView(BaseAPIView):
 
 class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
 
-    @transaction.atomic()
+    @transaction.atomic
     def delete(self, req, project_id, project_milestone_state_id, plan_id, doc_id):
         """
         删除【方案收集】里程碑下的方案附件或其他资料附件(单个)
@@ -1046,7 +1046,7 @@ class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
                     plan.save()
                     plan.cache()
                     doc.delete()
-                    resp.ok("操作成功")
+                    return resp.ok("操作成功")
             else:
                 doc_ids_str = plan.doc_list.split(",")
                 if str(doc_id) in doc_ids_str:
@@ -1055,16 +1055,16 @@ class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
                 plan.save()
                 plan.cache()
                 doc.delete()
-                resp.ok("操作成功")
+                return resp.ok("操作成功")
         except Exception as e:
             logger.exception(e)
-            resp.failed("操作失败")
+            return resp.failed("操作失败")
 
 
 class ProjectMilestoneStateSupplierPlanView(BaseAPIView):
 
-    @transaction.atomic()
-    def delete(self, req, project_id, project_milestone_state_id):
+    @transaction.atomic
+    def delete(self, req, project_id, project_milestone_state_id, plan_id):
         """
         删除【方案收集】里程碑下的供应商方案
         :param req:
@@ -1072,6 +1072,18 @@ class ProjectMilestoneStateSupplierPlanView(BaseAPIView):
         :param project_milestone_state_id:
         :return:
         """
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        if not milestone_state.milestone.title == '方案收集':
+            return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
+        # if milestone_state.is_finished():
+        #     return resp.failed("操作失败，当前里程碑已完结")
+        plan = self.get_object_or_404(plan_id, SupplierSelectionPlan)
+        if plan.doc_list:
+            doc_id_list = list(map(int, plan.doc_list.split(',')))
+            ProjectDocument.objects.filter(id__in=doc_id_list)
+
+
 
 
 class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
