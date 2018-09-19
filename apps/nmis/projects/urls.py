@@ -98,6 +98,16 @@ urlpatterns = [
         '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/get-plan-gather-info',
         views.ProjectMilestoneStatePlanGatheredView.as_view(),
     ),
+    # 删除【方案收集】里程碑下的方案附件或其他资料附件
+    path(
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/supplier_selection_plans/<int:plan_id>/documents/<int:doc_id>',
+        views.ProjectMilestoneStatePlanGatheredFileView.as_view(),
+    ),
+    # 删除【方案收集】里程碑下的供应商方案
+    path(
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/supplier_selection_plans/<int:plan_id>',
+        views.ProjectMilestoneStateSupplierPlanView.as_view(),
+    ),
     # 保存项目中【方案论证】里程碑下的信息
     path(
         '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-plan-argument-info',

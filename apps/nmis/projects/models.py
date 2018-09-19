@@ -423,15 +423,6 @@ class ProjectPlan(BaseModel):
         if self.is_unstarted():
             return False, "操作失败，项目尚未分配。"  # 项目分配后进入启动状态
 
-        if project_milestone_state.milestone == self.attached_flow.get_first_main_milestone() and self.is_unstarted():
-            try:
-                with transaction.atomic():
-                    self.start_next_project_milestone_state(project_milestone_state)
-                    return True, "操作成功"
-            except Exception as e:
-                logs.exception(e)
-                return False, "操作失败"
-
         if self.is_finished():
             return False, "操作失败，项目已完成。"
 
@@ -450,7 +441,6 @@ class ProjectPlan(BaseModel):
         if curr_stone_state.milestone.has_children():
             children = curr_stone_state.milestone.children()
             milestone_state_query = ProjectMilestoneState.objects.filter(project=self, milestone__in=children).all()
-            # milestone_state_query = ProjectMilestoneState.objects.filter(project=self, milestone__in=children).all()
             for query in milestone_state_query:
                 if not query.is_finished():
                     return False, '操作失败，当前里程碑存在未完结的子里程碑。'
@@ -458,7 +448,9 @@ class ProjectPlan(BaseModel):
         try:
             with transaction.atomic():
                 curr_stone_state.status = PRO_MILESTONE_DONE
+                curr_stone_state.finished_time = times.now()
                 curr_stone_state.save()
+                curr_stone_state.cache()
                 # 当前里程碑为某始祖里程碑最后一个子孙里程碑
                 if curr_stone_state.milestone.is_last_descendant(curr_stone_state.milestone.first_ancestor()):
                     # 当前里程碑为流程中最后一个子孙里程碑
@@ -468,6 +460,7 @@ class ProjectPlan(BaseModel):
                     if ancestor_milestone_states:
                         for anc_stone_state in ancestor_milestone_states:
                             anc_stone_state.status = PRO_MILESTONE_DONE
+                            anc_stone_state.finished_time = times.now()
                             anc_stone_state.save()
                             anc_stone_state.cache()
                     if not curr_stone_state.milestone.is_flow_last_descendant():
@@ -503,7 +496,6 @@ class ProjectPlan(BaseModel):
             first_child_stone_state.status = PRO_MILESTONE_DOING
             first_child_stone_state.save()
             first_child_stone_state.cache()
-            self.current_stone = first_child_milestone
         self.save()
         self.cache()
 
@@ -815,6 +807,7 @@ class ProjectMilestoneState(BaseModel):
     summary = models.TextField('总结说明', max_length=200, null=True, blank=True)
 
     status = models.CharField('项目里程碑状态', max_length=10, choices=PROJECT_MILESTONE_STATUS, default=PRO_MILESTONE_TODO)
+    finished_time = models.DateTimeField('项目里程碑完结时间', default=None, null=True, blank=True)
 
     objects = ProjectMilestoneStateManager()
 
