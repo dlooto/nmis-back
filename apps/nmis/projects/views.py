@@ -620,9 +620,7 @@ class ProjectPlanChangeMilestoneStateView(BaseAPIView):
         success, msg = project.change_project_milestone_state(curr_milestone_state)
         if not success:
             return resp.failed(msg)
-        return resp.serialize_response(
-            project, results_name='project', srl_cls_name='ChunkProjectPlanSerializer'
-        )
+        return resp.ok("操作成功")
 
 
 class ProjectDeviceCreateView(BaseAPIView):
@@ -905,16 +903,18 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
     # permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     """
-    项目负责人/项目协助人保存/修改[调研]里程碑下的信息
+    项目负责人/项目协助人保存/修改【调研】里程碑下的信息
     """
     @check_params_not_all_null(['files', 'summary'])
     def post(self, req, project_id, project_milestone_state_id, ):
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        if not project.contains_project_milestone_state(milestone_state):
+            return resp.failed('操作失败, 请求数据异常')
         if not milestone_state.milestone.title == '调研':
             return resp.failed('操作失败，当前里程碑不是【调研】里程碑')
-        # if stone_state.is_finished():
-        #     return resp.failed('操作失败，当前里程碑已完结')
+        if milestone_state.is_finished():
+            return resp.failed('操作失败，当前里程碑已完结')
 
         if project.performer == req.user.get_profile():
             if req.data.get('summary') and req.data.get('summary').strip():
@@ -936,33 +936,37 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
 
 class ProjectMilestoneStateResearchInfoView(BaseAPIView):
     """
-    查看[调研]里程碑下的信息
+    查看【调研】里程碑下的信息
     """
     def get(self, req, project_id, project_milestone_state_id):
 
         project = self.get_object_or_404(project_id, ProjectPlan)
-        stone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
-        if not stone_state.milestone.title == '调研':
-            return resp.failed('操作失败，当前里程碑不是【调研】里程碑')
-        return resp.serialize_response(stone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
+        milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        if not project.contains_project_milestone_state(milestone_state):
+            return resp.failed('操作失败, 数据错误')
+        if not milestone_state.milestone.title == '调研':
+            return resp.failed('操作失败, 数据错误')
+        return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
 
 
 class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
-    """保存[方案收集]里程碑下的信息"""
+    """保存【方案收集】里程碑下的信息"""
 
     @check_params_not_all_null(['plan_list', 'summary'])
     @transaction.atomic()
     def post(self, req, project_id, project_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
-        stone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
-        if not stone_state.milestone.title == '方案收集':
+        milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        if not project.contains_project_milestone_state(milestone_state):
+            return resp.failed('操作失败, 数据错误')
+        if not milestone_state.milestone.title == '方案收集':
             return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
-        # if stone_state.is_finished():
-        #     return resp.failed("操作失败，当前里程碑已完结")
+        if milestone_state.is_finished():
+            return resp.failed("操作失败，当前里程碑已完结")
 
         if project.performer == req.user.get_profile():
             if req.data.get('summary'):
-                stone_state.summary = req.data.get('summary')
+                milestone_state.summary = req.data.get('summary')
         plan_list = req.data.get("plan_list")
         if plan_list:
             try:
@@ -976,7 +980,7 @@ class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
                         supplier, created = Supplier.objects.update_or_create(name=supplier)
                         supplier.cache()
                         # 创建供应商选择方案
-                        plan, created = SupplierSelectionPlan.objects.update_or_create(project_milestone_state=stone_state, supplier=supplier)
+                        plan, created = SupplierSelectionPlan.objects.update_or_create(project_milestone_state=milestone_state, supplier=supplier)
                         if total_amount:
                             plan.total_amount = total_amount
                         if remark:
@@ -995,13 +999,13 @@ class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
                         if not plan.doc_list:
                             plan.doc_list = doc_ids_str
                         else:
-                            plan.doc_list = '%s%s%s' % (self.doc_list, ',', doc_ids_str)
+                            plan.doc_list = '%s%s%s' % (plan.doc_list, ',', doc_ids_str)
                         plan.save()
                         plan.cache()
             except Exception as e:
                 logger.exception(e)
                 return resp.failed('操作失败')
-        return resp.serialize_response(stone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
+        return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
 
 
 class ProjectMilestoneStatePlanGatheredView(BaseAPIView):
@@ -1010,51 +1014,52 @@ class ProjectMilestoneStatePlanGatheredView(BaseAPIView):
     """
     def get(self, req, project_id, project_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
-        stone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
-        if not stone_state.milestone.title == '方案收集':
+        milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        if not project.contains_project_milestone_state(milestone_state):
+            return resp.failed('操作失败, 数据错误')
+        if not milestone_state.milestone.title == '方案收集':
             return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
-        return resp.serialize_response(stone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
+        return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
 
 
 class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
 
-    @transaction.atomic
     def delete(self, req, project_id, project_milestone_state_id, plan_id, doc_id):
         """
         删除【方案收集】里程碑下的方案附件或其他资料附件(单个)
         :param req:
         :param project_id:
         :param project_milestone_state_id:
+        :param plan_id:
+        :param doc_id:
         :return:
         """
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        if not project.contains_project_milestone_state(milestone_state):
+            return resp.failed('操作失败, 数据错误')
         if not milestone_state.milestone.title == '方案收集':
             return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
-        # if milestone_state.is_finished():
-        #     return resp.failed("操作失败，当前里程碑已完结")
+        if milestone_state.is_finished():
+            return resp.failed("操作失败，当前里程碑已完结")
         plan = self.get_object_or_404(plan_id, SupplierSelectionPlan)
         doc = self.get_object_or_404(doc_id, ProjectDocument)
         try:
-            path = os.path.join(settings.MEDIA_ROOT, doc.path)
-            if is_file_exist(path):
-                if remove(path):
-                    doc_ids_str = plan.doc_list.split(",")
-                    if str(doc_id) in doc_ids_str:
-                        doc_ids_str.remove(str(doc_id))
+            with transaction.atomic():
+                doc_ids_str = plan.doc_list.split(",")
+                doc_path = doc.path
+                if str(doc_id) in doc_ids_str:
+                    doc_ids_str.remove(str(doc_id))
                     plan.doc_list = ",".join(doc_ids_str)
                     plan.save()
                     plan.cache()
+                    doc.clear_cache()
                     doc.delete()
-                    return resp.ok("操作成功")
-            else:
-                doc_ids_str = plan.doc_list.split(",")
-                if str(doc_id) in doc_ids_str:
-                    doc_ids_str.remove(str(doc_id))
-                plan.doc_list = ",".join(doc_ids_str)
-                plan.save()
-                plan.cache()
-                doc.delete()
+                if doc_path:
+                    path = os.path.join(settings.MEDIA_ROOT, doc_path)
+                    if is_file_exist(path):
+                        if not remove(path):
+                            return resp.failed("操作失败")
                 return resp.ok("操作成功")
         except Exception as e:
             logger.exception(e)
@@ -1063,32 +1068,52 @@ class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
 
 class ProjectMilestoneStateSupplierPlanView(BaseAPIView):
 
-    @transaction.atomic
     def delete(self, req, project_id, project_milestone_state_id, plan_id):
         """
         删除【方案收集】里程碑下的供应商方案
         :param req:
         :param project_id:
         :param project_milestone_state_id:
+        :param plan_id:
         :return:
         """
+
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        if not project.contains_project_milestone_state(milestone_state):
+            return resp.failed('操作失败, 数据错误')
         if not milestone_state.milestone.title == '方案收集':
             return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
-        # if milestone_state.is_finished():
-        #     return resp.failed("操作失败，当前里程碑已完结")
+        if milestone_state.is_finished():
+            return resp.failed("操作失败，当前里程碑已完结")
         plan = self.get_object_or_404(plan_id, SupplierSelectionPlan)
-        if plan.doc_list:
-            doc_id_list = list(map(int, plan.doc_list.split(',')))
-            ProjectDocument.objects.filter(id__in=doc_id_list)
-
-
+        try:
+            with transaction.atomic():
+                if not plan.doc_list:
+                    plan.clear_cache()
+                    plan.delete()
+                doc_id_list = list(map(int, plan.doc_list.split(',')))
+                documents = ProjectDocument.objects.filter(id__in=doc_id_list)
+                paths = list()
+                for doc in documents:
+                    path = os.path.join(settings.MEDIA_ROOT, doc.path)
+                    paths.append(path)
+                ProjectDocument.objects.clear_cache(documents)
+                documents.delete()
+                for path in paths:
+                    if is_file_exist(path):
+                        remove(path)
+                plan.clear_cache()
+                plan.delete()
+                return resp.ok("操作成功")
+        except Exception as e:
+            logger.exception(e)
+            return resp.failed("操作失败")
 
 
 class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
     """
-    保存[方案论证]里程碑下的信息
+    保存【方案论证】里程碑下的信息
     """
 
     @check_id('selected_plan_id')
@@ -1103,6 +1128,8 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
         """
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        if not project.contains_project_milestone_state(milestone_state):
+            return resp.failed('操作失败, 数据错误')
         if not milestone_state.milestone.title == '方案论证':
             return resp.failed('操作失败，当前里程碑不是【方案论证】里程碑')
         # if stone_state.is_finished():
@@ -1138,12 +1165,14 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
 
 class ProjectMilestoneStatePlanArgumentView(BaseAPIView):
     """
-    查看[方案论证]里程碑下的信息
+    查看【方案论证】里程碑下的信息
     """
     @check_id('supplier_plan_related_milestone_state_id')
     def get(self, req, project_id, project_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
         current_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        if not project.contains_project_milestone_state(current_milestone_state):
+            return resp.failed('操作失败, 数据错误')
         if not current_milestone_state.milestone.title == '方案论证':
             return resp.failed('操作失败，当前里程碑不是【方案论证】里程碑')
         supplier_plan_related_milestone_state_id = req.GET.get('supplier_plan_related_milestone_state_id')
