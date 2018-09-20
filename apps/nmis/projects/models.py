@@ -221,7 +221,7 @@ class ProjectPlan(BaseModel):
                 milestone = self.attached_flow.get_first_main_milestone()
                 project_milestone_state = ProjectMilestoneState.objects.get_project_milestone_state(project=self, milestone=milestone)
 
-                self.start_next_project_milestone_state(project_milestone_state)
+                self.startup_project_milestone_state(project_milestone_state)
                 self.save()
                 self.cache()
             return True, project_milestone_state
@@ -388,7 +388,7 @@ class ProjectPlan(BaseModel):
         返回当前项目所有项目里程碑项
         :return: ProjectMilestoneState对象列表
         """
-        return self.pro_milestone_states.all()
+        return ProjectMilestoneState.objects.filter(project=self).all()
 
     def get_milestone_state(self, milestone):
         """
@@ -467,7 +467,7 @@ class ProjectPlan(BaseModel):
                         next_milestone = curr_stone_state.milestone.next()
                         next_stone_state = ProjectMilestoneState.objects.filter(project=self,
                                                                                 milestone=next_milestone).first()
-                        self.start_next_project_milestone_state(next_stone_state)
+                        self.startup_project_milestone_state(next_stone_state)
                     else:
                         self.status = PRO_STATUS_DONE
                         self.expired_time = times.now()
@@ -484,24 +484,24 @@ class ProjectPlan(BaseModel):
                         project=self,
                         milestone=next_milestone
                     ).first()
-                    self.start_next_project_milestone_state(next_stone_state)
+                    self.startup_project_milestone_state(next_stone_state)
                 return True, "操作成功"
         except Exception as e:
             logs.exception(e)
             return False, "操作失败，数据异常"
 
-    def start_next_project_milestone_state(self, next_milestone_state):
+    def startup_project_milestone_state(self, milestone_state):
         """
-        开启下一个项目里程碑
-        :param next_milestone_state: 下一个项目里程碑
+        开启项目里程碑
+        :param milestone_state: 项目里程碑
         :return:
         """
-        next_milestone_state.status = PRO_MILESTONE_DOING
-        next_milestone_state.save()
-        next_milestone_state.cache()
-        next_milestone = next_milestone_state.milestone
-        if next_milestone.has_children():
-            first_child_milestone = next_milestone.flow.get_first_child(milestone=next_milestone)
+        milestone_state.status = PRO_MILESTONE_DOING
+        milestone_state.save()
+        milestone_state.cache()
+        milestone = milestone_state.milestone
+        if milestone.has_children():
+            first_child_milestone = milestone.flow.get_first_child(milestone=milestone)
             first_child_stone_state = ProjectMilestoneState.objects.filter(project=self, milestone=first_child_milestone).first()
             first_child_stone_state.status = PRO_MILESTONE_DOING
             first_child_stone_state.save()
@@ -1065,7 +1065,7 @@ class SupplierSelectionPlan(BaseModel):
         db_table = 'projects_supplier_selection_plan'
 
     VALID_ATTRS = [
-        'total_amount', 'remark', 'doc_list', 'selected'
+        'supplier', 'total_amount', 'remark', 'doc_list', 'selected',
     ]
 
     def __str__(self):

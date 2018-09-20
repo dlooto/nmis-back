@@ -6,14 +6,17 @@
 #
 import logging
 
+from django.db import transaction
+
 from base.forms import BaseForm
 from nmis.devices.models import OrderedDevice, SoftwareDevice
 from nmis.hospitals.consts import ARCHIVE
 from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectDocument, \
-    PurchaseContract, ProjectMilestoneState
+    PurchaseContract, ProjectMilestoneState, SupplierSelectionPlan, Supplier
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
     PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, \
-    PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES
+    PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PRO_DOC_CATE_OTHERS, \
+    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN
 from nmis.hospitals.models import Staff
 from utils import eggs
 from utils.files import upload_file, single_upload_file
@@ -719,3 +722,184 @@ class PurchaseContractCreateForm(BaseForm):
                 project_milestone_state=self.project_milestone_state,
                 contract_devices=self.data.get('contract_devices'),
                 **contract_data)
+
+
+class SupplierSelectionPlanBatchSaveForm(BaseForm):
+
+    def __init__(self, pro_milestone_state, data, *args, **kwargs):
+        BaseForm.__init__(self, pro_milestone_state, data, *args, **kwargs)
+
+        self.project_milestone_state = pro_milestone_state
+        self.data = data
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'plan_list_err': 'plan_list为空或数据异常',
+            'id_err': 'id数据异常',
+            'supplier_name_err': '供应商名称为空或数据异常',
+            'total_amount_err': '方案总价为空数据异常',
+            'remark_err': '备注数据异常',
+            'file_category_err': '文档资料为空或数据异常',
+            'file_paths_err': '文档路径为空或数据异常',
+        })
+
+    def is_valid(self):
+        if not self.check_plan_list() or not self.check_supplier_name() or not self.check_total_amount() or not self.check_files():
+            return False
+
+        return True
+
+    def check_plan_list(self):
+        if not self.data.get('plan_list'):
+            self.update_errors('plan_list', 'plan_list_err')
+            return False
+        return True
+
+    def check_plan_id(self):
+        for plan in self.data.get('plan_list'):
+            if not plan.get('id'):
+                continue
+            try:
+                int(plan.get('id'))
+            except ValueError as e:
+                logs.exception(e)
+                self.update_errors('id', 'id_err')
+                return False
+        return True
+
+    def check_supplier_name(self):
+        plan_list = self.data.get('plan_list')
+        for plan in plan_list:
+            supplier_name = plan.get("supplier_name").strip()
+            if not supplier_name:
+                self.update_errors('supplier_name', 'supplier_name_err')
+                return False
+        return True
+
+    def check_total_amount(self):
+        plan_list = self.data.get('plan_list')
+        for plan in plan_list:
+            total_amount = plan.get('total_amount')
+            if not total_amount:
+                self.update_errors('total_amount', 'total_amount_err')
+                return False
+            try:
+                float(total_amount)
+            except ValueError as e:
+                logs.exception(e)
+                self.update_errors('total_amount', 'total_amount_err')
+                return False
+        return True
+
+    def check_remark(self):
+        plan_list = self.data.get('plan_list')
+        for plan in plan_list:
+            remark = plan.get('remark').strip()
+            if not remark:
+                self.update_errors('remark', 'remark_err')
+                return False
+        return True
+
+    def check_files(self):
+        plan_list = self.data.get('plan_list')
+        for plan in plan_list:
+            files = plan.get('files')
+            if not files:
+                continue
+            for file in files:
+                if not file.get('file_category').strip():
+                    self.update_errors('file_category', 'file_category_err')
+                    return False
+                if file.get('file_category').strip() not in [PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS]:
+                    self.update_errors('file_category', 'file_category_err')
+                    return False
+                if not file.get('file_paths'):
+                    self.update_errors('file_paths', 'file_paths_err')
+                    return False
+        return True
+
+    def pre_handle_file_data(self, files):
+        import os
+        document_dict = {
+            'existed': [],
+            'created': []
+        }
+        try:
+            for file in files:
+                for file_path in file.get('file_paths'):
+                    document_data = {
+                        'category': file.get('file_category'),
+                        'path': file_path,
+                        'name': os.path.basename(file_path)
+                    }
+                    document = ProjectDocument.objects.filter(**document_data).first()
+                    if not document:
+                        document_dict['existed'].append(document)
+                    else:
+                        document = ProjectDocument.objects.create(**document_data)
+                        document_dict['created'].append(document)
+            return document_dict
+        except Exception as e:
+            logs.exception(e)
+            raise e
+
+    def save(self):
+        plan_param_list = self.data.get('plan_list')
+        plan_data_list = []
+        try:
+            for item in plan_param_list:
+                plan_data = dict()
+                if not int(item.get('id')):
+                    plan_data['id'] = None
+                else:
+                    plan_data['id'] = int(item.get('id'))
+                supplier_name = item.get('supplier_name').strip()
+                supplier, created = Supplier.objects.update_or_create(name=supplier_name)
+                supplier.cache()
+                plan_data['supplier'] = supplier
+                plan_data['total_amount'] = float(item.get('total_amount'))
+                plan_data['remark'] = item.get('remark').strip()
+                files = item.get('files')
+                if not files:
+                    plan_data['doc_list'] = ''
+
+                document_dict = self.pre_handle_file_data(files)
+                created_doc_list = document_dict.get('created')
+                if not created_doc_list:
+                    pass
+                else:
+                    doc_ids_str = ','.join('%s' % doc.id for doc in created_doc_list)
+                    plan_data['doc_list'] = doc_ids_str
+                plan_data_list.append(plan_data)
+
+            for data in plan_data_list:
+                if not data.get('id'):
+                    plan = SupplierSelectionPlan.objects.create(project_milestone_state=self.project_milestone_state, **data)
+                    plan.cache()
+                else:
+                    plan = SupplierSelectionPlan.objects.filter(id=data.get('id')).first()
+                    if not plan.doc_list:
+                        plan.doc_list = data['doc_list']
+                    else:
+                        plan.doc_list = '%s%s%s' % (plan.doc_list, ',', data['doc_list'])
+                    plan.save()
+                    plan.cache()
+                return self.project_milestone_state
+        except Exception as e:
+            logs.exception(e)
+            raise  e
+
+
+
+
+
+
+
+
+
+
+
+
+
+

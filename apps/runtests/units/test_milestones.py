@@ -7,6 +7,7 @@
 
 import logging
 
+from nmis.projects.models import ProjectMilestoneState
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
 from utils import times
@@ -51,25 +52,43 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertFalse(self.project.is_unstarted())
         self.assertEquals(self.admin_staff, self.project.performer)
 
-    # def test_change_milestone(self):
-    #     """
-    #     测试: 变更项目里程碑项
-    #     """
-    #     # 分配负责人
-    #     self.assertTrue(
-    #         self.project.dispatch(self.performer)
-    #     )
-    #
-    #     self.assertEquals(self.project.current_stone, self.flow.get_first_main_milestone())
-    #
-    #     # new_milestone = self.project.current_stone
-    #     # success, msg = self.project.change_milestone(new_milestone)
-    #     # self.assertFalse(success)
-    #
-    #     new_milestone = self.project.current_stone.next()
-    #     success, msg = self.project.change_milestone(new_milestone, done_sign='UN')
-    #     self.assertTrue(success)
-    #     self.assertEquals(self.project.current_stone, new_milestone)
-    #     self.assertTrue(self.project.contains_project_milestone_state(new_milestone))
+    def test_change_milestone(self):
+        """
+        测试: 变更项目里程碑项
+        """
+
+        # 分配负责人
+        self.assertTrue(self.project.status == 'PE')
+
+        self.assertTrue(
+            self.project.dispatch(self.performer)
+        )
+        self.assertTrue(self.project.status == 'SD')
+
+        first_main_milestone = self.project.attached_flow.get_first_main_milestone()
+        first_main_milestone_state = ProjectMilestoneState.objects.get_project_milestone_state(project=self.project, milestone=first_main_milestone)
+
+        self.assertEqual(first_main_milestone_state.status, "DOING", "里程碑状态异常")
+
+        success, msg = self.project.change_project_milestone_state(first_main_milestone_state)
+        self.assertTrue(success)
+
+        success, msg = self.project.change_project_milestone_state(first_main_milestone_state)
+        self.assertFalse(success)
+
+
+
+
+        # self.assertEquals(self.project.current_stone, self.flow.get_first_main_milestone())
+        #
+        # # new_milestone = self.project.current_stone
+        # # success, msg = self.project.change_milestone(new_milestone)
+        # # self.assertFalse(success)
+        #
+        # new_milestone = self.project.current_stone.next()
+        # success, msg = self.project.change_milestone(new_milestone, done_sign='UN')
+        # self.assertTrue(success)
+        # self.assertEquals(self.project.current_stone, new_milestone)
+        # self.assertTrue(self.project.contains_project_milestone_state(new_milestone))
 
 

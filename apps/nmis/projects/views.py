@@ -6,6 +6,9 @@
 #
 import logging
 import os
+
+from django.db.transaction import savepoint
+
 import settings
 
 from django.db import transaction
@@ -30,7 +33,7 @@ from nmis.projects.forms import (
     ProjectFlowCreateForm,
     ProjectFlowUpdateForm, UploadFileForm, PurchaseContractCreateForm,
     SingleUploadFileForm,
-    ProjectDocumentBulkCreateForm)
+    ProjectDocumentBulkCreateForm, SupplierSelectionPlanBatchSaveForm)
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
     ProjectMilestoneState, SupplierSelectionPlan, Supplier, PurchaseContract
 from nmis.projects.permissions import ProjectPerformerPermission, \
@@ -964,49 +967,85 @@ class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
             return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
         if milestone_state.is_finished():
             return resp.failed("操作失败，当前里程碑已完结")
-
         if project.performer == req.user.get_profile():
             if req.data.get('summary'):
                 milestone_state.summary = req.data.get('summary')
-        plan_list = req.data.get("plan_list")
-        if plan_list:
-            try:
-                with transaction.atomic():
-                    for item in plan_list:
-                        supplier = item.get('supplier')
-                        total_amount = item.get('total_amount')
-                        remark = item.get('remark')
-                        files = item.get('files')
-                        # 创建供应商
-                        supplier, created = Supplier.objects.update_or_create(name=supplier)
-                        supplier.cache()
-                        # 创建供应商选择方案
-                        plan, created = SupplierSelectionPlan.objects.update_or_create(project_milestone_state=milestone_state, supplier=supplier)
-                        if total_amount:
-                            plan.total_amount = total_amount
-                        if remark:
-                            plan.remark = remark
-                        plan.save()
-                        plan.cache()
-                        if not files:
-                            continue
-                        form = ProjectDocumentBulkCreateForm(item.get('files'))
-                        if not form.is_valid():
-                            return resp.form_err(form.errors)
-                        doc_list = form.save()
-                        if not doc_list:
-                            continue
-                        doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-                        if not plan.doc_list:
-                            plan.doc_list = doc_ids_str
-                        else:
-                            plan.doc_list = '%s%s%s' % (plan.doc_list, ',', doc_ids_str)
-                        plan.save()
-                        plan.cache()
-            except Exception as e:
-                logger.exception(e)
-                return resp.failed('操作失败')
+        form = SupplierSelectionPlanBatchSaveForm(milestone_state, req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        milestone_state = form.save()
+        if not milestone_state:
+            return resp.failed("操作失败")
         return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
+
+# class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
+#     """保存【方案收集】里程碑下的信息"""
+#
+#     @check_params_not_all_null(['plan_list', 'summary'])
+#     @transaction.atomic()
+#     def post(self, req, project_id, project_milestone_state_id):
+#         project = self.get_object_or_404(project_id, ProjectPlan)
+#         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+#         if not project.contains_project_milestone_state(milestone_state):
+#             return resp.failed('操作失败, 数据错误')
+#         if not milestone_state.milestone.title == '方案收集':
+#             return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
+#         if milestone_state.is_finished():
+#             return resp.failed("操作失败，当前里程碑已完结")
+#
+#         if project.performer == req.user.get_profile():
+#             if req.data.get('summary'):
+#                 milestone_state.summary = req.data.get('summary')
+#         plan_list = req.data.get("plan_list")
+#         if plan_list:
+#             try:
+#                 with transaction.atomic():
+#                     for item in plan_list:
+#                         id = item.get('id')
+#                         supplier_name = item.get('supplier_name')
+#                         total_amount = item.get('total_amount')
+#                         remark = item.get('remark')
+#                         files = item.get('files')
+#                         # 创建供应商
+#                         supplier, created = Supplier.objects.update_or_create(name=supplier_name)
+#                         supplier.cache()
+#                         # 创建供应商选择方案
+#                         plan = None
+#                         if not id:
+#                             plan = SupplierSelectionPlan.objects.create(
+#                                 project_milestone_state=milestone_state,
+#                                 supplier=supplier,
+#                                 total_amount=total_amount,
+#                                 remark=remark,
+#                             )
+#                         else:
+#                             plan = SupplierSelectionPlan.objects.filter(id=id).first()
+#                             plan.update(
+#                                 {
+#                                  "supplier": supplier,
+#                                  "total_amount": total_amount,
+#                                  "remark": remark
+#                                 }
+#                             )
+#                         if not files:
+#                             continue
+#                         form = ProjectDocumentBulkCreateForm(item.get('files'))
+#                         if not form.is_valid():
+#                             return resp.form_err(form.errors)
+#                         doc_list = form.save()
+#                         if not doc_list:
+#                             continue
+#                         doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
+#                         if not plan.doc_list:
+#                             plan.doc_list = doc_ids_str
+#                         else:
+#                             plan.doc_list = '%s%s%s' % (plan.doc_list, ',', doc_ids_str)
+#                         plan.save()
+#                         plan.cache()
+#             except Exception as e:
+#                 logger.exception(e)
+#                 return resp.failed('操作失败')
+#         return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
 
 
 class ProjectMilestoneStatePlanGatheredView(BaseAPIView):
@@ -1093,6 +1132,7 @@ class ProjectMilestoneStateSupplierPlanView(BaseAPIView):
                 if not plan.doc_list:
                     plan.clear_cache()
                     plan.delete()
+                    return resp.ok("操作成功")
                 doc_id_list = list(map(int, plan.doc_list.split(',')))
                 documents = ProjectDocument.objects.filter(id__in=doc_id_list)
                 paths = list()
