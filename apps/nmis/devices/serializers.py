@@ -8,7 +8,7 @@
 import logging
 
 from base.serializers import BaseModelSerializer
-from .models import OrderedDevice, SoftwareDevice
+from .models import OrderedDevice, SoftwareDevice, ContractDevice
 
 logs = logging.getLogger(__name__)
 
@@ -32,6 +32,17 @@ class SoftwareDeviceSerializer(BaseModelSerializer):
         fields = (
             'id', 'name', 'cate', 'purpose', 'producer', 'created_time', 'planned_price'
         )
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        pass
+
+
+class ContractDeviceSerializer(BaseModelSerializer):
+
+    class Meta:
+        model = ContractDevice
+        fields = '__all__'
 
     @staticmethod
     def setup_eager_loading(queryset):

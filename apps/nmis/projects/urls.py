@@ -135,7 +135,7 @@ urlpatterns = [
          views.MilestoneRecordPurchaseCreateView.as_view(), ),
 
     # 获取确定采购方式里程碑中所有的信息
-    path('project_milestone_states/<int:project_milestone_state_id>/get-confirm-purchase-info',
+    path('<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/get-confirm-purchase-info',
          views.MilestoneRecordPurchaseView.as_view(),),
 
     # 启动采购的相关操作接口（保存上传附件，说明）
@@ -143,13 +143,20 @@ urlpatterns = [
          views.MilestoneStartUpPurchaseCreateView.as_view(), ),
 
     # 获取启动采购中附件和说明信息
-    path('project_milestone_states/<int:project_milestone_state_id>/get-startup-purchase-info',
+    path('<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/get-startup-purchase-info',
          views.MilestoneStartUpPurchaseView.as_view(), ),
 
     # 合同管理子里程碑保存操作
     path('<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-purchase-contract-info',
          views.MilestonePurchaseContractCreateView.as_view(), ),
 
+    # 获取合同管理子里程碑相关信息
+    path('<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/get-purchase-contract-info',
+         views.MilestonePurchaseContractView.as_view(), ),
+
+    # 删除合同中的某个设备信息
+    path('<int:project_id>/purchase_contracts/<int:purchase_contract_id>/contract_devices/<int:contract_device_id>',
+         views.ContractDeviceView.as_view(), ),
 
     # 流程中各里程碑下单个文件上传
     path('<int:project_id>/single-upload-file', views.UploadFileView.as_view(), ),

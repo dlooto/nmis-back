@@ -124,3 +124,15 @@ class ContractDevice(Device):
 
     def __str__(self):
         return '%s %s' % (self.id, self.name)
+
+    def deleted(self):
+        """
+        删除单个设备信息
+        """
+        try:
+            self.clear_cache()
+            self.delete()
+        except Exception as e:
+            logs.exception(e)
+            return False
+        return True
