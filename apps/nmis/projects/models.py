@@ -468,6 +468,16 @@ class ProjectPlan(BaseModel):
                         next_stone_state = ProjectMilestoneState.objects.filter(project=self,
                                                                                 milestone=next_milestone).first()
                         self.start_next_project_milestone_state(next_stone_state)
+                    else:
+                        self.status = PRO_STATUS_DONE
+                        self.expired_time = times.now()
+                        self.save()
+                        self.cache()
+                elif curr_stone_state.milestone.is_last_main_milestone():
+                    self.status = PRO_STATUS_DONE
+                    self.expired_time = times.now()
+                    self.save()
+                    self.cache()
                 else:
                     next_milestone = curr_stone_state.milestone.next()
                     next_stone_state = ProjectMilestoneState.objects.filter(

@@ -9,7 +9,7 @@ import logging
 from django.db import models
 from django.core.cache import cache
 from django.db.models import Manager
-
+from django.db.models.query import QuerySet
 
 logs = logging.getLogger('django')
 
@@ -76,6 +76,18 @@ class BaseManager(Manager):
         """生成cache key """
         # logs.debug('make cache key: %s%s%s' % (self.__module__, self.model.__name__, obj_id))
         return u'%s%s%s' % (self.__module__, self.model.__name__, obj_id)
+
+    def clear_cache(self, obj):
+        """批量清除缓存或清除单个对象缓存"""
+        if isinstance(obj, QuerySet):
+            obj = list(obj)
+        if isinstance(obj, list):
+            keys = list()
+            for item in obj:
+                keys.append(type(item).objects.make_key(item.id))
+            cache.delete_many(keys)
+        else:
+            cache.delete(type(obj).objects.make_key(obj.id))
 
 
 class BaseModel(models.Model):

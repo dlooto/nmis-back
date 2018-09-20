@@ -21,7 +21,7 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         self.project = self.create_project(self.admin_staff, self.dept)
         self.performer = self.create_completed_staff(self.organ, self.dept, name="项目负责人x")
 
-        self.flow = self.create_flow(self.organ)
+        #self.flow = self.create_flow(self.organ)
 
     def test_project_dispatch(self):
         """
@@ -58,14 +58,6 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
     #     # 分配负责人
     #     self.assertTrue(
     #         self.project.dispatch(self.performer)
-    #     )
-    #     # 启动项目
-    #     self.assertTrue(
-    #         self.project.startup(
-    #             assistant=self.admin_staff,
-    #             flow=self.flow,
-    #             expired_time=times.tomorrow()
-    #         )
     #     )
     #
     #     self.assertEquals(self.project.current_stone, self.flow.get_first_main_milestone())
