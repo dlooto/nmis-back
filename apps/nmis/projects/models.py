@@ -219,7 +219,7 @@ class ProjectPlan(BaseModel):
                 # self.add_milestone_state(self.current_stone)
                 self.bulk_add_milestone_states()
                 milestone = self.attached_flow.get_first_main_milestone()
-                project_milestone_state = ProjectMilestoneState.objects.get_project_milestone_state(project=self, milestone=milestone)
+                project_milestone_state = ProjectMilestoneState.objects.get_project_milestone_state_by_project_milestone(project=self, milestone=milestone)
 
                 self.start_next_project_milestone_state(project_milestone_state)
                 self.save()
@@ -810,6 +810,11 @@ class ProjectMilestoneState(BaseModel):
     finished_time = models.DateTimeField('项目里程碑完结时间', default=None, null=True, blank=True)
 
     objects = ProjectMilestoneStateManager()
+
+    VALID_ATTRS = [
+        'doc_list', 'summary'
+    ]
+
 
     class Meta:
         verbose_name = '项目里程碑'

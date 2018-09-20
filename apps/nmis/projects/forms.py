@@ -574,7 +574,7 @@ class SingleUploadFileForm(BaseForm):
             return result, file.name, True
 
 
-class ProjectDocumentBulkCreateForm(BaseForm):
+class ProjectDocumentBulkCreateOrUpdateForm(BaseForm):
 
     def __init__(self, files, *args, **kwargs):
         BaseForm.__init__(self, files, *args, **kwargs)
@@ -588,31 +588,32 @@ class ProjectDocumentBulkCreateForm(BaseForm):
         })
 
     def is_valid(self):
-        if not self.check_file_type():
+        if not self.check_file_category():
             return False
         return True
 
-    def check_file_type(self):
-        for file in self.files:
-
-            if file.get('file_category') not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
-                self.update_errors('file_category', 'file_category_err')
-                return False
-
+    def check_file_category(self):
+        if self.files:
+            for file in self.files:
+                if file.get('file_category') not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
+                    self.update_errors('file_category', 'file_category_err')
+                    return False
         return True
 
     def save(self):
         import os
         project_documents = []
-        for file in self.files:
-            for file_path in file.get('file_paths'):
-                project_document = {
-                    'category': file.get('file_category'),
-                    'path': file_path,
-                    'name': os.path.basename(file_path)
-                }
-                project_documents.append(project_document)
-        return ProjectDocument.objects.bulk_save_upload_project_doc(project_documents)
+        if self.files:
+            for file in self.files:
+                for file_path in file.get('file_paths'):
+                    project_document = {
+                        'category': file.get('file_category'),
+                        'path': file_path,
+                        'name': os.path.basename(file_path)
+                    }
+                    project_documents.append(project_document)
+        return ProjectDocument.objects.bulk_save_upload_project_doc(
+                    project_documents) if project_documents else None
 
 
 class PurchaseContractCreateForm(BaseForm):
@@ -715,7 +716,39 @@ class PurchaseContractCreateForm(BaseForm):
         if self.data.get('delivery_date', '').strip():
             contract_data['delivery_date'] = self.data.get('delivery_date', '').strip()
 
-        return PurchaseContract.objects.create_purchase_contract(
+        return PurchaseContract.objects.create_or_update_purchase_contract(
                 project_milestone_state=self.project_milestone_state,
                 contract_devices=self.data.get('contract_devices'),
                 **contract_data)
+
+
+class ProjectMilestoneStateUpdateForm(BaseForm):
+    """
+    生成或更新ProjectMilestoneState
+    """
+    def __init__(self, doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs):
+        BaseForm.__init__(self, doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs)
+        self.doc_list = doc_list
+        self.summary = summary
+        self.project_milestone_state = project_milestone_state
+        self.login_user = login_user
+        self.project = project
+
+    def init_err_codes(self):
+        pass
+
+    def is_valid(self):
+        pass
+
+    def save(self):
+        pro_milestone_state_data = {}
+        if self.summary:
+            if self.login_user == self.project.performer:
+                pro_milestone_state_data['summary'] = self.summary
+        if self.doc_list:
+            doc_ids_str = ','.join('%s' % doc.id for doc in self.doc_list)
+            pro_milestone_state_data['doc_list'] = doc_ids_str
+
+        return ProjectMilestoneState.objects.update_project_milestone_state(
+            self.project_milestone_state, **pro_milestone_state_data
+        ) if pro_milestone_state_data else self.project_milestone_state
