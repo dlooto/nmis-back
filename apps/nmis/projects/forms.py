@@ -728,10 +728,27 @@ class ProjectMilestoneStateUpdateForm(BaseForm):
         self.project = project
 
     def init_err_codes(self):
-        pass
+        self.ERR_CODES.update({
+            'status_err': "操作失败，当前里程碑尚未开始或已完结",  # 当前里程碑尚未开始或已完结
+            'project_not_contains_project_milestone_state': "操作失败, 请求数据异常",
+        })
 
     def is_valid(self):
-        pass
+        if not self.check_data() or not self.check_status():
+            return False
+        return True
+
+    def check_data(self):
+        if not self.project.contains_project_milestone_state(self.project_milestone_state):
+            self.update_errors('Error', 'project_not_contains_project_milestone_state')
+            return False
+        return True
+
+    def check_status(self):
+        if not self.project_milestone_state.is_in_process():
+            self.update_errors('Error', 'status_err')
+            return False
+        return True
 
     def save(self):
         pro_milestone_state_data = {}

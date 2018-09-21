@@ -983,13 +983,24 @@ class ProjectMilestoneState(BaseModel):
 
     def is_finished(self):
         """
-        当前里程碑是否完结.
+        当前里程碑已完结.
         :return: 返回True/False; 已完结返回True, 否则返回False
         """
         return True if self.status == PRO_MILESTONE_DONE else False
 
     def is_unstarted(self):
+        """
+         当前里程碑尚未进行
+        :return: 返回True/False; 已完结返回True, 否则返回False
+        """
         return True if self.status == PRO_MILESTONE_TODO else False
+
+    def is_in_process(self):
+        """
+        当前里程碑在进行中
+        :return: 返回True/False; 已完结返回True, 否则返回False
+        """
+        return True if self.status == PRO_MILESTONE_DOING else False
 
 
 # class ProjectMilestoneRecord(BaseModel):
