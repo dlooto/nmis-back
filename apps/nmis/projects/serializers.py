@@ -15,7 +15,7 @@ from base import resp
 from base.serializers import BaseModelSerializer
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
     ProjectMilestoneState, ProjectOperationRecord, ProjectDocument, SupplierSelectionPlan, \
-    PurchaseContract
+    PurchaseContract, Receipt
 
 logs = logging.getLogger(__name__)
 
@@ -471,6 +471,85 @@ class ProjectMilestoneStateAndPurchaseContractSerializer(ProjectMilestoneStateSe
         if not hasattr(obj, 'created_time'):
             return ''
         return obj.created_time
+
+
+class ProjectMilestoneStateAndReceiptSerializer(ProjectMilestoneStateSerializer):
+
+    milestone_title = serializers.SerializerMethodField('_get_milestone_title')
+    milestone_index = serializers.SerializerMethodField('_get_milestone_index')
+    doc_list = serializers.SerializerMethodField('_get_doc_list')
+    purchase_method = serializers.SerializerMethodField('_get_purchase_method')
+
+    receipt = serializers.SerializerMethodField('_get_receipt')
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        return queryset.select_related('milestone',)
+
+    class Meta:
+        model = ProjectMilestoneState
+        fields = (
+            'id', 'milestone_title', 'milestone_index',
+            'doc_list', 'summary', 'purchase_method',
+            # 'has_children', 'children',
+            'status', 'created_time', 'receipt'
+        )
+
+    def _get_milestone_title(self, obj):
+        if not hasattr(obj, 'milestone'):
+            return ''
+        stone = obj.milestone
+        return stone.title if stone else ''
+
+    def _get_milestone_index(self, obj):
+        if not hasattr(obj, 'milestone'):
+            return ''
+        stone = obj.milestone
+        return stone.index if stone else -1
+
+    def _get_doc_list(self, obj):
+        if not hasattr(obj, 'doc_list'):
+            return []
+        if not obj.doc_list:
+            return []
+        doc_ids_str = obj.doc_list.split(',')
+        doc_ids = [int(id_str) for id_str in doc_ids_str]
+        doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
+        return resp.serialize_data(doc_list) if doc_list else []
+
+    def _get_receipt(self, obj):
+
+        receipt = Receipt.objects.get_receipt_by_project_milestone_state(project_milestone_state=obj)
+
+        return resp.serialize_data(receipt) if receipt else []
+
+    def _get_purchase_method(self, obj):
+        """
+        获取采购方法
+        """
+        if not hasattr(obj, 'get_project_purchase_method'):
+            return ''
+        purchase_method = obj.get_project_purchase_method()
+        return purchase_method if purchase_method else ''
+
+    def _get_created_time(self, obj):
+        """
+
+        :param obj:
+        :return:
+        """
+        if not hasattr(obj, 'created_time'):
+            return ''
+        return obj.created_time
+
+
+class ReceiptSerializer(BaseModelSerializer):
+
+    class Meta:
+        model = Receipt
+        fields = (
+            'id', 'served_date', 'delivery_man', 'contact_phone'
+        )
 
 
 def get_project_status_count(**data):

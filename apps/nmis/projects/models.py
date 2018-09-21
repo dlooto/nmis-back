@@ -10,7 +10,7 @@ import logging
 from django.db import models, transaction
 
 from nmis.projects.managers import ProjectDocumentManager, ProjectMilestoneStateManager, \
-    SupplierSelectionPlanManager, PurchaseContractManager
+    SupplierSelectionPlanManager, PurchaseContractManager, ReceiptManager
 from utils import times
 from base.models import BaseModel
 from nmis.devices.models import OrderedDevice, SoftwareDevice
@@ -1133,6 +1133,8 @@ class Receipt(BaseModel):
     contact_phone = models.CharField('联系电话', max_length=11, null=True, blank=True)
     # 送货单附件-ProjectDocument对象ID集，每个id之间用'|'字符进行分割
     doc_list = models.CharField('送货单附件', max_length=10, null=True, blank=True)
+
+    objects = ReceiptManager()
 
     class Meta:
         verbose_name = u'收货确认单'
