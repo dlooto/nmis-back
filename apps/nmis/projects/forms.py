@@ -745,7 +745,8 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
         })
 
     def is_valid(self):
-        if not self.check_plan_list() or not self.check_supplier_name() or not self.check_total_amount() or not self.check_files():
+        if not self.check_plan_list() or not self.check_plan() or not self.check_supplier_name()\
+                or not self.check_total_amount() or not self.check_files():
             return False
 
         return True
@@ -756,7 +757,7 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
             return False
         return True
 
-    def check_plan_id(self):
+    def check_plan(self):
         for plan in self.data.get('plan_list'):
             if not plan.get('id'):
                 continue
@@ -764,6 +765,9 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
                 int(plan.get('id'))
             except ValueError as e:
                 logs.exception(e)
+                self.update_errors('id', 'id_err')
+                return False
+            if not SupplierSelectionPlan.objects.filter(id=int(plan.get('id'))).first():
                 self.update_errors('id', 'id_err')
                 return False
         return True
@@ -820,11 +824,14 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
         return True
 
     def pre_handle_file_data(self, files):
-        import os
         document_dict = {
-            'existed': [],
-            'created': []
+            'updated': [],
+            'created': [],
+            'all': [],
         }
+        if not files:
+            return document_dict
+        import os
         try:
             for file in files:
                 for file_path in file.get('file_paths'):
@@ -833,12 +840,13 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
                         'path': file_path,
                         'name': os.path.basename(file_path)
                     }
-                    document = ProjectDocument.objects.filter(**document_data).first()
-                    if not document:
-                        document_dict['existed'].append(document)
-                    else:
-                        document = ProjectDocument.objects.create(**document_data)
+                    document, created = ProjectDocument.objects.update_or_create(**document_data)
+                    document_dict['all'].append(document)
+                    if created:
                         document_dict['created'].append(document)
+                    else:
+                        updated_doc = ProjectDocument.objects.filter(**document_data).first()
+                        document_dict['updated'].append(updated_doc)
             return document_dict
         except Exception as e:
             logs.exception(e)
@@ -850,10 +858,6 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
         try:
             for item in plan_param_list:
                 plan_data = dict()
-                if not int(item.get('id')):
-                    plan_data['id'] = None
-                else:
-                    plan_data['id'] = int(item.get('id'))
                 supplier_name = item.get('supplier_name').strip()
                 supplier, created = Supplier.objects.update_or_create(name=supplier_name)
                 supplier.cache()
@@ -865,30 +869,28 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
                     plan_data['doc_list'] = ''
 
                 document_dict = self.pre_handle_file_data(files)
-                created_doc_list = document_dict.get('created')
-                if not created_doc_list:
-                    pass
+                new_doc_list = document_dict.get('all')
+                if not new_doc_list:
+                    plan_data['doc_list'] = ''
                 else:
-                    doc_ids_str = ','.join('%s' % doc.id for doc in created_doc_list)
+                    doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
                     plan_data['doc_list'] = doc_ids_str
                 plan_data_list.append(plan_data)
 
-            for data in plan_data_list:
-                if not data.get('id'):
-                    plan = SupplierSelectionPlan.objects.create(project_milestone_state=self.project_milestone_state, **data)
-                    plan.cache()
+                if item.get('id') and int(item.get('id')) > 0:
+                    plan = SupplierSelectionPlan.objects.filter(id=int(item.get('id'))).first()
+                    if plan:
+                        plan.update(plan_data)
+                        plan.save()
+                        plan.cache()
                 else:
-                    plan = SupplierSelectionPlan.objects.filter(id=data.get('id')).first()
-                    if not plan.doc_list:
-                        plan.doc_list = data['doc_list']
-                    else:
-                        plan.doc_list = '%s%s%s' % (plan.doc_list, ',', data['doc_list'])
-                    plan.save()
+                    plan = SupplierSelectionPlan.objects.create(project_milestone_state=self.project_milestone_state, **plan_data)
                     plan.cache()
-                return self.project_milestone_state
+
+            return self.project_milestone_state
         except Exception as e:
             logs.exception(e)
-            raise  e
+            raise e
 
 
 
