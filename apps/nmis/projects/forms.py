@@ -14,7 +14,7 @@ from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectDocument, \
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
     PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, \
     PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PRO_DOC_CATE_OTHERS, \
-    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN
+    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_PLAN_ARGUMENT
 from nmis.hospitals.models import Staff
 from utils import eggs
 from utils.files import upload_file, single_upload_file
@@ -854,30 +854,48 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
                     return False
         return True
 
-    def pre_handle_file_data(self, files):
+    def pre_handle_file_data(self, plan_file_paths, other_file_paths):
+
+        if not plan_file_paths and other_file_paths:
+            return None
+        file_dict_list = []
+        if plan_file_paths:
+            import os
+            for path in plan_file_paths:
+                file_dict = {
+                    'category': PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN,
+                    'path': path,
+                    'name': os.path.basename(path)
+                }
+                file_dict_list.append(file_dict)
+        if other_file_paths:
+            import os
+            for path in other_file_paths:
+                file_dict = {
+                    'category': PRO_DOC_CATE_OTHERS,
+                    'path': path,
+                    'name': os.path.basename(path)
+                }
+                file_dict_list.append(file_dict)
+        return self.batch_update_or_create_document(file_dict_list)
+
+    def batch_update_or_create_document(self, file_dict_list):
         document_dict = {
             'updated': [],
             'created': [],
             'all': [],
         }
-        if not files:
+        if not file_dict_list:
             return document_dict
-        import os
         try:
-            for file in files:
-                for file_path in file.get('file_paths'):
-                    document_data = {
-                        'category': file.get('file_category'),
-                        'path': file_path,
-                        'name': os.path.basename(file_path)
-                    }
-                    document, created = ProjectDocument.objects.update_or_create(**document_data)
-                    document_dict['all'].append(document)
-                    if created:
-                        document_dict['created'].append(document)
-                    else:
-                        updated_doc = ProjectDocument.objects.filter(**document_data).first()
-                        document_dict['updated'].append(updated_doc)
+            for file_dict in file_dict_list:
+                document, created = ProjectDocument.objects.update_or_create(**file_dict)
+                document_dict['all'].append(document)
+                if created:
+                    document_dict['created'].append(document)
+                else:
+                    updated_doc = ProjectDocument.objects.filter(**file_dict).first()
+                    document_dict['updated'].append(updated_doc)
             return document_dict
         except Exception as e:
             logs.exception(e)
@@ -895,11 +913,9 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
                 plan_data['supplier'] = supplier
                 plan_data['total_amount'] = float(item.get('total_amount'))
                 plan_data['remark'] = item.get('remark').strip()
-                files = item.get('files')
-                if not files:
-                    plan_data['doc_list'] = ''
-
-                document_dict = self.pre_handle_file_data(files)
+                plan_file_paths = item.get('plan_files')
+                other_file_paths = item.get('other_files')
+                document_dict = self.pre_handle_file_data(plan_file_paths, other_file_paths)
                 new_doc_list = document_dict.get('all')
                 if not new_doc_list:
                     plan_data['doc_list'] = ''
@@ -915,6 +931,7 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
                         plan.save()
                         plan.cache()
                 else:
+
                     plan = SupplierSelectionPlan.objects.create(project_milestone_state=self.project_milestone_state, **plan_data)
                     plan.cache()
 

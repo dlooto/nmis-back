@@ -675,7 +675,45 @@ class Milestone(BaseModel):
 
     def previous(self):
         """ 上一个里程碑项 """
-        pass
+        """
+        返回当前里程碑项在流程中的下一个里程碑项
+        :return: milestone
+        """
+
+        if not self.parent:
+            if not self.has_children():
+                it = iter(self.flow.get_main_milestones().order_by('-index'))  # 迭代器
+                while True:
+                    try:
+                        m = next(it)
+                        if m == self:
+                            return next(it)
+                    except StopIteration:
+                        return None
+            else:
+                return self.first_child()
+
+        if self.is_first_child():
+
+            parent = self.parent
+            it = iter(parent.flow.get_main_milestones().order_by('-index'))
+            while True:
+                try:
+                    m = next(it)
+                    if m == parent:
+                        return next(it)
+                except StopIteration:
+                    return None
+            return parent.next()
+
+        it = iter(self.parent.children().order_by('-index'))
+        while True:
+            try:
+                m = next(it)
+                if m == self:
+                    return next(it)
+            except StopIteration:
+                return None
 
     def children(self):
         """
@@ -773,6 +811,14 @@ class Milestone(BaseModel):
             return False
         return True
 
+    def is_first_child(self):
+        if not self.parent:
+            return False
+
+        if not self == self.parent.first_child():
+            return False
+        return True
+
     def is_last_child(self):
         """
         当前里程碑项是否为父里程碑下最后一个子里程碑项
@@ -824,7 +870,6 @@ class ProjectMilestoneState(BaseModel):
     VALID_ATTRS = [
         'doc_list', 'summary'
     ]
-
 
     class Meta:
         verbose_name = '项目里程碑'
@@ -899,19 +944,6 @@ class ProjectMilestoneState(BaseModel):
         except Exception as e:
             logs.exception(e)
         return False
-
-    def change_first_pro_milestone_state_status(self):
-        """
-        分配项目之后设置第一个项目里程碑的状态为已完结
-        """
-        try:
-            self.status = PRO_MILESTONE_DONE
-            self.save()
-            self.cache()
-            return True
-        except Exception as e:
-            logs.exception(e)
-            return False
 
     def get_project_purchase_method(self):
         """

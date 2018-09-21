@@ -1144,9 +1144,9 @@ class ProjectMilestoneStatePlanArgumentView(BaseAPIView):
             return resp.failed('操作失败, 数据错误')
         if not current_milestone_state.milestone.title == '方案论证':
             return resp.failed('操作失败，当前里程碑不是【方案论证】里程碑')
-        supplier_plan_related_milestone_state_id = req.GET.get('supplier_plan_related_milestone_state_id')
-        supplier_plan_related_milestone_state = self.get_object_or_404(supplier_plan_related_milestone_state_id, ProjectMilestoneState)
-
+        supplier_plan_related_milestone_state = ProjectMilestoneState.objects.filter(
+            project=project, milestone=current_milestone_state.milestone.previous()
+        ).first()
         plans = SupplierSelectionPlan.objects.filter(project_milestone_state=supplier_plan_related_milestone_state)
         current_milestone_state.supplier_selection_plans = plans
 

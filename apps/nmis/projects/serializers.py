@@ -13,6 +13,7 @@ from rest_framework import serializers
 
 from base import resp
 from base.serializers import BaseModelSerializer
+from nmis.projects.consts import PRO_DOC_CATE_OTHERS, PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
     ProjectMilestoneState, ProjectOperationRecord, ProjectDocument, SupplierSelectionPlan, \
     PurchaseContract
@@ -58,26 +59,35 @@ class ProjectFlowSerializer(BaseModelSerializer):
 
 class SupplierSelectionPlanSerializer(BaseModelSerializer):
     supplier_name = serializers.SerializerMethodField('_get_supplier_name')
-    doc_list = serializers.SerializerMethodField('_get_plan_doc_list')
+    plan_files = serializers.SerializerMethodField('_get_plan_files')
+    other_files = serializers.SerializerMethodField('_get_other_files')
 
     class Meta:
         model = SupplierSelectionPlan
         fields = (
             'id', 'project_milestone_state_id',
-            'supplier_id', 'supplier_name', 'total_amount',
-            'remark', 'doc_list', 'selected',
+            'supplier_id', 'supplier_name', 'total_amount', 'plan_files', 'other_files',
+            'remark', 'selected',
         )
 
     def _get_supplier_name(self, obj):
         return obj.supplier.name if obj.supplier else ''
 
-    def _get_plan_doc_list(self, obj):
+    def _get_plan_files(self, obj):
         if not obj.doc_list:
             return []
         doc_ids_str = obj.doc_list.split(',')
         doc_ids = [int(id_str) for id_str in doc_ids_str]
-        doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
-        return resp.serialize_data(doc_list) if doc_list else []
+        plan_docs = ProjectDocument.objects.filter(id__in=doc_ids, category=PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN)
+        return resp.serialize_data(plan_docs) if plan_docs else []
+
+    def _get_other_files(self, obj):
+        if not obj.doc_list:
+            return []
+        doc_ids_str = obj.doc_list.split(',')
+        doc_ids = [int(id_str) for id_str in doc_ids_str]
+        other_docs = ProjectDocument.objects.filter(id__in=doc_ids, category=PRO_DOC_CATE_OTHERS)
+        return resp.serialize_data(other_docs) if other_docs else []
 
 
 class ProjectMilestoneStateSerializer(BaseModelSerializer):
