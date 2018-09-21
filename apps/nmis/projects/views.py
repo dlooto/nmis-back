@@ -6,9 +6,6 @@
 #
 import logging
 import os
-
-from django.db.transaction import savepoint
-
 import settings
 
 from django.db import transaction
@@ -33,7 +30,7 @@ from nmis.projects.forms import (
     ProjectFlowCreateForm,
     ProjectFlowUpdateForm, UploadFileForm, PurchaseContractCreateForm,
     SingleUploadFileForm,
-    ProjectDocumentBulkCreateForm, SupplierSelectionPlanBatchSaveForm)
+    ProjectDocumentBulkCreateOrUpdateForm, ProjectMilestoneStateUpdateForm, SupplierSelectionPlanBatchSaveForm)
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
     ProjectMilestoneState, SupplierSelectionPlan, Supplier, PurchaseContract
 from nmis.projects.permissions import ProjectPerformerPermission, \
@@ -60,7 +57,7 @@ from nmis.projects.consts import (
     PRO_STATUS_PAUSE,
     PRO_OPERATION_PAUSE,
     PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PROJECT_DOCUMENT_CATE_CHOICES,
-    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS)
+    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS, PRO_MILESTONE_DONE)
 from utils.files import upload_file, remove, is_file_exist
 
 logger = logging.getLogger(__name__)
@@ -925,7 +922,7 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
                 milestone_state.summary = req.data.get('summary')
 
         if req.data.get('files'):
-            form = ProjectDocumentBulkCreateForm(req.data.get('files'))
+            form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
             if not form.is_valid():
                 return resp.form_err(form.errors)
             doc_list = form.save()
@@ -1118,7 +1115,7 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
                 milestone_state.save()
                 milestone_state.cache()
         if req.data.get("files"):
-            form = ProjectDocumentBulkCreateForm(req.data.get('files'))
+            form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
             if not form.is_valid():
                 return resp.form_err(form.errors)
             doc_list = form.save()
@@ -1187,7 +1184,7 @@ class ProjectMilestoneStatePlanArgumentView(BaseAPIView):
 #                     return resp.failed('保存失败')
 #
 #         if req.data.get('files'):
-#             form = ProjectDocumentBulkCreateForm(req.data.get('files'))
+#             form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
 #             if not form.is_valid():
 #                 return resp.form_err(form.errors)
 #             doc_list = form.save()
@@ -1228,7 +1225,10 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
         self.check_object_permissions(req, req.user.get_profile().organ)
 
         project = self.get_object_or_404(project_id, ProjectPlan)
-        pro_milestone_states = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState, use_cache=False)
+        pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+
+        if pro_milestone_state.status == PRO_MILESTONE_DONE:
+            return resp.failed('当前项目已完结，无法操作')
 
         purchase_method = req.data.get('purchase_method', '').strip()
 
@@ -1243,34 +1243,28 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
                 if not success:
                     return resp.failed('保存失败')
 
-        if req.data.get('files'):
-            form = ProjectDocumentBulkCreateForm(req.data.get('files'))
-            if not form.is_valid():
-                return resp.form_err(form.errors)
-            doc_list = form.save()
-            if not doc_list:
-                return resp.serialize_response(
-                    pro_milestone_states,
-                    srl_cls_name='ChunkProjectMilestoneStateSerializer',
-                    results_name='project_milestone_state')
-            doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-            if not pro_milestone_states.save_doc_list(doc_ids_str):
-                return resp.failed('保存失败')
+        form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        doc_list = form.save()
 
-        if req.data.get('summary', '').strip():
-            if req.user.get_profile() == project.performer:
-                if pro_milestone_states.update_summary(req.data.get('summary', '').strip()):
-                    return resp.serialize_response(
-                        pro_milestone_states,
-                        srl_cls_name='ChunkProjectMilestoneStateSerializer',
-                        results_name='project_milestone_state')
-        else:
+        if not req.data.get('summary') and not doc_list:
             return resp.serialize_response(
-                pro_milestone_states,
-                srl_cls_name='ChunkProjectMilestoneStateSerializer',
-                results_name='project_milestone_state')
+                pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
+                results_name='project_milestone_state'
+            )
 
-        return resp.failed('保存失败')
+        pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
+            doc_list, req.data.get('summary'), pro_milestone_state, req.user.get_profile(), project
+        )
+        new_pro_milestone_state = pro_milestone_state_form.save()
+
+        if not new_pro_milestone_state:
+            return resp.failed('保存失败')
+
+        return resp.serialize_response(
+            new_pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
+            results_name='project_milestone_state')
 
 
 class MilestoneRecordPurchaseView(BaseAPIView):
@@ -1286,11 +1280,9 @@ class MilestoneRecordPurchaseView(BaseAPIView):
         self.get_object_or_404(project_id, ProjectPlan)
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState, use_cache=False)
         logger.info(pro_milestone_state.doc_list)
-        # milestone_record = ProjectMilestoneState.objects.get_milestone_state(project)
 
         return resp.serialize_response(
-            pro_milestone_state,
-            srl_cls_name='ChunkProjectMilestoneStateSerializer',
+            pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
             results_name='project_milestone_state'
         )
 
@@ -1300,6 +1292,7 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
     permission_classes = (HospitalStaffPermission, )
 
     @transaction.atomic
+    @check_params_not_all_null(['files', 'summary'])
     def post(self, req, project_id, project_milestone_state_id):
         """
         启动采购里程碑中保存操作(保存资料文档url地址，项目里程碑中的说明、文档集合)
@@ -1309,38 +1302,32 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
         project = self.get_object_or_404(project_id, ProjectPlan)
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
-        if not req.data.get('files') and not req.data.get('summary'):
-            return resp.failed('请输入保存内容')
+        if pro_milestone_state.status == PRO_MILESTONE_DONE:
+            return resp.failed('当前项目已完结，无法操作')
 
-        if req.data.get('files'):
-            form = ProjectDocumentBulkCreateForm(req.data.get('files'))
+        form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        doc_list = form.save()
 
-            if not form.is_valid():
-                return resp.form_err(form.errors)
-
-            doc_list = form.save()
-
-            if not doc_list:
-                return resp.failed('保存失败')
-
-            doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-            if not pro_milestone_state.save_doc_list(doc_ids_str):
-                return resp.failed('保存失败')
-
-        if req.user.get_profile() == project.performer:
-            if req.data.get('summary', '').strip():
-                if pro_milestone_state.update_summary(req.data.get('summary', '').strip()):
-                    return resp.serialize_response(
-                        pro_milestone_state,
-                        srl_cls_name='ChunkProjectMilestoneStateSerializer',
-                        results_name='project_milestone_state')
-        if req.user.get_profile() == project.assistant:
+        if not req.data.get('summary') and not doc_list:
             return resp.serialize_response(
-                pro_milestone_state,
-                srl_cls_name='ChunkProjectMilestoneStateSerializer',
-                results_name='project_milestone_state')
+                pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
+                results_name='project_milestone_state'
+            )
 
-        return resp.failed('保存失败')
+        pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
+            doc_list, req.data.get('summary'), pro_milestone_state,
+            req.user.get_profile(), project
+        )
+        new_pro_milestone_state = pro_milestone_state_form.save()
+
+        if not new_pro_milestone_state:
+            return resp.failed('保存失败')
+
+        return resp.serialize_response(
+            new_pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
+            results_name='project_milestone_state')
 
 
 class MilestoneStartUpPurchaseView(BaseAPIView):
@@ -1383,37 +1370,39 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         project = self.get_object_or_404(project_id, ProjectPlan)
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
-        if req.data.get('files'):
-            doc_form = ProjectDocumentBulkCreateForm(req.data.get('files'))
-            if not doc_form.is_valid():
-                return resp.failed(doc_form.errors)
-            doc_list = doc_form.save()
+        if pro_milestone_state.status == PRO_MILESTONE_DONE:
+            return resp.failed('当前项目已完结，无法操作')
 
-            if doc_list:
-                doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-                if not pro_milestone_state.save_doc_list(doc_ids_str):
-                    return resp.failed('保存失败')
+        purchase_contract_form = PurchaseContractCreateForm(pro_milestone_state, req.data)
+        if not purchase_contract_form.is_valid():
+            return resp.form_err(purchase_contract_form.errors)
+        purchase_contract = purchase_contract_form.save()
 
-            purchase_contract_form = PurchaseContractCreateForm(pro_milestone_state, req.data)
-            if not purchase_contract_form.is_valid():
-                return resp.form_err(purchase_contract_form.errors)
-            purchase_contract = purchase_contract_form.save()
+        if not purchase_contract:
+            return resp.failed('保存失败')
 
-            if not purchase_contract:
-                return resp.failed('保存失败')
+        doc_form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+        if not doc_form.is_valid():
+            return resp.failed(doc_form.errors)
+        doc_list = doc_form.save()
 
-        if req.data.get('summary', '').strip():
-            if req.user.get_profile() == project.performer:
-                if pro_milestone_state.update_summary(req.data.get('summary', '').strip()):
-                    return resp.serialize_response(
-                        pro_milestone_state,
-                        srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer',
-                        results_name='project_milestone_state'
-                    )
+        if not req.data.get('summary') and not doc_list:
+            return resp.serialize_response(
+                pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
+                results_name='project_milestone_state'
+            )
+
+        pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
+            doc_list, req.data.get('summary'), pro_milestone_state,
+            req.user.get_profile(), project
+        )
+        new_pro_milestone_state = pro_milestone_state_form.save()
+
+        if not new_pro_milestone_state:
+            return resp.failed('保存失败')
 
         return resp.serialize_response(
-            pro_milestone_state,
-            srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer',
+            new_pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
             results_name='project_milestone_state')
 
 

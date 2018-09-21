@@ -412,7 +412,7 @@ class ProjectDocumentManager(BaseManager):
 
 class ProjectMilestoneStateManager(BaseManager):
 
-    def get_project_milestone_state(self, project, milestone):
+    def get_project_milestone_state_by_project_milestone(self, project, milestone):
         """
         根据项目和里程碑获取项目里程碑
         """
@@ -446,6 +446,17 @@ class ProjectMilestoneStateManager(BaseManager):
         """
         return self.filter(milestone=milestone).first()
 
+    def update_project_milestone_state(self, project_milestone_state, **data):
+        """
+        里程中每个子里程碑下更新当前项目里程碑下保存的数据
+        :param project_milestone_state: 更新的项目里程碑
+        """
+        try:
+            return project_milestone_state.update(data)
+        except Exception as e:
+            logger.exception(e)
+            return None
+
 
 class SupplierSelectionPlanManager(BaseManager):
 
@@ -464,7 +475,7 @@ class SupplierSelectionPlanManager(BaseManager):
 
 class PurchaseContractManager(BaseManager):
 
-    def create_purchase_contract(self, project_milestone_state=None, contract_devices=None, **data):
+    def create_or_update_purchase_contract(self, project_milestone_state=None, contract_devices=None, **data):
         """
         创建采购合同,添加合同采购设备信息
         :param project_milestone_state: 项目里程碑
@@ -474,19 +485,41 @@ class PurchaseContractManager(BaseManager):
             with transaction.atomic():
                 purchase_contract = self.filter(project_milestone_state=project_milestone_state).first()
                 if not purchase_contract:
+                    # 不存在合同的情况下创建合同
                     purchase_contract = self.model(project_milestone_state=project_milestone_state, **data)
                     purchase_contract.save()
-
+                else:
+                    # 存在合同的情况下更新合同
+                    purchase_contract.update(data)
                 # 创建合同设备信息
-                contract_device_list = []
+                contract_device_add_list = []   # 存放待添加的设备
+                contract_device_update_list = []  # 存放待更新的设备
                 for device_data in contract_devices:
                     if not device_data.get('id'):
-                        contract_device_list.append(
+                        contract_device_add_list.append(
                             ContractDevice(contract=purchase_contract, **device_data)
                         )
+                    else:
+                        contract_device_update_list.append(device_data)
+                if contract_device_add_list:
+                    ContractDevice.objects.bulk_create(contract_device_add_list)
+                if contract_device_update_list:
+                    # 按照ID升序重新排序
+                    contract_device_update_list = sorted(contract_device_update_list, key=lambda item: item['id'])
 
-                ContractDevice.objects.bulk_create(contract_device_list)
+                    contract_device_id_list = [device['id'] for device in contract_device_update_list]
+                    # 获取数据库中相对应的设备集合
+                    contract_device_old_list = ContractDevice.objects.filter(pk__in=contract_device_id_list).order_by('id')
 
+                    for index in range(len(contract_device_old_list)):
+                        contract_device_old_list[index].name = contract_device_update_list[index].get('name')
+                        contract_device_old_list[index].producer = contract_device_update_list[index].get('producer')
+                        contract_device_old_list[index].supplier = contract_device_update_list[index].get('supplier')
+                        contract_device_old_list[index].real_price = contract_device_update_list[index].get('real_price')
+                        contract_device_old_list[index].num = contract_device_update_list[index].get('num')
+                        contract_device_old_list[index].real_total_amount = contract_device_update_list[index].get('real_total_amount')
+                    # 批量更新
+                    helper.bulk_update(contract_device_old_list)
         except Exception as e:
             logger.exception(e)
             return None
