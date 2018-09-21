@@ -62,8 +62,10 @@ class BaseManager(Manager):
         """
         if not obj_id_list:
             return None
-
-        objs = cache.get_many(obj_id_list)
+        obj_list_keys = []
+        for obj_id in obj_id_list:
+            obj_list_keys.append(self.make_key(obj_id))
+        objs = cache.get_many(obj_list_keys)
         if not objs or len(objs) < len(obj_id_list):
             objs = self.filter(id__in=obj_id_list)
             if not objs:
@@ -77,17 +79,21 @@ class BaseManager(Manager):
         # logs.debug('make cache key: %s%s%s' % (self.__module__, self.model.__name__, obj_id))
         return u'%s%s%s' % (self.__module__, self.model.__name__, obj_id)
 
-    def clear_cache(self, obj):
-        """批量清除缓存或清除单个对象缓存"""
-        if isinstance(obj, QuerySet):
-            obj = list(obj)
-        if isinstance(obj, list):
+    def clear_cache(self, objs):
+        """
+        批量清除缓存或清除单个对象缓存
+        :param objs: QuerySet object, object list or single object
+        :return:
+        """
+        if isinstance(objs, QuerySet):
+            objs = list(objs)
+        if isinstance(objs, list) or isinstance(objs, set):
             keys = list()
-            for item in obj:
+            for item in objs:
                 keys.append(type(item).objects.make_key(item.id))
             cache.delete_many(keys)
         else:
-            cache.delete(type(obj).objects.make_key(obj.id))
+            cache.delete(type(objs).objects.make_key(objs.id))
 
 
 class BaseModel(models.Model):
