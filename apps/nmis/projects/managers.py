@@ -530,3 +530,30 @@ class PurchaseContractManager(BaseManager):
         通过项目里程碑获取合同信息
         """
         return self.filter(project_milestone_state=project_milestone_state).first()
+
+
+class ReceiptManager(BaseManager):
+
+    def create_update_receipt(self, project_milestone_state, **data):
+        """
+        创建或者更新收货单据
+        :param project_milestone_state:
+        :param data:
+        :return:
+        """
+        try:
+            receipt = self.filter(
+                project_milestone_state=project_milestone_state).first()
+            if not receipt:
+                receipt = self.model(project_milestone_state=project_milestone_state, **data)
+                receipt.save()
+            else:
+                receipt.update(data)
+        except Exception as e:
+            logger.exception(e)
+            return None
+        return receipt
+
+    def get_receipt_by_project_milestone_state(self, project_milestone_state):
+
+        return self.filter(project_milestone_state=project_milestone_state).first()

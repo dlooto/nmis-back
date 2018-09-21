@@ -158,6 +158,14 @@ urlpatterns = [
     path('<int:project_id>/purchase_contracts/<int:purchase_contract_id>/contract_devices/<int:contract_device_id>',
          views.ContractDeviceView.as_view(), ),
 
+    # 到货里程碑的保存操作
+    path('<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-take-delivery-info',
+         views.MilestoneTakeDeliveryCreateOrUpdateView.as_view(), ),
+
+    # 获取到货项目里程碑下的信息
+    path('<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/get-take-delivery-info',
+         views.MilestoneTakeDeliveryView.as_view(), ),
+
     # 流程中各里程碑下单个文件上传
     path('<int:project_id>/single-upload-file', views.UploadFileView.as_view(), ),
 

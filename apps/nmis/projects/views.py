@@ -30,14 +30,15 @@ from nmis.projects.forms import (
     ProjectFlowCreateForm,
     ProjectFlowUpdateForm, UploadFileForm, PurchaseContractCreateForm,
     SingleUploadFileForm,
-    ProjectDocumentBulkCreateOrUpdateForm, ProjectMilestoneStateUpdateForm, SupplierSelectionPlanBatchSaveForm)
+    ProjectDocumentBulkCreateOrUpdateForm, ProjectMilestoneStateUpdateForm,
+    SupplierSelectionPlanBatchSaveForm, ReceiptCreateOrUpdateForm)
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
     ProjectMilestoneState, SupplierSelectionPlan, Supplier, PurchaseContract
 from nmis.projects.permissions import ProjectPerformerPermission, \
     ProjectAssistantPermission
 from nmis.projects.serializers import ChunkProjectPlanSerializer, ProjectPlanSerializer, \
     get_project_status_count, ProjectMilestoneStateAndPurchaseContractSerializer, \
-    ChunkProjectMilestoneStateSerializer
+    ChunkProjectMilestoneStateSerializer, ProjectMilestoneStateAndReceiptSerializer
 
 from nmis.hospitals.consts import (
     GROUP_CATE_PROJECT_APPROVER,
@@ -964,6 +965,7 @@ class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
             return resp.failed('操作失败，当前里程碑不是【方案收集】里程碑')
         if milestone_state.is_finished():
             return resp.failed("操作失败，当前里程碑已完结")
+
         if project.performer == req.user.get_profile():
             if req.data.get('summary'):
                 milestone_state.summary = req.data.get('summary')
@@ -1157,62 +1159,6 @@ class ProjectMilestoneStatePlanArgumentView(BaseAPIView):
         )
 
 
-# class MilestoneRecordPurchaseCreateView(BaseAPIView):
-#
-#     permission_classes = (HospitalStaffPermission,)
-#
-#     @transaction.atomic
-#     def post(self, req, project_id, project_milestone_state_id):
-#         """
-#         确定采购方式子里程碑记录操作（包括确定采购的方式，保存采购方式决策论证类附件，保存说明等操作）
-#         """
-#         self.check_object_permissions(req, req.user.get_profile().organ)
-#         project = self.get_object_or_404(project_id, ProjectPlan)
-#         pro_milestone_states = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState, use_cache=False)
-#
-#         purchase_method = req.data.get('purchase_method', '').strip()
-#
-#         if not project.purchase_method:
-#             if not purchase_method:
-#                 return resp.failed('请选择采购方式')
-#         if purchase_method:
-#             if purchase_method not in dict(PROJECT_PURCHASE_METHOD_CHOICES):
-#                 return resp.form_err({'purchase_method_err': '采购方式类型错误'})
-#             else:
-#                 success = project.determining_purchase_method(purchase_method)
-#                 if not success:
-#                     return resp.failed('保存失败')
-#
-#         if req.data.get('files'):
-#             form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
-#             if not form.is_valid():
-#                 return resp.form_err(form.errors)
-#             doc_list = form.save()
-#             if not doc_list:
-#                 return resp.serialize_response(
-#                     pro_milestone_states,
-#                     srl_cls_name='ChunkProjectMilestoneStateSerializer',
-#                     results_name='project_milestone_state')
-#             doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-#             if not pro_milestone_states.save_doc_list(doc_ids_str):
-#                 return resp.failed('保存失败')
-#
-#         if req.user.get_profile() == project.performer:
-#             if req.data.get('summary', '').strip():
-#                 if pro_milestone_states.update_summary(req.data.get('summary', '').strip()):
-#                     return resp.serialize_response(
-#                         pro_milestone_states,
-#                         srl_cls_name='ChunkProjectMilestoneStateSerializer',
-#                         results_name='project_milestone_state')
-#         if req.user.get_profile() == project.assistant:
-#             return resp.serialize_response(
-#                 pro_milestone_states,
-#                 srl_cls_name='ChunkProjectMilestoneStateSerializer',
-#                 results_name='project_milestone_state')
-#
-#         return resp.failed('保存失败')
-
-
 class MilestoneRecordPurchaseCreateView(BaseAPIView):
 
     permission_classes = (HospitalStaffPermission,)
@@ -1228,7 +1174,7 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
         if pro_milestone_state.status == PRO_MILESTONE_DONE:
-            return resp.failed('当前项目已完结，无法操作')
+            return resp.failed('项目里程碑已完结，无法操作')
 
         purchase_method = req.data.get('purchase_method', '').strip()
 
@@ -1303,7 +1249,7 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
         if pro_milestone_state.status == PRO_MILESTONE_DONE:
-            return resp.failed('当前项目已完结，无法操作')
+            return resp.failed('项目里程碑已完结，无法操作')
 
         form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
         if not form.is_valid():
@@ -1371,7 +1317,7 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
         if pro_milestone_state.status == PRO_MILESTONE_DONE:
-            return resp.failed('当前项目已完结，无法操作')
+            return resp.failed('项目里程碑已完结，无法操作')
 
         purchase_contract_form = PurchaseContractCreateForm(pro_milestone_state, req.data)
         if not purchase_contract_form.is_valid():
@@ -1446,6 +1392,81 @@ class ContractDeviceView(BaseAPIView):
         if contract_device.deleted():
             return resp.ok('操作成功')
         return resp.failed('操作失败')
+
+
+class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    @transaction.atomic
+    @check_params_not_null(['served_date', 'delivery_man', 'contact_phone'])
+    def post(self, req, project_id, project_milestone_state_id):
+        """
+        到货项目里程碑的保存/修改操作
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        project_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+
+        if project_milestone_state.status == PRO_MILESTONE_DONE:
+            return resp.failed('项目里程碑已完结，无法操作！')
+
+        form = ReceiptCreateOrUpdateForm(req.data, project_milestone_state)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        receipt = form.save()
+        if not receipt:
+            return resp.failed('保存失败')
+
+        doc_form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+        if not doc_form.is_valid():
+            return resp.failed(doc_form.errors)
+        doc_list = doc_form.save()
+
+        if not req.data.get('summary') and not doc_list:
+            return resp.serialize_response(
+                project_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
+                results_name='project_milestone_state'
+            )
+
+        pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
+            doc_list, req.data.get('summary'), project_milestone_state,
+            req.user.get_profile(), project
+        )
+        new_pro_milestone_state = pro_milestone_state_form.save()
+
+        if not new_pro_milestone_state:
+            return resp.failed('保存失败')
+
+        return resp.serialize_response(
+            new_pro_milestone_state, srl_cls_name='ProjectMilestoneStateAndReceiptSerializer',
+            results_name='project_milestone_state'
+        )
+
+
+class MilestoneTakeDeliveryView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    def get(self, req, project_id, project_milestone_state_id):
+        """
+        获取到货项目里程碑下的信息
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        self.get_object_or_404(project_id, ProjectPlan)
+        self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+
+        query_set = ProjectMilestoneStateAndReceiptSerializer.setup_eager_loading(
+            ProjectMilestoneState.objects.filter(pk=project_milestone_state_id))
+
+        return resp.serialize_response(
+            query_set,
+            srl_cls_name='ProjectMilestoneStateAndReceiptSerializer',
+            results_name='project_milestone_state'
+        )
 
 
 class UploadFileView(BaseAPIView):

@@ -10,7 +10,7 @@ from base.forms import BaseForm
 from nmis.devices.models import OrderedDevice, SoftwareDevice
 from nmis.hospitals.consts import ARCHIVE
 from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectDocument, \
-    PurchaseContract, ProjectMilestoneState, SupplierSelectionPlan, Supplier
+    PurchaseContract, ProjectMilestoneState, SupplierSelectionPlan, Supplier, Receipt
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
     PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, \
     PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PRO_DOC_CATE_OTHERS, \
@@ -697,25 +697,17 @@ class PurchaseContractCreateForm(BaseForm):
         return True
 
     def save(self):
-        contract_data = {}
-        if self.data.get('contract_no', '').strip():
-            contract_data['contract_no'] = self.data.get('contract_no', '').strip()
-        if self.data.get('title', '').strip():
-            contract_data['title'] = self.data.get('title', '').strip()
-        if self.data.get('signed_date', '').strip():
-            contract_data['signed_date'] = self.data.get('signed_date', '').strip()
-        if self.data.get('buyer_contact', '').strip():
-            contract_data['buyer_contact'] = self.data.get('buyer_contact', '').strip()
-        if self.data.get('seller_contact', '').strip():
-            contract_data['seller_contact'] = self.data.get('seller_contact', '').strip()
-        if self.data.get('seller', '').strip():
-            contract_data['seller'] = self.data.get('seller', '').strip()
-        if self.data.get('seller_tel', '').strip():
-            contract_data['seller_tel'] = self.data.get('seller_tel', '').strip()
-        if self.data.get('total_amount'):
-            contract_data['total_amount'] = self.data.get('total_amount',)
-        if self.data.get('delivery_date', '').strip():
-            contract_data['delivery_date'] = self.data.get('delivery_date', '').strip()
+        contract_data = {
+            'contract_no': self.data.get('contract_no', '').strip(),
+            'title': self.data.get('contract_no', '').strip(),
+            'signed_date': self.data.get('contract_no', '').strip(),
+            'buyer_contact': self.data.get('contract_no', '').strip(),
+            'seller_contact': self.data.get('contract_no', '').strip(),
+            'seller': self.data.get('contract_no', '').strip(),
+            'seller_tel': self.data.get('contract_no', '').strip(),
+            'total_amount': self.data.get('total_amount'),
+            'delivery_date': self.data.get('contract_no', '').strip(),
+        }
 
         return PurchaseContract.objects.create_or_update_purchase_contract(
                 project_milestone_state=self.project_milestone_state,
@@ -939,3 +931,39 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
         except Exception as e:
             logs.exception(e)
             raise e
+
+
+class ReceiptCreateOrUpdateForm(BaseForm):
+
+    def __init__(self, data, project_milestone_state, *args, **kwargs):
+        BaseForm.__init__(self, data, project_milestone_state, *args, **kwargs)
+        self.project_milestone_state = project_milestone_state
+
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'contact_phone_err': '乙方电话错误',
+        })
+
+    def is_valid(self):
+        if not self.check_contact_phone:
+            return False
+        return True
+
+    def check_contact_phone(self):
+
+        contact_phone = self.data.get('contact_phone', '').strip()
+        if not eggs.is_phone_valid(contact_phone):
+            self.update_errors('contact_phone', 'contact_phone_err')
+            return False
+        return True
+
+    def save(self):
+        delivery_data = {
+            'served_date': self.data.get('served_date', '').strip(),
+            'delivery_man': self.data.get('delivery_man', '').strip(),
+            'contact_phone': self.data.get('contact_phone', '').strip()
+        }
+
+        return Receipt.objects.create_update_receipt(self.project_milestone_state, **delivery_data)
