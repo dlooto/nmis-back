@@ -7,12 +7,15 @@
 
 import logging
 
+import settings
 from nmis.projects.consts import (PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED,
                                   PRO_CATE_SOFTWARE, PRO_CATE_HARDWARE,
                                   PRO_STATUS_OVERRULE, PRO_OPERATION_OVERRULE,
-                                  PRO_OPERATION_PAUSE, PRO_STATUS_PAUSE, PRO_STATUS_DONE)
+                                  PRO_OPERATION_PAUSE, PRO_STATUS_PAUSE, PRO_STATUS_DONE,
+                                  PROJECT_DOCUMENT_DIR)
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
+from utils.files import single_upload_file
 from utils.times import now, yesterday, tomorrow
 
 logs = logging.getLogger(__name__)
@@ -688,3 +691,47 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('projects'))
         self.assertEquals(response.get('projects')[0].get('assistant_id'), self.admin_staff.id)
+
+    def test_single_upload_file(self):
+        """
+        API测试：测试单个文件上传接口
+        """
+        api = "/api/v1/projects/{}/single-upload-file"
+        import os
+        self.login_with_username(self.user)
+        # 返回当前脚本路径
+        curr_path = os.path.dirname(__file__)
+
+        # 创建项目
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+
+        file_obj = open(curr_path + '/data/dept-normal-test.xlsx', 'wb+')
+
+        response = self.raw_post(api.format(project.id), {'file_key': file_obj})
+
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('file_url'))
+
+        upload_path = '%s%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/', 'dept-normal-test.xlsx')
+        self.assertEquals(upload_path, response.get('file_url'))
+        file_obj.close()
+
+    def test_deleted_single_file(self):
+        """
+        API测试：测试删除单个文件接口
+        """
+        import os
+        api = '/api/v1/projects/single-del-file/{}'
+
+        self.login_with_username(self.user)
+        # 创建项目申请
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+
+        # 上传文件
+        curr_path = os.path.dirname(__file__)
+
+        file_obj = open(curr_path + '/data/dept-normal-test.xlsx', 'wb+')
+
+        file_name_url_data = single_upload_file(
+            file_obj, '%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/'), 'dept-normal-test.xlsx')
+        self.assertIsNone(file_name_url_data)

@@ -39,10 +39,12 @@ def remove(path, fileName=None):
 def save_file(file, base_dir, file_name):
     """保存文件
     @param file  传入的文件参数, request.FILES中获取的数据对象, file需要先经过rename处理, 以便获取到file.name
+    :param base_dir:
     @param file_name  保存的目标文件名
      """
     
-    if not file: return ''
+    if not file:
+        return ''
     try:
         dest = open('%s/%s/%s' % (settings.MEDIA_ROOT, base_dir, file_name), 'wb+')
         for chunk in file.chunks():
@@ -61,7 +63,7 @@ def upload_file(file, base_dir, stored_file_name):
     :param file:
     :param base_dir:
     :param storge_file_name:
-    :return: 由上传的文件名和
+    :return: 由上传的文件名和保存路径
     """
     try:
         path = os.path.join(settings.MEDIA_ROOT, base_dir)
