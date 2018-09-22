@@ -13,6 +13,7 @@ from nmis.projects.consts import (PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED,
                                   PRO_STATUS_OVERRULE, PRO_OPERATION_OVERRULE,
                                   PRO_OPERATION_PAUSE, PRO_STATUS_PAUSE, PRO_STATUS_DONE,
                                   PROJECT_DOCUMENT_DIR)
+from nmis.projects.models import ProjectDocument, ProjectPlan, ProjectMilestoneState
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
 from utils.files import single_upload_file
@@ -721,17 +722,70 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         API测试：测试删除单个文件接口
         """
         import os
-        api = '/api/v1/projects/single-del-file/{}'
+        upload_file_api = "/api/v1/projects/{}/single-upload-file"  # 上传文件API接口
+
+        delete_file_api = '/api/v1/projects/single-del-file/{}'  # 删除文件API接口
 
         self.login_with_username(self.user)
         # 创建项目申请
         project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+
+        # 创建项目流程
+        flow = self.create_flow(self.organ)
+
+        # 分配项目负责人
+        success = project.dispatch(self.admin_staff)
+
+        self.assertTrue(success)
+
+        new_project = ProjectPlan.objects.filter(id=project.id).first()
+        self.assertEquals(new_project.attached_flow, flow)
+        # 获取第一个主里程碑
+        first_main_milestone = flow.get_first_main_milestone()
+
+        # 获取第一个project_milestone_state
+        first_pro_mil_state = ProjectMilestoneState.objects.get_project_milestone_state_by_project_milestone(
+            project=project, milestone=first_main_milestone)
 
         # 上传文件
         curr_path = os.path.dirname(__file__)
 
         file_obj = open(curr_path + '/data/dept-normal-test.xlsx', 'wb+')
 
-        file_name_url_data = single_upload_file(
-            file_obj, '%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/'), 'dept-normal-test.xlsx')
-        self.assertIsNone(file_name_url_data)
+        upload_response = self.raw_post(upload_file_api.format(project.id), {'file_key': file_obj})
+
+        self.assert_response_success(upload_response)
+        self.assertIsNotNone(upload_response.get('file_url'))
+
+        upload_path = '%s%s%s%s' % (
+            PROJECT_DOCUMENT_DIR, str(project.id), '/', 'dept-normal-test.xlsx')
+        success_upload_file_path = upload_response.get('file_url')  # 获取上传成功后的路径
+
+        self.assertEquals(upload_path, success_upload_file_path)
+        file_obj.close()    # 关闭文件流
+        project_document_data = {
+            'name': 'dept-normal-test.xlsx',
+            'category': 'others',
+            'path': success_upload_file_path,
+        }
+        project_documents = [project_document_data]
+        doc_list = ProjectDocument.objects.bulk_save_upload_project_doc(project_documents)
+        self.assertIsNotNone(doc_list)
+        doc_id_str = ','.join('%s' % doc.id for doc in doc_list)
+
+        # 保存doc到ProjectMilestoneState
+        self.assertTrue(first_pro_mil_state.save_doc_list(doc_id_str))
+        # 断言当前ProjectDocument是否在ProjectMilestoneState中
+        self.assertTrue(str(doc_list[0].id) in first_pro_mil_state.doc_list)
+
+        # 删除附件
+        doc_id = doc_list[0].id
+
+        delete_file_response = self.post(
+            delete_file_api.format(doc_id), data={'project_milestone_state_id': first_pro_mil_state.id})
+        self.assert_response_success(delete_file_response)
+        self.assertEquals(10000, delete_file_response.get('code'))
+        pro_mil_state = ProjectMilestoneState.objects.get_project_milestone_state_by_project_milestone(
+            project=project, milestone=first_main_milestone)
+        # 断言删除附件后，当前ProjectDocument是否在ProjectMilestoneState中
+        self.assertTrue(str(doc_list[0].id) not in pro_mil_state.doc_list)

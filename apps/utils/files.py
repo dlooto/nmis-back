@@ -94,6 +94,7 @@ def single_upload_file(file, base_dir, stored_file_name):
             os.makedirs(path)
         file_path = '%s/%s' % (path, stored_file_name)
         destination = open(file_path, 'wb+')
+
         for chunk in file.chunks():
             destination.write(chunk)
         destination.close()

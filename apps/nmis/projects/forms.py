@@ -540,13 +540,13 @@ class SingleUploadFileForm(BaseForm):
     def init_err_codes(self):
         self.ERR_CODES.update({
             'file_type_err': '不支持的文件类型',
-            'file_key_err': 'key类型错误',
+            'file_key_err': 'key值为空',
             'file_name_err': '文件名称错误',
             'file_size_err': '上传文件过大，默认上传大小2.5M'
         })
 
     def is_valid(self):
-        if not self.check_file_type() or not self.check_file_size():
+        if not self.check_file_type() or not self.check_file_size() or not self.check_file_key():
             return False
         return True
 
@@ -563,10 +563,13 @@ class SingleUploadFileForm(BaseForm):
         pass
 
     def check_file_key(self):
-        for tag in self.req.FILES.keys():
-            if tag not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
-                self.update_errors('file_key', 'file_key_err')
-                return False
+        if not self.req.FILES.keys():
+            self.update_errors('file_key', 'file_key_err')
+            return False
+        # for tag in self.req.FILES.keys():
+        #     if tag not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
+        #         self.update_errors('file_key', 'file_key_err')
+        #         return False
         return True
 
     def check_file_size(self):
@@ -576,7 +579,6 @@ class SingleUploadFileForm(BaseForm):
         """
         for tag in self.req.FILES.keys():
             file = self.req.FILES.get(tag)
-            logs.info(file.size)
             if file.size > 2621440:
                 self.update_errors('file_size', 'file_size_err')
                 return False
@@ -585,10 +587,8 @@ class SingleUploadFileForm(BaseForm):
     def save(self):
 
         logs.info(int(time.time()))
-
         for tag in self.req.FILES.keys():
             file = self.req.FILES.get(tag)
-
             result = single_upload_file(file, PROJECT_DOCUMENT_DIR + str(self.project_id) + '/',
                                         file.name)
             if not result:
