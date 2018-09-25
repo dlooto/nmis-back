@@ -693,33 +693,33 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertIsNotNone(response.get('projects'))
         self.assertEquals(response.get('projects')[0].get('assistant_id'), self.admin_staff.id)
 
-    def test_single_upload_file(self):
-        """
-        API测试：测试单个文件上传接口
-        """
-        api = "/api/v1/projects/{}/single-upload-file"
-        import os
-        self.login_with_username(self.user)
-        # 返回当前脚本路径
-        curr_path = os.path.dirname(__file__)
-
-        # 创建项目
-        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
-
-        file_obj = open(curr_path + '/data/dept-normal-test.xlsx', 'wb+')
-
-        response = self.raw_post(api.format(project.id), {'file_key': file_obj})
-
-        self.assert_response_success(response)
-        self.assertIsNotNone(response.get('file_url'))
-
-        upload_path = '%s%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/', 'dept-normal-test.xlsx')
-        self.assertEquals(upload_path, response.get('file_url'))
-        file_obj.close()
+    # def test_single_upload_file(self):
+    #     """
+    #     API测试：测试单个文件上传接口
+    #     """
+    #     api = "/api/v1/projects/{}/single-upload-file"
+    #     import os
+    #     self.login_with_username(self.user)
+    #     # 返回当前脚本路径
+    #     curr_path = os.path.dirname(__file__)
+    #
+    #     # 创建项目
+    #     project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+    #
+    #     file_obj = open(curr_path + '/data/dept-normal-test.xlsx', 'wb+')
+    #
+    #     response = self.raw_post(api.format(project.id), {'file_key': file_obj})
+    #
+    #     self.assert_response_success(response)
+    #     self.assertIsNotNone(response.get('file_url'))
+    #
+    #     upload_path = '%s%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/', 'dept-normal-test.xlsx')
+    #     self.assertEquals(upload_path, response.get('file_url'))
+    #     file_obj.close()
 
     def test_deleted_single_file(self):
         """
-        API测试：测试删除单个文件接口
+        API测试：测试上传/删除单个文件接口
         """
         import os
         upload_file_api = "/api/v1/projects/{}/single-upload-file"  # 上传文件API接口
@@ -789,3 +789,5 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             project=project, milestone=first_main_milestone)
         # 断言删除附件后，当前ProjectDocument是否在ProjectMilestoneState中
         self.assertTrue(str(doc_list[0].id) not in pro_mil_state.doc_list)
+        os.rmdir('%s%s%s%s' % (
+            settings.MEDIA_ROOT, '/', PROJECT_DOCUMENT_DIR, str(project.id)))
