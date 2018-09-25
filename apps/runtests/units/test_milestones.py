@@ -66,7 +66,7 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertTrue(self.project.status == 'SD')
 
         first_main_milestone = self.project.attached_flow.get_first_main_milestone()
-        first_main_milestone_state = ProjectMilestoneState.objects.get_project_milestone_state(project=self.project, milestone=first_main_milestone)
+        first_main_milestone_state = ProjectMilestoneState.objects.get_project_milestone_state_by_project_milestone(project=self.project, milestone=first_main_milestone)
 
         self.assertEqual(first_main_milestone_state.status, "DOING", "里程碑状态异常")
 

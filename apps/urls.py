@@ -11,6 +11,8 @@ from django.urls import include, path
 
 # schema_view = get_swagger_view(title='Pastebin API')
 
+handler500 = 'rest_framework.exceptions.server_error'
+
 admin.autodiscover()
 
 urlpatterns = [

@@ -58,7 +58,8 @@ from nmis.projects.consts import (
     PRO_STATUS_PAUSE,
     PRO_OPERATION_PAUSE,
     PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PROJECT_DOCUMENT_CATE_CHOICES,
-    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS, PRO_MILESTONE_DONE)
+    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS, PRO_MILESTONE_DONE,
+    PRO_MILESTONE_TODO)
 from utils.files import upload_file, remove, is_file_exist
 
 logger = logging.getLogger(__name__)
@@ -1182,7 +1183,7 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
         if pro_milestone_state.status == PRO_MILESTONE_DONE:
-            return resp.failed('项目里程碑已完结，无法操作')
+            return resp.failed('项目里程碑已完结或未开始，无法操作!')
 
         purchase_method = req.data.get('purchase_method', '').strip()
 
@@ -1257,7 +1258,7 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
         if pro_milestone_state.status == PRO_MILESTONE_DONE:
-            return resp.failed('项目里程碑已完结，无法操作')
+            return resp.failed('项目里程碑已完结或未开始，无法操作!')
 
         form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
         if not form.is_valid():
@@ -1325,8 +1326,7 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
         if pro_milestone_state.status == PRO_MILESTONE_DONE:
-            return resp.failed('项目里程碑已完结，无法操作')
-
+            return resp.failed('项目里程碑已完结或未开始，无法操作!')
         purchase_contract_form = PurchaseContractCreateForm(pro_milestone_state, req.data)
         if not purchase_contract_form.is_valid():
             return resp.form_err(purchase_contract_form.errors)
@@ -1417,8 +1417,8 @@ class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
         project = self.get_object_or_404(project_id, ProjectPlan)
         project_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
-        if project_milestone_state.status == PRO_MILESTONE_DONE:
-            return resp.failed('项目里程碑已完结，无法操作！')
+        if project_milestone_state.status in (PRO_MILESTONE_DONE, PRO_MILESTONE_TODO):
+            return resp.failed('项目里程碑已完结或未开始，无法操作!')
 
         form = ReceiptCreateOrUpdateForm(req.data, project_milestone_state)
 
@@ -1526,10 +1526,12 @@ class DeleteFileView(BaseAPIView):
 
             if str(doc_id) in doc_id_str:
                 doc_id_str.remove(str(doc_id))
+            else:
+                return resp.failed('该项目里程碑中不存在此文件')
             if project_milestone_state.update_doc_list(",".join(doc_id_str)):
                 path = os.path.join(settings.MEDIA_ROOT, project_document.path)
-                if remove(path):
-                    if project_document.deleted():
+                if project_document.deleted():
+                    if remove(path):
                         return resp.ok('删除成功')
 
         return resp.failed('系统找不到指定的路径')
