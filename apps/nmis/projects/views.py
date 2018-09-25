@@ -913,8 +913,11 @@ def check_project_milestone_state(project, project_milestone_state, milestone_ti
     """
     if not project.contains_project_milestone_state(project_milestone_state):
         return False, '操作失败, 请求数据异常'
-    if project_milestone_state.milestone.title != milestone_titles or project_milestone_state.milestone.title not in milestone_titles:
-        # return False, '操作失败，当前里程碑不是【%s】里程碑' % (milestone_title, )
+    if isinstance(milestone_titles, str) and not project_milestone_state.milestone.title == milestone_titles:
+        # return False, '操作失败，当前里程碑不是[%s]里程碑' % (milestone_titles, )
+        return False, '操作失败, 请求数据异常'
+    if isinstance(milestone_titles, list) and project_milestone_state.milestone.title not in milestone_titles:
+        # return False, '操作失败，当前里程碑在%s里程碑' % (milestone_titles, )
         return False, '操作失败, 请求数据异常'
     if request_method == 'GET':
         if project_milestone_state.is_unstarted():
@@ -966,7 +969,8 @@ class ProjectMilestoneStateResearchInfoView(BaseAPIView):
 
         project = self.get_object_or_404(project_id, ProjectPlan)
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
-        success, msg = check_project_milestone_state(project, milestone_state, '调研', request_method="GET")
+        stone_titles = ['调研', '实施调试', '项目验收']
+        success, msg = check_project_milestone_state(project, milestone_state, stone_titles, request_method="GET")
         if not success:
             return resp.failed(msg)
         return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
