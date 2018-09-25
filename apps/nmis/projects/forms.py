@@ -699,14 +699,14 @@ class PurchaseContractCreateForm(BaseForm):
     def save(self):
         contract_data = {
             'contract_no': self.data.get('contract_no', '').strip(),
-            'title': self.data.get('contract_no', '').strip(),
-            'signed_date': self.data.get('contract_no', '').strip(),
-            'buyer_contact': self.data.get('contract_no', '').strip(),
-            'seller_contact': self.data.get('contract_no', '').strip(),
-            'seller': self.data.get('contract_no', '').strip(),
-            'seller_tel': self.data.get('contract_no', '').strip(),
+            'title': self.data.get('title', '').strip(),
+            'signed_date': self.data.get('signed_date', '').strip(),
+            'buyer_contact': self.data.get('buyer_contact', '').strip(),
+            'seller_contact': self.data.get('seller_contact', '').strip(),
+            'seller': self.data.get('seller', '').strip(),
+            'seller_tel': self.data.get('seller_tel', '').strip(),
             'total_amount': self.data.get('total_amount'),
-            'delivery_date': self.data.get('contract_no', '').strip(),
+            'delivery_date': self.data.get('delivery_date', '').strip(),
         }
 
         return PurchaseContract.objects.create_or_update_purchase_contract(

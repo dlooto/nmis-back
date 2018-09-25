@@ -10,7 +10,7 @@ import logging
 from django.db import models, transaction
 
 from nmis.projects.managers import ProjectDocumentManager, ProjectMilestoneStateManager, \
-    SupplierSelectionPlanManager, PurchaseContractManager, ReceiptManager
+    SupplierSelectionPlanManager, PurchaseContractManager, ReceiptManager, MilestoneManager
 from utils import times
 from base.models import BaseModel
 from nmis.devices.models import OrderedDevice, SoftwareDevice
@@ -622,6 +622,8 @@ class Milestone(BaseModel):
     parent = models.ForeignKey('self', verbose_name='父里程碑', null=True, on_delete=models.CASCADE)
     # 祖里程碑到当前里程碑的父节点最短路径, 由各里程碑项id的字符串组成，每个id,之间用‘-’进行分隔
     parent_path = models.CharField('父里程碑路径', max_length=1024, default='', null=False, blank=False)
+
+    objects = MilestoneManager()
 
     class Meta:
         verbose_name = '里程碑项'

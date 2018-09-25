@@ -264,6 +264,10 @@ class ProjectPlanManager(BaseManager):
         return results
 
 
+class MilestoneManager(BaseManager):
+    pass
+
+
 class ProjectFlowManager(BaseManager):
 
     def create_flow(self, milestones, **data):
@@ -289,6 +293,20 @@ class ProjectFlowManager(BaseManager):
             return None
 
         return flow
+
+    def get_default_flow(self):
+        """获取默认流程"""
+        return self.filter(default_flow=True).first()
+
+    def get_default_flow_milestones(self):
+        """
+        默认流程中的项目里程碑
+        :return:
+        """
+        default_flow = self.get_default_flow()
+        if not default_flow:
+            return []
+        return MilestoneManager().filter(flow=default_flow).all()
 
 
 class ProjectOperationRecordManager(BaseManager):

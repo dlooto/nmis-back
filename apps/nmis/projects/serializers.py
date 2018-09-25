@@ -9,6 +9,7 @@ import logging
 
 from collections import OrderedDict
 
+from djcelery.views import JsonResponse
 from rest_framework import serializers
 
 from base import resp
@@ -142,7 +143,7 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
 
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
-    doc_list = serializers.SerializerMethodField('_get_doc_list')
+    cate_documents = serializers.SerializerMethodField('_get_cate_documents')
     purchase_method = serializers.SerializerMethodField('_get_purchase_method')
 
     @staticmethod
@@ -153,7 +154,7 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_title', 'milestone_index',
-            'doc_list', 'summary', 'purchase_method',
+            'cate_documents', 'summary', 'purchase_method',
             'status', 'created_time', 'finished_time',
         )
 
@@ -165,13 +166,33 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
         stone = obj.milestone
         return stone.index if stone else -1
 
-    def _get_doc_list(self, obj):
+    def _get_cate_documents(self, obj):
+        """获取分类文档"""
         if not obj.doc_list:
             return []
         doc_ids_str = obj.doc_list.split(',')
         doc_ids = [int(id_str) for id_str in doc_ids_str]
-        doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
-        return resp.serialize_data(doc_list) if doc_list else []
+        doc_list = ProjectDocument.objects.filter(id__in=doc_ids).all()
+        if not doc_list:
+            return []
+
+        cate_document_list = list()
+        category_set = set()
+
+        for doc in doc_list:
+            category_set.add(doc.category)
+
+        for category in category_set:
+            cate_document = {'category': category}
+            file_list = list()
+            for doc in doc_list:
+                if doc.category == category:
+                    doc = {'id': doc.id, 'name': doc.name, 'path': doc.path, 'category': doc.category}
+                    file_list.append(doc)
+            cate_document['files'] = file_list
+            cate_document_list.append(cate_document)
+
+        return cate_document_list if cate_document_list else []
 
     def _get_purchase_method(self, obj):
         """
@@ -188,7 +209,7 @@ class ProjectMilestoneStateWithSupplierSelectionPlanSerializer(ProjectMilestoneS
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_id',  'milestone_title',
-            'milestone_index', 'created_time', 'doc_list',
+            'milestone_index', 'created_time',
             'status', 'summary', 'supplier_selection_plans', 'finished_time',
         )
 
@@ -204,7 +225,7 @@ class ProjectMilestoneStateWithSupplierSelectionPlanSelectedSerializer(ProjectMi
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_id',  'milestone_title',
-            'milestone_index', 'created_time', 'doc_list',
+            'milestone_index', 'created_time',
             'status', 'summary', 'supplier_selection_plans', 'finished_time',
         )
 
@@ -417,7 +438,7 @@ class ProjectMilestoneStateAndPurchaseContractSerializer(ProjectMilestoneStateSe
 
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
-    doc_list = serializers.SerializerMethodField('_get_doc_list')
+    cate_documents = serializers.SerializerMethodField('_get_cate_documents')
     purchase_method = serializers.SerializerMethodField('_get_purchase_method')
 
     purchase_contract = serializers.SerializerMethodField('_get_purchase_contract')
@@ -430,7 +451,7 @@ class ProjectMilestoneStateAndPurchaseContractSerializer(ProjectMilestoneStateSe
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_title', 'milestone_index',
-            'doc_list', 'summary', 'purchase_method',
+            'cate_documents', 'summary', 'purchase_method',
             # 'has_children', 'children',
             'status', 'created_time', 'purchase_contract'
         )
@@ -447,15 +468,33 @@ class ProjectMilestoneStateAndPurchaseContractSerializer(ProjectMilestoneStateSe
         stone = obj.milestone
         return stone.index if stone else -1
 
-    def _get_doc_list(self, obj):
-        if not hasattr(obj, 'doc_list'):
-            return []
+    def _get_cate_documents(self, obj):
+        """获取分类文档"""
         if not obj.doc_list:
             return []
         doc_ids_str = obj.doc_list.split(',')
         doc_ids = [int(id_str) for id_str in doc_ids_str]
-        doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
-        return resp.serialize_data(doc_list) if doc_list else []
+        doc_list = ProjectDocument.objects.filter(id__in=doc_ids).all()
+        if not doc_list:
+            return []
+
+        cate_document_list = list()
+        category_set = set()
+
+        for doc in doc_list:
+            category_set.add(doc.category)
+
+        for category in category_set:
+            cate_document = {'category': category}
+            file_list = list()
+            for doc in doc_list:
+                if doc.category == category:
+                    doc = {'id': doc.id, 'name': doc.name, 'path': doc.path, 'category': doc.category}
+                    file_list.append(doc)
+            cate_document['files'] = file_list
+            cate_document_list.append(cate_document)
+
+        return cate_document_list if cate_document_list else []
 
     def _get_purchase_contract(self, obj):
 
@@ -487,7 +526,7 @@ class ProjectMilestoneStateAndReceiptSerializer(ProjectMilestoneStateSerializer)
 
     milestone_title = serializers.SerializerMethodField('_get_milestone_title')
     milestone_index = serializers.SerializerMethodField('_get_milestone_index')
-    doc_list = serializers.SerializerMethodField('_get_doc_list')
+    cate_documents = serializers.SerializerMethodField('_get_cate_documents')
     purchase_method = serializers.SerializerMethodField('_get_purchase_method')
 
     receipt = serializers.SerializerMethodField('_get_receipt')
@@ -500,7 +539,7 @@ class ProjectMilestoneStateAndReceiptSerializer(ProjectMilestoneStateSerializer)
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_title', 'milestone_index',
-            'doc_list', 'summary', 'purchase_method',
+            'cate_documents', 'summary', 'purchase_method',
             # 'has_children', 'children',
             'status', 'created_time', 'receipt'
         )
@@ -517,15 +556,33 @@ class ProjectMilestoneStateAndReceiptSerializer(ProjectMilestoneStateSerializer)
         stone = obj.milestone
         return stone.index if stone else -1
 
-    def _get_doc_list(self, obj):
-        if not hasattr(obj, 'doc_list'):
-            return []
+    def _get_cate_documents(self, obj):
+        """获取分类文档"""
         if not obj.doc_list:
             return []
         doc_ids_str = obj.doc_list.split(',')
         doc_ids = [int(id_str) for id_str in doc_ids_str]
-        doc_list = ProjectDocument.objects.filter(id__in=doc_ids)
-        return resp.serialize_data(doc_list) if doc_list else []
+        doc_list = ProjectDocument.objects.filter(id__in=doc_ids).all()
+        if not doc_list:
+            return []
+
+        cate_document_list = list()
+        category_set = set()
+
+        for doc in doc_list:
+            category_set.add(doc.category)
+
+        for category in category_set:
+            cate_document = {'category': category}
+            file_list = list()
+            for doc in doc_list:
+                if doc.category == category:
+                    doc = {'id': doc.id, 'name': doc.name, 'path': doc.path, 'category': doc.category}
+                    file_list.append(doc)
+            cate_document['files'] = file_list
+            cate_document_list.append(cate_document)
+
+        return cate_document_list if cate_document_list else []
 
     def _get_receipt(self, obj):
 
