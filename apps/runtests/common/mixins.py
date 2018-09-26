@@ -47,21 +47,80 @@ SOFTWARE_DEVICES = [
 
 MILESTONES = [
     {
-        "title": "前期准备",
+        "id": 3001001,
+        "title": "需求论证",
+        "index": 0
+    },
+    {
+        "id": 3001002,
+        "title": "圈定方案",
         "index": 1
     },
     {
-        "title": "合同签订",
+        "id": 3001003,
+        "title": "采购管理",
         "index": 2
     },
     {
-        "title": "进入实施",
+        "id": 3001004,
+        "title": "实施验收",
         "index": 3
     },
     {
-        "title": "已完成",
-        "index": 4
+        "id": 3001005,
+        "title": "调研",
+        "index": 0,
+        "parent_id": 3001002
+    },
+    {
+        "id": 3001006,
+        "title": "方案收集",
+        "index": 1,
+        "parent_id": 3001002
+    },
+    {
+        "id": 3001007,
+        "title": "方案论证",
+        "index": 2,
+        "parent_id": 3001002
+    },
+    {
+        "id": 3001008,
+        "title": "确定采购方式",
+        "index": 0,
+        "parent_id": 3001003
+    },
+    {
+        "id": 3001009,
+        "title": "启动采购",
+        "index": 1,
+        "parent_id": 3001003
+    },
+    {
+        "id": 3001010,
+        "title": "合同管理",
+        "index": 2,
+        "parent_id": 3001003
+    },
+    {
+        "id": 3001011,
+        "title": "到货",
+        "index": 0,
+        "parent_id": 3001004
+    },
+    {
+        "id": 3001012,
+        "title": "实施调试",
+        "index": 1,
+        "parent_id": 3001004
+    },
+    {
+        "id": 3001013,
+        "title": "项目验收(完结点)",
+        "index": 2,
+        "parent_id": 3001004
     }
+
 
 ]
 

@@ -3,14 +3,14 @@
 ########################################################################
 
 # 版本发布步骤:
-#   git branch v010                 # 在本地创建新分支
+#   git bsite v010                 # 在本地创建新分支
 #   git push upstream v010:v010     # 推送新分支到远程仓库
-#   fab h156 deploy:v010            # 在新分支上执行发布命令
+#   fab bsite deploy:v010            # 在新分支上执行发布命令
 #
 # 命令用法:
-#   fab h156    deploy     <==only deploy on 156 host
+#   fab bsite    deploy     <==only deploy on 156 host
 #   fab h_prod  deploy     <==deploy all host in prod hosts
-#   fab h156 runtests:nmis,test_api.py   <==运行测试, 其中:nmis,test_api.py为参数
+#   fab bsite runtests:nmis,test_api.py   <==运行测试, 其中:nmis,test_api.py为参数
 
 ########################################################################
 
