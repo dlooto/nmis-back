@@ -296,7 +296,8 @@ class ProjectFlowManager(BaseManager):
 
     def get_default_flow(self):
         """获取默认流程"""
-        return self.filter(default_flow=True).first()
+        flow = self.filter(default_flow=True).first()
+        return flow if flow else None
 
     def get_default_flow_milestones(self):
         """

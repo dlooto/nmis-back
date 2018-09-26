@@ -907,7 +907,7 @@ def check_project_milestone_state(project, project_milestone_state, milestone_ti
     校验项目里程碑数据
     :param project: ProjectPlan实例对象
     :param project_milestone_state: ProjectMilestoneState实例对象
-    :param milestone_titles: 里程碑标题/名称 当个字符 或字符串List
+    :param milestone_titles: 里程碑标题/名称 单个字符串或字符串List
     :param request_method: 请求方法: GET,POST,PUT,DELETE,PATCH,OPTION 字符串
     :return:
     """
@@ -931,7 +931,7 @@ def check_project_milestone_state(project, project_milestone_state, milestone_ti
 
 
 class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
-    # permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     """
     项目负责人/项目协助人保存/修改【调研】【实施调试】【项目验收】里程碑下的信息
@@ -940,16 +940,19 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
     @transaction.atomic
     def post(self, req, project_id, project_milestone_state_id, ):
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
         stone_titles = ['调研', '实施调试', '项目验收']
         success, msg = check_project_milestone_state(project, milestone_state, stone_titles, request_method="POST")
         if not success:
             return resp.failed(msg)
         if project.performer == req.user.get_profile():
-            if req.data.get('summary') and req.data.get('summary').strip():
-                milestone_state.summary = req.data.get('summary')
-        if req.data.get('files'):
-            form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+            if req.data.get('summary') is not None:
+                milestone_state.summary = req.data.get('summary').strip()
+                milestone_state.save()
+                milestone_state.cache()
+        if req.data.get('cate_documents'):
+            form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
             if not form.is_valid():
                 return resp.form_err(form.errors)
             doc_list = form.save()
@@ -962,12 +965,15 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
 
 
 class ProjectMilestoneStateResearchInfoView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+
     """
     查看【调研】里程碑下的信息
     """
     def get(self, req, project_id, project_milestone_state_id):
 
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
         stone_titles = ['调研', '实施调试', '项目验收']
         success, msg = check_project_milestone_state(project, milestone_state, stone_titles, request_method="GET")
@@ -978,19 +984,24 @@ class ProjectMilestoneStateResearchInfoView(BaseAPIView):
 
 class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
     """保存【方案收集】里程碑下的信息"""
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @check_params_not_all_null(['plan_list', 'summary'])
     @transaction.atomic
     def post(self, req, project_id, project_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
         success, msg = check_project_milestone_state(project, milestone_state, '方案收集', request_method="POST")
         if not success:
             return resp.failed(msg)
 
         if project.performer == req.user.get_profile():
-            if req.data.get('summary'):
-                milestone_state.summary = req.data.get('summary')
+            if req.data.get('summary') is not None:
+                milestone_state.summary = req.data.get('summary').strip()
+                milestone_state.save()
+                milestone_state.cache()
         form = SupplierSelectionPlanBatchSaveForm(milestone_state, req.data)
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -1004,8 +1015,12 @@ class ProjectMilestoneStatePlanGatheredView(BaseAPIView):
     """
     查询[方案收集]里程碑下的信息
     """
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+
     def get(self, req, project_id, project_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
         success, msg = check_project_milestone_state(project, milestone_state, '方案收集', request_method="GET")
         if not success:
@@ -1014,6 +1029,8 @@ class ProjectMilestoneStatePlanGatheredView(BaseAPIView):
 
 
 class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
+
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @transaction.atomic
     def delete(self, req, project_id, project_milestone_state_id, plan_id, doc_id):
@@ -1027,6 +1044,8 @@ class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
         :return:
         """
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
         success, msg = check_project_milestone_state(project, milestone_state, '方案收集', request_method="DELETE")
         if not success:
@@ -1056,6 +1075,7 @@ class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
 
 
 class ProjectMilestoneStateSupplierPlanView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @transaction.atomic
     def delete(self, req, project_id, project_milestone_state_id, plan_id):
@@ -1069,6 +1089,8 @@ class ProjectMilestoneStateSupplierPlanView(BaseAPIView):
         """
 
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
         success, msg = check_project_milestone_state(project, milestone_state, '方案收集', request_method="DELETE")
         if not success:
@@ -1103,6 +1125,7 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
     """
     保存【方案论证】里程碑下的信息
     """
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @check_id('selected_plan_id')
     @transaction.atomic
@@ -1115,6 +1138,8 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
         :return: 返回当前项目里程碑下信息，包括供应商选择方案，文档资料附件等
         """
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
         success, msg = check_project_milestone_state(project, milestone_state, '方案论证', request_method="POST")
         if not success:
@@ -1126,12 +1151,12 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
         selected_plan.cache()
 
         if project.performer == req.user.get_profile():
-            if req.data.get('summary'):
-                milestone_state.summary = req.data.get('summary')
+            if req.data.get('summary') is not None:
+                milestone_state.summary = req.data.get('summary').strip()
                 milestone_state.save()
                 milestone_state.cache()
-        if req.data.get("files"):
-            form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+        if req.data.get("cate_documents"):
+            form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
             if not form.is_valid():
                 return resp.form_err(form.errors)
             doc_list = form.save()
@@ -1152,9 +1177,12 @@ class ProjectMilestoneStatePlanArgumentView(BaseAPIView):
     """
     查看【方案论证】里程碑下的信息
     """
-    @check_id('supplier_plan_related_milestone_state_id')
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+
     def get(self, req, project_id, project_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         current_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
         success, msg = check_project_milestone_state(project, current_milestone_state, '方案论证', request_method="GET")
         if not success:

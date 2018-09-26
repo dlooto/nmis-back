@@ -7,6 +7,9 @@
 
 import logging
 
+from django.core.files.uploadedfile import UploadedFile
+from django.db.models.fields.files import File
+
 import settings
 from nmis.projects.consts import (PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED,
                                   PRO_CATE_SOFTWARE, PRO_CATE_HARDWARE,
@@ -16,7 +19,7 @@ from nmis.projects.consts import (PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED,
 from nmis.projects.models import ProjectDocument, ProjectPlan, ProjectMilestoneState
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
-from utils.files import single_upload_file
+from utils.files import single_upload_file, upload_file, remove
 from utils.times import now, yesterday, tomorrow
 
 logs = logging.getLogger(__name__)
@@ -791,3 +794,135 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertTrue(str(doc_list[0].id) not in pro_mil_state.doc_list)
         os.rmdir('%s%s%s%s' % (
             settings.MEDIA_ROOT, '/', PROJECT_DOCUMENT_DIR, str(project.id)))
+
+
+class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
+
+    def test_get_common_project_milestone_state_info(self):
+        """
+        测试获取通用的项目里程碑下的信息：调研、实时调试、项目验收
+        :return:
+        """
+        api = '/api/v1/projects/{0}/project_milestone_states/{1}/get-research-info'
+
+        self.login_with_username(self.user)
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x001')
+
+        # 分配项目负责人，同时开启需求论证里程碑
+        is_dispatched, msg = project.dispatch(self.admin_staff)
+        self.assertTrue(is_dispatched, msg)
+        self.assertEqual(project.status, "SD")
+
+        main_milestone1 = project.attached_flow.get_first_main_milestone()
+        main_milestone_state1 = ProjectMilestoneState.objects.get_project_milestone_state_by_project_milestone(
+            project=project, milestone=main_milestone1)
+        self.assertTrue(main_milestone_state1.is_in_process())
+
+        main_milestone2 = main_milestone1.next()
+
+        main_milestone_state2 = ProjectMilestoneState.objects.filter(
+            project=project, milestone=main_milestone2
+        ).first()
+
+        self.assertTrue(main_milestone_state2.is_unstarted())
+
+        main_milestone2_child1 = main_milestone2.next()
+
+        main_milestone_state2_child1 = ProjectMilestoneState.objects.filter(
+            project=project, milestone=main_milestone2_child1
+        ).first()
+
+        # 变更需求论证里程碑，开启圈定方案-调研里程碑
+        changed, msg = project.change_project_milestone_state(main_milestone_state1)
+        self.assertTrue(changed, msg)
+        # self.assertEqual(main_milestone_state2_child1.milestone.title, '')
+        self.assertTrue(project.status == "SD")
+
+        # 项目里程碑已开启，进行查询
+        response = self.get(api.format(project.id, main_milestone_state2_child1.id))
+        self.assert_response_success(response)
+
+    def test_save_common_project_milestone_state_info(self):
+        """ 测试 通用项目里程碑信息保存和修改：【'调研', '实施调试', '项目验收'】"""
+        api = '/api/v1/projects/{0}/project_milestone_states/{1}/save-research-info'
+
+        self.login_with_username(self.user)
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x001')
+
+        # 分配项目负责人，同时开启需求论证里程碑
+        is_dispatched, msg = project.dispatch(self.admin_staff)
+        self.assertTrue(is_dispatched, msg)
+        self.assertEqual(project.status, "SD")
+
+        milestone_states = project.get_project_milestone_states()
+        import os
+        curr_path = os.path.dirname(__file__)
+        file_io_buffer = open(curr_path + '/data/dept-normal-test.xlsx', 'wb+')
+        for index, item in enumerate(milestone_states):
+            if item.milestone.title in ['调研', '实施调试', '项目验收']:
+                item.status = "DOING"
+                item.save()
+                item.cache()
+                file_name = 'dept-normal-test%s.xlsx' % (index,)
+                file_name, file_path = upload_file(
+                    UploadedFile(file_io_buffer),
+                    '%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/'),
+                    file_name
+                )
+                file_paths = [file_path]
+                file = {'file_category': 'product', 'file_paths': file_paths}
+                files = [file]
+                data_dict = {
+                    'summary': '里程碑节点说明信息',
+                    'files': files
+                }
+                response = self.post(api.format(project.id, item.id), data=data_dict)
+                self.assert_response_success(response)
+                saved_milestone_state = response.get('project_milestone_state')
+                self.assertIsNotNone(saved_milestone_state)
+                logs.info(saved_milestone_state.get('cate_documents'))
+                saved_file_path = saved_milestone_state.get('cate_documents')[0].get('files')[0].get('path')
+                self.assertEqual(saved_file_path, file_path)
+                self.assertEqual(saved_milestone_state.get('cate_documents')[0].get('category'), file.get('file_category'))
+                remove(os.path.join(settings.MEDIA_ROOT, saved_file_path))
+        os.rmdir(os.path.join(settings.MEDIA_ROOT, PROJECT_DOCUMENT_DIR, str(project.id)))
+
+    def test_save_project_milestone_state_plan_gathered_info(self):
+        """测试方案保存/修改"""
+        api = '/api/v1/projects/{0}/project_milestone_states/{1}/save-plan-gather-info'
+
+        self.login_with_username(self.user)
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x002')
+        is_dispatched, msg = project.dispatch(self.admin_staff)
+        self.assertTrue(is_dispatched, msg)
+        self.assertEqual(project.status, "SD")
+        create_data = {
+            "plan_list": [
+                {
+                    "supplier_name": "飞鸟科技有限公司",
+                    "total_amount": 12,
+                    "remark": "备注：折扣10%",
+                    "plan_files": [
+                        "upload/project/document/%s/supplier_selection_plan001.txt" % (project.id, ),
+                        "upload/project/document/%s/supplier_selection_plan002.txt" % (project.id, )
+                    ],
+                    "other_files": [
+                        "upload/project/document/%s/others001.txt" % (project.id, ),
+                        "upload/project/document/%s/others002.txt" % (project.id, )
+                    ]
+                }
+            ],
+            "summary": "方案收集说明信息"
+        }
+        milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone__title='方案收集').first()
+        milestone_state.status = "DOING"
+        milestone_state.save()
+        milestone_state.cache()
+        self.assertIsNotNone(milestone_state)
+        response = self.post(api.format(project.id, milestone_state.id), data=create_data)
+        self.assert_response_success(response)
+
+
+
+
+
