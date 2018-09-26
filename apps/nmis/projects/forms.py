@@ -599,9 +599,9 @@ class SingleUploadFileForm(BaseForm):
 
 class ProjectDocumentBulkCreateOrUpdateForm(BaseForm):
 
-    def __init__(self, files, *args, **kwargs):
-        BaseForm.__init__(self, files, *args, **kwargs)
-        self.files = files
+    def __init__(self, documents, *args, **kwargs):
+        BaseForm.__init__(self, documents, *args, **kwargs)
+        self.documents = documents
 
         self.init_err_codes()
 
@@ -616,27 +616,27 @@ class ProjectDocumentBulkCreateOrUpdateForm(BaseForm):
         return True
 
     def check_file_category(self):
-        if self.files:
-            for file in self.files:
-                if file.get('file_category') not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
+        if self.documents:
+            for document in self.documents:
+                if document.get('category') not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
                     self.update_errors('file_category', 'file_category_err')
                     return False
         return True
 
     def save(self):
-        import os
         project_documents = []
-        if self.files:
-            for file in self.files:
-                for file_path in file.get('file_paths'):
-                    project_document = {
-                        'category': file.get('file_category'),
-                        'path': file_path,
-                        'name': os.path.basename(file_path)
-                    }
-                    project_documents.append(project_document)
-        return ProjectDocument.objects.bulk_save_upload_project_doc(
-                    project_documents) if project_documents else None
+        if self.documents:
+            for document in self.documents:
+                if document.get('files'):
+                    for file in document.get('files'):
+                        project_document = {
+                            'category': document.get('category'),
+                            'path': file.get('path'),
+                            'name': file.get('name')
+                        }
+                        project_documents.append(project_document)
+        return ProjectDocument.objects.bulk_save_or_update_project_doc(
+            project_documents) if project_documents else None
 
 
 class PurchaseContractCreateForm(BaseForm):
@@ -741,9 +741,10 @@ class ProjectMilestoneStateUpdateForm(BaseForm):
     """
     生成或更新ProjectMilestoneState
     """
-    def __init__(self, doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs):
-        BaseForm.__init__(self, doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs)
+    def __init__(self, doc_list, old_doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs):
+        BaseForm.__init__(self, doc_list, old_doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs)
         self.doc_list = doc_list
+        self.old_doc_list = old_doc_list
         self.summary = summary
         self.project_milestone_state = project_milestone_state
         self.login_user = login_user
@@ -774,12 +775,18 @@ class ProjectMilestoneStateUpdateForm(BaseForm):
 
     def save(self):
         pro_milestone_state_data = {}
+        if self.old_doc_list and self.doc_list:
+            logs.info(self.old_doc_list)
+            logs.info(self.doc_list)
+            doc_ids_str = ','.join('%s' % doc.id for doc in self.doc_list)
+            pro_milestone_state_data['doc_list'] = '%s%s%s' % (self.old_doc_list, ',', doc_ids_str)
+        elif not self.old_doc_list:
+            doc_ids_str = ','.join('%s' % doc.id for doc in self.doc_list)
+            pro_milestone_state_data['doc_list'] = doc_ids_str
         if self.summary:
             if self.login_user == self.project.performer:
                 pro_milestone_state_data['summary'] = self.summary
-        if self.doc_list:
-            doc_ids_str = ','.join('%s' % doc.id for doc in self.doc_list)
-            pro_milestone_state_data['doc_list'] = doc_ids_str
+        logs.info(pro_milestone_state_data)
 
         return ProjectMilestoneState.objects.update_project_milestone_state(
             self.project_milestone_state, **pro_milestone_state_data

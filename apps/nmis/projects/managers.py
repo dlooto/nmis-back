@@ -404,7 +404,7 @@ class ProjectDocumentManager(BaseManager):
                     doc_list.append(doc)
         return doc_list
 
-    def bulk_save_upload_project_doc(self, project_documents):
+    def bulk_save_or_update_project_doc(self, project_documents):
         """
         批量保存或更新上传的project_document
         :param project_documents:
@@ -421,6 +421,7 @@ class ProjectDocumentManager(BaseManager):
                         path=project_document.get('path')
                     )
                     if is_create:
+                        doc.cache()
                         doc_list.append(doc)
                 return doc_list
         except Exception as e:
@@ -470,7 +471,9 @@ class ProjectMilestoneStateManager(BaseManager):
         :param project_milestone_state: 更新的项目里程碑
         """
         try:
-            return project_milestone_state.update(data)
+            project_milestone_state.update(data)
+            project_milestone_state.cache()
+            return project_milestone_state
         except Exception as e:
             logger.exception(e)
             return None

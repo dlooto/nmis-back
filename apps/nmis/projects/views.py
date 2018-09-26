@@ -1197,20 +1197,19 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
                 success = project.determining_purchase_method(purchase_method)
                 if not success:
                     return resp.failed('保存失败')
-
-        form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+        form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
         if not form.is_valid():
             return resp.form_err(form.errors)
-        doc_list = form.save()
-
-        if not req.data.get('summary') and not doc_list:
+        new_doc_list = form.save()
+        if not req.data.get('summary') and not new_doc_list:
             return resp.serialize_response(
                 pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'
             )
-
+        old_doc_list = pro_milestone_state.doc_list
         pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
-            doc_list, req.data.get('summary'), pro_milestone_state, req.user.get_profile(), project
+            new_doc_list, old_doc_list, req.data.get('summary'),
+            pro_milestone_state, req.user.get_profile(), project
         )
         new_pro_milestone_state = pro_milestone_state_form.save()
 

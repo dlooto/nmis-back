@@ -769,7 +769,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             'path': success_upload_file_path,
         }
         project_documents = [project_document_data]
-        doc_list = ProjectDocument.objects.bulk_save_upload_project_doc(project_documents)
+        doc_list = ProjectDocument.objects.bulk_save_or_update_project_doc(project_documents)
         self.assertIsNotNone(doc_list)
         doc_id_str = ','.join('%s' % doc.id for doc in doc_list)
 
