@@ -1214,7 +1214,7 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
         project = self.get_object_or_404(project_id, ProjectPlan)
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
-        if pro_milestone_state.status == PRO_MILESTONE_DONE:
+        if pro_milestone_state.status in (PRO_MILESTONE_DONE, PRO_MILESTONE_TODO):
             return resp.failed('项目里程碑已完结或未开始，无法操作!')
 
         purchase_method = req.data.get('purchase_method', '').strip()
@@ -1229,20 +1229,19 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
                 success = project.determining_purchase_method(purchase_method)
                 if not success:
                     return resp.failed('保存失败')
-
-        form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+        form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
         if not form.is_valid():
             return resp.form_err(form.errors)
-        doc_list = form.save()
-
-        if not req.data.get('summary') and not doc_list:
+        new_doc_list = form.save()
+        if not req.data.get('summary') and not new_doc_list:
             return resp.serialize_response(
                 pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'
             )
-
+        old_doc_list = pro_milestone_state.doc_list
         pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
-            doc_list, req.data.get('summary'), pro_milestone_state, req.user.get_profile(), project
+            new_doc_list, old_doc_list, req.data.get('summary'),
+            pro_milestone_state, req.user.get_profile(), project
         )
         new_pro_milestone_state = pro_milestone_state_form.save()
 
@@ -1289,10 +1288,10 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
         project = self.get_object_or_404(project_id, ProjectPlan)
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
-        if pro_milestone_state.status == PRO_MILESTONE_DONE:
+        if pro_milestone_state.status in (PRO_MILESTONE_DONE, PRO_MILESTONE_TODO):
             return resp.failed('项目里程碑已完结或未开始，无法操作!')
 
-        form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+        form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
         if not form.is_valid():
             return resp.form_err(form.errors)
         doc_list = form.save()
@@ -1302,9 +1301,9 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
                 pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'
             )
-
+        old_doc_list = pro_milestone_state.doc_list
         pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
-            doc_list, req.data.get('summary'), pro_milestone_state,
+            doc_list, old_doc_list, req.data.get('summary'), pro_milestone_state,
             req.user.get_profile(), project
         )
         new_pro_milestone_state = pro_milestone_state_form.save()
@@ -1357,7 +1356,7 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         project = self.get_object_or_404(project_id, ProjectPlan)
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
-        if pro_milestone_state.status == PRO_MILESTONE_DONE:
+        if pro_milestone_state.status in (PRO_MILESTONE_DONE, PRO_MILESTONE_TODO):
             return resp.failed('项目里程碑已完结或未开始，无法操作!')
         purchase_contract_form = PurchaseContractCreateForm(pro_milestone_state, req.data)
         if not purchase_contract_form.is_valid():
@@ -1367,7 +1366,7 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         if not purchase_contract:
             return resp.failed('保存失败')
 
-        doc_form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+        doc_form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
         if not doc_form.is_valid():
             return resp.failed(doc_form.errors)
         doc_list = doc_form.save()
@@ -1377,9 +1376,9 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
                 pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'
             )
-
+        old_doc_list = pro_milestone_state.doc_list
         pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
-            doc_list, req.data.get('summary'), pro_milestone_state,
+            doc_list, old_doc_list, req.data.get('summary'), pro_milestone_state,
             req.user.get_profile(), project
         )
         new_pro_milestone_state = pro_milestone_state_form.save()
@@ -1460,7 +1459,7 @@ class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
         if not receipt:
             return resp.failed('保存失败')
 
-        doc_form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('files'))
+        doc_form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
         if not doc_form.is_valid():
             return resp.failed(doc_form.errors)
         doc_list = doc_form.save()
@@ -1470,9 +1469,9 @@ class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
                 project_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'
             )
-
+        old_doc_list = project_milestone_state.doc_list
         pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
-            doc_list, req.data.get('summary'), project_milestone_state,
+            doc_list, old_doc_list, req.data.get('summary'), project_milestone_state,
             req.user.get_profile(), project
         )
         new_pro_milestone_state = pro_milestone_state_form.save()

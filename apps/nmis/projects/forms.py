@@ -599,9 +599,9 @@ class SingleUploadFileForm(BaseForm):
 
 class ProjectDocumentBulkCreateOrUpdateForm(BaseForm):
 
-    def __init__(self, files, *args, **kwargs):
-        BaseForm.__init__(self, files, *args, **kwargs)
-        self.files = files
+    def __init__(self, documents, *args, **kwargs):
+        BaseForm.__init__(self, documents, *args, **kwargs)
+        self.documents = documents
 
         self.init_err_codes()
 
@@ -616,27 +616,27 @@ class ProjectDocumentBulkCreateOrUpdateForm(BaseForm):
         return True
 
     def check_file_category(self):
-        if self.files:
-            for file in self.files:
-                if file.get('file_category') not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
+        if self.documents:
+            for document in self.documents:
+                if document.get('category') not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
                     self.update_errors('file_category', 'file_category_err')
                     return False
         return True
 
     def save(self):
-        import os
         project_documents = []
-        if self.files:
-            for file in self.files:
-                for file_path in file.get('file_paths'):
-                    project_document = {
-                        'category': file.get('file_category'),
-                        'path': file_path,
-                        'name': os.path.basename(file_path)
-                    }
-                    project_documents.append(project_document)
-        return ProjectDocument.objects.bulk_save_upload_project_doc(
-                    project_documents) if project_documents else None
+        if self.documents:
+            for document in self.documents:
+                if document.get('files'):
+                    for file in document.get('files'):
+                        project_document = {
+                            'category': document.get('category'),
+                            'path': file.get('path'),
+                            'name': file.get('name')
+                        }
+                        project_documents.append(project_document)
+        return ProjectDocument.objects.bulk_save_or_update_project_doc(
+            project_documents) if project_documents else None
 
 
 class PurchaseContractCreateForm(BaseForm):
@@ -656,21 +656,11 @@ class PurchaseContractCreateForm(BaseForm):
             'device_producer_err': '设备生产商错误',
             'device_amount_err': '设备总价错误',
             'device_supplier_err': '供应商错误',
-            'file_category_err': '文件类别错误'
         })
 
     def is_valid(self):
-        if not self.check_seller_tel() or not self.check_device() \
-                or not self.check_file_type():
+        if not self.check_seller_tel() or not self.check_device():
             return False
-        return True
-
-    def check_file_type(self):
-        for file in self.data.get('files'):
-            if file.get('file_category') not in dict(PROJECT_DOCUMENT_CATE_CHOICES):
-                self.update_errors('file_category', 'file_category_err')
-                return False
-
         return True
 
     def check_device(self):
@@ -679,7 +669,6 @@ class PurchaseContractCreateForm(BaseForm):
         """
         contract_device_list = self.data.get('contract_devices')
         for device in contract_device_list:
-            print(device)
             if not device.get('num'):
                 self.update_errors('device_num', 'device_num_err')
                 return False
@@ -733,17 +722,17 @@ class PurchaseContractCreateForm(BaseForm):
 
         return PurchaseContract.objects.create_or_update_purchase_contract(
                 project_milestone_state=self.project_milestone_state,
-                contract_devices=self.data.get('contract_devices'),
-                **contract_data)
+                contract_devices=self.data.get('contract_devices'), **contract_data)
 
 
 class ProjectMilestoneStateUpdateForm(BaseForm):
     """
-    生成或更新ProjectMilestoneState
+    更新ProjectMilestoneState
     """
-    def __init__(self, doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs):
-        BaseForm.__init__(self, doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs)
+    def __init__(self, doc_list, old_doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs):
+        BaseForm.__init__(self, doc_list, old_doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs)
         self.doc_list = doc_list
+        self.old_doc_list = old_doc_list
         self.summary = summary
         self.project_milestone_state = project_milestone_state
         self.login_user = login_user
@@ -751,36 +740,24 @@ class ProjectMilestoneStateUpdateForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'status_err': "操作失败，当前里程碑尚未开始或已完结",  # 当前里程碑尚未开始或已完结
-            'project_not_contains_project_milestone_state': "操作失败, 请求数据异常",
         })
 
     def is_valid(self):
-        if not self.check_data() or not self.check_status():
-            return False
-        return True
-
-    def check_data(self):
-        if not self.project.contains_project_milestone_state(self.project_milestone_state):
-            self.update_errors('Error', 'project_not_contains_project_milestone_state')
-            return False
-        return True
-
-    def check_status(self):
-        if not self.project_milestone_state.is_in_process():
-            self.update_errors('Error', 'status_err')
-            return False
-        return True
+        pass
 
     def save(self):
         pro_milestone_state_data = {}
+        if self.old_doc_list and self.doc_list:
+            logs.info(self.old_doc_list)
+            logs.info(self.doc_list)
+            doc_ids_str = ','.join('%s' % doc.id for doc in self.doc_list)
+            pro_milestone_state_data['doc_list'] = '%s%s%s' % (self.old_doc_list, ',', doc_ids_str)
+        elif not self.old_doc_list:
+            doc_ids_str = ','.join('%s' % doc.id for doc in self.doc_list)
+            pro_milestone_state_data['doc_list'] = doc_ids_str
         if self.summary:
             if self.login_user == self.project.performer:
                 pro_milestone_state_data['summary'] = self.summary
-        if self.doc_list:
-            doc_ids_str = ','.join('%s' % doc.id for doc in self.doc_list)
-            pro_milestone_state_data['doc_list'] = doc_ids_str
-
         return ProjectMilestoneState.objects.update_project_milestone_state(
             self.project_milestone_state, **pro_milestone_state_data
         ) if pro_milestone_state_data else self.project_milestone_state
