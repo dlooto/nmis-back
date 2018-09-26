@@ -814,8 +814,7 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
     def check_supplier_name(self):
         plan_list = self.data.get('plan_list')
         for plan in plan_list:
-            supplier_name = plan.get("supplier_name").strip()
-            if not supplier_name:
+            if not plan.get("supplier_name"):
                 self.update_errors('supplier_name', 'supplier_name_err')
                 return False
         return True
@@ -836,30 +835,22 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
         return True
 
     def check_remark(self):
-        plan_list = self.data.get('plan_list')
-        for plan in plan_list:
-            remark = plan.get('remark').strip()
-            if not remark:
-                self.update_errors('remark', 'remark_err')
-                return False
+        # plan_list = self.data.get('plan_list')
+        # for plan in plan_list:
+        #     if plan.get('remark') is not None:
+        #         self.update_errors('remark', 'remark_err')
+        #         return False
         return True
 
     def check_files(self):
-        plan_list = self.data.get('plan_list')
-        for plan in plan_list:
-            files = plan.get('files')
-            if not files:
-                continue
-            for file in files:
-                if not file.get('file_category').strip():
-                    self.update_errors('file_category', 'file_category_err')
-                    return False
-                if file.get('file_category').strip() not in [PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS]:
-                    self.update_errors('file_category', 'file_category_err')
-                    return False
-                if not file.get('file_paths'):
-                    self.update_errors('file_paths', 'file_paths_err')
-                    return False
+        # plan_list = self.data.get('plan_list')
+        # for plan in plan_list:
+        #     plan_files = plan.get('plan_files')
+        #     if not plan_files:
+        #         continue
+        #     other_files = plan.get('other_files')
+        #     if not other_files:
+        #         continue
         return True
 
     def pre_handle_file_data(self, plan_file_paths, other_file_paths):
@@ -911,7 +902,6 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
 
     def save(self):
         plan_param_list = self.data.get('plan_list')
-        plan_data_list = []
         try:
             for item in plan_param_list:
                 plan_data = dict()
@@ -920,7 +910,8 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
                 supplier.cache()
                 plan_data['supplier'] = supplier
                 plan_data['total_amount'] = float(item.get('total_amount'))
-                plan_data['remark'] = item.get('remark').strip()
+                if item.get('remark') is not None:
+                    plan_data['remark'] = item.get('remark').strip()
                 plan_file_paths = item.get('plan_files')
                 other_file_paths = item.get('other_files')
                 document_dict = self.pre_handle_file_data(plan_file_paths, other_file_paths)
@@ -930,13 +921,10 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
                 else:
                     doc_ids_str = ','.join('%s' % doc.id for doc in new_doc_list)
                     plan_data['doc_list'] = doc_ids_str
-                plan_data_list.append(plan_data)
-
                 if item.get('id') and int(item.get('id')) > 0:
                     plan = SupplierSelectionPlan.objects.filter(id=int(item.get('id'))).first()
                     if plan:
                         plan.update(plan_data)
-                        plan.save()
                         plan.cache()
                 else:
 

@@ -500,7 +500,7 @@ class ProjectMilestoneStateAndPurchaseContractSerializer(ProjectMilestoneStateSe
 
         purchase_contract = PurchaseContract.objects.get_purchase_contract_by_project_milestone_state(project_milestone_state=obj)
 
-        return resp.serialize_data(purchase_contract) if purchase_contract else []
+        return resp.serialize_data(purchase_contract) if purchase_contract else None
 
     def _get_purchase_method(self, obj):
         """
