@@ -123,6 +123,7 @@ MILESTONES = [
 
 
 ]
+DEFAULT_MILESTONES = []
 
 
 class ProjectPlanMixin(object):
@@ -175,3 +176,21 @@ class ProjectPlanMixin(object):
             "title": "默认测试流程", "organ": organ, "default_flow": True
         }
         return ProjectFlow.objects.create_flow(milestones, **flow_data)
+
+    def create_default_flow(self, organ, milestones=DEFAULT_MILESTONES):
+        flow_data = {
+            "title": "项目默认流程", "organ": organ
+        }
+        return ProjectFlow.objects.create_flow(milestones, **flow_data)
+
+    def get_default_flow(self):
+        return ProjectFlow.objects.get_default_flow()
+
+    def init_one_dispatched_project(self, creator, dept, project_cate, title):
+        """初始化已分配的项目"""
+
+        project = self.create_project(creator, dept, project_cate, title)
+
+        # 分配项目负责人，同时开启需求论证里程碑
+        is_dispatched, msg = project.dispatch(creator)
+        return project if is_dispatched else None

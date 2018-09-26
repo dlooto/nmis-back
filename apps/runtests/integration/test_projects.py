@@ -7,6 +7,9 @@
 
 import logging
 
+from django.core.files.uploadedfile import UploadedFile
+from django.db.models.fields.files import File
+
 import settings
 from nmis.projects.consts import (PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED,
                                   PRO_CATE_SOFTWARE, PRO_CATE_HARDWARE,
@@ -17,7 +20,7 @@ from nmis.projects.models import ProjectDocument, ProjectPlan, ProjectMilestoneS
     ProjectFlow, Milestone
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
-from utils.files import single_upload_file
+from utils.files import single_upload_file, upload_file, remove
 from utils.times import now, yesterday, tomorrow
 
 logs = logging.getLogger(__name__)
