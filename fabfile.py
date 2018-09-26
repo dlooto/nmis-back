@@ -98,7 +98,7 @@ def runtests(ctx, test_suite='', test_module=''):
 @task
 def deploy(ctx, remote='origin', branch='master'):
     """
-    发布更新: fab h156 deploy (更新代码, 安装lib, migrate, 刷新缓存, 重启server, runtests)
+    发布更新: fab bsite deploy (更新代码, 安装lib, migrate, 刷新缓存, 重启server, runtests)
     :param remote: 远程仓库名称, 默认为 origin
     :param branch: 部署发布用到的代码分支
     """
@@ -117,7 +117,7 @@ def deploy(ctx, remote='origin', branch='master'):
 @task
 def lean_deploy(ctx, remote="origin", branch="master"):
     """
-    轻量部署: fab h156 lean-deploy(更新代码, migrate, 刷新缓存, 重启server, runtests)
+    轻量部署: fab bsite lean-deploy(更新代码, migrate, 刷新缓存, 重启server, runtests)
     :param remote: 远程代码仓库名, 默认origin
     :param branch: 远程代码仓库分支, 默认master
 
@@ -136,7 +136,7 @@ def lean_deploy(ctx, remote="origin", branch="master"):
 @task
 def supervisor(ctx, command='restart', program='all'):
     """
-    执行supervisor 命令 示例: fab h156 supervisor:restart,nmis (default: restart all)
+    执行supervisor 命令 示例: fab bsite supervisor:restart,nmis (default: restart all)
     @param command: ('start', 'restart', 'stop', 'status')
     @param program: 应用进程名, 如 nmis
     """
