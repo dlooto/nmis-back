@@ -1334,7 +1334,7 @@ class MilestoneStartUpPurchaseView(BaseAPIView):
         )
 
         return resp.serialize_response(
-            query_set,
+            query_set.first(),
             srl_cls_name='ChunkProjectMilestoneStateSerializer',
             results_name='project_milestone_state')
 
@@ -1408,7 +1408,7 @@ class MilestonePurchaseContractView(BaseAPIView):
             ProjectMilestoneState.objects.filter(pk=project_milestone_state_id))
 
         return resp.serialize_response(
-            query_set,
+            query_set.first(),
             srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer',
             results_name='project_milestone_state'
         )
@@ -1502,7 +1502,7 @@ class MilestoneTakeDeliveryView(BaseAPIView):
             ProjectMilestoneState.objects.filter(pk=project_milestone_state_id))
 
         return resp.serialize_response(
-            query_set,
+            query_set.first(),
             srl_cls_name='ProjectMilestoneStateAndReceiptSerializer',
             results_name='project_milestone_state'
         )
