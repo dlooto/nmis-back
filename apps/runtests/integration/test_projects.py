@@ -869,12 +869,12 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                     '%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/'),
                     file_name
                 )
-                file_paths = [file_path]
-                file = {'file_category': 'product', 'file_paths': file_paths}
-                files = [file]
+                file = {'name': file_name, 'path': file_path}
+                cate_document = {'category': 'product', 'files': [file]}
+                cate_documents = [cate_document]
                 data_dict = {
                     'summary': '里程碑节点说明信息',
-                    'files': files
+                    'cate_documents': cate_documents
                 }
                 response = self.post(api.format(project.id, item.id), data=data_dict)
                 self.assert_response_success(response)
@@ -883,7 +883,7 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                 logs.info(saved_milestone_state.get('cate_documents'))
                 saved_file_path = saved_milestone_state.get('cate_documents')[0].get('files')[0].get('path')
                 self.assertEqual(saved_file_path, file_path)
-                self.assertEqual(saved_milestone_state.get('cate_documents')[0].get('category'), file.get('file_category'))
+                self.assertEqual(saved_milestone_state.get('cate_documents')[0].get('category'), cate_document.get('category'))
                 remove(os.path.join(settings.MEDIA_ROOT, saved_file_path))
         os.rmdir(os.path.join(settings.MEDIA_ROOT, PROJECT_DOCUMENT_DIR, str(project.id)))
 
