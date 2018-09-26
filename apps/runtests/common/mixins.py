@@ -45,7 +45,7 @@ SOFTWARE_DEVICES = [
     }
 ]
 
-MILESTONES = [
+DEFAULT_MILESTONES = [
     {
         "id": 3001001,
         "title": "需求论证",
@@ -124,7 +124,7 @@ MILESTONES = [
 
 ]
 
-DEFAULT_MILESTONES = [
+MILESTONES = [
     {
         "title": "前期准备",
         "index": 1
@@ -183,7 +183,7 @@ class ProjectPlanMixin(object):
             )
         return ProjectPlan.objects.create_project(hardware_devices=ordered_devices, **project_data)
 
-    def create_flow(self, organ, milestones=MILESTONES):
+    def create_flow(self, organ, milestones=DEFAULT_MILESTONES):
         """
 
         :param milestones:
