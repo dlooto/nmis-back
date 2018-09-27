@@ -60,6 +60,10 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         # 分配负责人
         self.assertTrue(self.project.status == 'PE')
 
+        default_flow = self.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
+
         self.assertTrue(
             self.project.dispatch(self.performer)
         )

@@ -350,6 +350,9 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             project = self.create_project(self.admin_staff, self.dept, project_cate='SW',
                                           title='测试项目{}'.format(self.get_random_suffix()))
             projects.append(project)
+        default_flow = self.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
         # 分配项目负责人
         for i in range(len(projects)):
             projects[i].dispatch(self.admin_staff)
@@ -377,7 +380,6 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
                 self.admin_staff, self.dept, project_cate='SW', title='测试项目{}'.format(self.get_random_suffix())
             )
             projects.append(project)
-
         data = {
             'pro_status': 'PE',
             'search_key': '项目'
@@ -436,7 +438,9 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         # 创建项目
         project_plan = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='新建项目申请')
-
+        default_flow = self.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
         data = {
             'performer_id': self.admin_staff.id,
         }
@@ -844,7 +848,9 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
 
         self.login_with_username(self.user)
         project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x001')
-
+        default_flow = self.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
         # 分配项目负责人，同时开启需求论证里程碑
         is_dispatched, msg = project.dispatch(self.admin_staff)
         self.assertTrue(is_dispatched, msg)
@@ -1402,5 +1408,6 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         project_milestone_state = response.get('project_milestone_state')
         self.assertIsNotNone(project_milestone_state)
-        self.assertIsNotNone(project_milestone_state.get('contract_devices'))
+        self.assertIsNotNone(project_milestone_state.get('purchase_contract'))
+        self.assertIsNotNone(project_milestone_state.get('purchase_contract').get('contract_devices'))
 

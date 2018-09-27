@@ -116,7 +116,7 @@ DEFAULT_MILESTONES = [
     },
     {
         "id": 4001013,
-        "title": "项目验收(完结点)",
+        "title": "项目验收",
         "index": 2,
         "parent_id": 4001004
     }
