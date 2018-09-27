@@ -123,7 +123,8 @@ class BaseModel(models.Model):
         :param data:  字典类型, key值与model字段(fields)严格一致, value为新值
         """
         for attr in data.keys():
-            if attr in self.VALID_ATTRS and data.get(attr):
+
+            if attr in self.VALID_ATTRS and data.get(attr) is not None:
                 setattr(self, attr, data.get(attr))
         self.save()
         return self

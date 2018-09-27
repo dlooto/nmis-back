@@ -717,7 +717,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
     #     self.assert_response_success(response)
     #     self.assertIsNotNone(response.get('file_url'))
     #
-    #     upload_path = '%s%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/', 'dept-normal-test.xlsx')
+    #     upload_path = '%s%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/', 'upload_file_test.xlsx')
     #     self.assertEquals(upload_path, response.get('file_url'))
     #     file_obj.close()
 
@@ -807,30 +807,26 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
 
         self.login_with_username(self.user)
         project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x001')
-
-        # 分配项目负责人，同时开启需求论证里程碑
+        if not self.get_default_flow():
+            self.create_default_flow(self.organ)
         is_dispatched, msg = project.dispatch(self.admin_staff)
+
         self.assertTrue(is_dispatched, msg)
         self.assertEqual(project.status, "SD")
 
         main_milestone1 = project.attached_flow.get_first_main_milestone()
-        main_milestone_state1 = ProjectMilestoneState.objects.get_project_milestone_state_by_project_milestone(
-            project=project, milestone=main_milestone1)
+        main_milestone_state1 = self.get_project_milestone_state(project=project, milestone=main_milestone1)
         self.assertTrue(main_milestone_state1.is_in_process())
 
         main_milestone2 = main_milestone1.next()
 
-        main_milestone_state2 = ProjectMilestoneState.objects.filter(
-            project=project, milestone=main_milestone2
-        ).first()
+        main_milestone_state2 = self.get_project_milestone_state(project=project, milestone=main_milestone2)
 
         self.assertTrue(main_milestone_state2.is_unstarted())
 
         main_milestone2_child1 = main_milestone2.next()
 
-        main_milestone_state2_child1 = ProjectMilestoneState.objects.filter(
-            project=project, milestone=main_milestone2_child1
-        ).first()
+        main_milestone_state2_child1 = self.get_project_milestone_state(project=project, milestone=main_milestone2_child1)
 
         # 变更需求论证里程碑，开启圈定方案-调研里程碑
         changed, msg = project.change_project_milestone_state(main_milestone_state1)
@@ -842,84 +838,280 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         response = self.get(api.format(project.id, main_milestone_state2_child1.id))
         self.assert_response_success(response)
 
-    # def test_save_common_project_milestone_state_info(self):
-    #     """ 测试 通用项目里程碑信息保存和修改：【'调研', '实施调试', '项目验收'】"""
-    #     api = '/api/v1/projects/{0}/project_milestone_states/{1}/save-research-info'
-    #
-    #     self.login_with_username(self.user)
-    #     project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x001')
-    #
-    #     # 分配项目负责人，同时开启需求论证里程碑
-    #     is_dispatched, msg = project.dispatch(self.admin_staff)
-    #     self.assertTrue(is_dispatched, msg)
-    #     self.assertEqual(project.status, "SD")
-    #
-    #     milestone_states = project.get_project_milestone_states()
-    #     import os
-    #     curr_path = os.path.dirname(__file__)
-    #     with open(curr_path + '/data/dept-normal-test.xlsx', 'wb+') as file_io:
-    #         for index, item in enumerate(milestone_states):
-    #             if item.milestone.title in ['调研', '实施调试', '项目验收']:
-    #                 item.status = "DOING"
-    #                 item.save()
-    #                 item.cache()
-    #                 file_name = 'upload_file_test%s.xlsx' % (index,)
-    #                 file_name, file_path = upload_file(
-    #                     UploadedFile(file_io),
-    #                     '%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/'),
-    #                     file_name
-    #                 )
-    #                 file = {'name': file_name, 'path': file_path}
-    #                 cate_document = {'category': 'product', 'files': [file]}
-    #                 cate_documents = [cate_document]
-    #                 data_dict = {
-    #                     'summary': '里程碑节点说明信息',
-    #                     'cate_documents': cate_documents
-    #                 }
-    #                 response = self.post(api.format(project.id, item.id), data=data_dict)
-    #                 self.assert_response_success(response)
-    #                 saved_milestone_state = response.get('project_milestone_state')
-    #                 self.assertIsNone(saved_milestone_state)
-    #                 saved_file_path = saved_milestone_state.get('cate_documents')[0].get('files')[0].get('path')
-    #                 self.assertEqual(saved_file_path, file_path)
-    #                 self.assertEqual(saved_milestone_state.get('cate_documents')[0].get('category'), cate_document.get('category'))
-    #                 remove(os.path.join(settings.MEDIA_ROOT, saved_file_path))
-    #         os.rmdir(os.path.join(settings.MEDIA_ROOT, PROJECT_DOCUMENT_DIR, str(project.id)))
-
-    def test_save_project_milestone_state_plan_gathered_info(self):
-        """测试方案保存/修改"""
-        api = '/api/v1/projects/{0}/project_milestone_states/{1}/save-plan-gather-info'
+    def test_save_common_project_milestone_state_info(self):
+        """ 测试 通用项目里程碑信息保存和修改：【'调研', '实施调试', '项目验收'】"""
+        api = '/api/v1/projects/{0}/project_milestone_states/{1}/save-research-info'
 
         self.login_with_username(self.user)
-        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x002')
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x001')
+
+        # 分配项目负责人，同时开启需求论证里程碑
         is_dispatched, msg = project.dispatch(self.admin_staff)
         self.assertTrue(is_dispatched, msg)
         self.assertEqual(project.status, "SD")
-        create_data = {
+
+        milestone_states = project.get_project_milestone_states()
+        import os
+        curr_path = os.path.dirname(__file__)
+        with open(curr_path + '/data/upload_file_test.xlsx', 'wb+') as file_io:
+            try:
+                for index, item in enumerate(milestone_states):
+                    if item.milestone.title in ['调研', '实施调试', '项目验收']:
+                        item.status = "DOING"
+                        item.save()
+                        item.cache()
+                        file_name = 'upload_file_test%s.xlsx' % (index,)
+                        file_name, file_path = upload_file(
+                            UploadedFile(file_io),
+                            '%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/'),
+                            file_name
+                        )
+                        file = {'name': file_name, 'path': file_path}
+                        cate_document = {'category': 'product', 'files': [file]}
+                        cate_documents = [cate_document]
+                        data_dict = {
+                            'summary': '里程碑节点说明信息',
+                            'cate_documents': cate_documents
+                        }
+                        response = self.post(api.format(project.id, item.id), data=data_dict)
+                        saved_file_path = None
+                        try:
+                            self.assert_response_success(response)
+                            saved_milestone_state = response.get('project_milestone_state')
+                            self.assertIsNone(saved_milestone_state)
+                            saved_file_path = saved_milestone_state.get('cate_documents')[0].get('files')[0].get('path')
+                            self.assertEqual(saved_file_path, file_path)
+                            self.assertEqual(saved_milestone_state.get('cate_documents')[0].get('category'), cate_document.get('category'))
+                        except AssertionError as e:
+                            remove(os.path.join(settings.MEDIA_ROOT, file_path))
+                            raise e
+            except AssertionError as e:
+                os.rmdir(os.path.join(settings.MEDIA_ROOT, PROJECT_DOCUMENT_DIR, str(project.id)))
+
+    def test_save_project_milestone_state_plan_gathered_info(self):
+        """测试方案保存/修改"""
+        api_plan_gather_save = '/api/v1/projects/{0}/project_milestone_states/{1}/save-plan-gather-info'
+        api_plan_gather_get = '/api/v1/projects/{0}/project_milestone_states/{1}/get-plan-gather-info'
+        api_delete_plan = '/api/v1/projects/{0}/project_milestone_states/{1}/supplier_selection_plans/{2}'
+        api_delete_plan_doc = '/api/v1/projects/{0}/project_milestone_states/{1}/supplier_selection_plans/{2}/documents/{3}'
+
+        api_plan_argument_save = '/api/v1/projects/{0}/project_milestone_states/{1}/save-plan-argument-info'
+        api_plan_argument_get = '/api/v1/projects/{0}/project_milestone_states/{1}/get-plan-argument-info'
+
+        self.login_with_username(self.user)
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x002')
+        if not self.get_default_flow():
+            self.create_default_flow(self.organ)
+        is_dispatched, msg = project.dispatch(self.admin_staff)
+        self.assertTrue(is_dispatched, msg)
+        self.assertEqual(project.status, "SD")
+
+        # 保存方案收集信息
+        create_plan_data = {
             "plan_list": [
                 {
-                    "supplier_name": "飞鸟科技有限公司",
-                    "total_amount": 12,
+                    "supplier_name": "飞鸟科技有限公司001",
+                    "total_amount": 100,
                     "remark": "备注：折扣10%",
                     "plan_files": [
-                        "upload/project/document/%s/supplier_selection_plan001.txt" % (project.id, ),
-                        "upload/project/document/%s/supplier_selection_plan002.txt" % (project.id, )
+                        {
+                            "name": "supplier_selection_plan001",
+                            "path": ("upload/project/document/%s/supplier_selection_plan001.txt" % (project.id, ))
+                         },
+                        {
+                            "name": "supplier_selection_plan002",
+                            "path": ("upload/project/document/%s/supplier_selection_plan002.txt" % (project.id,))
+                        }
                     ],
                     "other_files": [
-                        "upload/project/document/%s/others001.txt" % (project.id, ),
-                        "upload/project/document/%s/others002.txt" % (project.id, )
+                        {
+                            "name": "others001",
+                            "path": ("upload/project/document/%s/supplier_selection_plan001.txt" % (project.id,))
+                        },
+                        {
+                            "name": "others002",
+                            "path": ("upload/project/document/%s/supplier_selection_plan001.txt" % (project.id,))
+                        }
+                    ]
+                },
+                {
+                    "supplier_name": "飞鸟科技有限公司002",
+                    "total_amount": 200,
+                    "remark": "备注：折扣20%",
+                    "plan_files": [
+                        {
+                            "name": "supplier_selection_plan003",
+                            "path": ("upload/project/document/%s/supplier_selection_plan003.txt" % (project.id,))
+                        },
+
+                    ],
+                    "other_files": [
+                        {
+                            "name": "others003",
+                            "path": ("upload/project/document/%s/supplier_selection_plan003.txt" % (project.id,))
+                        },
                     ]
                 }
             ],
             "summary": "方案收集说明信息"
         }
-        milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone__title='方案收集').first()
-        milestone_state.status = "DOING"
-        milestone_state.save()
-        milestone_state.cache()
-        self.assertIsNotNone(milestone_state)
-        response = self.post(api.format(project.id, milestone_state.id), data=create_data)
+        milestone_state_gather = self.startup_project_milestone_state(project, '方案收集')
+        self.assertIsNotNone(milestone_state_gather)
+        response = self.post(api_plan_gather_save.format(project.id, milestone_state_gather.id), data=create_plan_data)
         self.assert_response_success(response)
+        saved_gather_state = response.get('project_milestone_state')
+        self.assertIsNotNone(saved_gather_state)
+        self.assertEqual(saved_gather_state.get('summary'), create_plan_data.get('summary'))
+        self.assertEqual(saved_gather_state.get('milestone_title'), '方案收集')
+        plans = saved_gather_state.get('supplier_selection_plans')
+        self.assertIsNotNone(plans)
+        self.assertEqual(plans[0].get('supplier_name'), create_plan_data.get('plan_list')[0].get('supplier_name'))
+        self.assertEqual(plans[0].get('total_amount'), create_plan_data.get('plan_list')[0].get('total_amount'))
+        self.assertEqual(plans[0].get('remark'), create_plan_data.get('plan_list')[0].get('remark'))
+        self.assertIsNotNone(plans[0].get('plan_files')[0].get('id'))
+        self.assertEqual(plans[0].get('plan_files')[0].get('name'), create_plan_data.get('plan_list')[0].get('plan_files')[0].get('name'))
+        self.assertEqual(plans[0].get('plan_files')[0].get('path'), create_plan_data.get('plan_list')[0].get('plan_files')[0].get('path'))
+        self.assertIsNotNone(plans[0].get('other_files')[0].get('id'))
+        self.assertEqual(plans[0].get('other_files')[0].get('name'), create_plan_data.get('plan_list')[0].get('other_files')[0].get('name'))
+        self.assertEqual(plans[0].get('other_files')[0].get('path'), create_plan_data.get('plan_list')[0].get('other_files')[0].get('path'))
+        plan_id = plans[0].get('id')
+        doc_id = plans[0].get('plan_files')[1].get('id')
+        self.assertIsNotNone(doc_id)
+        self.assertIsNotNone(plan_id)
+        response = self.delete(api_delete_plan_doc.format(project.id,milestone_state_gather.id, plan_id, doc_id))
+        self.assert_response_success(response)
+        response = self.delete(api_delete_plan.format(project.id, milestone_state_gather.id, plans[1].get('id')))
+        # self.assert_response_failure(response)
+        self.assert_response_success(response)
+
+        # 获取方案收集信息
+        response = self.get(api_plan_gather_get.format(project.id, milestone_state_gather.id))
+        self.assert_response_success(response)
+        get_gather_state = response.get('project_milestone_state')
+        self.assertIsNotNone(get_gather_state)
+        self.assertIsNotNone(get_gather_state)
+        self.assertEqual(get_gather_state.get('summary'), create_plan_data.get('summary'))
+        self.assertEqual(get_gather_state.get('milestone_title'), '方案收集')
+        plans = get_gather_state.get('supplier_selection_plans')
+        self.assertIsNotNone(plans)
+        self.assertEqual(len(plans), 1)
+        self.assertEqual(len(plans[0].get('plan_files')), 1)
+        self.assertEqual(plans[0].get('supplier_name'), create_plan_data.get('plan_list')[0].get('supplier_name'))
+        self.assertEqual(plans[0].get('total_amount'), create_plan_data.get('plan_list')[0].get('total_amount'))
+        self.assertEqual(plans[0].get('remark'), create_plan_data.get('plan_list')[0].get('remark'))
+        self.assertIsNotNone(plans[0].get('plan_files')[0].get('id'))
+        self.assertEqual(plans[0].get('plan_files')[0].get('name'), create_plan_data.get('plan_list')[0].get('plan_files')[0].get('name'))
+        self.assertEqual(plans[0].get('plan_files')[0].get('path'), create_plan_data.get('plan_list')[0].get('plan_files')[0].get('path'))
+        self.assertIsNotNone(plans[0].get('other_files')[0].get('id'))
+        self.assertEqual(plans[0].get('other_files')[0].get('name'), create_plan_data.get('plan_list')[0].get('other_files')[0].get('name'))
+        self.assertEqual(plans[0].get('other_files')[0].get('path'), create_plan_data.get('plan_list')[0].get('other_files')[0].get('path'))
+
+
+        # 获取方案论证信息
+        milestone_state_argument = self.startup_project_milestone_state(project, '方案论证')
+        self.assertIsNotNone(milestone_state_argument)
+        response = self.get(api_plan_argument_get.format(project.id, milestone_state_argument.id))
+        self.assert_response_success(response)
+        get_argument_state = response.get('project_milestone_state')
+        self.assertIsNotNone(get_argument_state)
+        self.assertIsNone(get_argument_state.get('summary'))
+        self.assertEqual(get_argument_state.get('milestone_title'), '方案论证')
+        self.assertEqual(get_argument_state.get('cate_documents'), [])
+        plans = saved_gather_state.get('supplier_selection_plans')
+        self.assertIsNotNone(plans)
+        self.assertEqual(plans[0].get('supplier_name'), create_plan_data.get('plan_list')[0].get('supplier_name'))
+        self.assertEqual(plans[0].get('total_amount'), create_plan_data.get('plan_list')[0].get('total_amount'))
+        self.assertEqual(plans[0].get('remark'), create_plan_data.get('plan_list')[0].get('remark'))
+        self.assertIsNotNone(plans[0].get('plan_files')[0].get('id'))
+        self.assertEqual(plans[0].get('plan_files')[0].get('name'), create_plan_data.get('plan_list')[0].get('plan_files')[0].get('name'))
+        self.assertEqual(plans[0].get('plan_files')[0].get('path'), create_plan_data.get('plan_list')[0].get('plan_files')[0].get('path'))
+        self.assertIsNotNone(plans[0].get('other_files')[0].get('id'))
+        self.assertEqual(plans[0].get('other_files')[0].get('name'), create_plan_data.get('plan_list')[0].get('other_files')[0].get('name'))
+        self.assertEqual(plans[0].get('other_files')[0].get('path'), create_plan_data.get('plan_list')[0].get('other_files')[0].get('path'))
+
+        # 保存方案论证信息
+        plan_argument_data = {
+            "selected_plan_id": plans[0].get('id'),
+            "cate_documents": [
+                {
+                    "category": "decision_argument",
+                    "files": [
+                        {
+                            "name": "decision_argument001",
+                            "path": "upload/project/document/%s/decision_argument001.txt" % (project.id,)
+                        },
+                        {
+                            "name": "decision_argument002",
+                            "path": "upload/project/document/%s/decision_argument002.txt" % (project.id,)
+                        }
+                    ]
+                }
+            ]
+        }
+        response = self.post(api_plan_argument_save.format(project.id, milestone_state_argument.id), data=plan_argument_data)
+        self.assert_response_success(response)
+        saved_argument_state = response.get('project_milestone_state')
+
+        saved_file_path = saved_argument_state.get('cate_documents')[0].get('files')[0].get('path')
+        saved_file_name = saved_argument_state.get('cate_documents')[0].get('files')[0].get('name')
+
+        self.assertEqual(saved_file_path, plan_argument_data.get('cate_documents')[0].get('files')[0].get('path'))
+        self.assertEqual(saved_file_name, plan_argument_data.get('cate_documents')[0].get('files')[0].get('name'))
+
+        self.assertEqual(saved_argument_state.get('cate_documents')[0].get('category'), plan_argument_data.get('cate_documents')[0].get('category'))
+        plans = saved_argument_state.get('supplier_selection_plans')
+        self.assertIsNotNone(plans)
+        self.assertTrue(plans[0].get('selected'))
+        self.assertEqual(plans[0].get('id'), plan_argument_data.get('selected_plan_id'))
+
+    # def test_change_project_milestone_state(self):
+    #
+    #     api = '/api/v1/projects/{0}/change-project-milestone-state'
+    #
+    #     self.login_with_username(self.user)
+    #     project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x004')
+    #
+    #     # 分配项目负责人，同时开启需求论证里程碑
+    #     is_dispatched, msg = project.dispatch(self.admin_staff)
+    #     self.assertTrue(is_dispatched, msg)
+    #     self.assertEqual(project.status, "SD")
+    #     default_flow = project.attached_flow
+    #     main_milestone1 = default_flow.get_first_main_milestone()
+    #     self.assertEqual(main_milestone1.title, "需求论证")
+    #
+    #     main_milestone2 = main_milestone1.next()
+    #     self.assertEqual(main_milestone2.title, '圈定方案')
+    #
+    #     main_milestone2_child1 = main_milestone2.next()
+    #     self.assertEqual(main_milestone2_child1.title, '调研')
+    #     self.get_project_milestone_state(project, main_milestone2_child1)
+    #     response = self.post(api.format(project), data={'project_milestone_state_id': main_milestone2_child1.id})
+    #     self.assert_response_success(response)
+    #     main_milestone2_child2 = main_milestone2_child1.next()
+    #     self.assertEqual(main_milestone2_child2.title, '方案收集')
+    #     main_milestone2_child3 = main_milestone2_child2.next()
+    #     self.assertEqual(main_milestone2_child3.title, '方案论证')
+    #
+    #     main_milestone3 = main_milestone2_child3.next()
+    #     self.assertEqual(main_milestone3.title, '采购管理')
+    #
+    #     main_milestone3_child1 = main_milestone3.next()
+    #     self.assertEqual(main_milestone3_child1.title, '确定采购方式')
+    #     main_milestone3_child2 = main_milestone3_child1.next()
+    #     self.assertEqual(main_milestone3_child2.title, '启动采购')
+    #     main_milestone3_child3 = main_milestone3_child2.next()
+    #     self.assertEqual(main_milestone3_child3.title, '合同管理')
+    #
+    #     main_milestone4 = main_milestone3_child3.next()
+    #     self.assertEqual(main_milestone4.title, '实施验收')
+    #
+    #     main_milestone4_child1 = main_milestone4.next()
+    #     self.assertEqual(main_milestone4_child1.title, '到货')
+    #     main_milestone4_child2 = main_milestone4_child1.next()
+    #     self.assertEqual(main_milestone4_child2.title, '实施调试')
+    #     main_milestone4_child3 = main_milestone4_child2.next()
+    #     self.assertEqual(main_milestone4_child3.title, '项目验收')
+    #     self.assertEqual(main_milestone4_child3.next(), None)
 
     def test_save_confirm_purchase(self):
         """
@@ -1211,7 +1403,4 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         project_milestone_state = response.get('project_milestone_state')
         self.assertIsNotNone(project_milestone_state)
         self.assertIsNotNone(project_milestone_state.get('contract_devices'))
-
-
-
 

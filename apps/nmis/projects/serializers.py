@@ -220,14 +220,44 @@ class ProjectMilestoneStateWithSupplierSelectionPlanSerializer(ProjectMilestoneS
 
 class ProjectMilestoneStateWithSupplierSelectionPlanSelectedSerializer(ProjectMilestoneStateSerializer):
     supplier_selection_plans = SupplierSelectionPlanSerializer(many=True)
+    cate_documents = serializers.SerializerMethodField('_get_cate_documents')
+
 
     class Meta:
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_id',  'milestone_title',
-            'milestone_index', 'created_time',
+            'milestone_index', 'created_time', 'cate_documents',
             'status', 'summary', 'supplier_selection_plans', 'finished_time',
         )
+
+    def _get_cate_documents(self, obj):
+        """获取分类文档"""
+        if not obj.doc_list:
+            return []
+        doc_ids_str = obj.doc_list.split(',')
+        doc_ids = [int(id_str) for id_str in doc_ids_str]
+        doc_list = ProjectDocument.objects.filter(id__in=doc_ids).all()
+        if not doc_list:
+            return []
+
+        cate_document_list = list()
+        category_set = set()
+
+        for doc in doc_list:
+            category_set.add(doc.category)
+
+        for category in category_set:
+            cate_document = {'category': category}
+            file_list = list()
+            for doc in doc_list:
+                if doc.category == category:
+                    doc = {'id': doc.id, 'name': doc.name, 'path': doc.path, 'category': doc.category}
+                    file_list.append(doc)
+            cate_document['files'] = file_list
+            cate_document_list.append(cate_document)
+
+        return cate_document_list if cate_document_list else []
 
 
 class ProjectPlanSerializer(BaseModelSerializer):
