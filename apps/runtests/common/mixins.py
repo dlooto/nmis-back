@@ -8,7 +8,7 @@
 import logging
 
 from nmis.projects.consts import PRO_HANDING_TYPE_SELF, PRO_CATE_SOFTWARE
-from nmis.projects.models import ProjectPlan, ProjectFlow
+from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectMilestoneState, Milestone
 
 logs = logging.getLogger(__name__)
 
@@ -212,3 +212,29 @@ class ProjectPlanMixin(object):
         # 分配项目负责人，同时开启需求论证里程碑
         is_dispatched, msg = project.dispatch(creator)
         return project if is_dispatched else None
+
+    def get_project_milestone_state(self, project, milestone):
+        state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
+        return state if state else None
+
+    def startup_project_milestone_state(self, project, milestone):
+        try:
+            if isinstance(milestone, str):
+                milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone__title=milestone).first()
+            if isinstance(milestone, Milestone):
+                milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
+            milestone_state.status = "DOING"
+            milestone_state.save()
+            milestone_state.cache()
+            return milestone_state
+        except Exception as e:
+            return None
+
+    def startup_all_project_milestone_state(self, project):
+        try:
+            milestone_states = ProjectMilestoneState.objects.filter(project=project).all()
+            milestone_states.update(status="DOING")
+            ProjectMilestoneState.objects.clear_cache(milestone_states)
+            return milestone_states
+        except Exception as e:
+            return []

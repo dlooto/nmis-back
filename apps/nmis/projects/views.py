@@ -1160,11 +1160,12 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
             if not form.is_valid():
                 return resp.form_err(form.errors)
             doc_list = form.save()
-            if not doc_list:
-                pass
-            doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-            if not milestone_state.save_doc_list(doc_ids_str):
-                return resp.failed('操作异常，请重新保存')
+            doc_ids_str = None
+            if doc_list:
+                doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
+            if doc_ids_str:
+                if not milestone_state.save_doc_list(doc_ids_str):
+                    return resp.failed('操作异常，请重新保存')
         plans = SupplierSelectionPlan.objects.filter(project_milestone_state=selected_plan.project_milestone_state)
         milestone_state.supplier_selection_plans = plans
         return resp.serialize_response(
