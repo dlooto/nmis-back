@@ -936,7 +936,7 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
     """
     项目负责人/项目协助人保存/修改【调研】【实施调试】【项目验收】里程碑下的信息
     """
-    @check_params_not_all_null(['files', 'summary'])
+    @check_params_not_all_null(['cate_documents', 'summary'])
     @transaction.atomic
     def post(self, req, project_id, project_milestone_state_id, ):
         project = self.get_object_or_404(project_id, ProjectPlan)

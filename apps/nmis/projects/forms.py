@@ -779,8 +779,9 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
             'supplier_name_err': '供应商名称为空或数据异常',
             'total_amount_err': '方案总价为空数据异常',
             'remark_err': '备注数据异常',
-            'file_category_err': '文档资料为空或数据异常',
-            'file_paths_err': '文档路径为空或数据异常',
+            'file_name_err': '文档名称为空或数据异常',
+            'file_path_err': '文档路径为空或数据异常',
+
         })
 
     def is_valid(self):
@@ -843,37 +844,47 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
         return True
 
     def check_files(self):
-        # plan_list = self.data.get('plan_list')
-        # for plan in plan_list:
-        #     plan_files = plan.get('plan_files')
-        #     if not plan_files:
-        #         continue
-        #     other_files = plan.get('other_files')
-        #     if not other_files:
-        #         continue
+        plan_list = self.data.get('plan_list')
+        for plan in plan_list:
+            plan_files = plan.get('plan_files')
+            if plan_files:
+                for file in plan_files:
+                    if not file.get('name'):
+                        self.update_errors('name', 'file_name_err')
+                        return False
+                    if not file.get('path'):
+                        self.update_errors('path', 'file_path_err')
+            other_files = plan.get('other_files')
+            if other_files:
+                for file in other_files:
+                    if not file.get('name'):
+                        self.update_errors('name', 'file_name_err')
+                        return False
+                    if not file.get('path'):
+                        self.update_errors('path', 'file_path_err')
         return True
 
-    def pre_handle_file_data(self, plan_file_paths, other_file_paths):
+    def pre_handle_file_data(self, plan_files, other_files):
 
-        if not plan_file_paths and other_file_paths:
+        if not plan_files and other_files:
             return None
         file_dict_list = []
-        if plan_file_paths:
+        if plan_files:
             import os
-            for path in plan_file_paths:
+            for file in plan_files:
                 file_dict = {
                     'category': PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN,
-                    'path': path,
-                    'name': os.path.basename(path)
+                    'path': file.get('path'),
+                    'name': file.get('name')
                 }
                 file_dict_list.append(file_dict)
-        if other_file_paths:
+        if other_files:
             import os
-            for path in other_file_paths:
+            for file in other_files:
                 file_dict = {
                     'category': PRO_DOC_CATE_OTHERS,
-                    'path': path,
-                    'name': os.path.basename(path)
+                    'path': file.get('path'),
+                    'name': file.get('name')
                 }
                 file_dict_list.append(file_dict)
         return self.batch_update_or_create_document(file_dict_list)

@@ -89,13 +89,15 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         # self.assertTrue(self.project.contains_project_milestone_state(new_milestone))
 
 
-class MilestoneTestCase(BaseTestCase):
+class MilestoneTestCase(BaseTestCase, ProjectPlanMixin):
     def setUp(self):
         super(MilestoneTestCase, self).setUp()
 
     def test_next(self):
 
-        default_flow = ProjectPlanMixin().get_default_flow()
+        default_flow = self.get_default_flow()
+        if not default_flow:
+            default_flow = self.create_default_flow(self.organ)
         default_flow.get_milestones()
         main_milestone1 = default_flow.get_first_main_milestone()
         self.assertEqual(main_milestone1.title, "需求论证")

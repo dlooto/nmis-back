@@ -795,49 +795,48 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         os.rmdir('%s%s%s%s' % (
             settings.MEDIA_ROOT, '/', PROJECT_DOCUMENT_DIR, str(project.id)))
 
-    # def test_confirm_purchase(self):
-    #     """
-    #     api测试：测试确定采购方式保存接口
-    #     """
-    #     api = '/api/v1/projects/{}/project_milestone_states/{}/save-confirm-purchase-info'
-    #
-    #     self.login_with_username(self.user)
-    #
-    #     # 创建项目
-    #     project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
-    #
-    #     # 判断是否存在默认流程
-    #     default_flow = ProjectFlow.objects.get_default_flow()
-    #     if not default_flow:
-    #         default_flow = self.create_flow(self.organ)
-    #     # 分配流程
-    #     self.assertTrue(project.dispatch(self.admin_staff))
-    #
-    #     milestone = Milestone.objects.filter(title='确定采购方式').first()
-    #     project_milestone_state = ProjectMilestoneState.objects.filter(
-    #         milestone=milestone, project=project).first()
-    #     self.assertIsNone(project_milestone_state)
-    #     self.assertEquals(milestone.id, project.id)
-    #     # 确定采购里程碑下相关数据
-    #     data = {
-    #         "summary": "确定采购方式de里程碑",
-    #         "purchase_method": "INVITED",
-    #         "cate_documents": [
-    #             {
-    #                 "category": "contract",
-    #                 "files": [
-    #                     {
-    #                         "name": "u912.png",
-    #                         "path": "upload/project/document/50051078/u912.png",
-    #                     },
-    #                     {
-    #                         "name": "u9197.png",
-    #                         "path": "upload/project/document/50051078/u9197.png",
-    #                     }
-    #                 ]
-    #             }
-    #         ]
-    #     }
+    def test_confirm_purchase(self):
+        """
+        api测试：测试确定采购方式保存接口
+        """
+        api = '/api/v1/projects/{}/project_milestone_states/{}/save-confirm-purchase-info'
+
+        self.login_with_username(self.user)
+
+        # 创建项目
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+
+        # 判断是否存在默认流程
+        default_flow = ProjectFlow.objects.get_default_flow()
+        if not default_flow:
+            default_flow = self.create_flow(self.organ)
+        # # 分配流程
+
+        milestone = Milestone.objects.filter(title='确定采购方式').first()
+        project_milestone_state = ProjectMilestoneState.objects.filter(
+            milestone=milestone, project=project).first()
+        self.assertIsNone(project_milestone_state)
+        self.assertEquals(milestone.id, project.id)
+        # 确定采购里程碑下相关数据
+        data = {
+            "summary": "确定采购方式de里程碑",
+            "purchase_method": "INVITED",
+            "cate_documents": [
+                {
+                    "category": "contract",
+                    "files": [
+                        {
+                            "name": "u912.png",
+                            "path": "upload/project/document/50051078/u912.png",
+                        },
+                        {
+                            "name": "u9197.png",
+                            "path": "upload/project/document/50051078/u9197.png",
+                        }
+                    ]
+                }
+            ]
+        }
 
 
 class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
@@ -851,6 +850,9 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
 
         self.login_with_username(self.user)
         project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x001')
+        if not self.get_default_flow():
+            self.create_default_flow(self.organ)
+        is_dispatched, msg = project.dispatch(self.admin_staff)
 
         # 分配项目负责人，同时开启需求论证里程碑
         is_dispatched, msg = project.dispatch(self.admin_staff)
@@ -930,12 +932,16 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
     #                 remove(os.path.join(settings.MEDIA_ROOT, saved_file_path))
     #         os.rmdir(os.path.join(settings.MEDIA_ROOT, PROJECT_DOCUMENT_DIR, str(project.id)))
 
-    def test_save_project_milestone_state_plan_gathered_info(self):
+    def test_save_project_milestone_state_plan_gather_info(self):
         """测试方案保存/修改"""
-        api = '/api/v1/projects/{0}/project_milestone_states/{1}/save-plan-gather-info'
+        api_plan_gather = '/api/v1/projects/{0}/project_milestone_states/{1}/save-plan-gather-info'
+        api_plan_argument = '/api/v1/projects/{0}/project_milestone_states/{1}/save-plan-argument-info'
+
 
         self.login_with_username(self.user)
         project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x002')
+        if not self.get_default_flow():
+            self.create_default_flow(self.organ)
         is_dispatched, msg = project.dispatch(self.admin_staff)
         self.assertTrue(is_dispatched, msg)
         self.assertEqual(project.status, "SD")
@@ -957,13 +963,17 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
             ],
             "summary": "方案收集说明信息"
         }
-        milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone__title='方案收集').first()
+        # milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone__title='方案收集').first()
+        milestone = Milestone.objects.filter(title='方案收集').first()
+        milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
         milestone_state.status = "DOING"
         milestone_state.save()
         milestone_state.cache()
         self.assertIsNotNone(milestone_state)
-        response = self.post(api.format(project.id, milestone_state.id), data=create_data)
+        response = self.post(api_plan_gather.format(project.id, milestone_state.id), data=create_data)
         self.assert_response_success(response)
+
+
 
 
 
