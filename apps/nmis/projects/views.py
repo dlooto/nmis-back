@@ -1274,8 +1274,6 @@ class MilestoneRecordPurchaseView(BaseAPIView):
 
         self.get_object_or_404(project_id, ProjectPlan)
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState, use_cache=False)
-        logger.info(pro_milestone_state.doc_list)
-
         return resp.serialize_response(
             pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
             results_name='project_milestone_state'
@@ -1382,7 +1380,7 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
 
         if not req.data.get('summary') and not doc_list:
             return resp.serialize_response(
-                pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
+                pro_milestone_state, srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer',
                 results_name='project_milestone_state'
             )
         old_doc_list = pro_milestone_state.doc_list
@@ -1396,7 +1394,7 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
             return resp.failed('保存失败')
 
         return resp.serialize_response(
-            new_pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
+            new_pro_milestone_state, srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer',
             results_name='project_milestone_state')
 
 

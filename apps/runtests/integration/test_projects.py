@@ -15,7 +15,7 @@ from nmis.projects.consts import (PRO_HANDING_TYPE_AGENT, PRO_STATUS_STARTED,
                                   PRO_CATE_SOFTWARE, PRO_CATE_HARDWARE,
                                   PRO_STATUS_OVERRULE, PRO_OPERATION_OVERRULE,
                                   PRO_OPERATION_PAUSE, PRO_STATUS_PAUSE, PRO_STATUS_DONE,
-                                  PROJECT_DOCUMENT_DIR)
+                                  PROJECT_DOCUMENT_DIR, PRO_MILESTONE_DOING)
 from nmis.projects.models import ProjectDocument, ProjectPlan, ProjectMilestoneState, \
     ProjectFlow, Milestone
 from runtests import BaseTestCase
@@ -795,49 +795,6 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         os.rmdir('%s%s%s%s' % (
             settings.MEDIA_ROOT, '/', PROJECT_DOCUMENT_DIR, str(project.id)))
 
-    def test_confirm_purchase(self):
-        """
-        api测试：测试确定采购方式保存接口
-        """
-        api = '/api/v1/projects/{}/project_milestone_states/{}/save-confirm-purchase-info'
-
-        self.login_with_username(self.user)
-
-        # 创建项目
-        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
-
-        # 判断是否存在默认流程
-        default_flow = ProjectFlow.objects.get_default_flow()
-        if not default_flow:
-            default_flow = self.create_flow(self.organ)
-        # # 分配流程
-
-        milestone = Milestone.objects.filter(title='确定采购方式').first()
-        project_milestone_state = ProjectMilestoneState.objects.filter(
-            milestone=milestone, project=project).first()
-        self.assertIsNone(project_milestone_state)
-        self.assertEquals(milestone.id, project.id)
-        # 确定采购里程碑下相关数据
-        data = {
-            "summary": "确定采购方式de里程碑",
-            "purchase_method": "INVITED",
-            "cate_documents": [
-                {
-                    "category": "contract",
-                    "files": [
-                        {
-                            "name": "u912.png",
-                            "path": "upload/project/document/50051078/u912.png",
-                        },
-                        {
-                            "name": "u9197.png",
-                            "path": "upload/project/document/50051078/u9197.png",
-                        }
-                    ]
-                }
-            ]
-        }
-
 
 class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
 
@@ -931,7 +888,7 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
             except AssertionError as e:
                 os.rmdir(os.path.join(settings.MEDIA_ROOT, PROJECT_DOCUMENT_DIR, str(project.id)))
 
-    def test_save_project_milestone_state_plan_gather_and_plan_argument_info(self):
+    def test_save_project_milestone_state_plan_gathered_info(self):
         """测试方案保存/修改"""
         api_plan_gather_save = '/api/v1/projects/{0}/project_milestone_states/{1}/save-plan-gather-info'
         api_plan_gather_get = '/api/v1/projects/{0}/project_milestone_states/{1}/get-plan-gather-info'
@@ -1156,4 +1113,294 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
     #     self.assertEqual(main_milestone4_child3.title, '项目验收')
     #     self.assertEqual(main_milestone4_child3.next(), None)
 
+    def test_save_confirm_purchase(self):
+        """
+        api测试：测试确定采购方式保存接口
+        """
+        api = '/api/v1/projects/{}/project_milestone_states/{}/save-confirm-purchase-info'
+
+        self.login_with_username(self.user)
+
+        # 创建项目
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+
+        # 判断是否存在默认流程
+        default_flow = ProjectFlow.objects.filter(default_flow=True).first()
+        if not default_flow:
+            self.create_flow(self.organ)
+        # 分配流程
+        self.assertTrue(project.dispatch(self.admin_staff))
+
+        milestone = Milestone.objects.filter(title='确定采购方式')
+        self.assertIsNotNone(milestone)
+        project_milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone__in=milestone).first()
+        self.assertIsNotNone(project_milestone_state)
+        # 改变确定采购方式项目里程碑的status
+        project_milestone_state.status = PRO_MILESTONE_DOING
+        project_milestone_state.save()
+
+        # 初始化确定采购里程碑下相关数据
+        init_data = {
+            "summary": "确定采购方式里程碑测试用例",
+            "purchase_method": "OPEN",
+            "cate_documents": [
+                {
+                    "category": "contract",
+                    "files": [
+                        {
+                            "name": "ceshi1.png",
+                            "path": "upload/project/document/50051078/ceshi1.png",
+                        },
+                        {
+                            "name": "ceshi2.png",
+                            "path": "upload/project/document/50051078/ceshi2.png",
+                        }
+                    ]
+                }
+            ]
+        }
+        response = self.post(api.format(project.id, project_milestone_state.id), data=init_data)
+        self.assert_response_success(response)
+        project_milestone_state = response.get('project_milestone_state')
+        self.assertIsNotNone(project_milestone_state)
+        self.assertIsNotNone(project_milestone_state.get('cate_documents'))
+        self.assertEquals(project_milestone_state.get('purchase_method'), init_data.get('purchase_method'))
+        self.assertEquals(project_milestone_state.get('summary'), init_data.get('summary'))
+        cate_documents = project_milestone_state.get('cate_documents')
+        for cate_document in cate_documents:
+            files = []
+            for file in cate_document.get('files'):
+                logs.info(file)
+                file_data = {
+                    "name": file.get('name'),
+                    "path": file.get('path')
+                }
+                files.append(file_data)
+                document = {
+                    "category": cate_document.get('category'),
+                    "files": files
+                }
+            self.assert_object_in_results(document, init_data.get('cate_documents'))
+
+        self.assertEquals(len(project_milestone_state.get('cate_documents')),
+                          len(init_data.get('cate_documents')))
+
+    def test_get_confirm_purchase(self):
+        """
+        API测试：测试获取确定采购项目里程碑下的信息
+        """
+        api = '/api/v1/projects/{}/project_milestone_states/{}/get-confirm-purchase-info'
+
+        self.login_with_username(self.user)
+
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+        # 查询是否存在默认流程
+        default_flow = ProjectFlow.objects.get_default_flow()
+
+        if not default_flow:
+            self.create_flow(self.organ)
+
+        self.assertTrue(project.dispatch(self.admin_staff))
+
+        milestone = Milestone.objects.filter(title='确定采购方式', flow__default_flow=True).first()
+        self.assertIsNotNone(milestone)
+        project_milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
+        self.assertIsNotNone(project_milestone_state)
+        response = self.get(api.format(project.id, project_milestone_state.id))
+        self.assert_response_success(response)
+        project_milestone_state = response.get('project_milestone_state')
+        self.assertIsNotNone(project_milestone_state)
+        cate_documents = project_milestone_state.get('cate_documents')
+        if not cate_documents:
+            cate_documents = None
+        self.assertIsNone(cate_documents)
+
+    def test_save_startup_purchase_info(self):
+        """
+        API测试:启动采购项目里程碑保存接口测试
+        """
+        api = '/api/v1/projects/{}/project_milestone_states/{}/save-startup-purchase-info'
+
+        self.login_with_username(self.user)
+
+        # 创建项目
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+        # 获取默认流程
+        default_flow = ProjectFlow.objects.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
+        self.assertTrue(project.dispatch(self.admin_staff))
+        # 获取milestone
+        milestone = Milestone.objects.filter(title='启动采购', flow__default_flow=True).first()
+        self.assertIsNotNone(milestone)
+        project_milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
+        self.assertIsNotNone(project_milestone_state)
+
+        project_milestone_state.status = PRO_MILESTONE_DOING
+        project_milestone_state.save()
+
+        init_data = {
+            "summary": "启动采购项目里程碑测试用例",
+            "cate_documents": [
+                {
+                    "category": "bidding_doc",
+                    "files": [
+                        {
+                            "name": "招标文件.txt",
+                            "path": "%s%s%s" % ("upload/project/document/", str(project.id), "/招标文件.txt")
+                        }
+                    ]
+                },
+                {
+                    "category": "purchase_plan",
+                    "files": [
+                        {
+                            "name": "采购计划.txt",
+                            "path": "%s%s%s" % ("upload/project/document/", str(project.id), "/采购计划.txt")
+                        }
+                    ]
+                },
+                {
+                    "category": "tender_doc",
+                    "files": [
+                        {
+                            "name": "投标文件.text",
+                            "path": "%s%s%s" % ("upload/project/document/", str(project.id), "/投标文件.txt")
+                        },
+                        {
+                            "name": "投标文件1.text",
+                            "path": "%s%s%s" % ("upload/project/document/", str(project.id), "/投标文件1.txt")
+                        }
+                    ]
+                }
+            ]
+        }
+        response = self.post(api.format(project.id, project_milestone_state.id), data=init_data)
+        self.assert_response_success(response)
+        project_milestone_state = response.get('project_milestone_state')
+        self.assertIsNotNone(project_milestone_state)
+        self.assertIsNotNone(project_milestone_state.get('summary'))
+        self.assertIsNotNone(project_milestone_state.get('cate_documents'))
+        cate_documents = project_milestone_state.get('cate_documents')
+        for cate_document in cate_documents:
+            files = []
+            for file in cate_document.get('files'):
+                logs.info(file)
+                file_data = {
+                    "name": file.get('name'),
+                    "path": file.get('path')
+                }
+                files.append(file_data)
+                document = {
+                    "category": cate_document.get('category'),
+                    "files": files
+                }
+            self.assert_object_in_results(document, init_data.get('cate_documents'))
+
+        self.assertEquals(len(project_milestone_state.get('cate_documents')), len(init_data.get('cate_documents')))
+
+    def test_get_startup_purchase_info(self):
+        """
+        API测试: 测试获取启动采购项目里程碑下相关信息
+        """
+        api = '/api/v1/projects/{}/project_milestone_states/{}/get-startup-purchase-info'
+
+        self.login_with_username(self.user)
+        # 创建项目
+        project = self.create_project(self.admin_staff, self.dept, project_cate="SW", title='测试项目')
+
+        default_flow = ProjectFlow.objects.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
+        self.assertTrue(project.dispatch(self.admin_staff))
+        milestone = Milestone.objects.filter(title='启动采购', flow__default_flow=True).first()
+        logs.info(milestone)
+        self.assertIsNotNone(milestone)
+        project_milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
+        self.assertIsNotNone(project_milestone_state)
+
+        response = self.get(api.format(project.id, project_milestone_state.id))
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('project_milestone_state'))
+
+    def test_save_purchase_contract_info(self):
+        """
+        API测试: 合同管理项目里程碑节点下的保存操作接口
+        """
+        api = '/api/v1/projects/{}/project_milestone_states/{}/save-purchase-contract-info'
+        self.login_with_username(self.user)
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+
+        default_flow = ProjectFlow.objects.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
+        self.assertTrue(project.dispatch(self.admin_staff))
+        milestone = Milestone.objects.filter(title='合同管理', flow__default_flow=True).first()
+        self.assertIsNotNone(milestone)
+        project_milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
+        self.assertIsNotNone(project_milestone_state)
+        project_milestone_state.status = PRO_MILESTONE_DOING
+        project_milestone_state.save()
+        init_data = {
+            "contract_no": "BJ20180927",
+            "title": "测试合同管理",
+            "signed_date": "2018-09-27",
+            "seller_contact": "乙方联系人",
+            "seller": "乙方单位",
+            "seller_tel": "13453453456",
+            "buyer_contact": "甲方联系人",
+            "total_amount": 1231221,
+            "delivery_date": "2018-09-28",
+            "contract_devices": [
+                {
+                    "id": None,
+                    "name": "测试系统1",
+                    "producer": "厂商1",
+                    "supplier": "供应商",
+                    "real_price": 123000,
+                    "num": 2,
+                    "real_total_amount": 246000
+                },
+                {
+                    "id": None,
+                    "name": "测试系统2",
+                    "producer": "厂商2",
+                    "supplier": "供应商",
+                    "real_price": 12000,
+                    "num": 2,
+                    "real_total_amount": 24000
+                }
+            ],
+            "summary": "测试合同管理项目里程碑保存操作",
+            "cate_documents": [
+                {
+                    "category": "contract",
+                    "files": [
+                        {
+                            "name": "合同1",
+                            "path": "%s%s%s" % ("upload/project/document/", project.id, "/合同1")
+                        }
+                    ]
+                },
+                {
+                    "category": "others",
+                    "files": [
+                        {
+                            "name": "其他资料1",
+                            "path": "%s%s%s" % ("upload/project/document/", project.id, "其他资料1")
+                        },
+                        {
+                            "name": "其他资料2",
+                            "path": "%s%s%s" % ("upload/project/document/", project.id, "其他资料2")
+                        }
+                    ]
+                }
+            ]
+        }
+
+        response = self.post(api.format(project.id, project_milestone_state.id), data=init_data)
+        self.assert_response_success(response)
+        project_milestone_state = response.get('project_milestone_state')
+        self.assertIsNotNone(project_milestone_state)
+        self.assertIsNotNone(project_milestone_state.get('contract_devices'))
 
