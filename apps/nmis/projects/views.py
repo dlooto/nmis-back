@@ -6,6 +6,9 @@
 #
 import logging
 import os
+
+from django.db.models import Q
+
 import settings
 
 from django.db import transaction
@@ -1149,6 +1152,11 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
         selected_plan.selected = True
         selected_plan.save()
         selected_plan.cache()
+        others_plans = SupplierSelectionPlan.objects.filter(project_milestone_state=selected_plan.project_milestone_state).exclude(id=selected_plan.id).all()
+        if others_plans:
+            logger.info(others_plans)
+            others_plans.update(selected=False)
+            SupplierSelectionPlan.objects.clear_cache(others_plans)
 
         if project.performer == req.user.get_profile():
             if req.data.get('summary') is not None:
