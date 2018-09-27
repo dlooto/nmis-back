@@ -710,14 +710,14 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
     #     # 创建项目
     #     project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
     #
-    #     file_obj = open(curr_path + '/data/dept-normal-test.xlsx', 'wb+')
+    #     file_obj = open(curr_path + '/data/upload_file_test.xlsx', 'wb+')
     #
     #     response = self.raw_post(api.format(project.id), {'file_key': file_obj})
     #
     #     self.assert_response_success(response)
     #     self.assertIsNotNone(response.get('file_url'))
     #
-    #     upload_path = '%s%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/', 'dept-normal-test.xlsx')
+    #     upload_path = '%s%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/', 'upload_file_test.xlsx')
     #     self.assertEquals(upload_path, response.get('file_url'))
     #     file_obj.close()
 
@@ -753,7 +753,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         # 上传文件
         curr_path = os.path.dirname(__file__)
 
-        file_obj = open(curr_path + '/data/dept-normal-test.xlsx', 'wb+')
+        file_obj = open(curr_path + '/data/upload_file_test.xlsx', 'wb+')
 
         upload_response = self.raw_post(upload_file_api.format(project.id), {'file_key': file_obj})
 
@@ -761,13 +761,13 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertIsNotNone(upload_response.get('file_url'))
 
         upload_path = '%s%s%s%s' % (
-            PROJECT_DOCUMENT_DIR, str(project.id), '/', 'dept-normal-test.xlsx')
+            PROJECT_DOCUMENT_DIR, str(project.id), '/', 'upload_file_test.xlsx')
         success_upload_file_path = upload_response.get('file_url')  # 获取上传成功后的路径
 
         self.assertEquals(upload_path, success_upload_file_path)
         file_obj.close()    # 关闭文件流
         project_document_data = {
-            'name': 'dept-normal-test.xlsx',
+            'name': 'upload_file_test.xlsx',
             'category': 'others',
             'path': success_upload_file_path,
         }
@@ -903,7 +903,7 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
     #     milestone_states = project.get_project_milestone_states()
     #     import os
     #     curr_path = os.path.dirname(__file__)
-    #     with open(curr_path + '/data/dept-normal-test.xlsx', 'wb+') as file_io:
+    #     with open(curr_path + '/data/upload_file_test.xlsx', 'wb+') as file_io:
     #         for index, item in enumerate(milestone_states):
     #             if item.milestone.title in ['调研', '实施调试', '项目验收']:
     #                 item.status = "DOING"
@@ -937,7 +937,6 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         api_plan_gather = '/api/v1/projects/{0}/project_milestone_states/{1}/save-plan-gather-info'
         api_plan_argument = '/api/v1/projects/{0}/project_milestone_states/{1}/save-plan-argument-info'
 
-
         self.login_with_username(self.user)
         project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x002')
         if not self.get_default_flow():
@@ -952,20 +951,30 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                     "total_amount": 12,
                     "remark": "备注：折扣10%",
                     "plan_files": [
-                        "upload/project/document/%s/supplier_selection_plan001.txt" % (project.id, ),
-                        "upload/project/document/%s/supplier_selection_plan002.txt" % (project.id, )
+                        {
+                            "name": "supplier_selection_plan001",
+                            "path": ("upload/project/document/%s/supplier_selection_plan001.txt" % (project.id, ))
+                         },
+                        {
+                            "name": "supplier_selection_plan002",
+                            "path": ("upload/project/document/%s/supplier_selection_plan002.txt" % (project.id,))
+                        }
                     ],
                     "other_files": [
-                        "upload/project/document/%s/others001.txt" % (project.id, ),
-                        "upload/project/document/%s/others002.txt" % (project.id, )
+                        {
+                            "name": "others001",
+                            "path": ("upload/project/document/%s/supplier_selection_plan001.txt" % (project.id,))
+                        },
+                        {
+                            "name": "others002",
+                            "path": ("upload/project/document/%s/supplier_selection_plan001.txt" % (project.id,))
+                        }
                     ]
                 }
             ],
             "summary": "方案收集说明信息"
         }
-        # milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone__title='方案收集').first()
-        milestone = Milestone.objects.filter(title='方案收集').first()
-        milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
+        milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone__title='方案收集').first()
         milestone_state.status = "DOING"
         milestone_state.save()
         milestone_state.cache()
