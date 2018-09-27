@@ -1110,7 +1110,7 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
     # def test_change_project_milestone_state(self):
     #
     #     api = '/api/v1/projects/{0}/change-project-milestone-state'
-    #
+    # 
     #     self.login_with_username(self.user)
     #     project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x004')
     #
@@ -1128,7 +1128,7 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
     #     main_milestone2_child1 = main_milestone2.next()
     #     self.assertEqual(main_milestone2_child1.title, '调研')
     #     self.get_project_milestone_state(project, main_milestone2_child1)
-    #     response = self.post(api.format(project), data={'project_milestone_state_id': main_milestone2_child1.id})
+    #     response = self.post(api.format(project.id), data={'project_milestone_state_id': main_milestone2_child1.id})
     #     self.assert_response_success(response)
     #     main_milestone2_child2 = main_milestone2_child1.next()
     #     self.assertEqual(main_milestone2_child2.title, '方案收集')
