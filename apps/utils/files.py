@@ -92,7 +92,8 @@ def single_upload_file(file, base_dir, stored_file_name):
         path = os.path.join(settings.MEDIA_ROOT, base_dir)
         if not os.path.exists(path):
             os.makedirs(path)
-        file_path = '%s/%s' % (path, stored_file_name)
+        file_path = '%s%s' % (path, stored_file_name)
+        logger.info(file_path)
         destination = open(file_path, 'wb+')
 
         for chunk in file.chunks():

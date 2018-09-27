@@ -47,78 +47,78 @@ SOFTWARE_DEVICES = [
 
 DEFAULT_MILESTONES = [
     {
-        "id": 3001001,
+        "id": 4001001,
         "title": "需求论证",
         "index": 0
     },
     {
-        "id": 3001002,
+        "id": 4001002,
         "title": "圈定方案",
         "index": 1
     },
     {
-        "id": 3001003,
+        "id": 4001003,
         "title": "采购管理",
         "index": 2
     },
     {
-        "id": 3001004,
+        "id": 4001004,
         "title": "实施验收",
         "index": 3
     },
     {
-        "id": 3001005,
+        "id": 4001005,
         "title": "调研",
         "index": 0,
-        "parent_id": 3001002
+        "parent_id": 4001002
     },
     {
-        "id": 3001006,
+        "id": 4001006,
         "title": "方案收集",
         "index": 1,
-        "parent_id": 3001002
+        "parent_id": 4001002
     },
     {
-        "id": 3001007,
+        "id": 4001007,
         "title": "方案论证",
         "index": 2,
-        "parent_id": 3001002
+        "parent_id": 4001002
     },
     {
-        "id": 3001008,
+        "id": 4001008,
         "title": "确定采购方式",
         "index": 0,
-        "parent_id": 3001003
+        "parent_id": 4001003
     },
     {
-        "id": 3001009,
+        "id": 4001009,
         "title": "启动采购",
         "index": 1,
-        "parent_id": 3001003
+        "parent_id": 4001003
     },
     {
-        "id": 3001010,
+        "id": 4001010,
         "title": "合同管理",
         "index": 2,
-        "parent_id": 3001003
+        "parent_id": 4001003
     },
     {
-        "id": 3001011,
+        "id": 4001011,
         "title": "到货",
         "index": 0,
-        "parent_id": 3001004
+        "parent_id": 4001004
     },
     {
-        "id": 3001012,
+        "id": 4001012,
         "title": "实施调试",
         "index": 1,
-        "parent_id": 3001004
+        "parent_id": 4001004
     },
     {
-        "id": 3001013,
+        "id": 4001013,
         "title": "项目验收(完结点)",
         "index": 2,
-        "parent_id": 3001004
+        "parent_id": 4001004
     }
 
 
