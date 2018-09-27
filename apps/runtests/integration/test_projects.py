@@ -1107,53 +1107,53 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         self.assertTrue(plans[0].get('selected'))
         self.assertEqual(plans[0].get('id'), plan_argument_data.get('selected_plan_id'))
 
-    def test_change_project_milestone_state(self):
-
-        api = '/api/v1/projects/{0}/change-project-milestone-state'
-
-        self.login_with_username(self.user)
-        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x004')
-
-        # 分配项目负责人，同时开启需求论证里程碑
-        is_dispatched, msg = project.dispatch(self.admin_staff)
-        self.assertTrue(is_dispatched, msg)
-        self.assertEqual(project.status, "SD")
-        default_flow = project.attached_flow
-        main_milestone1 = default_flow.get_first_main_milestone()
-        self.assertEqual(main_milestone1.title, "需求论证")
-
-        main_milestone2 = main_milestone1.next()
-        self.assertEqual(main_milestone2.title, '圈定方案')
-
-        main_milestone2_child1 = main_milestone2.next()
-        self.assertEqual(main_milestone2_child1.title, '调研')
-        self.get_project_milestone_state(project, main_milestone2_child1)
-        response = self.post(api.format(project), data={'project_milestone_state_id': main_milestone2_child1.id})
-        self.assert_response_success(response)
-        main_milestone2_child2 = main_milestone2_child1.next()
-        self.assertEqual(main_milestone2_child2.title, '方案收集')
-        main_milestone2_child3 = main_milestone2_child2.next()
-        self.assertEqual(main_milestone2_child3.title, '方案论证')
-
-        main_milestone3 = main_milestone2_child3.next()
-        self.assertEqual(main_milestone3.title, '采购管理')
-
-        main_milestone3_child1 = main_milestone3.next()
-        self.assertEqual(main_milestone3_child1.title, '确定采购方式')
-        main_milestone3_child2 = main_milestone3_child1.next()
-        self.assertEqual(main_milestone3_child2.title, '启动采购')
-        main_milestone3_child3 = main_milestone3_child2.next()
-        self.assertEqual(main_milestone3_child3.title, '合同管理')
-
-        main_milestone4 = main_milestone3_child3.next()
-        self.assertEqual(main_milestone4.title, '实施验收')
-
-        main_milestone4_child1 = main_milestone4.next()
-        self.assertEqual(main_milestone4_child1.title, '到货')
-        main_milestone4_child2 = main_milestone4_child1.next()
-        self.assertEqual(main_milestone4_child2.title, '实施调试')
-        main_milestone4_child3 = main_milestone4_child2.next()
-        self.assertEqual(main_milestone4_child3.title, '项目验收')
-        self.assertEqual(main_milestone4_child3.next(), None)
+    # def test_change_project_milestone_state(self):
+    #
+    #     api = '/api/v1/projects/{0}/change-project-milestone-state'
+    #
+    #     self.login_with_username(self.user)
+    #     project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目x004')
+    #
+    #     # 分配项目负责人，同时开启需求论证里程碑
+    #     is_dispatched, msg = project.dispatch(self.admin_staff)
+    #     self.assertTrue(is_dispatched, msg)
+    #     self.assertEqual(project.status, "SD")
+    #     default_flow = project.attached_flow
+    #     main_milestone1 = default_flow.get_first_main_milestone()
+    #     self.assertEqual(main_milestone1.title, "需求论证")
+    #
+    #     main_milestone2 = main_milestone1.next()
+    #     self.assertEqual(main_milestone2.title, '圈定方案')
+    #
+    #     main_milestone2_child1 = main_milestone2.next()
+    #     self.assertEqual(main_milestone2_child1.title, '调研')
+    #     self.get_project_milestone_state(project, main_milestone2_child1)
+    #     response = self.post(api.format(project), data={'project_milestone_state_id': main_milestone2_child1.id})
+    #     self.assert_response_success(response)
+    #     main_milestone2_child2 = main_milestone2_child1.next()
+    #     self.assertEqual(main_milestone2_child2.title, '方案收集')
+    #     main_milestone2_child3 = main_milestone2_child2.next()
+    #     self.assertEqual(main_milestone2_child3.title, '方案论证')
+    #
+    #     main_milestone3 = main_milestone2_child3.next()
+    #     self.assertEqual(main_milestone3.title, '采购管理')
+    #
+    #     main_milestone3_child1 = main_milestone3.next()
+    #     self.assertEqual(main_milestone3_child1.title, '确定采购方式')
+    #     main_milestone3_child2 = main_milestone3_child1.next()
+    #     self.assertEqual(main_milestone3_child2.title, '启动采购')
+    #     main_milestone3_child3 = main_milestone3_child2.next()
+    #     self.assertEqual(main_milestone3_child3.title, '合同管理')
+    #
+    #     main_milestone4 = main_milestone3_child3.next()
+    #     self.assertEqual(main_milestone4.title, '实施验收')
+    #
+    #     main_milestone4_child1 = main_milestone4.next()
+    #     self.assertEqual(main_milestone4_child1.title, '到货')
+    #     main_milestone4_child2 = main_milestone4_child1.next()
+    #     self.assertEqual(main_milestone4_child2.title, '实施调试')
+    #     main_milestone4_child3 = main_milestone4_child2.next()
+    #     self.assertEqual(main_milestone4_child3.title, '项目验收')
+    #     self.assertEqual(main_milestone4_child3.next(), None)
 
 
