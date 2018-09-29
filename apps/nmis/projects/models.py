@@ -211,7 +211,10 @@ class ProjectPlan(BaseModel):
             with transaction.atomic():
                 self.performer = performer
 
-                self.attached_flow = ProjectFlow.objects.get_default_flow()
+                default_flow = ProjectFlow.objects.get_default_flow()
+                if not default_flow:
+                    return False, "系统尚未设置默认流程，请联系管理员"
+                self.attached_flow = default_flow
 
                 self.status = PRO_STATUS_STARTED
                 self.startup_time = times.now()
@@ -864,7 +867,7 @@ class ProjectMilestoneState(BaseModel):
     objects = ProjectMilestoneStateManager()
 
     VALID_ATTRS = [
-        'doc_list', 'summary'
+        'doc_list', 'summary', 'status', 'finished_time'
     ]
 
     class Meta:
@@ -961,21 +964,31 @@ class ProjectMilestoneState(BaseModel):
         """
         获取当前里程碑下供应商选择方案列表
         """
-        pass
+        return SupplierSelectionPlan.objects.filter(project_milestone_state=self).all()
+
+    def has_selected_supplier_selection_plan(self):
+        """里程碑下是否有选定的供应商选择方案"""
+        plans = self.get_supplier_selection_plans()
+        if not plans:
+            return False
+        for plan in plans:
+            if plan.selected:
+                return True
+        return False
 
     def get_purchase_contract(self):
         """
         获取当前里程碑下采购合同信息
         :return:
         """
-        pass
+        return PurchaseContract.objects.filter(project_milestone_state=self).first()
 
     def get_receipt(self):
         """
         获取当前里程碑下的收货确认单
         :return:
         """
-        pass
+        return Receipt.objects.filter(project_milestone_state=self).first()
 
     def is_finished(self):
         """

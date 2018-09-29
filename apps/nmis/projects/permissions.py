@@ -13,6 +13,7 @@ import urllib
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 from base.common.permissions import is_login
+from nmis.projects.models import ProjectPlan
 
 logs = logging.getLogger(__name__)
 
@@ -30,6 +31,8 @@ class ProjectPerformerPermission(BasePermission):
         """
         :param obj: 为project object
         """
+        if not isinstance(project, ProjectPlan):
+            return False
         staff = request.user.get_profile()
         return project.performer == staff if staff else False
 
@@ -47,6 +50,8 @@ class ProjectCreatorPermission(BasePermission):
         """
         :param obj: 为project object
         """
+        if not isinstance(obj, ProjectPlan):
+            return False
         staff = request.user.get_profile()
         return obj.creator == staff if staff else False
 
@@ -64,5 +69,7 @@ class ProjectAssistantPermission(BasePermission):
         """
         :param obj: 为project object
         """
+        if not isinstance(project, ProjectPlan):
+            return False
         staff = request.user.get_profile()
         return project.assistant == staff if staff else False

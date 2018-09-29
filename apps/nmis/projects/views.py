@@ -62,7 +62,10 @@ from nmis.projects.consts import (
     PRO_OPERATION_PAUSE,
     PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PROJECT_DOCUMENT_CATE_CHOICES,
     PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS, PRO_MILESTONE_DONE,
-    PRO_MILESTONE_TODO)
+    PRO_MILESTONE_TODO, DEFAULT_MILESTONE_CHOICES, DEFAULT_MILESTONE_DICT, DEFAULT_MILESTONE_RESEARCH,
+    DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING, DEFAULT_MILESTONE_PROJECT_CHECK, DEFAULT_MILESTONE_STARTUP_PURCHASE,
+    DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD, DEFAULT_MILESTONE_PLAN_GATHERED, DEFAULT_MILESTONE_PLAN_ARGUMENT,
+    DEFAULT_MILESTONE_CONTRACT_MANAGEMENT, DEFAULT_MILESTONE_CONFIRM_DELIVERY)
 from utils.files import upload_file, remove, is_file_exist
 
 logger = logging.getLogger(__name__)
@@ -322,6 +325,8 @@ class ProjectPlanDispatchView(BaseAPIView):
             return resp.failed('%s %s %s' % ('项目状态:', project.status, ',无法分配'))
 
         success, result = project.dispatch(staff)
+        if not success:
+            return resp.failed(result)
         if success:
             success, result = project.change_project_milestone_state(result)
             if not success:
@@ -614,15 +619,61 @@ class ProjectPlanStartupView(BaseAPIView):
 class ProjectPlanChangeMilestoneStateView(BaseAPIView):
     """
     变更当前项目里程碑的状态:
-    完结当前项目里程碑，同时点亮下一个里程碑(如果下一个里程碑有子里程碑，同时点亮下一个里程碑的第一个子里程碑）
     """
-    # permission_classes = (ProjectPerformerPermission, )
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, )
+
+    def check_milestone_state_data(self, project, milestone_state):
+        """
+        仅校验必要数据
+        :param project: ProjectPlan对象
+        :param milestone_state: ProjectMilestoneState对象
+        :return: 返回响应数据
+        """
+        if not milestone_state.project == project:
+            return resp.failed('操作失败，请求数据错误')
+        common_milestone_tiles = [
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_RESEARCH),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_STARTUP_PURCHASE),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
+        ]
+        if milestone_state.milestone.title in common_milestone_tiles:
+            if not milestone_state.doc_list:
+                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_GATHERED):
+            if not milestone_state.get_supplier_selection_plans():
+                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_ARGUMENT):
+            previous_milestone_state = ProjectMilestoneState.objects.filter(
+                project=project, milestone=milestone_state.milestone.previous()
+            ).first()
+            if not previous_milestone_state.has_selected_supplier_selection_plan():
+                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD):
+            if not milestone_state.get_project_purchase_method():
+                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONTRACT_MANAGEMENT):
+            if not milestone_state.get_purchase_contract():
+                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONFIRM_DELIVERY):
+            if not milestone_state.get_receipt():
+                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+
     @check_id('project_milestone_state_id')
     def post(self, req, project_id, ):
+        """
+        完结当前项目里程碑，同时开启下一个里程碑(如果下一个里程碑有子里程碑，同时开启下一个里程碑的第一个子里程碑）
+        :param req: Request对象
+        :param project_id: ProjectPlan对象id
+        :return:
+        """
 
         project = self.get_object_or_404(project_id, ProjectPlan)
-        self.check_object_permissions(req, project)
-        curr_milestone_state = self.get_object_or_404(req.data.get('project_milestone_state_id'), ProjectMilestoneState)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+        curr_milestone_state: ProjectMilestoneState = self.get_object_or_404(
+            req.data.get('project_milestone_state_id'), ProjectMilestoneState
+        )
+        self.check_milestone_state_data(project, curr_milestone_state)
         success, msg = project.change_project_milestone_state(curr_milestone_state)
         if not success:
             return resp.failed(msg)
@@ -934,7 +985,7 @@ def check_project_milestone_state(project, project_milestone_state, milestone_ti
 
 
 class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
-    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (ProjectAssistantPermission, IsHospitalAdmin,)
 
     """
     项目负责人/项目协助人保存/修改【调研】【实施调试】【项目验收】里程碑下的信息
@@ -1285,7 +1336,7 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
     permission_classes = (HospitalStaffPermission, )
 
     @transaction.atomic
-    @check_params_not_all_null(['files', 'summary'])
+    @check_params_not_all_null(['cate_documents', 'summary'])
     def post(self, req, project_id, project_milestone_state_id):
         """
         启动采购里程碑中保存操作(保存资料文档url地址，项目里程碑中的说明、文档集合)
