@@ -1410,4 +1410,131 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         self.assertIsNotNone(project_milestone_state)
         self.assertIsNotNone(project_milestone_state.get('purchase_contract'))
         self.assertIsNotNone(project_milestone_state.get('purchase_contract').get('contract_devices'))
+        self.assertEquals(len(project_milestone_state.get('purchase_contract').get('contract_devices')), 2)
+        self.assertIsNotNone(project_milestone_state.get('cate_documents'))
+        self.assertEquals(len(project_milestone_state.get('cate_documents')), 2)
+        for cate_document in project_milestone_state.get('cate_documents'):
+            self.assertIsNotNone(cate_document)
+            if cate_document.get('category') == 'contract':
+                self.assertEquals(len(cate_document.get('files')), 1)
+            if cate_document.get('category') == 'others':
+                self.assertEquals(len(cate_document.get('files')), 2)
 
+    def test_get_purchase_contract_info(self):
+        """
+        API测试: 获取合同管理项目里程碑下的相关信息
+        """
+        api = '/api/v1/projects/{}/project_milestone_states/{}/get-purchase-contract-info'
+        self.login_with_username(self.user)
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+        default_flow = self.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
+        self.assertTrue(project.dispatch(self.admin_staff))
+        milestone = Milestone.objects.filter(title='合同管理', flow__default_flow=True).first()
+        self.assertIsNotNone(milestone)
+        project_milestone_state = ProjectMilestoneState.objects.filter(milestone=milestone, project=project).first()
+        self.assertIsNotNone(project_milestone_state)
+        response = self.get(api.format(project.id, project_milestone_state.id))
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('project_milestone_state'))
+
+    def test_save_take_delivery_info(self):
+        """
+        API测试: 到货项目里程碑操作API接口测试
+        """
+        api = '/api/v1/projects/{}/project_milestone_states/{}/save-take-delivery-info'
+        self.login_with_username(self.user)
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+
+        default_flow = self.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
+        self.assertTrue(project.dispatch(self.admin_staff))
+        milestone = Milestone.objects.filter(title='到货', flow__default_flow=True).first()
+        self.assertIsNotNone(milestone)
+        project_milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
+        self.assertIsNotNone(project_milestone_state)
+        project_milestone_state.status = PRO_MILESTONE_DOING
+        project_milestone_state.save()
+        init_data = {
+            "served_date": "2018-10-10",
+            "delivery_man": "龚怀前",
+            "contact_phone": "13499999999",
+            "summary": "到货项目里程碑下保存操作",
+            "cate_documents": [
+                {
+                    "category": "delivery_note",
+                    "files": [
+                        {
+                            "name": "送货单",
+                            "path": "%s%s%s" % ("upload/project/document/", project.id, "/送货单")
+                        }
+                    ]
+                }
+            ]
+        }
+        response = self.post(api.format(project.id, project_milestone_state.id), data=init_data)
+        self.assert_response_success(response)
+        project_milestone_state = response.get('project_milestone_state')
+        self.assertIsNotNone(project_milestone_state)
+        cate_documents = project_milestone_state.get('cate_documents')
+        self.assertIsNotNone(cate_documents)
+        self.assertEquals(len(cate_documents), len(init_data.get('cate_documents')))
+        self.assertEquals(len(cate_documents), 1)
+        cate_document = cate_documents[0]
+        self.assertIsNotNone(cate_document)
+        self.assertEquals(cate_document.get('category'), "delivery_note")
+        self.assertIsNotNone(cate_document.get('files'))
+        self.assertEquals(len(cate_document.get('files')), 1)
+        file = cate_document.get('files')[0]
+        self.assertIsNotNone(file)
+        self.assertEquals(file.get('name'), "送货单")
+        self.assertEquals(file.get('path'), "%s%s%s" % ("upload/project/document/", project.id, "/送货单"))
+
+    def test_get_take_delivery_info(self):
+        """
+        API测试: 获取到货项目里程碑下的信息
+        """
+        api = '/api/v1/projects/{}/project_milestone_states/{}/get-take-delivery-info'
+        self.login_with_username(self.user)
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+        default_flow = self.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
+        self.assertTrue(project.dispatch(self.admin_staff))
+        milestone = Milestone.objects.filter(title='到货', flow__default_flow=True).first()
+        self.assertIsNotNone(milestone)
+        project_milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
+        self.assertIsNotNone(project_milestone_state)
+        response = self.get(api.format(project.id, project_milestone_state.id))
+        self.assert_response_success(response)
+        project_milestone_state = response.get('project_milestone_state')
+        self.assertIsNotNone(project_milestone_state)
+
+    def test_delete_contract_device(self):
+        """
+        API测试：测试删除合同中合同设备接口测试
+        """
+        api = '/api/v1/projects/{}/purchase_contracts/{}/contract_devices/{}'
+        self.login_with_username(self.user)
+        project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
+        default_flow = self.get_default_flow()
+        if not default_flow:
+            self.create_flow(self.organ)
+        self.assertTrue(project.dispatch(self.admin_staff))
+        milestone = Milestone.objects.filter(title='合同管理', flow__default_flow=True).first()
+        self.assertIsNotNone(milestone)
+        project_milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
+        self.assertIsNotNone(project_milestone_state)
+        purchase_contract = self.create_purchase_contract(project_milestone_state)
+        self.assertIsNotNone(purchase_contract)
+        contract_devices = purchase_contract.contract_devices.all()
+        self.assertIsNotNone(contract_devices)
+        contract_device = contract_devices[0]
+        self.assertIsNotNone(contract_device)
+        response = self.delete(api.format(project.id, purchase_contract.id, contract_device.id))
+        self.assert_response_success(response)
+        self.assertEquals(response.get('code'), 10000)
+        new_contract_devices = purchase_contract.contract_devices.all()
+        self.assert_object_not_in_results(contract_device, new_contract_devices)

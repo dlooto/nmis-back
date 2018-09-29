@@ -8,7 +8,8 @@
 import logging
 
 from nmis.projects.consts import PRO_HANDING_TYPE_SELF, PRO_CATE_SOFTWARE
-from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectMilestoneState, Milestone
+from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectMilestoneState, \
+    Milestone, PurchaseContract
 
 logs = logging.getLogger(__name__)
 
@@ -42,6 +43,25 @@ SOFTWARE_DEVICES = [
         "name": "易冉运维信息服务系统",
         "purpose": "解决医院设备管理",
         "planned_price": 200000.0
+    }
+]
+
+CONTRACT_DEVICES = [
+    {
+        "name": "测试系统",
+        "producer": "北京仪器",
+        "supplier": "聚阳腾达",
+        "real_price": 123000,
+        "num": 2,
+        "real_total_amount": 246000
+    },
+    {
+        "name": "管理系统",
+        "producer": "聚阳恒鑫",
+        "supplier": "聚阳腾达",
+        "real_price": 12000,
+        "num": 2,
+        "real_total_amount": 24000
     }
 ]
 
@@ -238,3 +258,19 @@ class ProjectPlanMixin(object):
             return milestone_states
         except Exception as e:
             return []
+
+    def create_purchase_contract(self, project_milestone_state, contract_devices=CONTRACT_DEVICES):
+
+        purchase_contract_data = {
+            "contract_no": "BJ20180928",
+            "title": "测试合同管理",
+            "signed_date": "2018-09-27",
+            "seller_contact": "乙方联系人",
+            "seller": "乙方单位",
+            "seller_tel": "13453453456",
+            "buyer_contact": "甲方联系人",
+            "total_amount": 1231221,
+            "delivery_date": "2018-09-28",
+        }
+        return PurchaseContract.objects.create_purchase_contract(
+            project_milestone_state, contract_devices, **purchase_contract_data)

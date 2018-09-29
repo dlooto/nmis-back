@@ -543,6 +543,24 @@ class PurchaseContractManager(BaseManager):
         """
         return self.filter(project_milestone_state=project_milestone_state).first()
 
+    def create_purchase_contract(self, project_milestone_state, contract_devices, **data):
+        """
+        创建采购合同
+        """
+        try:
+            with transaction.atomic():
+                purchase_contract = self.model(project_milestone_state=project_milestone_state, **data)
+                purchase_contract.save()
+
+                contract_device_list = []
+                for contract_device in contract_devices:
+                    contract_device_list.append(ContractDevice(contract=purchase_contract, **contract_device))
+                ContractDevice.objects.bulk_create(contract_device_list)
+        except Exception as e:
+            logger.exception(e)
+            return None
+        return purchase_contract
+
 
 class ReceiptManager(BaseManager):
 
