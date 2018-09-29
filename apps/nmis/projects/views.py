@@ -248,44 +248,28 @@ class ProjectPlanView(BaseAPIView):
         """
         修改项目.
         """
-
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        old_project = self.get_object_or_404(project_id, ProjectPlan)
 
         self.check_object_any_permissions(req, hospital)
-        if old_project.project_cate == PRO_CATE_HARDWARE:
 
-            if not old_project.is_unstarted() or old_project.is_paused():
-                return resp.failed('项目已启动或已完成或被挂起, 无法修改')
+        old_project = self.get_object_or_404(project_id, ProjectPlan)
 
-            form = ProjectPlanUpdateForm(old_project, data=req.data)
-            if not form.is_valid():
-                return resp.form_err(form.errors)
-            new_project = form.save()
-            if not new_project:
-                return resp.failed('项目修改失败')
+        if not old_project.is_unstarted or old_project.is_paused() or old_project.is_finished():
+            return resp.failed('项目已启动或完成或被挂起，无法修改')
 
-            new_project_queryset = ChunkProjectPlanSerializer.setup_eager_loading(
-                ProjectPlan.objects.filter(id=project_id)
-            ).first()
-            return resp.serialize_response(
-                new_project_queryset, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
-            )
-        else:
-            if not old_project.is_unstarted or old_project.is_paused():
-                return resp.failed('项目已启动或完成或被挂起，无法修改')
-            form = ProjectPlanUpdateForm(old_project, data=req.data)
-            if not form.is_valid():
-                return resp.form_err(form.errors)
-            new_project = form.save()
-            if not new_project:
-                return resp.failed('项目修改失败')
-            new_project_queryset = ChunkProjectPlanSerializer.setup_eager_loading(
-                ProjectPlan.objects.filter(id=project_id)
-            ).first()
-            return resp.serialize_response(
-                new_project_queryset, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
-            )
+        form = ProjectPlanUpdateForm(old_project, data=req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        new_project = form.save()
+        if not new_project:
+            return resp.failed('项目修改失败')
+        new_project_queryset = ChunkProjectPlanSerializer.setup_eager_loading(
+            ProjectPlan.objects.filter(id=project_id)
+        ).first()
+        return resp.serialize_response(
+            new_project_queryset, srl_cls_name='ChunkProjectPlanSerializer',
+            results_name='project'
+        )
 
     def delete(self, req, project_id):
         """
@@ -376,7 +360,14 @@ class ProjectPlanOverruleView(BaseAPIView):
         """
         self.check_object_any_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
-
+        if project.status == PRO_STATUS_OVERRULE:
+            return resp.failed('项目已驳回')
+        if project.status == PRO_STATUS_DONE:
+            return resp.failed('项目以完成，无法驳回')
+        if project.status == PRO_STATUS_PAUSE:
+            return resp.failed('项目已挂起，无法驳回')
+        if project.status == PRO_STATUS_STARTED:
+            return resp.failed('项目已开始，无法驳回')
         operation_record_data = {
             'project': project_id,
             'reason': req.data.get('reason', '').strip(),
@@ -1432,8 +1423,11 @@ class ContractDeviceView(BaseAPIView):
         self.check_object_permissions(req, req.user.get_profile().organ)
 
         self.get_object_or_404(project_id, ProjectPlan)
-        self.get_object_or_404(purchase_contract_id, PurchaseContract)
+        purchase_contract = self.get_object_or_404(purchase_contract_id, PurchaseContract)
+        project_milestone_state = purchase_contract.project_milestone_state
         contract_device = self.get_object_or_404(contract_device_id, ContractDevice)
+        if project_milestone_state.status == PRO_MILESTONE_DONE:
+            return resp.failed('项目里程碑已完结，无法删除')
 
         if contract_device.deleted():
             return resp.ok('操作成功')

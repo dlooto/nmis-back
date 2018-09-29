@@ -585,8 +585,6 @@ class SingleUploadFileForm(BaseForm):
         return True
 
     def save(self):
-
-        logs.info(int(time.time()))
         for tag in self.req.FILES.keys():
             file = self.req.FILES.get(tag)
             result = single_upload_file(file, PROJECT_DOCUMENT_DIR + str(self.project_id) + '/',

@@ -192,6 +192,10 @@ class ProjectPlanManager(BaseManager):
                     pro_base_data['purpose'] = data.get('purpose')
                 if data.get('project_introduce'):
                     pro_base_data['project_introduce'] = data.get('project_introduce').strip()
+                if old_project.status == PRO_STATUS_OVERRULE:
+                    pro_base_data['status'] = PRO_STATUS_PENDING
+                if data.get('pre_amount'):
+                    pro_base_data['pre_amount'] = data.get('pre_amount')
                 if pro_base_data:
                     new_project = old_project.update(pro_base_data)
 
