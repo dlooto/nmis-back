@@ -19,6 +19,7 @@ from restfw_composed_permissions.generic.components import (
     ObjectAttrEqualToObjectAttr)
 
 from base.common.permissions import is_login
+from nmis.hospitals.models import Hospital
 
 logs = logging.getLogger(__name__)
 
@@ -47,9 +48,10 @@ class IsHospitalAdmin(BasePermission):
         对象级权限检查.
         :param obj: organ object
         """
+        if not isinstance(obj, Hospital):
+            return False
         if not request.user.get_profile():
             return False
-
         return request.user.get_profile().is_admin_for_organ(obj)
 
 
@@ -64,6 +66,8 @@ class HospitalStaffPermission(BasePermission):
         """
         :param obj: organ对象
         """
+        if not isinstance(obj, Hospital):
+            return False
         if not is_login(request):
             return False
         staff = request.user.get_profile()
@@ -89,6 +93,8 @@ class ProjectDispatcherPermission(BasePermission):
         staff = request.user.get_profile()
         if staff.is_admin_for_organ(obj):
             return True
+        if not isinstance(obj, Hospital):
+            return False
         return staff.organ == obj and staff.has_project_dispatcher_perm()
 
 
