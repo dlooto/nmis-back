@@ -78,6 +78,11 @@ urlpatterns = [
     #     '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/children',
     #     views.ProjectChildMilestoneStatesView.as_view(),
     # ),
+    # 通用项目里程碑节点下的数据保存/修改
+    path(
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/create-or-update',
+        views.ProjectMilestoneStateDataCommonCreateOrUpdate.as_view(),
+    ),
     # 保存项目中【调研】里程碑下的信息
     path(
         '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-research-info',
@@ -118,9 +123,6 @@ urlpatterns = [
         '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/get-plan-argument-info',
         views.ProjectMilestoneStatePlanArgumentView.as_view(),
     ),
-
-
-
     # 项目流程接口
     path('flows',               views.ProjectFlowListView.as_view(), ),     # List
     path('flows/create',        views.ProjectFlowCreateView.as_view(), ),   # create
