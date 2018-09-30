@@ -93,7 +93,7 @@ class ProjectPlan(BaseModel):
         db_table = 'projects_project_plan'
 
     VALID_ATTRS = [
-        'title', 'purpose', 'handing_type', 'project_introduce', 'pre_amount'
+        'title', 'purpose', 'handing_type', 'project_introduce', 'pre_amount', 'status'
     ]
 
     def __str__(self):

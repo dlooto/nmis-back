@@ -11,7 +11,7 @@ import logging
 
 from django.contrib import admin
 
-from nmis.devices.models import OrderedDevice, SoftwareDevice
+from nmis.devices.models import OrderedDevice, SoftwareDevice, ContractDevice
 
 logs = logging.getLogger(__name__)
 
@@ -29,14 +29,15 @@ class SoftwareDeviceAdmin(admin.ModelAdmin):
     )
 
 
-class ContractDevice(admin.ModelAdmin):
+class ContractDeviceAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'name', 'contract', 'supplier'
+        'id', 'name', 'contract', 'supplier',
         'real_price', 'num', 'real_total_amount',
-        'purpose', 'producer'
+        'purpose', 'producer',
         'type_spec', 'measure', 'planned_price',
     )
 
 
 admin.site.register(OrderedDevice, OrderedDeviceAdmin)
 admin.site.register(SoftwareDevice, SoftwareDeviceAdmin)
+admin.site.register(ContractDevice, ContractDeviceAdmin)
