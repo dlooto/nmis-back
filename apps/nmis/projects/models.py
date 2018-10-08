@@ -863,11 +863,12 @@ class ProjectMilestoneState(BaseModel):
 
     status = models.CharField('项目里程碑状态', max_length=10, choices=PROJECT_MILESTONE_STATUS, default=PRO_MILESTONE_TODO)
     finished_time = models.DateTimeField('项目里程碑完结时间', default=None, null=True, blank=True)
+    modified_time = models.DateTimeField('最近一次修改时间', default=None, null=True, blank=True)
 
     objects = ProjectMilestoneStateManager()
 
     VALID_ATTRS = [
-        'doc_list', 'summary', 'status', 'finished_time'
+        'doc_list', 'summary', 'status', 'finished_time', 'modified_time'
     ]
 
     class Meta:

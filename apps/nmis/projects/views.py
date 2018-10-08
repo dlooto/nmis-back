@@ -64,6 +64,7 @@ from nmis.projects.consts import (
     DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING, DEFAULT_MILESTONE_PROJECT_CHECK, DEFAULT_MILESTONE_STARTUP_PURCHASE,
     DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD, DEFAULT_MILESTONE_PLAN_GATHERED, DEFAULT_MILESTONE_PLAN_ARGUMENT,
     DEFAULT_MILESTONE_CONTRACT_MANAGEMENT, DEFAULT_MILESTONE_CONFIRM_DELIVERY)
+from utils import times
 from utils.files import remove, is_file_exist
 
 logger = logging.getLogger(__name__)
@@ -673,7 +674,6 @@ class ProjectPlanChangeMilestoneStateView(BaseAPIView):
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
         ]
         if curr_milestone_state.milestone.title in common_milestone_tiles:
-            logger.info(not curr_milestone_state.doc_list)
             if not curr_milestone_state.doc_list:
                 return resp.failed('操作失败，当前项目里程碑尚未保存数据')
         if curr_milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_GATHERED):
@@ -1037,11 +1037,13 @@ class ProjectMilestoneStateDataCommonCreateOrUpdate(BaseAPIView):
             if not form.is_valid():
                 return resp.form_err(form.errors)
             doc_list = form.save()
-            if not doc_list:
-                return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
-            doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-            if not milestone_state.save_doc_list(doc_ids_str):
-                return resp.failed('保存失败')
+            if doc_list:
+                doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
+                if not milestone_state.save_doc_list(doc_ids_str):
+                    return resp.failed('保存失败')
+        milestone_state.modified_time = times.now()
+        milestone_state.save()
+        milestone_state.cache()
         return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
 
 
@@ -1077,11 +1079,15 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
             if not form.is_valid():
                 return resp.form_err(form.errors)
             doc_list = form.save()
-            if not doc_list:
-                return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
-            doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-            if not milestone_state.save_doc_list(doc_ids_str):
-                return resp.failed('保存失败')
+            # if not doc_list:
+            #     return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
+            if doc_list:
+                doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
+                if not milestone_state.save_doc_list(doc_ids_str):
+                    return resp.failed('保存失败')
+        milestone_state.modified_time = times.now()
+        milestone_state.save()
+        milestone_state.cache()
         return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
 
 
@@ -1129,6 +1135,9 @@ class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
         milestone_state = form.save()
         if not milestone_state:
             return resp.failed("操作失败")
+        milestone_state.modified_time = times.now()
+        milestone_state.save()
+        milestone_state.cache()
         return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
 
 
@@ -1292,6 +1301,9 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
             if doc_ids_str:
                 if not milestone_state.save_doc_list(doc_ids_str):
                     return resp.failed('操作异常，请重新保存')
+        milestone_state.modified_time = times.now()
+        milestone_state.save()
+        milestone_state.cache()
         plans = SupplierSelectionPlan.objects.filter(project_milestone_state=selected_plan.project_milestone_state)
         milestone_state.supplier_selection_plans = plans
         return resp.serialize_response(

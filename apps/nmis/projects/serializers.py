@@ -98,6 +98,7 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
     children = serializers.SerializerMethodField('_get_children')
     created_time = serializers.SerializerMethodField('_get_created_time')
     finished_time = serializers.SerializerMethodField('_get_finished_time')
+    is_saved = serializers.SerializerMethodField('_is_saved_data')
 
     @staticmethod
     def setup_eager_loading(queryset):
@@ -107,7 +108,7 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_title', 'milestone_index',
-            'has_children', 'children', 'status', 'created_time', 'finished_time',
+            'has_children', 'children', 'status', 'created_time', 'finished_time', 'is_saved',
         )
 
     def _get_milestone_title(self, obj):
@@ -138,6 +139,15 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
         children = obj.children
         return resp.serialize_data(children, srl_cls_name='ProjectMilestoneStateSerializer') if children else []
 
+    def _is_saved_data(self, obj):
+        """
+        是否已保存数据
+        当前逻辑：创建ProjectMilestoneState对象时并不保存额外的数据，保存额外数据时，更新modified_time字段
+        :param obj:
+        :return:
+        """
+        return True if obj.modified_time else False
+
 
 class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
 
@@ -155,7 +165,7 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
         fields = (
             'id', 'milestone_title', 'milestone_index',
             'cate_documents', 'summary', 'purchase_method',
-            'status', 'created_time', 'finished_time',
+            'status', 'created_time', 'finished_time', 'is_saved',
         )
 
     def _get_milestone_title(self, obj):
@@ -209,7 +219,7 @@ class ProjectMilestoneStateWithSupplierSelectionPlanSerializer(ProjectMilestoneS
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_id',  'milestone_title',
-            'milestone_index', 'created_time',
+            'milestone_index', 'created_time', 'is_saved',
             'status', 'summary', 'supplier_selection_plans', 'finished_time',
         )
 
@@ -228,7 +238,7 @@ class ProjectMilestoneStateWithSupplierSelectionPlanSelectedSerializer(ProjectMi
         fields = (
             'id', 'milestone_id',  'milestone_title',
             'milestone_index', 'created_time', 'cate_documents',
-            'status', 'summary', 'supplier_selection_plans', 'finished_time',
+            'status', 'summary', 'supplier_selection_plans', 'finished_time', 'is_saved',
         )
 
     def _get_cate_documents(self, obj):
@@ -483,7 +493,7 @@ class ProjectMilestoneStateAndPurchaseContractSerializer(ProjectMilestoneStateSe
             'id', 'milestone_title', 'milestone_index',
             'cate_documents', 'summary', 'purchase_method',
             # 'has_children', 'children',
-            'status', 'created_time', 'purchase_contract'
+            'status', 'created_time', 'purchase_contract', 'is_saved',
         )
 
     def _get_milestone_title(self, obj):
@@ -571,7 +581,7 @@ class ProjectMilestoneStateAndReceiptSerializer(ProjectMilestoneStateSerializer)
             'id', 'milestone_title', 'milestone_index',
             'cate_documents', 'summary', 'purchase_method',
             # 'has_children', 'children',
-            'status', 'created_time', 'receipt'
+            'status', 'created_time', 'receipt', 'is_saved',
         )
 
     def _get_milestone_title(self, obj):

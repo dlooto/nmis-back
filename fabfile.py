@@ -96,7 +96,7 @@ def runtests(ctx, test_suite='', test_module=''):
 
 
 @task
-def deploy(ctx, remote='origin', branch='master'):
+def deploy(ctx, remote='origin', branch='v0.1.0'):
     """
     发布更新: fab bsite deploy (更新代码, 安装lib, migrate, 刷新缓存, 重启server, runtests)
     :param remote: 远程仓库名称, 默认为 origin

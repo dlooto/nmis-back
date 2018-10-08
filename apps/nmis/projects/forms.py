@@ -17,7 +17,7 @@ from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CH
     PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PRO_DOC_CATE_OTHERS, \
     PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_PLAN_ARGUMENT
 from nmis.hospitals.models import Staff
-from utils import eggs
+from utils import eggs, times
 from utils.files import upload_file, single_upload_file
 
 logs = logging.getLogger(__name__)
@@ -763,6 +763,7 @@ class ProjectMilestoneStateUpdateForm(BaseForm):
         if self.summary:
             if self.login_user == self.project.performer:
                 pro_milestone_state_data['summary'] = self.summary
+        pro_milestone_state_data['modified_time'] = times.now()
         return ProjectMilestoneState.objects.update_project_milestone_state(
             self.project_milestone_state, **pro_milestone_state_data
         ) if pro_milestone_state_data else self.project_milestone_state
@@ -875,7 +876,6 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
             return None
         file_dict_list = []
         if plan_files:
-            import os
             for file in plan_files:
                 file_dict = {
                     'category': PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN,
@@ -884,7 +884,6 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
                 }
                 file_dict_list.append(file_dict)
         if other_files:
-            import os
             for file in other_files:
                 file_dict = {
                     'category': PRO_DOC_CATE_OTHERS,
