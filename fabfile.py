@@ -120,7 +120,7 @@ def deploy(ctx, branch, remote='origin'):
 @task
 def lean_deploy(ctx, branch, remote="origin"):
     """
-    轻量部署: fab bsite lean-deploy(更新代码, migrate, 刷新缓存, 重启server, runtests)
+    轻量部署: fab bsite lean-deploy <branch> <remote> (更新代码, migrate, 刷新缓存, 重启server, runtests)
     其中 branch为分支名, remote为远端仓库名, 命令示例如:
         >>>fab bsite lean_deploy v0.1.0 origin
 
