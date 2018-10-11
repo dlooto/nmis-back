@@ -81,7 +81,7 @@ from fabenv import *
 @task
 def runtests(ctx, test_suite='', test_module=''):
     """
-    运行测试用例: 示例 fab h156 runtests 默认运行所有测试用例
+    运行测试用例: 示例 fab bsite runtests 默认运行所有测试用例
 
     :param c: c 参数默认为本地localhost连接
     :param test_suite: 要运行的测试包, 如fab h156 runtests:units 将运行units下的所有测试模块
@@ -96,10 +96,13 @@ def runtests(ctx, test_suite='', test_module=''):
 
 
 @task
-def deploy(ctx, remote='origin', branch='v0.1.0'):
+def deploy(ctx, branch, remote='origin'):
     """
-    发布更新: fab bsite deploy (更新代码, 安装lib, migrate, 刷新缓存, 重启server, runtests)
-    :param remote: 远程仓库名称, 默认为 origin
+    发布更新: fab bsite deploy <branch> <remote>(更新代码, 安装lib, migrate, 刷新缓存, 重启server, runtests)
+    其中 branch为分支名, remote为远端仓库名, 命令示例如:
+        >>>fab bsite deploy v0.1.0 origin
+
+    :param remote: 远程中心仓库在部署环境上的别名, 默认为 origin
     :param branch: 部署发布用到的代码分支
     """
     c = get_connection()
@@ -115,9 +118,12 @@ def deploy(ctx, remote='origin', branch='v0.1.0'):
 
 
 @task
-def lean_deploy(ctx, remote="origin", branch="master"):
+def lean_deploy(ctx, branch, remote="origin"):
     """
     轻量部署: fab bsite lean-deploy(更新代码, migrate, 刷新缓存, 重启server, runtests)
+    其中 branch为分支名, remote为远端仓库名, 命令示例如:
+        >>>fab bsite lean_deploy v0.1.0 origin
+
     :param remote: 远程代码仓库名, 默认origin
     :param branch: 远程代码仓库分支, 默认master
 
@@ -134,14 +140,25 @@ def lean_deploy(ctx, remote="origin", branch="master"):
 
 
 @task
-def supervisor(ctx, command='restart', program='all'):
+def supervisor(ctx, command, program):
     """
-    执行supervisor 命令 示例: fab bsite supervisor:restart,nmis (default: restart all)
+    执行supervisor 命令 示例: fab bsite supervisor restart|stop|status nmis (其中 restart和nmis为命令参数).
+
+    经查, 以上参数形式不能写成  command='start', program='nmis', 暂不明原因...
+
     @param command: ('start', 'restart', 'stop', 'status')
     @param program: 应用进程名, 如 nmis
     """
     c = get_connection()
 
+    if not command:
+        print(
+            """
+            Uage: fab <host_task> supervisor:restart|start|stop|status,<program_name>
+                just like: fab bsite supervisor restart nmis
+            """
+        )
+        return
     if command not in ('start', 'stop', 'restart', 'status'):
         return
     if command == 'status':
@@ -151,9 +168,9 @@ def supervisor(ctx, command='restart', program='all'):
 
 def _runtests(c, test_suite='', test_module=''):
     """
-    运行单元测试. test_suite和test_module默认为空时执行所有测试用例
+    运行单元测试. test_suite和test_module为空时默认执行所有测试用例
     :param c: Connection对象
-    :param test_suite: 测试集包名, 如integration
+    :param test_suite: 测试集名, 如integration
     :param test_module: 测试模块名, 如test_users.py
     :return:
     """
@@ -183,14 +200,14 @@ def _update_code(c, remote, branch):
     :param branch: 代码分支名, 如 test
     :return:
     """
-    c.run('git checkout master')
-    c.run('git stash save')
-    c.run('git pull %s master' % remote)
-    c.run('git stash pop')
-
-    if not branch == 'master':
+    if not branch == 'master':  # 不是master分支则执行git fetch取下新分支
         c.run('git fetch %s %s:%s' % (remote, branch, branch))
         c.run('git checkout %s' % branch)
+    else:
+        c.run('git checkout %s' % branch)
+        c.run('git stash save')
+        c.run('git pull %s %s' % (remote, branch))
+        c.run('git stash pop')
 
 
 def _install_env_libs(c):
@@ -207,6 +224,7 @@ def _migrate_data(c):
             c.run('python apps/manage.py collectstatic --noinput')
 
 def _load_init_data(c):
+    """ 加载fixtures中的初始数据 """
     with c.prefix("source %s" % ACTIVATE_PATH):
         with c.cd(CODE_ROOT):
             c.run('python apps/manage.py loaddata %s' % ' '.join(INIT_JSON_DATA))
@@ -216,4 +234,4 @@ def _restart_server(c):
     c.sudo('supervisorctl reread')  # 用reload将出错
     c.sudo('supervisorctl restart %s' % PROCESS_NAME)
     c.sudo('service nginx reload')
-    print("Nginx config reloaded")
+    print("Nginx config reloaded and %s server restarted" % PROCESS_NAME)
