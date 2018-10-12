@@ -441,6 +441,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         default_flow = self.get_default_flow()
         if not default_flow:
             self.create_flow(self.organ)
+        # 只分配项目负责人
         data = {
             'performer_id': self.admin_staff.id,
         }
@@ -450,6 +451,28 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertIsNotNone(project.get('performer_id'))
         self.assertEquals(project_plan.id, project.get('id'))
         self.assertEquals(self.admin_staff.id, project.get('performer_id'))
+        # 同时分配项目负责人和项目协助办理人
+        project_plan2 = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='新建项目申请2')
+        # 创建项目协助人
+        staff_data = {
+            'title': '主治医师',
+            'contact': '19822012220',
+            'email': 'ceshi01@test.com',
+        }
+        assistant = self.create_completed_staff(self.organ, self.dept, name='项目协助办理人', **staff_data)
+
+        data = {
+            'performer_id': self.admin_staff.id,
+            'assistant_id': assistant.id
+        }
+        response2 = self.put(api.format(project_plan2.id), data=data)
+        self.assert_response_success(response2)
+        project2 = response2.get('project')
+        self.assertIsNotNone(project2.get('performer_id'))
+        self.assertEquals(project_plan2.id, project2.get('id'))
+        self.assertEquals(self.admin_staff.id, project2.get('performer_id'))
+        self.assertIsNotNone(project2.get('assistant_id'))
+        self.assertEquals(assistant.id, project2.get('assistant_id'))
 
     def test_project_startup(self):
         """
