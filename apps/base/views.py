@@ -15,7 +15,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from base import codes, resp
-from base.exceptions import ParamsError, CsrfError
+from base.exceptions import ParamsError, CsrfError, AuthenticationTokenExpired
 from .resp import LeanResponse
 
 
@@ -178,6 +178,9 @@ class BaseAPIView(GenericAPIView):
 
         elif isinstance(exc, exceptions.ParseError):
             return Response(codes.get('parse_error'), status=exc.status_code, exception=True)
+
+        elif isinstance(exc, AuthenticationTokenExpired):
+            return Response(codes.get('token_expired'), status=exc.status_code, exception=True)
 
         elif isinstance(exc, exceptions.AuthenticationFailed):
             return Response(codes.get('authentication_failed'), status=exc.status_code, exception=True)
