@@ -306,15 +306,16 @@ class ProjectPlanDispatchView(BaseAPIView):
     @check_id('performer_id')
     def put(self, req, project_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
-        staff = self.get_object_or_404(req.data.get('performer_id'), Staff,)
-
+        performer = self.get_object_or_404(req.data.get('performer_id'), Staff)
         # 检查当前操作者是否具有管理员和项目分配者权限
         self.check_object_any_permissions(req, req.user.get_profile().organ)
 
         if project.status in (PRO_STATUS_STARTED, PRO_STATUS_DONE, PRO_STATUS_PAUSE, PRO_STATUS_OVERRULE):
             return resp.failed('%s %s %s' % ('项目状态:', project.status, ',无法分配'))
-
-        success, result = project.dispatch(staff)
+        assistant = None
+        if req.data.get('assistant_id'):
+            assistant = self.get_object_or_404(req.data.get('assistant_id'), Staff)
+        success, result = project.dispatch(performer=performer, assistant=assistant)
         if not success:
             return resp.failed(result)
         if success:

@@ -202,15 +202,17 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return False
 
-    def dispatch(self, performer):
+    def dispatch(self, performer, assistant=None):
         """
         分派项目给某个员工作为责任人.项目状态改变，项目直接进入第一个里程碑
         :param performer:  要分派的责任人, staff object
+        :param assistant: 项目协助办理人， staff object
         """
         try:
             with transaction.atomic():
                 self.performer = performer
-
+                if assistant:
+                    self.assistant = assistant
                 default_flow = ProjectFlow.objects.get_default_flow()
                 if not default_flow:
                     return False, "系统尚未设置默认流程，请联系管理员"

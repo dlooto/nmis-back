@@ -54,6 +54,7 @@ ACTIVATE_PATH = os.path.join(ENV_ROOT, 'bin/activate')
 #                               Fixture data
 ##############################################################################
 
+# 初始化数据文件名
 INIT_JSON_DATA = [
     'users.json',
     'hospitals.json',
@@ -64,7 +65,7 @@ INIT_JSON_DATA = [
 
 @task
 def bsite(ctx):
-    """ 前置Task: 线上测试主机 """
+    """ 前置Task: 线上测试主机及服务地址配置 """
     env.host = '47.92.154.145'
 
     env.redis_user = None
@@ -73,14 +74,35 @@ def bsite(ctx):
     env.sudo_password = 'Td@80-ply'
 
     # return Connection(env.host, user=USER)
+    _print_setinfo(env)
 
 @task
 def h_prod(ctx):
-    """ 前置Task: 生产环境主机 """
-    env.host = ''
+    """ 前置Task: 生产环境主机及服务地址配置 """
+    env.host = '127.0.0.1'
+
     env.redis_user = None
     env.redis_host = '127.0.0.1'
     env.redis_auth = 'root'
+    env.sudo_password = ''
+
+    _print_setinfo(env)
+
+
+def _print_setinfo(env):
+    print(
+        """
+        The env variables are following:
+        env = {
+            "host":         %s,
+            "redis_user":   %s,
+            "redis_host":   %s,
+            "redis_auth":   %s,
+            "sudo_password": ***
+        }
+        """ %
+        (env.host, env.redis_user, env.redis_host, env.redis_auth)
+    )
 
 
 def get_connection():

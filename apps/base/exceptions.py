@@ -27,8 +27,20 @@ class CsrfError(APIException):
     def __init__(self, detail=None):
         self.detail = detail or self.default_detail
 
+
 code_obj = codes.get('params_error')
+
+
 class ParamsError(APIException):
     default_code = 'params_error'
     status_code = codes.get(default_code).get('code')
+    default_detail = _(codes.get(default_code).get('msg'))
+
+
+class AuthenticationTokenExpired(APIException):
+    """
+    exception raised when token expired
+    """
+    default_code = 'token_expired'
+    status_code = status.HTTP_401_UNAUTHORIZED
     default_detail = _(codes.get(default_code).get('msg'))

@@ -17,6 +17,7 @@ CODES = {
     # system err_codes
     'parse_error':              {'code': 10400, 'msg': "malformed request."},   # 请求参数解析错误
     'authentication_failed':    {'code': 10401, 'msg': "incorrect authentication credentials."},
+    'token_expired':            {'code': 1040106, 'msg': "authentication token is expired"},
     'csrf_invalid':             {'code': 10403, 'msg': "csrftoken invalid, refresh and set it from the cookies."},
     'not_found':                {'code': 10404, 'msg': "request not found"},
     'method_not_allowed':       {'code': 10405, 'msg': "method not allowed"},
