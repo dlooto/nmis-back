@@ -29,38 +29,29 @@ from nmis.projects.forms import (
     OrderedDeviceCreateForm,
     OrderedDeviceUpdateForm,
     ProjectFlowCreateForm,
-    ProjectFlowUpdateForm, UploadFileForm, PurchaseContractCreateForm,
+    ProjectFlowUpdateForm, PurchaseContractCreateForm,
     SingleUploadFileForm,
     ProjectDocumentBulkCreateOrUpdateForm, ProjectMilestoneStateUpdateForm,
     SupplierSelectionPlanBatchSaveForm, ReceiptCreateOrUpdateForm)
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
-    ProjectMilestoneState, SupplierSelectionPlan, Supplier, PurchaseContract
+    ProjectMilestoneState, SupplierSelectionPlan, PurchaseContract
 from nmis.projects.permissions import ProjectPerformerPermission, \
     ProjectAssistantPermission
 from nmis.projects.serializers import ChunkProjectPlanSerializer, ProjectPlanSerializer, \
     get_project_status_count, ProjectMilestoneStateAndPurchaseContractSerializer, \
     ChunkProjectMilestoneStateSerializer, ProjectMilestoneStateAndReceiptSerializer
 
-from nmis.hospitals.consts import (
-    GROUP_CATE_PROJECT_APPROVER,
-    GROUP_CATE_NORMAL_STAFF,
-    ARCHIVE)
 from nmis.projects.consts import (
     PROJECT_STATUS_CHOICES,
     PRO_STATUS_STARTED,
     PRO_STATUS_DONE,
-    PRO_STATUS_PENDING,
-    FLOW_UNDONE,
     PROJECT_CATE_CHOICES,
-    PRO_CATE_HARDWARE,
-    PRO_CATE_SOFTWARE,
     PRO_STATUS_OVERRULE,
     PRO_OPERATION_OVERRULE,
     PRO_STATUS_PAUSE,
     PRO_OPERATION_PAUSE,
-    PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PROJECT_DOCUMENT_CATE_CHOICES,
-    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_OTHERS, PRO_MILESTONE_DONE,
-    PRO_MILESTONE_TODO, DEFAULT_MILESTONE_CHOICES, DEFAULT_MILESTONE_DICT, DEFAULT_MILESTONE_RESEARCH,
+    PROJECT_PURCHASE_METHOD_CHOICES, PRO_MILESTONE_DONE,
+    PRO_MILESTONE_TODO, DEFAULT_MILESTONE_DICT, DEFAULT_MILESTONE_RESEARCH,
     DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING, DEFAULT_MILESTONE_PROJECT_CHECK, DEFAULT_MILESTONE_STARTUP_PURCHASE,
     DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD, DEFAULT_MILESTONE_PLAN_GATHERED, DEFAULT_MILESTONE_PLAN_ARGUMENT,
     DEFAULT_MILESTONE_CONTRACT_MANAGEMENT, DEFAULT_MILESTONE_CONFIRM_DELIVERY)
@@ -341,8 +332,10 @@ class ProjectPlanRedispatchView(BaseAPIView):
 
         if project.status in (PRO_STATUS_DONE, PRO_STATUS_PAUSE, PRO_STATUS_OVERRULE):
             return resp.failed('%s %s %s' % ('项目状态:', project.status, ',无法分配'))
-
-        success = project.redispatch(staff)
+        assistant = None
+        if req.data.get('assistant_id'):
+            assistant = self.get_object_or_404(req.data.get('assistant_id'), Staff)
+        success = project.redispatch(performer=staff, assistant=assistant)
         if success:
             project_queryset = ProjectPlanSerializer.setup_eager_loading(
                 ProjectPlan.objects.filter(id=project_id)).first()
