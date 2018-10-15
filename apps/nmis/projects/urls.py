@@ -14,8 +14,7 @@ from django.urls import path
 from . import views
 
 logs = logging.getLogger(__name__)
-
-
+app_name = 'nmis.projects'
 # /api/v1/projects/
 urlpatterns = [
     # 获取项目总览列表
@@ -78,10 +77,21 @@ urlpatterns = [
     #     '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/children',
     #     views.ProjectChildMilestoneStatesView.as_view(),
     # ),
-    # 通用项目里程碑节点下的数据保存/修改
+    # 保存/修改项目里程碑节点下的数据(通用接口)，仅对默认项目流程有效
+    path(
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save',
+        views.DefaultCommonCreateOrUpdateView.as_view(),
+        name='default_common_create_or_update',
+    ),
+    # 保存/修改项目里程碑节点下的数据(通用接口)，仅对默认项目流程有效
     path(
         '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/create-or-update',
-        views.ProjectMilestoneStateDataCommonCreateOrUpdate.as_view(),
+        views.DefaultCommonProjectMilestoneStateDataCreateOrUpdateView.as_view(), name='default_common_project_milestone_state_data_create_or_update',
+    ),
+    # 查看项目里程碑节点下的数据（通用接口），仅对默认项目流程有效
+    path(
+        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>',
+        views.DefaultCommonProjectMilestoneStateDataView.as_view(),
     ),
     # 保存项目中【调研】里程碑下的信息
     path(
@@ -96,7 +106,7 @@ urlpatterns = [
     # 保存【方案收集】里程碑下的信息
     path(
         '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/save-plan-gather-info',
-        views.ProjectMilestoneStatePlanGatheredCreateView.as_view(),
+        views.ProjectMilestoneStatePlanGatheredCreateView.as_view(), name='project_milestone_state_plan_gathered_create_or_update',
     ),
     # 查看【方案收集】里程碑下的信息
     path(

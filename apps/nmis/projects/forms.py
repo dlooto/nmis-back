@@ -727,14 +727,14 @@ class ProjectMilestoneStateUpdateForm(BaseForm):
     """
     更新ProjectMilestoneState
     """
-    def __init__(self, doc_list, old_doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs):
-        BaseForm.__init__(self, doc_list, old_doc_list, summary, project_milestone_state, login_user, project, *args, **kwargs)
-        self.doc_list = doc_list
-        self.old_doc_list = old_doc_list
-        self.summary = summary
-        self.project_milestone_state = project_milestone_state
-        self.login_user = login_user
+    def __init__(self, doc_list, old_doc_list, summary, project_milestone_state, user_profile, project, *args, **kwargs):
+        BaseForm.__init__(self, doc_list, old_doc_list, summary, project_milestone_state, user_profile, project, *args, **kwargs)
         self.project = project
+        self.project_milestone_state = project_milestone_state
+        self.doc_list = doc_list
+        self.old_doc_list = project_milestone_state.doc_list
+        self.user_profile = user_profile
+        self.summary = summary
 
     def init_err_codes(self):
         self.ERR_CODES.update({
@@ -752,17 +752,10 @@ class ProjectMilestoneStateUpdateForm(BaseForm):
             else:
                 pro_milestone_state_data['doc_list'] = '%s%s%s' % (self.old_doc_list, ',', doc_ids_str)
 
-        # if self.old_doc_list and self.doc_list:
-        #     logs.info(self.old_doc_list)
-        #     logs.info(self.doc_list)
-        #     doc_ids_str = ','.join('%s' % doc.id for doc in self.doc_list)
-        #     pro_milestone_state_data['doc_list'] = '%s%s%s' % (self.old_doc_list, ',', doc_ids_str)
-        # elif not self.old_doc_list:
-        #     doc_ids_str = ','.join('%s' % doc.id for doc in self.doc_list)
-        #     pro_milestone_state_data['doc_list'] = doc_ids_str
         if self.summary:
-            if self.login_user == self.project.performer:
-                pro_milestone_state_data['summary'] = self.summary
+            if self.user_profile == self.project.performer:
+                if self.summary:
+                    pro_milestone_state_data['summary'] = self.summary.strip()
         pro_milestone_state_data['modified_time'] = times.now()
         return ProjectMilestoneState.objects.update_project_milestone_state(
             self.project_milestone_state, **pro_milestone_state_data
