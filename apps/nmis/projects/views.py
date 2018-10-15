@@ -4,8 +4,14 @@
 #
 
 #
+import json
 import logging
 import os
+
+from django.http import HttpResponseRedirect
+from django.shortcuts import redirect
+from django.views.generic import RedirectView
+from rest_framework.reverse import reverse
 
 import settings
 
@@ -15,6 +21,7 @@ from base import resp
 from base.common.decorators import (
     check_id, check_id_list, check_params_not_null, check_params_not_all_null
 )
+from base.resp import redirect_response
 
 from base.views import BaseAPIView
 
@@ -999,9 +1006,36 @@ def check_project_milestone_state(project, project_milestone_state, milestone_ti
     return True, '数据正常'
 
 
-class ProjectMilestoneStateDataCommonCreateOrUpdate(BaseAPIView):
+class DefaultCommonCreateOrUpdateView(RedirectView, BaseAPIView):
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+
+    def post(self, req, project_id, project_milestone_state_id, *args, **kwargs):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+        milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        common_milestone_tiles = [
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_RESEARCH),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_STARTUP_PURCHASE),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
+        ]
+        post_data_json = req.data
+        logger.info(post_data_json)
+        path_data = {'project_id': project_id, 'project_milestone_state_id': project_milestone_state_id}
+        req.session['data'] = req.data
+        if milestone_state.milestone.title in common_milestone_tiles:
+            response = HttpResponseRedirect(reverse('nmis.projects:default_common_project_milestone_state_data_create_or_update'), args=post_data_json)
+            return response
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_PLAN_GATHERED:
+            response = HttpResponseRedirect(reverse('nmis.projects:project_milestone_state_plan_gathered_create_or_update', kwargs=json.dumps(post_data_json)))
+        return response
+
+
+class DefaultCommonProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
     """
     通用项目里程碑节点下的数据保存/修改, 包含【调研】【实施调试】【启动采购】【项目验收】
+    仅对默认项目流程有效
 
     """
     permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
@@ -1009,11 +1043,13 @@ class ProjectMilestoneStateDataCommonCreateOrUpdate(BaseAPIView):
     @check_params_not_all_null(['cate_documents', 'summary'])
     @transaction.atomic
     def post(self, req, project_id, project_milestone_state_id, ):
+        logger.info(req.session.get('cate_documents'))
         project = self.get_object_or_404(project_id, ProjectPlan)
         self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
         common_milestone_tiles = [
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_RESEARCH),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD),
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_STARTUP_PURCHASE),
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING),
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
@@ -1021,24 +1057,62 @@ class ProjectMilestoneStateDataCommonCreateOrUpdate(BaseAPIView):
         success, msg = check_project_milestone_state(project, milestone_state, common_milestone_tiles, request_method="POST")
         if not success:
             return resp.failed(msg)
-        if project.performer == req.user.get_profile():
-            if req.data.get('summary') is not None:
-                milestone_state.summary = req.data.get('summary').strip()
-                milestone_state.save()
-                milestone_state.cache()
+        new_doc_list = ''
         if req.data.get('cate_documents'):
             form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
             if not form.is_valid():
                 return resp.form_err(form.errors)
-            doc_list = form.save()
-            if doc_list:
-                doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
-                if not milestone_state.save_doc_list(doc_ids_str):
-                    return resp.failed('保存失败')
-        milestone_state.modified_time = times.now()
-        milestone_state.save()
-        milestone_state.cache()
-        return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
+            new_doc_list = form.save()
+        pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
+            new_doc_list, milestone_state.doc_list, req.data.get('summary'), milestone_state,
+            req.user.get_profile(), project
+        )
+        new_milestone_state = pro_milestone_state_form.save()
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD):
+            purchase_method = req.data.get('purchase_method', '').strip()
+            if not purchase_method:
+                return resp.failed('请选择采购方式')
+            if purchase_method not in dict(PROJECT_PURCHASE_METHOD_CHOICES):
+                return resp.form_err({'purchase_method_err': '采购方式类型错误'})
+            success = project.determining_purchase_method(purchase_method)
+            if not success:
+                return resp.failed('操作失败')
+        return resp.serialize_response(new_milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
+
+
+class DefaultCommonProjectMilestoneStateDataView(BaseAPIView):
+    permission_classes = (IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+
+    def get(self, req, project_id, project_milestone_state_id):
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+        milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        all_stone_titles = DEFAULT_MILESTONE_DICT.values()
+        success, msg = check_project_milestone_state(project, milestone_state, all_stone_titles, request_method="GET")
+        if not success:
+            return resp.failed(msg)
+        common_milestone_tiles = [
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_RESEARCH),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_STARTUP_PURCHASE),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING),
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
+        ]
+        if milestone_state.milestone.title in common_milestone_tiles:
+            return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_GATHERED):
+            return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_ARGUMENT):
+            supplier_plan_related_milestone_state = ProjectMilestoneState.objects.filter(
+                project=project, milestone=milestone_state.milestone.previous()
+            ).first()
+            plans = SupplierSelectionPlan.objects.filter(project_milestone_state=supplier_plan_related_milestone_state)
+            milestone_state.supplier_selection_plans = plans
+            return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSelectedSerializer')
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONTRACT_MANAGEMENT):
+            return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer')
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONFIRM_DELIVERY):
+            return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateAndReceiptSerializer')
 
 
 class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
