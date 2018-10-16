@@ -52,7 +52,7 @@ class VerifyAuthtokenView(BaseAPIView):
     验证authtoken. 判断是否有效: token合法性, 是否过期(根据created属性)
     """
     authentication_classes = (TokenAuthentication, )
-    permission_classes = (AllowAny,)
+    # permission_classes = (AllowAny,)
 
     @check_not_null('token')
     def post(self, req):

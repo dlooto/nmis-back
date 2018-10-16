@@ -22,16 +22,16 @@ class CustomToken(Token):
     !!! Don't put this class into users app, CircularDependencyError would occurred
     自定义Token模型: 代理DRF框架的Token模型, 添加额外的方法和属性
     """
-    expired_day = 30    # Token默认超时天数
-    expired_seconds = 300
+    expired_days = 30    # Token默认超时天数
+    expired_minutes = 30
 
     class Meta:
         proxy = True
 
     def is_expired(self):
         """ token是否过期 """
-        return self.created + datetime.timedelta(days=self.expired_day) < self.created.now()
-        # return self.created + datetime.timedelta(days=self.expired_seconds) < self.created.now()
+        # return self.created + datetime.timedelta(days=self.expired_day) < self.created.now()
+        return self.created + datetime.timedelta(minutes=self.expired_minutes) < self.created.now()
 
     @staticmethod
     def refresh(token):
