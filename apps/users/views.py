@@ -23,9 +23,10 @@ from django.contrib.auth import logout as system_logout
 
 from nmis.hospitals.models import Role, Department, UserRoleShip
 from nmis.hospitals.serializers import SimpleRoleSerializer, SimplePermissionSerializer
-from users.forms import UserSignupForm, UserLoginForm, CheckEmailForm
+from users.forms import UserSignupForm, UserLoginForm, CheckEmailForm, UploadFileForm
 from users.models import User, ResetRecord
-from utils.eggs import get_email_host_url
+from utils.eggs import get_email_host_url, gen_uuid1
+from utils.files import upload_file
 
 logs = logging.getLogger(__name__)
 
@@ -357,3 +358,20 @@ class AssignRolesDeptDomains(BaseAPIView):
             return resp.failed("操作失败")
 
 
+class UploadFileView(BaseAPIView):
+
+    permission_classes = (AllowAny, )
+
+    def post(self, req):
+        """
+        文件上传
+        :return: 保存至服务器，返回保存路径和原文件名称
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+        form = UploadFileForm(req)
+        if not form.is_valid():
+            return resp.failed(form.errors)
+        result, is_success = form.save()
+        if not is_success:
+            return resp.failed(msg=result)
+        return resp.ok(data={'file': result})

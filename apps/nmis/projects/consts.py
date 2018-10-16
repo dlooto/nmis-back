@@ -87,7 +87,7 @@ PROJECT_PURCHASE_METHOD_CHOICES = (
 
 
 PROJECT_DOCUMENT_DIR = 'upload/project/document/'
-
+DOCUMENT_DIR = 'upload/document/'
 # 项目文档类型
 PRO_DOC_CATE_PRODUCT = 'product'
 PRO_DOC_CATE_PRODUCER = 'producer'

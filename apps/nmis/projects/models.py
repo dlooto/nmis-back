@@ -248,13 +248,16 @@ class ProjectPlan(BaseModel):
             logs.exception(e)
             return False
 
-    def redispatch(self, performer):
+    def redispatch(self, performer, assistant=None):
         """
         分派项目给某个员工作为责任人.项目状态改变，项目直接进入第一个里程碑
         :param performer:  要分派的责任人, staff object
+        :param assistant: 项目协助办理人, staff object
         """
         try:
             with transaction.atomic():
+                if assistant:
+                    self.assistant = assistant
                 self.performer = performer
                 self.save()
                 self.cache()

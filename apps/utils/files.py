@@ -13,6 +13,8 @@ from openpyxl.worksheet import Worksheet
 import settings
 from openpyxl import Workbook, load_workbook
 
+from utils.eggs import gen_uuid1
+
 logger = logging.getLogger('django')
 
 
@@ -60,16 +62,18 @@ def save_file(file, base_dir, file_name):
 def upload_file(file, base_dir, stored_file_name):
     """
 
-    :param file:
-    :param base_dir:
-    :param storge_file_name:
+    :param file: 文件
+    :param base_dir: 文件保存地址
+    :param storge_file_name: 文件名
     :return: 由上传的文件名和保存路径
     """
     try:
         path = os.path.join(settings.MEDIA_ROOT, base_dir)
         if not os.path.exists(path):
             os.makedirs(path)
-        file_path = '%s/%s' % (path, stored_file_name)
+        # 对文件名重命名
+        rename = '%s%s' % (gen_uuid1(), os.path.splitext(stored_file_name)[1])
+        file_path = '%s%s' % (path, rename)
         destination = open(file_path, 'wb+')
         for chunk in file.chunks():
             destination.write(chunk)
@@ -77,7 +81,8 @@ def upload_file(file, base_dir, stored_file_name):
     except Exception as e:
         logger.info(e)
         return None
-    return file.name, '%s%s' % (base_dir, stored_file_name)
+    data = {'file_name': file.name, 'file_url': base_dir + rename}
+    return data
 
 
 def single_upload_file(file, base_dir, stored_file_name):
@@ -108,6 +113,30 @@ def single_upload_file(file, base_dir, stored_file_name):
         file.name: '%s%s' % (base_dir, stored_file_name)
     }
     return file_name_url_data
+
+
+def single_upload_file_test(file, base_dir, stored_file_name):
+    """
+
+    :param file:
+    :param base_dir:
+    :param storge_file_name:
+    :return: 由上传的文件名和
+    """
+    try:
+        path = os.path.join(settings.MEDIA_ROOT, base_dir)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        file_path = '%s%s' % (path, stored_file_name)
+        destination = open(file_path, 'wb+')
+
+        for chunk in file.chunks():
+            destination.write(chunk)
+        destination.close()
+    except Exception as e:
+        logger.info(e)
+        return False
+    return True
 
 
 # def batch_update_files(file_dict, base_dir):

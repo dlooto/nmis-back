@@ -1,4 +1,4 @@
-#coding=utf-8
+# coding=utf-8
 #
 # Created by junn, on 16/12/2
 #
@@ -12,12 +12,15 @@ import logging
 
 from django.contrib.auth import authenticate, get_user_model
 
+from nmis.hospitals.consts import ARCHIVE
+from nmis.projects.consts import DOCUMENT_DIR
 from utils import eggs
 from base.forms import BaseForm
 from users.models import User
+from utils.eggs import gen_uuid1
+from utils.files import upload_file
 
 logs = logging.getLogger(__name__)
-
 
 PASSWORD_COMPILE = re.compile(r'^(?=.*[a-zA-Z])(?=.*[0-9])')
 PASSWORD_ERROR_MSG = u"密码格式不正确"
@@ -29,7 +32,8 @@ def is_valid_password(password):
     6-20位
     包含数字和字母
     """
-    return bool(password and (6 <= len(password) <= 20) and PASSWORD_COMPILE.match(password))
+    return bool(
+        password and (6 <= len(password) <= 20) and PASSWORD_COMPILE.match(password))
 
 
 class UserSignupForm(BaseForm):
@@ -79,7 +83,7 @@ class UserSignupForm(BaseForm):
 
         # 如果是手机号注册, 需确保手机号已验证
         phone = phone.strip()
-        vcode_key = self.data.get('vcode_key') # 注册时传入
+        vcode_key = self.data.get('vcode_key')  # 注册时传入
         if not vcode_key or vcode_key != self.req.session.get('vcode_key_%s' % phone, ''):
             self.err_msg = u'手机号未验证'
             return False
@@ -114,12 +118,12 @@ class UserLoginForm(BaseForm):
     """
 
     ERR_CODES = {
-        'params_lack':          u'参数缺乏或参数为空',
-        'user_not_activated':   u'账号未激活',
-        'user_not_found':       u'账号不存在',
-        'user_or_passwd_err':   u'用户名或密码错误',
-        'no_passwd':            u'未设置密码',
-        'unknown_auth_key':     u'未知的authkey类型'
+        'params_lack': u'参数缺乏或参数为空',
+        'user_not_activated': u'账号未激活',
+        'user_not_found': u'账号不存在',
+        'user_or_passwd_err': u'用户名或密码错误',
+        'no_passwd': u'未设置密码',
+        'unknown_auth_key': u'未知的authkey类型'
     }
 
     def __init__(self, req, data=None, *args, **kwargs):
@@ -128,7 +132,8 @@ class UserLoginForm(BaseForm):
         self.user_cache = None
 
     def is_valid(self):
-        authkey = self.data.get('authkey', '').strip()  # 取值为 'phone', 'username', or 'email'
+        authkey = self.data.get('authkey',
+                                '').strip()  # 取值为 'phone', 'username', or 'email'
         if authkey not in ('phone', 'username', 'email'):
             self.update_errors('authkey', 'unknown_auth_key', )
             return False
@@ -147,7 +152,8 @@ class UserLoginForm(BaseForm):
         try:
             if authkey == 'username':  # username时需要精确匹配, 区分大小写
                 # user = User.objects.get(username__exact=auth_value)  # DB层面大小写无法区分, 所以换用以下语句...
-                query_set = user_model.objects.extra(where=["binary username = '%s'" % auth_value])
+                query_set = user_model.objects.extra(
+                    where=["binary username = '%s'" % auth_value])
                 if not query_set:
                     self.update_errors(authkey, 'user_not_found')
                     return False
@@ -170,7 +176,8 @@ class UserLoginForm(BaseForm):
             return False
 
         try:
-            self.user_cache = authenticate(**{'authkey': authkey, authkey: auth_value, u'password': password, })     # 传入authkey以标识验证登录类型
+            self.user_cache = authenticate(**{'authkey': authkey, authkey: auth_value,
+                                              u'password': password, })  # 传入authkey以标识验证登录类型
         except Exception as e:
             logs.exception(e)
             self.update_errors('password', 'user_or_passwd_err')
@@ -261,3 +268,66 @@ class CheckEmailForm(BaseForm):
             return False
 
         return True
+
+
+class UploadFileForm(BaseForm):
+
+    def __init__(self, req, *args, **kwargs):
+        BaseForm.__init__(self, req, *args, **kwargs)
+        self.req = req
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'file_type_err': '不支持的文件类型',
+            'file_err': '文件不存在',
+            'file_name_err': '文件名称错误',
+            'file_size_err': '上传文件过大，默认上传大小2.5M'
+        })
+
+    def is_valid(self):
+        if not self.check_file_type() or not self.check_file_size() or not self.check_file_key():
+            return False
+        return True
+
+    def check_file_type(self):
+        for tag in self.req.FILES.keys():
+            files = self.req.FILES.getlist(tag)
+            for file in files:
+                if file.content_type not in ARCHIVE.values():
+                    self.update_errors('%s' % file.name, 'file_type_err')
+                    return False
+        return True
+
+    def check_file_name(self):
+        pass
+
+    def check_file_key(self):
+        if not self.req.FILES.keys():
+            self.update_errors('file', 'file_err')
+            return False
+        return True
+
+    def check_file_size(self):
+        """
+        校验文件大小，以字节校验，默认2621440字节（2.5M）
+        :return:
+        """
+        for tag in self.req.FILES.keys():
+            file = self.req.FILES.get(tag)
+            if file.size > 2621440:
+                self.update_errors('file_size', 'file_size_err')
+                return False
+        return True
+
+    def save(self):
+        upload_success_files = []
+        for tag in self.req.FILES.keys():
+            files = self.req.FILES.getlist(tag)
+            for file in files:
+                result = upload_file(file, DOCUMENT_DIR, file.name)
+                if result:
+                    upload_success_files.append(result)
+                else:
+                    return '%s%s' % (file.name, '上传失败'), False
+        return upload_success_files, True
