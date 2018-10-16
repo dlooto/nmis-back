@@ -409,7 +409,7 @@ class HospitalAddress(BaseModel):
     class Meta:
         verbose_name = '医院内部地址'
         verbose_name_plural = verbose_name
-        db_table = 'hospitals_hospital_area'
+        db_table = 'hosp_hospital_address'
 
     VALID_ATTRS = [
         'title', 'type', 'level', 'sort', 'disabled', 'dept', 'parent', 'desc',

@@ -170,7 +170,7 @@ class MedicalDeviceSix8Cate(BaseModel):
     class Meta:
         verbose_name = ' 医疗器械分类(68码)'
         verbose_name_plural = verbose_name
-        db_table = 'device_medical_device_six8_cate'
+        db_table = 'devices_medical_device_six8_cate'
 
     VALID_ATTRS = [
         'code', 'title', 'parent', 'level', 'example', 'mgt_cate',
