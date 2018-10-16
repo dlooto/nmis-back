@@ -10,7 +10,7 @@ import logging
 from base.serializers import BaseModelSerializer
 from .models import OrderedDevice, SoftwareDevice, ContractDevice
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class OrderedDeviceSerializer(BaseModelSerializer):

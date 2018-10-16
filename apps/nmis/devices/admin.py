@@ -11,9 +11,10 @@ import logging
 
 from django.contrib import admin
 
-from nmis.devices.models import OrderedDevice, SoftwareDevice, ContractDevice
+from nmis.devices.models import OrderedDevice, SoftwareDevice, ContractDevice, MedicalDeviceSix8Cate, AssertDevice, \
+    AssertDeviceRecord, FaultType, RepairOrder, RepairOrderRecord, MaintenancePlan, FaultSolution
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class OrderedDeviceAdmin(admin.ModelAdmin):
@@ -41,3 +42,11 @@ class ContractDeviceAdmin(admin.ModelAdmin):
 admin.site.register(OrderedDevice, OrderedDeviceAdmin)
 admin.site.register(SoftwareDevice, SoftwareDeviceAdmin)
 admin.site.register(ContractDevice, ContractDeviceAdmin)
+MedicalDeviceSix8Cate
+AssertDevice
+AssertDeviceRecord
+FaultType
+RepairOrder
+RepairOrderRecord
+MaintenancePlan
+FaultSolution

@@ -385,3 +385,35 @@ class UserRoleShip(BaseModel):
 
     def __str__(self):
         return '%s %s' % (self.user_id, self.role_id)
+
+
+class HospitalAddress(BaseModel):
+    """
+    医院内部地址
+    """
+    title = models.CharField('名称', max_length=128)
+    type = models.CharField('类型', choices=HOSPITAL_AREA_TYPE_CHOICES, max_length=3)
+    parent = models.ForeignKey('self', verbose_name='父级地址', on_delete=models.PROTECT, null=True, blank=True)
+    # 祖节点到当节点的父节点最短路径, 由各节点id的字符串组成，每个id,之间用‘-’进行分隔
+    parent_path = models.CharField('父地址路径', max_length=1024, default='', null=False, blank=False)
+    level = models.SmallIntegerField('层级')
+    sort = models.SmallIntegerField('排序')
+    disabled = models.BooleanField('是否禁用', default=False,)
+    dept = models.ForeignKey(
+        'hospitals.Department', verbose_name='所属科室', on_delete=models.PROTECT,
+        null=True, blank=True
+    )
+
+    desc = models.CharField('描述', max_length=256, null=True, blank=True)
+
+    class Meta:
+        verbose_name = '医院内部地址'
+        verbose_name_plural = verbose_name
+        db_table = 'hospitals_hospital_area'
+
+    VALID_ATTRS = [
+        'title', 'type', 'level', 'sort', 'disabled', 'dept', 'parent', 'desc',
+    ]
+
+    def __str__(self):
+        return '%d' % (self.id, )
