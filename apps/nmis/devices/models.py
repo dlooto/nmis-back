@@ -17,6 +17,8 @@ from nmis.devices.consts import MGT_CATE_CHOICE, ASSERT_DEVICE_CATE_CHOICES, ASS
     MAINTENANCE_PLAN_TYPE_POLLING, MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_STATUS_NEW, \
     MAINTENANCE_PLAN_PERIOD_MEASURE_CHOICES, MAINTENANCE_PLAN_PERIOD_MEASURE_DAY, ASSERT_DEVICE_OPERATION_CHOICES, \
     ASSERT_DEVICE_OPERATION_SUBMIT, FAULT_SOLUTION_STATUS_CHOICES, FAULT_SOLUTION_STATUS_NEW
+from nmis.devices.managers import AssertDeviceManager, MedicalDeviceSix8CateManager, FaultTypeManager, \
+    RepairOrderManager, MaintenancePlanManager, FaultSolutionManager
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +169,8 @@ class MedicalDeviceSix8Cate(BaseModel):
         'hospitals.Staff', related_name='created_medical_device_cate', verbose_name='创建人', on_delete=models.PROTECT
     )
 
+    objects = MedicalDeviceSix8CateManager()
+
     class Meta:
         verbose_name = ' 医疗器械分类(68码)'
         verbose_name_plural = verbose_name
@@ -231,6 +235,8 @@ class AssertDevice(BaseModel):
         on_delete=models.PROTECT, null=True, blank=True
     )
     modified_time = models.DateTimeField('修改时间', null=True, blank=True)
+
+    objects = AssertDeviceManager()
 
     class Meta:
         verbose_name = '资产设备'
@@ -329,6 +335,8 @@ class FaultType(BaseModel):
         on_delete=models.PROTECT
     )
 
+    objects = FaultTypeManager()
+
     class Meta:
         verbose_name = '故障类型',
         verbose_name_plural = verbose_name
@@ -380,13 +388,15 @@ class RepairOrder(BaseModel):
     )
     modified_time = models.DateTimeField('修改时间', null=True, blank=True)
 
+    objects = RepairOrderManager()
+
     class Meta:
         verbose_name = '报修单/维修工单'
         verbose_name_plural = verbose_name
         db_table = 'devices_repair_order'
 
     VALID_ATTRS = [
-        'applicant', 'applicant', 'fault_type', 'desc', 'maintainer', 'expenses', 'result',
+        'applicant', 'fault_type', 'desc', 'maintainer', 'expenses', 'result',
         'solution', 'doc_list', 'priority', 'status', 'comment_grade', 'comment_content', 'comment_time'
         'reason', 'modifier', 'modified_time'
     ]
@@ -499,6 +509,8 @@ class MaintenancePlan(BaseModel):
     )
     modified_time = models.DateTimeField('修改时间', null=True, blank=True)
 
+    objects = MaintenancePlanManager()
+
     class Meta:
         verbose_name = '设备维护保养计划'
         verbose_name_plural = verbose_name
@@ -543,13 +555,15 @@ class FaultSolution(BaseModel):
     )
     audited_time = models.DateTimeField('审核时间', null=True, blank=True)
 
+    objects = FaultSolutionManager()
+
     class Meta:
         verbose_name = '故障/问题解决方案'
         verbose_name_plural = verbose_name
         db_table = 'devices_fault_solution'
 
     VALID_ATTRS = [
-        'title', 'desc', 'fault_type', 'fault_type', 'solution', 'doc_list',
+        'title', 'desc', 'fault_type', 'solution', 'doc_list',
         'status', 'page_views', 'likes', 'modifier', 'modified_time', 'auditor', 'audited_time',
     ]
 
