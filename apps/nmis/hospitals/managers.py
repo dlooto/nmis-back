@@ -143,3 +143,8 @@ class UserRoleShipManager(BaseManager):
 
     def create_user_role_ship(self):
         pass
+
+
+class SequenceManager(BaseManager):
+
+    pass
