@@ -26,7 +26,8 @@ from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
     DepartmentBatchUploadForm, RoleCreateForm, RoleUpdateForm
 from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission, \
     ProjectDispatcherPermission
-from nmis.hospitals.models import Hospital, Department, Staff, Group, Role, UserRoleShip
+from nmis.hospitals.models import Hospital, Department, Staff, Group, Role, UserRoleShip, \
+    HospitalAddress
 from .forms import (
     HospitalSignupForm,
     DepartmentUpdateFrom,
@@ -573,8 +574,15 @@ class RoleListView(BaseAPIView):
         return resp.serialize_response(roles, srl_cls_name='ChunkRoleSerializer', results_name='roles')
 
 
+class HospitalAddressListView(BaseAPIView):
 
+    permission_classes = (AllowAny, )
 
+    def get(self, req, hid):
+        """
+        获取医疗机构下资产设备存储地点列表
+        """
+        self.get_object_or_404(hid, Hospital)
+        hospital_address_list = HospitalAddress.objects.get_hospital_address_list()
 
-
-
+        return resp.serialize_response(hospital_address_list, results_name='hospital_address')

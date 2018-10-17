@@ -148,3 +148,12 @@ class UserRoleShipManager(BaseManager):
 class SequenceManager(BaseManager):
 
     pass
+
+
+class HospitalAddressManager(BaseManager):
+
+    def get_hospital_address_list(self):
+        """
+        获取医疗机构下资产设备存放地点列表（返回room级别的存放地点）
+        """
+        return self.exclude(parent=None)

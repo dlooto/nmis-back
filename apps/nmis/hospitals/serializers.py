@@ -12,7 +12,8 @@ from rest_framework import serializers
 
 from base import resp
 from base.serializers import BaseModelSerializer
-from nmis.hospitals.models import Department, Hospital, Staff, Group, Role, UserRoleShip
+from nmis.hospitals.models import Department, Hospital, Staff, Group, Role, UserRoleShip, \
+    HospitalAddress
 
 logs = logging.getLogger(__name__)
 
@@ -325,6 +326,12 @@ class SimpleRoleSerializer(BaseModelSerializer):
     class Meta:
         model = Role
         fields = ('id', 'name', 'codename')
+
+
+class HospitalAddressSerializer(BaseModelSerializer):
+    class Meta:
+        model = HospitalAddress
+        fields = ('id', 'title')
 
 
 
