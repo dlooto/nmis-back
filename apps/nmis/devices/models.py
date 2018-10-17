@@ -10,13 +10,19 @@ import logging
 from django.db import models
 
 from base.models import BaseModel
-from nmis.devices.consts import MGT_CATE_CHOICE, ASSERT_DEVICE_CATE_CHOICES, ASSERT_DEVICE_CATE_MEDICAL, \
-    ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_STATUS_FREE, ASSERT_DEVICE_STATE_CHOICES, ASSERT_DEVICE_STATE_NEW, \
+from nmis.devices.consts import MGT_CATE_CHOICE, ASSERT_DEVICE_CATE_CHOICES, \
+    ASSERT_DEVICE_CATE_MEDICAL, \
+    ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_STATUS_FREE, ASSERT_DEVICE_STATE_CHOICES, \
+    ASSERT_DEVICE_STATE_NEW, \
     PRIORITY_CHOICES, REPAIR_ORDER_STATUS_CHOICES, REPAIR_ORDER_STATUS_SUBMITTED, \
-    REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_SUBMIT, MAINTENANCE_PLAN_TYPE_CHOICES, \
-    MAINTENANCE_PLAN_TYPE_POLLING, MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_STATUS_NEW, \
-    MAINTENANCE_PLAN_PERIOD_MEASURE_CHOICES, MAINTENANCE_PLAN_PERIOD_MEASURE_DAY, ASSERT_DEVICE_OPERATION_CHOICES, \
-    ASSERT_DEVICE_OPERATION_SUBMIT, FAULT_SOLUTION_STATUS_CHOICES, FAULT_SOLUTION_STATUS_NEW
+    REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_SUBMIT, \
+    MAINTENANCE_PLAN_TYPE_CHOICES, \
+    MAINTENANCE_PLAN_TYPE_POLLING, MAINTENANCE_PLAN_STATUS_CHOICES, \
+    MAINTENANCE_PLAN_STATUS_NEW, \
+    MAINTENANCE_PLAN_PERIOD_MEASURE_CHOICES, MAINTENANCE_PLAN_PERIOD_MEASURE_DAY, \
+    ASSERT_DEVICE_OPERATION_CHOICES, \
+    ASSERT_DEVICE_OPERATION_SUBMIT, FAULT_SOLUTION_STATUS_CHOICES, \
+    FAULT_SOLUTION_STATUS_NEW, ASSERT_DEVICE_STATUS_SCRAPPED
 from nmis.devices.managers import AssertDeviceManager, MedicalDeviceSix8CateManager, FaultTypeManager, \
     RepairOrderManager, MaintenancePlanManager, FaultSolutionManager
 
@@ -251,6 +257,29 @@ class AssertDevice(BaseModel):
 
     def __str__(self):
         return '%d' % (self.id, )
+
+    def deleted(self):
+
+        try:
+            self.clear_cache()
+            self.delete()
+            return True
+        except Exception as e:
+            logger.exception(e)
+            return False
+
+    def assert_device_scrapped(self):
+        """
+        资产设备报废
+        """
+        try:
+            self.status = ASSERT_DEVICE_STATUS_SCRAPPED
+            self.save()
+            self.cache()
+            return True
+        except Exception as e:
+            logger.exception(e)
+            return False
 
     def is_free(self):
         """

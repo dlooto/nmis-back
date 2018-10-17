@@ -12,7 +12,8 @@ import logging
 from django.db import models, transaction
 
 from base.models import BaseModel
-from nmis.hospitals.managers import GroupManager, RoleManager, SequenceManager
+from nmis.hospitals.managers import GroupManager, RoleManager, SequenceManager, \
+    HospitalAddressManager
 
 from organs.models import BaseOrgan, BaseStaff, BaseDepartment, BaseGroup
 from users.models import User
@@ -405,6 +406,8 @@ class HospitalAddress(BaseModel):
     )
 
     desc = models.CharField('描述', max_length=256, null=True, blank=True)
+
+    objects = HospitalAddressManager()
 
     class Meta:
         verbose_name = '医院内部地址'
