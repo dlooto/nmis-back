@@ -73,7 +73,7 @@ class AssertDeviceSerializer(BaseModelSerializer):
                   'performer_id', 'performer_name', 'responsible_dept_id',
                   'responsible_dept_name', 'use_dept_id', 'use_dept_name',
                   'production_date', 'bar_code', 'status', 'storage_place_id',
-                  'storage_place_title', 'purchase_date', 'cate')
+                  'storage_place_title', 'purchase_date', 'producer', 'cate')
 
     @staticmethod
     def setup_eager_loading(queryset):
