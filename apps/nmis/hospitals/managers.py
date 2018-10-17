@@ -147,4 +147,14 @@ class UserRoleShipManager(BaseManager):
 
 class SequenceManager(BaseManager):
 
-    pass
+    def get_next_value(self, seq_code):
+        seq = self.filter(seq_code=seq_code).first()
+        if not seq:
+            return None
+        return seq.seq_value + 1
+
+    def get_curr_value(self, seq_code):
+        seq = self.filter(seq_code=seq_code).first()
+        if not seq:
+            return None
+        return seq.seq_value

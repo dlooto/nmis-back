@@ -89,7 +89,7 @@ class HospitalAddressAdmin(admin.ModelAdmin):
 
 
 class SequenceAdmin(admin.ModelAdmin):
-    list_display = ('seq_name', 'seq_value', 'increment', 'comment')
+    list_display = ('seq_code', 'seq_name', 'seq_value', 'increment', 'remark')
 
 
 admin.site.register(Hospital, HospitalAdmin)

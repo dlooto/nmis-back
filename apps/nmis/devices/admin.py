@@ -92,7 +92,7 @@ class RepairOrderRecordAdmin(admin.ModelAdmin):
 class MaintenancePlanAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'title', 'type', 'start_date', 'expired_date',
-        'status','period_measure', 'period_num',
+        'status', 'period_measure', 'period_num',
     )
     search_fields = ()
     list_display_links = ()

@@ -420,10 +420,15 @@ class HospitalAddress(BaseModel):
 
 
 class Sequence(BaseModel):
-    seq_name = models.CharField('sequence标识', max_length=16, unique=True)
-    seq_value = models.IntegerField('当前sequence值', default=1)
+    """
+    序列数据模型
+    可用于各业务编码或表ID
+    """
+    seq_code = models.CharField('sequence编码', max_length=16, unique=True, default='2')
+    seq_name = models.CharField('sequence编码名称', max_length=64)
+    seq_value = models.IntegerField('sequence值', default=0)
     increment = models.IntegerField('步进', default=1)
-    comment = models.CharField('备注', max_length=64, null=True, blank=True)
+    remark = models.CharField('备注', max_length=64, null=True, blank=True)
 
     objects = SequenceManager()
 
@@ -433,13 +438,13 @@ class Sequence(BaseModel):
         db_table = 'hosp_sequence'
 
     VALID_ATTRS = [
-        'seq_name', 'seq_value', 'increment', 'comment',
+        'seq_code', 'seq_name', 'seq_value', 'increment', 'remark',
     ]
 
     def __str__(self):
-        return '%d %s' % (self.id, self.seq_name)
+        return '%d %s' % (self.id, self.seq_code)
 
-    def current_value(self):
+    def curr_value(self):
         return self.seq_value
 
     def next_value(self):
