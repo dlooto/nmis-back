@@ -17,5 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 urlpatterns = [
+    # 新建资产设备
+    path("create", views.AssertDeviceCreateView.as_view()),
 
+    # 资产设备列表API接口
+    path("assert-devices", views.AssertDeviceListView.as_view()),
 ]

@@ -30,8 +30,8 @@ class CustomToken(Token):
 
     def is_expired(self):
         """ token是否过期 """
-        # return self.created + datetime.timedelta(days=self.expired_day) < self.created.now()
-        return self.created + datetime.timedelta(minutes=self.expired_minutes) < self.created.now()
+        return self.created + datetime.timedelta(days=self.expired_days) < self.created.now()
+        # return self.created + datetime.timedelta(minutes=self.expired_minutes) < self.created.now()
 
     @staticmethod
     def refresh(token):

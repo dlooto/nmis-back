@@ -8,7 +8,7 @@
 import logging
 
 from base.serializers import BaseModelSerializer
-from .models import OrderedDevice, SoftwareDevice, ContractDevice
+from .models import OrderedDevice, SoftwareDevice, ContractDevice, AssertDevice
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,16 @@ class ContractDeviceSerializer(BaseModelSerializer):
 
     class Meta:
         model = ContractDevice
+        fields = '__all__'
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        pass
+
+
+class AssertDeviceSerializer(BaseModelSerializer):
+    class Meta:
+        model = AssertDevice
         fields = '__all__'
 
     @staticmethod
