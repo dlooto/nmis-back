@@ -65,11 +65,19 @@ class AssertDeviceManager(BaseManager):
             logger.exception(e)
             return None
 
-    def get_assert_devices(self):
+    def get_assert_devices(self, search_key=None, status=None):
         """
         资产设备列表
+        :param search_key: 关键字：设备名
+        :param status: 资产设备状态
         """
-        return self.all()
+        assert_devices = self.filter()
+        if search_key:
+            assert_devices = assert_devices.filter(title__contains=search_key)
+        if status:
+            assert_devices = assert_devices.filter(status__contains=status)
+
+        return assert_devices
 
     def get_assert_device_by_assert_no(self, assert_no):
         """

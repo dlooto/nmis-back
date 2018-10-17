@@ -10,6 +10,7 @@ from rest_framework.permissions import AllowAny
 from base import resp
 from base.common.decorators import check_params_not_null
 from base.views import BaseAPIView
+from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate
 from nmis.hospitals.models import Staff, Department, HospitalAddress
@@ -26,8 +27,13 @@ class AssertDeviceListView(BaseAPIView):
         获取资产设备列表（筛选条件：关键词搜索（设备名称）、设备状态（维修、使用中、报废、闲置））
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
-        assert_devices = AssertDevice.objects.get_assert_devices()
-        return resp.serialize_response(assert_devices, results_name='assert_devices')
+        search_key = req.GET.get('search_key')  # 获取参数
+        status = req.GET.get('status')
+        if status not in dict(ASSERT_DEVICE_STATUS_CHOICES):
+            return resp.failed('资产设备状态错误')
+        assert_devices = AssertDevice.objects.get_assert_devices(search_key=search_key, status=status)
+        self.get_pages(assert_devices, results_name='assert_devices')
+        return self.get_pages(assert_devices, results_name='assert_devices')
 
 
 class AssertDeviceCreateView(BaseAPIView):
