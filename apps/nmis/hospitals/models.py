@@ -412,7 +412,7 @@ class HospitalAddress(BaseModel):
         db_table = 'hosp_hospital_address'
 
     VALID_ATTRS = [
-        'title', 'type', 'level', 'sort', 'disabled', 'dept', 'parent', 'desc',
+        'title', 'type', 'parent', 'parent_path', 'level', 'sort', 'disabled', 'dept', 'desc',
     ]
 
     def __str__(self):
