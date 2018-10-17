@@ -64,6 +64,9 @@ class RepairOrderManager(BaseManager):
     def create(self):
         pass
 
+    def gen_repair_order_no(self):
+        pass
+
 
 class MaintenancePlanManager(BaseManager):
 

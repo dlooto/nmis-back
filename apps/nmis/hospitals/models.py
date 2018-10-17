@@ -12,7 +12,7 @@ import logging
 from django.db import models, transaction
 
 from base.models import BaseModel
-from nmis.hospitals.managers import GroupManager, RoleManager
+from nmis.hospitals.managers import GroupManager, RoleManager, SequenceManager
 
 from organs.models import BaseOrgan, BaseStaff, BaseDepartment, BaseGroup
 from users.models import User
@@ -412,8 +412,35 @@ class HospitalAddress(BaseModel):
         db_table = 'hosp_hospital_address'
 
     VALID_ATTRS = [
-        'title', 'type', 'level', 'sort', 'disabled', 'dept', 'parent', 'desc',
+        'title', 'type', 'parent', 'parent_path', 'level', 'sort', 'disabled', 'dept', 'desc',
     ]
 
     def __str__(self):
         return '%d' % (self.id, )
+
+
+class Sequence(BaseModel):
+    seq_name = models.CharField('sequence标识', max_length=16, unique=True)
+    seq_value = models.IntegerField('当前sequence值', default=1)
+    increment = models.IntegerField('步进', default=1)
+    comment = models.CharField('备注', max_length=64, null=True, blank=True)
+
+    objects = SequenceManager()
+
+    class Meta:
+        verbose_name = '序列'
+        verbose_name_plural = verbose_name
+        db_table = 'hosp_sequence'
+
+    VALID_ATTRS = [
+        'seq_name', 'seq_value', 'increment', 'comment',
+    ]
+
+    def __str__(self):
+        return '%d %s' % (self.id, self.seq_name)
+
+    def current_value(self):
+        return self.seq_value
+
+    def next_value(self):
+        return self.seq_value + 1

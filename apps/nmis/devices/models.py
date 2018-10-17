@@ -156,14 +156,14 @@ class MedicalDeviceSix8Cate(BaseModel):
     """
     医疗器械分类（68码）
     """
-    code = models.CharField('分类编号', max_length=6, unique=True)
+    code = models.CharField('分类编号', max_length=16, unique=True)
     title = models.CharField('分类名称', max_length=128, )
     level = models.SmallIntegerField('分类等级', default=1)
     parent = models.ForeignKey(
         'self', related_name='child_six8_cate', verbose_name='父级分类', on_delete=models.PROTECT,
         null=True, blank=True
     )
-    example = models.CharField('品名举例', max_length=10240, null=True, blank=True)
+    example = models.TextField('品名举例', max_length=2048, null=True, blank=True)
     mgt_cate = models.SmallIntegerField('管理类别', choices=MGT_CATE_CHOICE, default=1)
     creator = models.ForeignKey(
         'hospitals.Staff', related_name='created_medical_device_cate', verbose_name='创建人', on_delete=models.PROTECT
@@ -323,7 +323,7 @@ class FaultType(BaseModel):
     """
     故障类型
     """
-    title = models.CharField('故障类型名称', max_length=6, )
+    title = models.CharField('故障类型名称', max_length=32, )
     desc = models.CharField('故障类型描述', max_length=255, null=True, blank=True)
     parent = models.ForeignKey('self', verbose_name='父类故障类型', on_delete=models.PROTECT, null=True, blank=True)
     # 祖节点到当节点的父节点最短路径, 由各节点id的字符串组成，每个id,之间用‘-’进行分隔

@@ -1,0 +1,174 @@
+[
+  	{
+      "pk": 50010001,
+      "model": "hospitals.hospitalAddress",
+      "fields": {
+        "title": "住院大楼A座",
+        "type": "BD",
+        "parent": null,
+        "parent_path": "",
+        "level": 1,
+        "sort": 1,
+        "dept": null,
+        "desc": "简介住院大楼A座",
+        "disabled": false,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 50010002,
+      "model": "hospitals.hospitalAddress",
+      "fields": {
+        "title": "综合楼B座",
+        "type": "BD",
+        "parent": null,
+        "parent_path": "",
+        "level": 1,
+        "sort": 2,
+        "dept": null,
+        "desc": "简介综合楼B座",
+        "disabled": false,
+        "created_time": "2018-6-6 15:00"
+      }
+    } ,
+    {
+      "pk": 50010003,
+      "model": "hospitals.hospitalAddress",
+      "fields": {
+        "title": "消毒设备库房001",
+        "type": "RM",
+        "parent": 50010001,
+        "parent_path": "50010001",
+        "level": 2,
+        "sort": 1,
+        "dept": 30030001,
+        "desc": "简介消毒设备库房001",
+        "disabled": false,
+        "created_time": "2018-6-6 15:00"
+      }
+    } ,
+    {
+      "pk": 50010004,
+      "model": "hospitals.hospitalAddress",
+      "fields": {
+        "title": "消毒设备库房002",
+        "type": "RM",
+        "parent": 50010001,
+        "parent_path": "50010001",
+        "level": 2,
+        "sort": 2,
+        "dept": 30030001,
+        "desc": "简介消毒设备库房002",
+        "disabled": false,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 50010005,
+      "model": "hospitals.hospitalAddress",
+      "fields": {
+        "title": "手术器械存放室001",
+        "type": "RM",
+        "parent": 50010002,
+        "parent_path": "50010002",
+        "level": 2,
+        "sort": 1,
+        "dept": 30030001,
+        "desc": "简介手术器械存放室001",
+        "disabled": false,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 60020001,
+      "model": "devices.MedicalDeviceSix8Cate",
+      "fields": {
+        "code": "6857",
+        "title": "消毒和灭菌设备及器具",
+        "level": 1,
+        "parent": null,
+        "example": "",
+        "mgt_cate": 1,
+        "creator": 40040001,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 60020002,
+      "model": "devices.MedicalDeviceSix8Cate",
+      "fields": {
+        "code": "6858",
+        "title": "医用冷疗、低温、冷藏设备及器具",
+        "level": 1,
+        "parent": null,
+        "example": "",
+        "mgt_cate": 1,
+        "creator": 40040001,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 60020003,
+      "model": "devices.MedicalDeviceSix8Cate",
+      "fields": {
+        "code": "6857-06.1",
+        "title": "专用消毒设备",
+        "level": 2,
+        "parent": 60020001,
+        "example": "超声消毒设备、口腔科消毒设备",
+        "mgt_cate": 2,
+        "creator": 40040001,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 60020004,
+      "model": "devices.MedicalDeviceSix8Cate",
+      "fields": {
+        "code": "6857-06.2",
+        "title": "专用消毒设备",
+        "level": 2,
+        "parent": 60020001,
+        "example": "超声清洗器、超声干燥脱水设备",
+        "mgt_cate": 1,
+        "creator": 40040001,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 60020005,
+      "model": "devices.MedicalDeviceSix8Cate",
+      "fields": {
+        "code": "6858-02",
+        "title": "医用低温设备",
+        "level": 2,
+        "parent": 60020002,
+        "example": "医用低温箱（-20℃、-40℃、-60℃、-80℃）、低温生物降温仪",
+        "mgt_cate": 3,
+        "creator": 40040001,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+      {
+      "pk": 70010001,
+      "model": "hospitals.Sequence",
+      "fields": {
+        "seq_name": "SEQ-RPOR-NO",
+        "seq_value": 1,
+        "increment": 1,
+        "comment": "报修单自增序列",
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 70010002,
+      "model": "hospitals.Sequence",
+      "fields": {
+        "seq_name": "SEQ-MNPL-NO",
+        "seq_value": 1,
+        "increment": 1,
+        "comment": "维护保养计划自增序列",
+        "created_time": "2018-6-6 15:00"
+      }
+    }
+]

@@ -11,7 +11,7 @@ import logging
 
 from django.contrib import admin
 
-from nmis.hospitals.models import Role, UserRoleShip, HospitalAddress
+from nmis.hospitals.models import Role, UserRoleShip, HospitalAddress, Sequence
 from .models import Hospital, Staff, Department, Group
 
 logs = logging.getLogger(__name__)
@@ -88,6 +88,10 @@ class HospitalAddressAdmin(admin.ModelAdmin):
     list_display_links = ('dept', )
 
 
+class SequenceAdmin(admin.ModelAdmin):
+    list_display = ('seq_name', 'seq_value', 'increment', 'comment')
+
+
 admin.site.register(Hospital, HospitalAdmin)
 admin.site.register(Staff, StaffAdmin)
 admin.site.register(Department, DepartmentAdmin)
@@ -95,6 +99,7 @@ admin.site.register(Group, GroupAdmin)
 admin.site.register(Role, RoleAdmin)
 admin.site.register(UserRoleShip, UserRoleShipAdmin)
 admin.site.register(HospitalAddress, HospitalAddressAdmin)
+admin.site.register(Sequence, SequenceAdmin)
 
 from django.contrib.auth.models import Group as _Group
 from django.contrib.sites.models import Site as _Site
