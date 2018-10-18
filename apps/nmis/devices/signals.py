@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=RepairOrder)
 def gen_operation_record(sender, **kwargs):
-    repair_order: RepairOrder = kwargs.get('instance')
+    repair_order = kwargs.get('instance')
     created = kwargs.get('created')
     creator = repair_order.creator
     if created:
