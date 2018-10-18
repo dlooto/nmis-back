@@ -8,7 +8,8 @@ import logging
 from django.db import transaction
 
 from base.models import BaseManager
-from nmis.devices.consts import REPAIR_ORDER_NO_SEQ_CODE, REPAIR_ORDER_NO_PREFIX, REPAIR_ORDER_NO_SEQ_DIGITS
+from nmis.devices.consts import REPAIR_ORDER_NO_SEQ_CODE, REPAIR_ORDER_NO_PREFIX, REPAIR_ORDER_NO_SEQ_DIGITS, \
+    REPAIR_ORDER_STATUS_DONE, REPAIR_ORDER_STATUS_CHOICES, REPAIR_ORDER_STATUS_CLOSED, REPAIR_ORDER_STATUS_DOING
 from nmis.hospitals.models import Sequence
 from utils import times
 
@@ -121,10 +122,11 @@ class RepairOrderManager(BaseManager):
 
     def create_order(self, applicant, fault_type, desc, creator):
         """
-        :param applicant:
-        :param fault_type:
-        :param desc:
-        :param creator:
+        创建报修单
+        :param applicant: 申请人
+        :param fault_type: 故障类型
+        :param desc:    故障描述
+        :param creator: 创建人
         :return: 返回(boolean, RepairOrder对象/string)元祖
         """
 
@@ -148,6 +150,83 @@ class RepairOrderManager(BaseManager):
         except Exception as e:
             logger.exception(e)
             return False, '创建报修单异常'
+
+    def dispatch_repair_order(self, repair_order, dispatcher, maintainer, priority, *args, **kwargs):
+        """
+        分派报修单
+        :param repair_order 报修单
+        :param dispatcher: 分派人
+        :param maintainer: 维修工
+        :param priority: 优先级
+        :param args:
+        :param kwargs: {}
+        :return:
+        """
+        try:
+            update_data = dict(
+                {
+                    "modifier": dispatcher, 'modified_time': times.now(), "maintainer": maintainer,
+                    'priority': priority, 'status': REPAIR_ORDER_STATUS_DOING
+                },
+                **kwargs
+            )
+            repair_order.update(update_data)
+            repair_order.cache()
+            return repair_order
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+    def handle_repair_order(self, repair_order, operator, result, *args, **kwargs):
+        """
+        处理报修单
+        :param repair_order 报修单
+        :param operator: 当前操作人
+        :param result: 处理结果
+        :param args:
+        :param kwargs: {"expenses": expenses, "files": files, "solution": solution, "assert_devices": assert_devices}
+        :return:
+        """
+        try:
+            update_data = dict(
+                {
+                    "modifier": operator, "result": result,
+                    "status": REPAIR_ORDER_STATUS_DONE
+                },
+                **kwargs
+            )
+            assert_devices = kwargs.get('repair_device_list')
+            repair_order.update(update_data)
+            repair_order.assert_devices.set(assert_devices)
+            repair_order.cache()
+            return repair_order
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+    def comment_repair_order(self, repair_order, commentator, *args, **kwargs):
+
+        """
+        评论此次报修
+        :param repair_order: 报修单
+        :param commentator: 评论人
+        :param args:
+        :param kwargs: {"comment_grade": comment_grade, "comment_content": comment_content}
+        :return:
+        """
+        update_data = dict(
+            {
+                'comment_time': times.now(), "status": REPAIR_ORDER_STATUS_CLOSED
+            },
+            **kwargs
+        )
+        try:
+            repair_order.update(update_data)
+            repair_order.cache()
+            return repair_order
+        except Exception as e:
+            logger.exception(e)
+            return None
 
     @staticmethod
     def gen_repair_order_no(prefix, timestamp, seq, seq_max_digits=2):

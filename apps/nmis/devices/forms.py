@@ -6,7 +6,7 @@
 import logging
 
 from base.forms import BaseForm
-from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES
+from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, PRIORITY_CHOICES
 from nmis.devices.models import AssertDevice, FaultType, RepairOrder
 from utils.times import now
 from nmis.hospitals.models import Staff
@@ -264,10 +264,12 @@ class RepairOrderCreateForm(BaseForm):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.user_profile = user_profile
         self.data = data
+        self.init_err_codes()
 
-    ERR_CODES = {
+    def init_err_codes(self):
+        self.update_errors({
 
-    }
+        })
 
     def is_valid(self):
         return True
@@ -279,3 +281,112 @@ class RepairOrderCreateForm(BaseForm):
         applicant = Staff.objects.get_by_id(applicant_id)
         fault_type = FaultType.objects.get_by_id(fault_type_id)
         return RepairOrder.objects.create_order(applicant, fault_type, desc, self.user_profile)
+
+
+class RepairOrderDispatchForm(BaseForm):
+
+    def __init__(self, user_profile, repair_order, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.repair_order = repair_order
+        self.user_profile = user_profile
+        self.data = data
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'priority_error': '优先级为空或数据错误',
+            'maintainer_error': '维修工为空或数据错误',
+        })
+
+    def is_valid(self):
+        if not self.check_maintainer() or not self.check_priority():
+            return False
+        return True
+
+    def check_priority(self):
+        priority = self.data.get('priority', '').strip()
+        if not priority or priority not in dict(PRIORITY_CHOICES):
+            self.update_errors('priority', 'priority_error')
+            return False
+        return True
+
+    def check_maintainer(self):
+        maintainer_id = self.data.get('maintainer_id')
+        if not maintainer_id:
+            self.update_errors('maintainer_id', 'maintainer_error')
+            return False
+        try:
+            maintainer_id = int(maintainer_id)
+        except ValueError as e:
+            logger.exception(e)
+            self.update_errors('maintainer_id', 'maintainer_error')
+            return False
+        maintainer = Staff.objects.get_obj_by_id(maintainer_id)
+        if not maintainer:
+            self.update_errors('maintainer_id', 'maintainer_error')
+            return False
+        return True
+
+    def save(self):
+        maintainer = Staff.objects.get_obj_by_id(self.data.get('maintainer_id'))
+        priority = self.data.get('priority')
+        return RepairOrder.objects.dispatch_repair_order(self.repair_order, self.user_profile, maintainer, priority)
+
+
+class RepairOrderHandleForm(BaseForm):
+
+    def __init__(self, user_profile, repair_order, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.repair_order = repair_order
+        self.user_profile = user_profile
+        self.data = data
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.update_errors({
+
+        })
+
+    def is_valid(self):
+        return True
+
+    def save(self):
+        result = self.data.get('result')
+        expenses = self.data.get('expenses')
+        files = self.data.get('files')
+        solution = self.data.get('solution')
+        assert_devices_param = self.data.get('assert_devices')
+        assert_devices_data = AssertDevice.objects.filter(id__in=[item.get('id') for item in assert_devices_param]).all()
+
+        update_data = {
+            "expenses": expenses, "files": files,
+            "solution": solution, "repair_device_list": assert_devices_data
+        }
+        return RepairOrder.objects.handle_repair_order(self.repair_order, self.user_profile, result, **update_data)
+
+
+class RepairOrderCommentForm(BaseForm):
+
+    def __init__(self, user_profile, repair_order, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.repair_order = repair_order
+        self.user_profile = user_profile
+        self.data = data
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.update_errors({
+
+        })
+
+    def is_valid(self):
+        return True
+
+    def save(self):
+        comment_grade = self.data.get('comment_grade')
+        comment_content = self.data.get('comment_content')
+
+        update_data = {
+            "comment_grade": comment_grade, "comment_content": comment_content,
+        }
+        return RepairOrder.objects.comment_repair_order(self.repair_order, self.user_profile, **update_data)

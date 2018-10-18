@@ -15,7 +15,8 @@ from base.views import BaseAPIView
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES, \
     REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_DISPATCH, REPAIR_ORDER_STATUS_DOING, \
     REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_CHOICES
-from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, RepairOrderCreateForm
+from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, RepairOrderCreateForm, \
+    RepairOrderHandleForm, RepairOrderCommentForm, RepairOrderDispatchForm
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer
@@ -204,39 +205,36 @@ class RepairOrderView(BaseAPIView):
         action = req.data.get('action', '').strip()
         if not action or action not in dict(REPAIR_ORDER_OPERATION_CHOICES):
             return resp.failed('请求数据异常')
-
+        """ 分派报销单"""
         if action == REPAIR_ORDER_OPERATION_DISPATCH:
-            priority = req.data.get('priority', '').strip()
-            if not priority or priority not in dict(PRIORITY_CHOICES):
-                return resp.failed('请求数据异常')
-            maintainer_id = req.data.get('maintainer_id')
-            maintainer = self.get_object_or_404(maintainer_id, Staff)
-            logger.info(req.user.get_profile())
-            update_data = {
-                'maintainer': maintainer, 'modifier': req.user.get_profile(),
-                'modified_time': times.now(), 'status': REPAIR_ORDER_STATUS_DOING, 'priority': priority
-            }
-            repair_order.update(update_data)
-            repair_order.cache()
+            form = RepairOrderDispatchForm(req.user.get_profile(), repair_order, req.data)
+            if not form.is_valid():
+                return resp.form_err(form.errors)
+            new_order = form.save()
+            if not new_order:
+                return resp.failed('操作失败')
+
+        """ 维修工处理报修单 """
         if action == REPAIR_ORDER_OPERATION_HANDLE:
-            result = req.data.get('result')
-            expenses = req.data.get('expenses')
-            files = req.data.get('files')
-            solution = req.data.get('solution')
-            assert_devices = req.data.get('assert_devices')
-            update_data = {
-                "result": result, "expenses": expenses, "files": files,
-                "solution": solution, "assert_devices": assert_devices,
-            }
+            form = RepairOrderHandleForm(req.user.get_profile(), repair_order, req.data)
+            if not form.is_valid():
+                return resp.form_err(form.errors)
+            new_order = form.save()
+            if not new_order:
+                return resp.failed('操作失败')
 
-
+        """ 评论此次报修 """
         if action == REPAIR_ORDER_OPERATION_COMMENT:
-            pass
+            form = RepairOrderCommentForm(req.user.get_profile(), repair_order, req.data)
+            if not form.is_valid():
+                return resp.form_err(form.errors)
+            new_order = form.save()
+            if not new_order:
+                return resp.failed('操作失败')
         queryset = RepairOrderSerializer.setup_eager_loading(RepairOrder.objects.filter(id=order_id))
         return resp.serialize_response(
             queryset.first(), results_name='repair_order', srl_cls_name='RepairOrderSerializer'
         )
-
 
 
 class RepairOrderListView(BaseAPIView):
@@ -260,9 +258,3 @@ class RepairOrderListView(BaseAPIView):
                 Q(creator__name__contains=search)
             )
         return self.get_pages(queryset, srl_cls_name='RepairOrderSerializer', results_name='repair_orders')
-
-
-class RepairOrderDispatchView(BaseAPIView):
-
-    def put(self):
-        pass

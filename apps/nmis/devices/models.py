@@ -425,7 +425,7 @@ class RepairOrder(BaseModel):
         db_table = 'devices_repair_order'
 
     VALID_ATTRS = [
-        'applicant', 'fault_type', 'desc', 'maintainer', 'expenses', 'result',
+        'applicant', 'fault_type', 'desc', 'maintainer', 'expenses', 'result', 'repair_device_list',
         'solution', 'doc_list', 'priority', 'status', 'comment_grade', 'comment_content', 'comment_time',
         'modifier', 'modified_time'
     ]

@@ -95,6 +95,19 @@ class BaseManager(Manager):
         else:
             cache.delete(type(objs).objects.make_key(objs.id))
 
+    def get_obj_by_id(self, obj_id, use_cache=True):
+        """
+        :param obj_id: 对象id
+        :param use_cache: 是否优先从缓存中获取数据, 默认优先从缓存中取
+        :return: obj
+        """
+        if use_cache:
+            obj = self.get_cached(obj_id)
+        else:
+            obj = self.get_by_id(obj_id)
+        if obj:
+            return obj
+
 
 class BaseModel(models.Model):
     default_timeout = 30 * 60    # 默认缓存30分钟, timeout=None 则表示永不过期
