@@ -12,7 +12,8 @@ from base import resp
 from base.authtoken import CustomTokenAuthentication
 from base.common.decorators import check_params_not_null
 from base.views import BaseAPIView
-from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES
+from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES, \
+    ASSERT_DEVICE_CATE_CHOICES
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, RepairOrderCreateForm
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder
 from nmis.hospitals.models import Staff, Department, HospitalAddress
@@ -27,14 +28,26 @@ class AssertDeviceListView(BaseAPIView):
 
     def get(self, req):
         """
-        获取资产设备列表（筛选条件：关键词搜索（设备名称）、设备状态（维修、使用中、报废、闲置））
+        获取资产设备列表（筛选条件：关键词搜索（设备名称）、设备状态（维修、使用中、报废、闲置）、资产存储地点）
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
         search_key = req.GET.get('search_key')  # 获取参数
         status = req.GET.get('status')
-        if status not in dict(ASSERT_DEVICE_STATUS_CHOICES):
-            return resp.failed('资产设备状态错误')
-        assert_devices = AssertDevice.objects.get_assert_devices(search_key=search_key, status=status)
+        storage_place_id = req.GET.get('storage_place_id')
+        storage_place = None
+        if storage_place_id:
+            storage_place = self.get_object_or_404(storage_place_id, HospitalAddress)
+        if status:
+            if status not in dict(ASSERT_DEVICE_STATUS_CHOICES):
+                return resp.failed('资产设备状态错误')
+
+        cate = req.GET.get('cate')
+        if cate:
+            if cate not in dict(ASSERT_DEVICE_CATE_CHOICES):
+                return resp.failed('资产设备类型错误')
+
+        assert_devices = AssertDevice.objects.get_assert_devices(
+            cate=cate, search_key=search_key, status=status, storage_place=storage_place)
         self.get_pages(assert_devices, results_name='assert_devices')
         return self.get_pages(assert_devices, results_name='assert_devices')
 
