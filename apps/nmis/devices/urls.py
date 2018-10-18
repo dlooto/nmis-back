@@ -35,6 +35,10 @@ urlpatterns = [
     # 资产设备调配操作（单个调配、多个调配）
     path('allocate', views.AssertDeviceAllocateView.as_view(), ),
 
+    # 新建设备维护计划单
+    path('maintenance_plan/create', views.MaintenancePlanCreateView.as_view(), ),
+
+
     path('repair_orders/create', views.RepairOrderCreateView.as_view(), ),
     path('repair_orders/<int:order_id>', views.RepairOrderView.as_view(), ),
     path('repair_orders', views.RepairOrderListView.as_view(), ),

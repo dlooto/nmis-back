@@ -167,3 +167,10 @@ class HospitalAddressManager(BaseManager):
         获取医疗机构下资产设备存放地点列表（返回room级别的存放地点）
         """
         return self.exclude(parent=None)
+
+    def get_hospital_address_by_ids(self, ids):
+        """
+        通过存储地点ID集合查询存储地点
+        :param ids: 资产设备存储地点list
+        """
+        return self.filter(id__in=ids)

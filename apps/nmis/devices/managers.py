@@ -8,7 +8,9 @@ import logging
 from django.db import transaction
 
 from base.models import BaseManager
-from nmis.devices.consts import REPAIR_ORDER_NO_SEQ_CODE, REPAIR_ORDER_NO_PREFIX, REPAIR_ORDER_NO_SEQ_DIGITS
+from nmis.devices.consts import REPAIR_ORDER_NO_SEQ_CODE, REPAIR_ORDER_NO_PREFIX, \
+    REPAIR_ORDER_NO_SEQ_DIGITS, ASSERT_DEVICE_STATUS_USING, MAINTENANCE_PLAN_NO_PREFIX, \
+    MAINTENANCE_PLAN_NO_SEQ_CODE, MAINTENANCE_PLAN_NO_SEQ_DIGITS
 from nmis.hospitals.models import Sequence
 from utils import times
 
@@ -119,6 +121,21 @@ class AssertDeviceManager(BaseManager):
         """
         return self.filter(id__in=device_ids)
 
+    def update_assert_devices_use_dept(self, assert_devices, use_dept):
+        """
+        单个或多个资产设备调配使用科室（调配之后资产设备状态变成使用中）
+        :return:
+        """
+        try:
+            with transaction.atomic():
+                assert_devices.update(use_dept=use_dept, status=ASSERT_DEVICE_STATUS_USING)
+                for assert_device in assert_devices:
+                    assert_device.cache()
+                return assert_devices
+        except Exception as e:
+            logger.exception(e)
+            return None
+
 
 class FaultTypeManager(BaseManager):
 
@@ -186,8 +203,50 @@ class RepairOrderManager(BaseManager):
 
 class MaintenancePlanManager(BaseManager):
 
-    def create(self):
-        pass
+    def create_maintenance_plan(self, storage_places=None, assert_devices=None, **data):
+        try:
+            with transaction.atomic():
+                seq = Sequence.objects.select_for_update().get(seq_code=MAINTENANCE_PLAN_NO_SEQ_CODE)
+                seq.curr_value()
+                next_value = seq.next_value()
+                timestamp = times.datetime_to_str(times.now(), format='%Y%m%d')
+                plan_no = MaintenancePlanManager.gen_maintenance_plan_no(
+                    MAINTENANCE_PLAN_NO_PREFIX, timestamp, next_value, seq_max_digits=MAINTENANCE_PLAN_NO_SEQ_DIGITS)
+                if not plan_no:
+                    return False
+                data['plan_no'] = plan_no
+                maintenance_plan = self.create(**data)
+                maintenance_plan.places.set(storage_places)
+                maintenance_plan.assert_devices.set(assert_devices)
+                return True
+        except Exception as e:
+            logger.exception(e)
+            return False
+
+    @staticmethod
+    def gen_maintenance_plan_no(prefix, timestamp, seq, seq_max_digits=2):
+        """
+        :param prefix: 报修单号前缀
+        :param timestamp: 时间戳字符串
+        :param seq: 序列值
+        :param seq_max_digits: 序列最大位数
+        :return: 报修单号字符串： 前缀 + 时间戳 + 序列
+        """
+        # 默认支持的最大位数
+        default_max_digits = 9
+
+        if seq_max_digits > default_max_digits:
+            return None
+
+        seq_digits = len(str(seq))
+        if seq_digits > seq_max_digits:
+            return None
+        seq_str = str(seq)
+        if seq_digits < seq_max_digits:
+            seq_str = "%s%s" % (str(10**seq_max_digits)[(seq_digits-seq_max_digits):], seq_str)
+
+        maintenance_plan_no = "%s%s%s" % (prefix, timestamp, seq_str)
+        return maintenance_plan_no
 
 
 class FaultSolutionManager(BaseManager):

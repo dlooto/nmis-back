@@ -10,14 +10,16 @@ from django.db.models import Q
 
 from base import resp
 from base.authtoken import CustomTokenAuthentication
-from base.common.decorators import check_params_not_null
+from base.common.decorators import check_params_not_null, check_id
 from base.common.param_utils import get_id_list
 from base.views import BaseAPIView
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES, \
     REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_DISPATCH, REPAIR_ORDER_STATUS_DOING, \
     REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_CHOICES
-from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, RepairOrderCreateForm
-from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder
+from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
+    RepairOrderCreateForm, MaintenancePlanCreateForm
+from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
+    MaintenancePlan
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer
 from utils import times
@@ -183,20 +185,59 @@ class AssertDeviceAllocateView(BaseAPIView):
 
     permission_classes = (AllowAny, )
 
+    @check_id('use_dept_id')
+    @check_params_not_null(['assert_device_ids'])
     def put(self, req):
         """
         资产设备调配操作（单个设备调配、多个设备调配）
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
 
-        str_device_ids = req.data.get('assert_devices')
-        logger.info(str_device_ids)
-        device_ids = get_id_list(req.data.get('assert_devices'))
-        logger.info(device_ids)
-        assert_devices = AssertDevice.objects.get_assert_device_by_ids(device_ids)
-        if len(assert_devices) < len(device_ids):
+        assert_device_ids = get_id_list(req.data.get('assert_device_ids', '').strip())
+
+        assert_devices = AssertDevice.objects.get_assert_device_by_ids(assert_device_ids)
+        if len(assert_devices) < len(assert_device_ids):
             return resp.failed('请确认是否有不存在的资产设备信息')
-        return resp.ok(str_device_ids)
+        use_dept_id = req.data.get('use_dept_id')
+        use_dept = self.get_object_or_404(use_dept_id, Department)
+        result = AssertDevice.objects.update_assert_devices_use_dept(assert_devices, use_dept)
+        if not result:
+            return resp.failed('调配失败')
+        return resp.serialize_response(result, results_name='assert_devices')
+
+
+class MaintenancePlanCreateView(BaseAPIView):
+
+    permission_classes = (AllowAny, )
+
+    @check_id('executor_id')
+    @check_params_not_null(['title', 'storage_place_ids', 'type', 'start_date',
+                            'expired_date', 'assert_device_ids'])
+    def post(self, req):
+        """
+        新建设备维护单（维护单号自动生产）
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+        executor = self.get_object_or_404(req.data.get('executor_id'), Staff)
+
+        storage_place_ids = get_id_list(req.data.get('storage_place_ids', '').strip())
+        storage_places = HospitalAddress.objects.get_hospital_address_by_ids(storage_place_ids)
+        if len(storage_places) < len(storage_place_ids):
+            return resp.failed('请确认是否有不存在的存储地点信息')
+        logger.info(storage_places)
+
+        assert_device_ids = get_id_list(req.data.get('assert_device_ids', '').strip())
+        assert_devices = AssertDevice.objects.get_assert_device_by_ids(assert_device_ids)
+        if len(assert_devices) < len(assert_device_ids):
+            return resp.failed('请确认是否有不存在的资产设备信息')
+        logger.info(assert_devices)
+        form = MaintenancePlanCreateForm(
+            req.data, storage_places, assert_devices, executor, req.user.get_profile())
+        if not form.is_valid():
+            return resp.failed(form.errors)
+        if not form.save():
+            return resp.failed('创建失败')
+        return resp.ok('')
 
 
 class RepairOrderCreateView(BaseAPIView):
@@ -256,14 +297,12 @@ class RepairOrderView(BaseAPIView):
                 "solution": solution, "assert_devices": assert_devices,
             }
 
-
         if action == REPAIR_ORDER_OPERATION_COMMENT:
             pass
         queryset = RepairOrderSerializer.setup_eager_loading(RepairOrder.objects.filter(id=order_id))
         return resp.serialize_response(
             queryset.first(), results_name='repair_order', srl_cls_name='RepairOrderSerializer'
         )
-
 
 
 class RepairOrderListView(BaseAPIView):

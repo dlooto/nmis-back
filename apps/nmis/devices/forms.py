@@ -6,8 +6,9 @@
 import logging
 
 from base.forms import BaseForm
-from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES
-from nmis.devices.models import AssertDevice, FaultType, RepairOrder
+from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
+    MAINTENANCE_PLAN_TYPE_CHOICES
+from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan
 from utils.times import now
 from nmis.hospitals.models import Staff
 
@@ -283,3 +284,44 @@ class RepairOrderCreateForm(BaseForm):
         applicant = Staff.objects.get_by_id(applicant_id)
         fault_type = FaultType.objects.get_by_id(fault_type_id)
         return RepairOrder.objects.create_order(applicant, fault_type, desc, self.user_profile)
+
+
+class MaintenancePlanCreateForm(BaseForm):
+
+    def __init__(self, data, storage_places, assert_devices, executor, creator, *args, **kwargs):
+        BaseForm.__init__(self, data, storage_places, assert_devices, executor, creator, *args, **kwargs)
+
+        self.storage_places = storage_places
+        self.assert_devices = assert_devices
+        self.executor = executor
+        self.creator = creator
+
+        self.ERR_CODES.update(
+            {
+                'type_err': '维护类型错误',
+            }
+        )
+
+    def is_valid(self):
+        if not self.check_type():
+            return False
+        return True
+
+    def check_type(self):
+        maintenance_plan_type = self.data.get('type')
+        if maintenance_plan_type not in dict(MAINTENANCE_PLAN_TYPE_CHOICES):
+            self.update_errors('type', 'type_err')
+            return False
+        return True
+
+    def save(self):
+        maintenance_plan_data = {
+            'title': self.data.get('title', '').strip(),
+            'type': self.data.get('type', '').strip(),
+            'start_date': self.data.get('start_date', '').strip(),
+            'expired_date': self.data.get('expired_date', '').strip(),
+            'executor': self.executor,
+            'creator': self.creator
+        }
+        return MaintenancePlan.objects.create_maintenance_plan(
+            self.storage_places, self.assert_devices, **maintenance_plan_data)
