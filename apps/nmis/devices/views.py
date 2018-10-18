@@ -28,26 +28,32 @@ class AssertDeviceListView(BaseAPIView):
 
     def get(self, req):
         """
-        获取资产设备列表（筛选条件：关键词搜索（设备名称）、设备状态（维修、使用中、报废、闲置）、资产存储地点）
+        获取资产设备列表（
+        筛选条件：关键词搜索（设备名称）、设备状态（维修、使用中、报废、闲置）、资产存储地点、设备类型
+        ）
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
-        search_key = req.GET.get('search_key')  # 获取参数
-        status = req.GET.get('status')
-        storage_place_id = req.GET.get('storage_place_id')
-        storage_place = None
-        if storage_place_id:
-            storage_place = self.get_object_or_404(storage_place_id, HospitalAddress)
-        if status:
-            if status not in dict(ASSERT_DEVICE_STATUS_CHOICES):
-                return resp.failed('资产设备状态错误')
 
+        search_key = req.GET.get('search_key')
+        str_status = req.GET.get('status')
+        storage_place_id = req.GET.get('storage_place_id')
         cate = req.GET.get('cate')
         if cate:
             if cate not in dict(ASSERT_DEVICE_CATE_CHOICES):
                 return resp.failed('资产设备类型错误')
+        storage_place = None
+        if storage_place_id:
+            storage_place = self.get_object_or_404(storage_place_id, HospitalAddress)
+        status_list = None
+        if str_status:
+            status_list = list(set([status.strip() for status in str_status.split(',')]))
+            logger.info(status_list)
+            for status in status_list:
+                if status not in dict(ASSERT_DEVICE_STATUS_CHOICES):
+                    return resp.failed('资产设备状态错误')
 
         assert_devices = AssertDevice.objects.get_assert_devices(
-            cate=cate, search_key=search_key, status=status, storage_place=storage_place)
+            cate=cate, search_key=search_key, status=status_list, storage_place=storage_place)
         self.get_pages(assert_devices, results_name='assert_devices')
         return self.get_pages(assert_devices, results_name='assert_devices')
 

@@ -73,6 +73,7 @@ class AssertDeviceManager(BaseManager):
     def get_assert_devices(self, cate=None, search_key=None, status=None, storage_place=None):
         """
         资产设备列表
+        :param cate: 资产设备类型
         :param search_key: 关键字：设备名
         :param status: 资产设备状态
         :param storage_place: 设备存储地点
@@ -84,10 +85,10 @@ class AssertDeviceManager(BaseManager):
         if search_key:
             assert_devices = assert_devices.filter(title__contains=search_key)
         if status:
-            assert_devices = assert_devices.filter(status__contains=status)
+            assert_devices = assert_devices.filter(status__in=status)
         if storage_place:
             assert_devices = assert_devices.filter(storage_place=storage_place)
-        return assert_devices
+        return assert_devices.order_by('id')
 
     def get_assert_device_by_assert_no(self, assert_no):
         """
