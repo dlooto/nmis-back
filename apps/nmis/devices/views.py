@@ -11,6 +11,7 @@ from django.db.models import Q
 from base import resp
 from base.authtoken import CustomTokenAuthentication
 from base.common.decorators import check_params_not_null
+from base.common.param_utils import get_id_list
 from base.views import BaseAPIView
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES, \
     REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_DISPATCH, REPAIR_ORDER_STATUS_DOING, \
@@ -176,6 +177,26 @@ class AssertDeviceScrapView(BaseAPIView):
             return resp.failed('操作失败')
 
         return resp.serialize_response(assert_device, results_name='assert_device')
+
+
+class AssertDeviceAllocateView(BaseAPIView):
+
+    permission_classes = (AllowAny, )
+
+    def put(self, req):
+        """
+        资产设备调配操作（单个设备调配、多个设备调配）
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+
+        str_device_ids = req.data.get('assert_devices')
+        logger.info(str_device_ids)
+        device_ids = get_id_list(req.data.get('assert_devices'))
+        logger.info(device_ids)
+        assert_devices = AssertDevice.objects.get_assert_device_by_ids(device_ids)
+        if len(assert_devices) < len(device_ids):
+            return resp.failed('请确认是否有不存在的资产设备信息')
+        return resp.ok(str_device_ids)
 
 
 class RepairOrderCreateView(BaseAPIView):

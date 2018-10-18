@@ -131,6 +131,8 @@ class AssertDeviceCreateForm(BaseForm):
             assert_data['responsible_dept_id'] = self.data.get('responsible_dept_id')
         if self.data.get('use_dept_id'):
             assert_data['use_dept_id'] = self.data.get('use_dept_id')
+        if self.data.get('producer', '').strip():
+            assert_data['producer'] = self.data.get('producer', '').strip()
 
         assert_device = AssertDevice.objects.create_assert_device(**assert_data)
         assert_device.cache()
@@ -254,6 +256,8 @@ class AssertDeviceUpdateForm(BaseForm):
             update_data['storage_place_id'] = self.data.get('storage_place_id')
         if self.data.get('purchase_date', '').strip():
             update_data['purchase_date'] = self.data.get('purchase_date', '').strip()
+        if self.data.get('producer', '').strip():
+            update_data['producer'] = self.data.get('producer', '').strip()
 
         return AssertDevice.objects.update_assert_device(self.assert_device, **update_data)
 

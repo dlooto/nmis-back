@@ -32,6 +32,9 @@ urlpatterns = [
     # 资产设备报废处理
     path('<int:device_id>/scrap', views.AssertDeviceScrapView.as_view(), ),
 
+    # 资产设备调配操作（单个调配、多个调配）
+    path('allocate', views.AssertDeviceAllocateView.as_view(), ),
+
     path('repair_orders/create', views.RepairOrderCreateView.as_view(), ),
     path('repair_orders/<int:order_id>', views.RepairOrderView.as_view(), ),
     path('repair_orders', views.RepairOrderListView.as_view(), ),

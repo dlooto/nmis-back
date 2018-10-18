@@ -111,6 +111,14 @@ class AssertDeviceManager(BaseManager):
         """
         return self.filter(bar_code=bar_code).first()
 
+    def get_assert_device_by_ids(self, device_ids):
+        """
+        通过资产设备ID集合查询资产设备
+        :param device_ids: 资产设备ID list
+        :return:
+        """
+        return self.filter(id__in=device_ids)
+
 
 class FaultTypeManager(BaseManager):
 
