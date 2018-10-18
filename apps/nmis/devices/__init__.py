@@ -16,4 +16,8 @@ class DevicesAppConfig(AppConfig):
     name = 'nmis.devices'
     verbose_name = "设备管理"
 
+    def ready(self):
+        from nmis.devices import signals
+
+
 default_app_config = 'nmis.devices.DevicesAppConfig'

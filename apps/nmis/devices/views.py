@@ -12,11 +12,14 @@ from base import resp
 from base.authtoken import CustomTokenAuthentication
 from base.common.decorators import check_params_not_null
 from base.views import BaseAPIView
-from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES
+from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES, \
+    REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_DISPATCH, REPAIR_ORDER_STATUS_DOING, \
+    REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, PRIORITY_CHOICES
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, RepairOrderCreateForm
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer
+from utils import times
 
 logger = logging.getLogger(__name__)
 
@@ -183,6 +186,45 @@ class RepairOrderView(BaseAPIView):
 
         return resp.serialize_response(repair_order_queryset.first(), results_name='repair_order',
                                        srl_cls_name='RepairOrderSerializer')
+
+    def put(self, req, order_id):
+        repair_order = self.get_object_or_404(order_id, RepairOrder)
+        action = req.data.get('action', '').strip()
+        if not action or action not in dict(REPAIR_ORDER_OPERATION_CHOICES):
+            return resp.failed('请求数据异常')
+
+        if action == REPAIR_ORDER_OPERATION_DISPATCH:
+            priority = req.data.get('priority', '').strip()
+            if not priority or priority not in dict(PRIORITY_CHOICES):
+                return resp.failed('请求数据异常')
+            maintainer_id = req.data.get('maintainer_id')
+            maintainer = self.get_object_or_404(maintainer_id, Staff)
+            logger.info(req.user.get_profile())
+            update_data = {
+                'maintainer': maintainer, 'modifier': req.user.get_profile(),
+                'modified_time': times.now(), 'status': REPAIR_ORDER_STATUS_DOING, 'priority': priority
+            }
+            repair_order.update(update_data)
+            repair_order.cache()
+        if action == REPAIR_ORDER_OPERATION_HANDLE:
+            result = req.data.get('result')
+            expenses = req.data.get('expenses')
+            files = req.data.get('files')
+            solution = req.data.get('solution')
+            assert_devices = req.data.get('assert_devices')
+            update_data = {
+                "result": result, "expenses": expenses, "files": files,
+                "solution": solution, "assert_devices": assert_devices,
+            }
+
+
+        if action == REPAIR_ORDER_OPERATION_COMMENT:
+            pass
+        queryset = RepairOrderSerializer.setup_eager_loading(RepairOrder.objects.filter(id=order_id))
+        return resp.serialize_response(
+            queryset.first(), results_name='repair_order', srl_cls_name='RepairOrderSerializer'
+        )
+
 
 
 class RepairOrderListView(BaseAPIView):
