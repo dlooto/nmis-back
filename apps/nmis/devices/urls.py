@@ -32,6 +32,12 @@ urlpatterns = [
     # 资产设备报废处理
     path('<int:device_id>/scrap', views.AssertDeviceScrapView.as_view(), ),
 
+    # 资产设备调配操作（单个调配、多个调配）
+    path('allocate', views.AssertDeviceAllocateView.as_view(), ),
+
+    # 新建设备维护计划单
+    path('maintenance_plan/create', views.MaintenancePlanCreateView.as_view(), ),
+
     # 提交/新建报修单
     path('repair_orders/create', views.RepairOrderCreateView.as_view(), ),
     # 单个报修单详情/修改/删除/分派/处理/评价

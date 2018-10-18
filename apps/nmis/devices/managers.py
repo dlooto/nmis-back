@@ -8,8 +8,10 @@ import logging
 from django.db import transaction
 
 from base.models import BaseManager
-from nmis.devices.consts import REPAIR_ORDER_NO_SEQ_CODE, REPAIR_ORDER_NO_PREFIX, REPAIR_ORDER_NO_SEQ_DIGITS, \
-    REPAIR_ORDER_STATUS_DONE, REPAIR_ORDER_STATUS_CHOICES, REPAIR_ORDER_STATUS_CLOSED, REPAIR_ORDER_STATUS_DOING
+from nmis.devices.consts import ASSERT_DEVICE_STATUS_USING, MAINTENANCE_PLAN_NO_PREFIX, \
+    MAINTENANCE_PLAN_NO_SEQ_CODE, MAINTENANCE_PLAN_NO_SEQ_DIGITS, REPAIR_ORDER_NO_SEQ_CODE, \
+    REPAIR_ORDER_NO_PREFIX, REPAIR_ORDER_NO_SEQ_DIGITS, \
+    REPAIR_ORDER_STATUS_DONE, REPAIR_ORDER_STATUS_CLOSED, REPAIR_ORDER_STATUS_DOING
 from nmis.hospitals.models import Sequence
 from utils import times
 
@@ -74,6 +76,7 @@ class AssertDeviceManager(BaseManager):
     def get_assert_devices(self, cate=None, search_key=None, status=None, storage_place=None):
         """
         资产设备列表
+        :param cate: 资产设备类型
         :param search_key: 关键字：设备名
         :param status: 资产设备状态
         :param storage_place: 设备存储地点
@@ -85,10 +88,10 @@ class AssertDeviceManager(BaseManager):
         if search_key:
             assert_devices = assert_devices.filter(title__contains=search_key)
         if status:
-            assert_devices = assert_devices.filter(status__contains=status)
+            assert_devices = assert_devices.filter(status__in=status)
         if storage_place:
             assert_devices = assert_devices.filter(storage_place=storage_place)
-        return assert_devices
+        return assert_devices.order_by('id')
 
     def get_assert_device_by_assert_no(self, assert_no):
         """
@@ -110,6 +113,29 @@ class AssertDeviceManager(BaseManager):
         :param bar_code: 资产设备条形码
         """
         return self.filter(bar_code=bar_code).first()
+
+    def get_assert_device_by_ids(self, device_ids):
+        """
+        通过资产设备ID集合查询资产设备
+        :param device_ids: 资产设备ID list
+        :return:
+        """
+        return self.filter(id__in=device_ids)
+
+    def update_assert_devices_use_dept(self, assert_devices, use_dept):
+        """
+        单个或多个资产设备调配使用科室（调配之后资产设备状态变成使用中）
+        :return:
+        """
+        try:
+            with transaction.atomic():
+                assert_devices.update(use_dept=use_dept, status=ASSERT_DEVICE_STATUS_USING)
+                for assert_device in assert_devices:
+                    assert_device.cache()
+                return assert_devices
+        except Exception as e:
+            logger.exception(e)
+            return None
 
 
 class FaultTypeManager(BaseManager):
@@ -256,8 +282,50 @@ class RepairOrderManager(BaseManager):
 
 class MaintenancePlanManager(BaseManager):
 
-    def create(self):
-        pass
+    def create_maintenance_plan(self, storage_places=None, assert_devices=None, **data):
+        try:
+            with transaction.atomic():
+                seq = Sequence.objects.select_for_update().get(seq_code=MAINTENANCE_PLAN_NO_SEQ_CODE)
+                seq.curr_value()
+                next_value = seq.next_value()
+                timestamp = times.datetime_to_str(times.now(), format='%Y%m%d')
+                plan_no = MaintenancePlanManager.gen_maintenance_plan_no(
+                    MAINTENANCE_PLAN_NO_PREFIX, timestamp, next_value, seq_max_digits=MAINTENANCE_PLAN_NO_SEQ_DIGITS)
+                if not plan_no:
+                    return False
+                data['plan_no'] = plan_no
+                maintenance_plan = self.create(**data)
+                maintenance_plan.places.set(storage_places)
+                maintenance_plan.assert_devices.set(assert_devices)
+                return True
+        except Exception as e:
+            logger.exception(e)
+            return False
+
+    @staticmethod
+    def gen_maintenance_plan_no(prefix, timestamp, seq, seq_max_digits=2):
+        """
+        :param prefix: 报修单号前缀
+        :param timestamp: 时间戳字符串
+        :param seq: 序列值
+        :param seq_max_digits: 序列最大位数
+        :return: 报修单号字符串： 前缀 + 时间戳 + 序列
+        """
+        # 默认支持的最大位数
+        default_max_digits = 9
+
+        if seq_max_digits > default_max_digits:
+            return None
+
+        seq_digits = len(str(seq))
+        if seq_digits > seq_max_digits:
+            return None
+        seq_str = str(seq)
+        if seq_digits < seq_max_digits:
+            seq_str = "%s%s" % (str(10**seq_max_digits)[(seq_digits-seq_max_digits):], seq_str)
+
+        maintenance_plan_no = "%s%s%s" % (prefix, timestamp, seq_str)
+        return maintenance_plan_no
 
 
 class FaultSolutionManager(BaseManager):

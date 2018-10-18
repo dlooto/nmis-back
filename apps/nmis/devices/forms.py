@@ -6,8 +6,9 @@
 import logging
 
 from base.forms import BaseForm
-from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, PRIORITY_CHOICES
-from nmis.devices.models import AssertDevice, FaultType, RepairOrder
+from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
+    MAINTENANCE_PLAN_TYPE_CHOICES, PRIORITY_CHOICES
+from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan
 from utils.times import now
 from nmis.hospitals.models import Staff
 
@@ -131,6 +132,8 @@ class AssertDeviceCreateForm(BaseForm):
             assert_data['responsible_dept_id'] = self.data.get('responsible_dept_id')
         if self.data.get('use_dept_id'):
             assert_data['use_dept_id'] = self.data.get('use_dept_id')
+        if self.data.get('producer', '').strip():
+            assert_data['producer'] = self.data.get('producer', '').strip()
 
         assert_device = AssertDevice.objects.create_assert_device(**assert_data)
         assert_device.cache()
@@ -254,6 +257,8 @@ class AssertDeviceUpdateForm(BaseForm):
             update_data['storage_place_id'] = self.data.get('storage_place_id')
         if self.data.get('purchase_date', '').strip():
             update_data['purchase_date'] = self.data.get('purchase_date', '').strip()
+        if self.data.get('producer', '').strip():
+            update_data['producer'] = self.data.get('producer', '').strip()
 
         return AssertDevice.objects.update_assert_device(self.assert_device, **update_data)
 
@@ -281,7 +286,6 @@ class RepairOrderCreateForm(BaseForm):
         applicant = Staff.objects.get_by_id(applicant_id)
         fault_type = FaultType.objects.get_by_id(fault_type_id)
         return RepairOrder.objects.create_order(applicant, fault_type, desc, self.user_profile)
-
 
 class RepairOrderDispatchForm(BaseForm):
 
@@ -390,3 +394,43 @@ class RepairOrderCommentForm(BaseForm):
             "comment_grade": comment_grade, "comment_content": comment_content,
         }
         return RepairOrder.objects.comment_repair_order(self.repair_order, self.user_profile, **update_data)
+
+class MaintenancePlanCreateForm(BaseForm):
+
+    def __init__(self, data, storage_places, assert_devices, executor, creator, *args, **kwargs):
+        BaseForm.__init__(self, data, storage_places, assert_devices, executor, creator, *args, **kwargs)
+
+        self.storage_places = storage_places
+        self.assert_devices = assert_devices
+        self.executor = executor
+        self.creator = creator
+
+        self.ERR_CODES.update(
+            {
+                'type_err': '维护类型错误',
+            }
+        )
+
+    def is_valid(self):
+        if not self.check_type():
+            return False
+        return True
+
+    def check_type(self):
+        maintenance_plan_type = self.data.get('type')
+        if maintenance_plan_type not in dict(MAINTENANCE_PLAN_TYPE_CHOICES):
+            self.update_errors('type', 'type_err')
+            return False
+        return True
+
+    def save(self):
+        maintenance_plan_data = {
+            'title': self.data.get('title', '').strip(),
+            'type': self.data.get('type', '').strip(),
+            'start_date': self.data.get('start_date', '').strip(),
+            'expired_date': self.data.get('expired_date', '').strip(),
+            'executor': self.executor,
+            'creator': self.creator
+        }
+        return MaintenancePlan.objects.create_maintenance_plan(
+            self.storage_places, self.assert_devices, **maintenance_plan_data)
