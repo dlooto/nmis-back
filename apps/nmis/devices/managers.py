@@ -131,7 +131,7 @@ class RepairOrderManager(BaseManager):
 
         try:
             with transaction.atomic():
-                seq: Sequence = Sequence.objects.select_for_update().get(seq_code=REPAIR_ORDER_NO_SEQ_CODE)
+                seq = Sequence.objects.select_for_update().get(seq_code=REPAIR_ORDER_NO_SEQ_CODE)
                 seq.curr_value()
                 next_value = seq.next_value()
                 timestamp = times.datetime_to_str(times.now(), format='%Y%m%d')
