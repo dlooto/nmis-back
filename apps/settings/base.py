@@ -180,6 +180,7 @@ INSTALLED_APPS = [
     'nmis.hospitals',
     'nmis.devices',
     'nmis.projects',
+    'nmis.documents',
 
     # 'runtests',
 ]

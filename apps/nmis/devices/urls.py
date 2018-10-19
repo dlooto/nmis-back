@@ -38,6 +38,8 @@ urlpatterns = [
     # 新建设备维护计划单
     path('maintenance_plan/create', views.MaintenancePlanCreateView.as_view(), ),
 
+    # 故障类型列表
+    path('fault_types', views.FaultTypeListView.as_view()),
     # 提交/新建报修单
     path('repair_orders/create', views.RepairOrderCreateView.as_view(), ),
     # 单个报修单详情/修改/删除/分派/处理/评价

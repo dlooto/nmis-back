@@ -12,7 +12,7 @@ from rest_framework import serializers
 from base.serializers import BaseModelSerializer
 from .models import OrderedDevice, SoftwareDevice, ContractDevice, AssertDevice, \
     MedicalDeviceSix8Cate
-from nmis.devices.models import RepairOrder
+from nmis.devices.models import RepairOrder, FaultType
 from nmis.hospitals.serializers import StaffSerializer
 
 
@@ -115,6 +115,17 @@ class AssertDeviceBriefSerializer(BaseModelSerializer):
 class MedicalDeviceSix8CateSerializer(BaseModelSerializer):
     class Meta:
         model = MedicalDeviceSix8Cate
+        fields = ('id', 'title')
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        pass
+
+
+class FaultTypeSerializer(BaseModelSerializer):
+
+    class Meta:
+        model = FaultType
         fields = ('id', 'title')
 
     @staticmethod

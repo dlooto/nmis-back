@@ -272,8 +272,9 @@ class RepairOrderCreateForm(BaseForm):
         self.init_err_codes()
 
     def init_err_codes(self):
-        self.update_errors({
-
+        self.ERR_CODES.update({
+            'applicant_error': '优先级为空或数据错误',
+            'fault_type_error': '维修工为空或数据错误'
         })
 
     def is_valid(self):
@@ -286,6 +287,7 @@ class RepairOrderCreateForm(BaseForm):
         applicant = Staff.objects.get_by_id(applicant_id)
         fault_type = FaultType.objects.get_by_id(fault_type_id)
         return RepairOrder.objects.create_order(applicant, fault_type, desc, self.user_profile)
+
 
 class RepairOrderDispatchForm(BaseForm):
 
@@ -347,8 +349,9 @@ class RepairOrderHandleForm(BaseForm):
         self.init_err_codes()
 
     def init_err_codes(self):
-        self.update_errors({
-
+        self.ERR_CODES.update({
+            'applicant_error': '优先级为空或数据错误',
+            'fault_type_error': '维修工为空或数据错误'
         })
 
     def is_valid(self):
@@ -379,8 +382,9 @@ class RepairOrderCommentForm(BaseForm):
         self.init_err_codes()
 
     def init_err_codes(self):
-        self.update_errors({
-
+        self.ERR_CODES.update({
+            'applicant_error': '优先级为空或数据错误',
+            'fault_type_error': '维修工为空或数据错误'
         })
 
     def is_valid(self):
@@ -394,6 +398,7 @@ class RepairOrderCommentForm(BaseForm):
             "comment_grade": comment_grade, "comment_content": comment_content,
         }
         return RepairOrder.objects.comment_repair_order(self.repair_order, self.user_profile, **update_data)
+
 
 class MaintenancePlanCreateForm(BaseForm):
 

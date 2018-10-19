@@ -22,7 +22,7 @@ from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm,     RepairOrderHandleForm, RepairOrderCommentForm, RepairOrderDispatchForm
 
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
-    MaintenancePlan
+    MaintenancePlan, FaultType
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer
 from utils import times
@@ -243,11 +243,20 @@ class MaintenancePlanCreateView(BaseAPIView):
         return resp.ok('')
 
 
+class FaultTypeListView(BaseAPIView):
+
+    permission_classes = ()
+
+    def get(self, req):
+        queryset = FaultType.objects.all()
+        return resp.serialize_response(queryset, srl_cls_name='FaultTypeSerializer', results_name='fault_types')
+
+
 class RepairOrderCreateView(BaseAPIView):
     """
     提交报修单
     """
-    permission_classes = (AllowAny,)
+    permission_classes = ()
 
     def post(self, req, ):
         form = RepairOrderCreateForm(req.user.get_profile(), req.data)
@@ -261,7 +270,7 @@ class RepairOrderCreateView(BaseAPIView):
 
 class RepairOrderView(BaseAPIView):
 
-    permission_classes = (AllowAny,)
+    permission_classes = ()
 
     def get(self, req, order_id):
         repair_order = self.get_object_or_404(order_id, RepairOrder)
