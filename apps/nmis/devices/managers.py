@@ -291,16 +291,21 @@ class MaintenancePlanManager(BaseManager):
                 timestamp = times.datetime_to_str(times.now(), format='%Y%m%d')
                 plan_no = MaintenancePlanManager.gen_maintenance_plan_no(
                     MAINTENANCE_PLAN_NO_PREFIX, timestamp, next_value, seq_max_digits=MAINTENANCE_PLAN_NO_SEQ_DIGITS)
+                logger.info(plan_no)
                 if not plan_no:
                     return False
                 data['plan_no'] = plan_no
                 maintenance_plan = self.create(**data)
                 maintenance_plan.places.set(storage_places)
                 maintenance_plan.assert_devices.set(assert_devices)
-                return True
+                seq.seq_value = next_value
+                seq.save()
+                seq.cache()
+                maintenance_plan.cache()
+                return maintenance_plan
         except Exception as e:
             logger.exception(e)
-            return False
+            return None
 
     @staticmethod
     def gen_maintenance_plan_no(prefix, timestamp, seq, seq_max_digits=2):
