@@ -15,7 +15,9 @@ from base.common.param_utils import get_id_list
 from base.views import BaseAPIView
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES, \
     REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_DISPATCH, REPAIR_ORDER_STATUS_DOING, \
-    REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_CHOICES
+    REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
+    REPAIR_ORDER_STATUS_SUBMITTED, ORDERS_ACTION_CHOICES, MY_REPAIR_ORDERS, MY_MAINTAIN_ORDERS, ALL_ORDERS, \
+    TO_DISPATCH_ORDERS
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm,     RepairOrderHandleForm, RepairOrderCommentForm, RepairOrderDispatchForm
 
@@ -313,9 +315,21 @@ class RepairOrderListView(BaseAPIView):
 
     def get(self, req):
 
+        action = req.GET.get('action', '').strip()
         status = req.GET.get('status', '').strip()
         search = req.GET.get('search', '').strip()
+
+        if action not in ORDERS_ACTION_CHOICES:
+            return resp.failed('请求数据异常')
         queryset = self.get_queryset()
+        if action == MY_REPAIR_ORDERS:
+            queryset = queryset.filter(creator=req.user.get_profile())
+        if action == TO_DISPATCH_ORDERS:
+            queryset = queryset.filter(status=REPAIR_ORDER_STATUS_SUBMITTED)
+        if action == MY_MAINTAIN_ORDERS:
+            queryset = queryset.filter(maintainer=req.user.get_profile())
+        if action == ALL_ORDERS:
+            queryset = queryset
         if status:
             if status not in dict(REPAIR_ORDER_STATUS_CHOICES):
                 return resp.failed("请求数据异常")
