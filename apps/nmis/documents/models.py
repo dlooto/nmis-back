@@ -12,6 +12,7 @@ from django.db import models
 import settings
 from base.models import BaseModel
 from nmis.documents.consts import FILE_CATE_UNKNOWN
+from nmis.documents.managers import FileManager
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,8 @@ class File(AbstractFile):
     )
     desc = models.CharField('描述', max_length=255, null=True, blank=True)
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='创建人', on_delete=models.CASCADE)
+
+    objects = FileManager()
 
     class Meta:
         verbose_name = '文档'

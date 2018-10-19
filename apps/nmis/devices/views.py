@@ -260,7 +260,8 @@ class RepairOrderCreateView(BaseAPIView):
 
     def post(self, req, ):
         form = RepairOrderCreateForm(req.user.get_profile(), req.data)
-        form.is_valid()
+        if not form.is_valid():
+            return resp.form_err(form.errors)
         success, repair_order = form.save()
         if not success:
             return resp.failed("操作失败")
@@ -295,6 +296,10 @@ class RepairOrderView(BaseAPIView):
 
         """ 维修工处理报修单 """
         if action == REPAIR_ORDER_OPERATION_HANDLE:
+            if self.data.get('files'):
+                files_param = self.data.get('files')
+
+
             form = RepairOrderHandleForm(req.user.get_profile(), repair_order, req.data)
             if not form.is_valid():
                 return resp.form_err(form.errors)
