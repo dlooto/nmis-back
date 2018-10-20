@@ -9,6 +9,7 @@ from base.forms import BaseForm
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
     MAINTENANCE_PLAN_TYPE_CHOICES, PRIORITY_CHOICES
 from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan
+from nmis.documents.models import File
 from utils.times import now
 from nmis.hospitals.models import Staff
 
@@ -272,11 +273,48 @@ class RepairOrderCreateForm(BaseForm):
         self.init_err_codes()
 
     def init_err_codes(self):
-        self.update_errors({
-
+        self.ERR_CODES.update({
+            'applicant_error': '申请人为空或数据错误',
+            'fault_type_error': '故障类型为空或数据错误'
         })
 
     def is_valid(self):
+        if not self.check_applicant() or not self.check_fault_type():
+            return False
+        return True
+
+    def check_applicant(self):
+        applicant_id = self.data.get('applicant_id')
+        if not applicant_id:
+            self.update_errors('applicant_id', 'applicant_error')
+            return False
+        try:
+            applicant_id = int(applicant_id)
+        except ValueError as e:
+            logger.exception(e)
+            self.update_errors('applicant_id', 'applicant_error')
+            return False
+        applicant = Staff.objects.get_obj_by_id(applicant_id)
+        if not applicant:
+            self.update_errors('applicant_id', 'applicant_error')
+            return False
+        return True
+
+    def check_fault_type(self):
+        fault_type_id = self.data.get('fault_type_id')
+        if not fault_type_id:
+            self.update_errors('fault_type_id', 'fault_type_error')
+            return False
+        try:
+            fault_type_id = int(fault_type_id)
+        except ValueError as e:
+            logger.exception(e)
+            self.update_errors('fault_type_id', 'fault_type_error')
+            return False
+        fault_type = FaultType.objects.get_obj_by_id(fault_type_id)
+        if not fault_type:
+            self.update_errors('fault_type_id', 'fault_type_error')
+            return False
         return True
 
     def save(self):
@@ -286,6 +324,7 @@ class RepairOrderCreateForm(BaseForm):
         applicant = Staff.objects.get_by_id(applicant_id)
         fault_type = FaultType.objects.get_by_id(fault_type_id)
         return RepairOrder.objects.create_order(applicant, fault_type, desc, self.user_profile)
+
 
 class RepairOrderDispatchForm(BaseForm):
 
@@ -347,24 +386,79 @@ class RepairOrderHandleForm(BaseForm):
         self.init_err_codes()
 
     def init_err_codes(self):
-        self.update_errors({
-
+        self.ERR_CODES.update({
+            'result_error': '处理结果为空或数据错误',
+            'expenses_error': '维修费用为空或数据错误',
+            'files_error': '文件名和文件路径不能为空',
+            'solution_error': '为空或数据错误',
+            'assert_devices_error': '设备id为空或异常',
         })
 
     def is_valid(self):
+        if not self.check_result():
+            return False
+        # 校验非必传参数
+        if self.data.get('expenses') and not self.check_expenses():
+            return False
+        if self.data.get('files') and not self.check_file():
+            return False
+        if self.data.get('assert_devices') and not self.check_assert_devices():
+            return False
+        return True
+
+    def check_result(self):
+        result = self.data.get('result').strip()
+        if not result:
+            self.update_errors('result', 'result_error')
+            return False
+        return True
+
+    def check_expenses(self):
+        expenses = self.data.get('expenses')
+        try:
+            int(expenses)
+        except ValueError as e:
+            self.update_errors('expenses', 'expenses_error')
+            return False
+        return True
+
+    def check_file(self):
+        files = self.data.get('files')
+        for file in files:
+            if not file.get('name') or not file.path('path'):
+                self.update_errors('files', 'files_error')
+                return False
+        return True
+
+    def check_assert_devices(self):
+        assert_devices = self.data.get('assert_devices')
+        for device in assert_devices:
+            if not device.get('id'):
+                self.update_errors('assert_devices', 'assert_devices_error')
+                return False
+            try:
+                int(device.get('id'))
+            except ValueError as e:
+                logger.exception(e)
+                self.update_errors('assert_devices', 'assert_devices_error')
+                return False
         return True
 
     def save(self):
-        result = self.data.get('result')
-        expenses = self.data.get('expenses')
+        result = self.data.get('result').strip()
+        update_data = dict()
+        if self.data.get('expenses'):
+            update_data['expenses'] = self.data.get('expenses')
         files = self.data.get('files')
-        solution = self.data.get('solution')
+        if files:
+            files = File.objects.filter(id__in=[file.get('id') for file in files]).all()
+            update_data['files'] = self.data.get('files')
         assert_devices_param = self.data.get('assert_devices')
         assert_devices_data = AssertDevice.objects.filter(id__in=[item.get('id') for item in assert_devices_param]).all()
 
         update_data = {
             "expenses": expenses, "files": files,
-            "solution": solution, "repair_device_list": assert_devices_data
+            "repair_device_list": assert_devices_data
         }
         return RepairOrder.objects.handle_repair_order(self.repair_order, self.user_profile, result, **update_data)
 
@@ -379,21 +473,52 @@ class RepairOrderCommentForm(BaseForm):
         self.init_err_codes()
 
     def init_err_codes(self):
-        self.update_errors({
-
+        self.ERR_CODES.update({
+            'comment_grade_error': '评论等级为空或数据错误',
+            'comment_content_error': '评论内容数据错误'
         })
 
     def is_valid(self):
+        if not self.check_comment_grade():
+            return False
+        if self.data.get('comment_content') and not self.check_comment_content():
+            return False
+        return True
+
+    def check_comment_grade(self):
+        comment_grade = self.data.get('comment_grade')
+        logger.info(comment_grade)
+        if not comment_grade:
+            self.update_errors('comment_grade', 'comment_grade_error')
+            return False
+        try:
+            comment_grade = int(comment_grade)
+        except ValueError as e:
+            self.update_errors('comment_grade', 'comment_grade_error')
+            return False
+        grades = [grade for grade in range(1, 6)]
+        logger.info(grades)
+        if comment_grade not in grades:
+            self.update_errors('comment_grade1', 'comment_grade_error')
+            return False
+        return True
+
+    def check_comment_content(self):
+        comment_content = self.data.get('comment_content', '').strip()
+        if len(comment_content) > 127:
+            self.update_errors('comment_content', 'comment_content_error')
         return True
 
     def save(self):
         comment_grade = self.data.get('comment_grade')
         comment_content = self.data.get('comment_content')
+        update_data = {"comment_grade": comment_grade}
 
-        update_data = {
-            "comment_grade": comment_grade, "comment_content": comment_content,
-        }
+        if comment_content is not None:
+            update_data.update({"comment_content": comment_content.strip()})
+
         return RepairOrder.objects.comment_repair_order(self.repair_order, self.user_profile, **update_data)
+
 
 class MaintenancePlanCreateForm(BaseForm):
 

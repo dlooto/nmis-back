@@ -24,6 +24,7 @@ urlpatterns = [
     path('api/v1/projects/',    include('nmis.projects.urls')),
     path('api/v1/hospitals/',   include('nmis.hospitals.urls')),
     path('api/v1/devices/',     include('nmis.devices.urls')),
+    path('api/v1/documents/',   include('nmis.documents.urls')),
 
 ]
 

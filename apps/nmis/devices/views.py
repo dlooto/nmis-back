@@ -15,12 +15,14 @@ from base.common.param_utils import get_id_list
 from base.views import BaseAPIView
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES, \
     REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_DISPATCH, REPAIR_ORDER_STATUS_DOING, \
-    REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_CHOICES
+    REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
+    REPAIR_ORDER_STATUS_SUBMITTED, ORDERS_ACTION_CHOICES, MY_REPAIR_ORDERS, MY_MAINTAIN_ORDERS, ALL_ORDERS, \
+    TO_DISPATCH_ORDERS
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm,     RepairOrderHandleForm, RepairOrderCommentForm, RepairOrderDispatchForm
 
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
-    MaintenancePlan
+    MaintenancePlan, FaultType
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer
 from utils import times
@@ -261,15 +263,25 @@ class MaintenancePlanView(BaseAPIView):
         return resp.serialize_response(maintenance_plan, results_name='maintenance_plan')
 
 
+class FaultTypeListView(BaseAPIView):
+
+    permission_classes = ()
+
+    def get(self, req):
+        queryset = FaultType.objects.all()
+        return resp.serialize_response(queryset, srl_cls_name='FaultTypeSerializer', results_name='fault_types')
+
+
 class RepairOrderCreateView(BaseAPIView):
     """
     提交报修单
     """
-    permission_classes = (AllowAny,)
+    permission_classes = ()
 
     def post(self, req, ):
         form = RepairOrderCreateForm(req.user.get_profile(), req.data)
-        form.is_valid()
+        if not form.is_valid():
+            return resp.form_err(form.errors)
         success, repair_order = form.save()
         if not success:
             return resp.failed("操作失败")
@@ -279,7 +291,7 @@ class RepairOrderCreateView(BaseAPIView):
 
 class RepairOrderView(BaseAPIView):
 
-    permission_classes = (AllowAny,)
+    permission_classes = ()
 
     def get(self, req, order_id):
         repair_order = self.get_object_or_404(order_id, RepairOrder)
@@ -304,6 +316,10 @@ class RepairOrderView(BaseAPIView):
 
         """ 维修工处理报修单 """
         if action == REPAIR_ORDER_OPERATION_HANDLE:
+            if self.data.get('files'):
+                files_param = self.data.get('files')
+
+
             form = RepairOrderHandleForm(req.user.get_profile(), repair_order, req.data)
             if not form.is_valid():
                 return resp.form_err(form.errors)
@@ -333,9 +349,21 @@ class RepairOrderListView(BaseAPIView):
 
     def get(self, req):
 
+        action = req.GET.get('action', '').strip()
         status = req.GET.get('status', '').strip()
         search = req.GET.get('search', '').strip()
+
+        if action not in ORDERS_ACTION_CHOICES:
+            return resp.failed('请求数据异常')
         queryset = self.get_queryset()
+        if action == MY_REPAIR_ORDERS:
+            queryset = queryset.filter(creator=req.user.get_profile())
+        if action == TO_DISPATCH_ORDERS:
+            queryset = queryset.filter(status=REPAIR_ORDER_STATUS_SUBMITTED)
+        if action == MY_MAINTAIN_ORDERS:
+            queryset = queryset.filter(maintainer=req.user.get_profile())
+        if action == ALL_ORDERS:
+            queryset = queryset
         if status:
             if status not in dict(REPAIR_ORDER_STATUS_CHOICES):
                 return resp.failed("请求数据异常")

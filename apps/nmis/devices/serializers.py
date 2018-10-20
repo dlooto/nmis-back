@@ -13,7 +13,7 @@ from base import resp
 from base.serializers import BaseModelSerializer
 from .models import OrderedDevice, SoftwareDevice, ContractDevice, AssertDevice, \
     MedicalDeviceSix8Cate, MaintenancePlan
-from nmis.devices.models import RepairOrder
+from nmis.devices.models import RepairOrder, FaultType
 from nmis.hospitals.serializers import StaffSerializer, HospitalAddressSerializer
 
 
@@ -124,6 +124,16 @@ class MedicalDeviceSix8CateSerializer(BaseModelSerializer):
     def setup_eager_loading(queryset):
         pass
 
+
+class FaultTypeSerializer(BaseModelSerializer):
+
+    class Meta:
+        model = FaultType
+        fields = ('id', 'title')
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        pass
 
 class RepairOrderSerializer(BaseModelSerializer):
     applicant_name = serializers.SerializerMethodField('_get_applicant_name')

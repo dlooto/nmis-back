@@ -40,7 +40,8 @@ urlpatterns = [
 
     # 设备维护详情
     path('maintenance_plan/<int:m_plan_id>', views.MaintenancePlanView.as_view(), ),
-
+    # 故障类型列表
+    path('fault_types', views.FaultTypeListView.as_view()),
     # 提交/新建报修单
     path('repair_orders/create', views.RepairOrderCreateView.as_view(), ),
     # 单个报修单详情/修改/删除/分派/处理/评价
