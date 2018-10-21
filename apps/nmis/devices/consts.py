@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Created by gonghuaiqian, on 2018/6/4
+# Created by gong, on 2018/6/4
 #
 
 # 设备模块常量配置

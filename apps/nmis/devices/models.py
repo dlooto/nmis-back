@@ -397,12 +397,13 @@ class RepairOrder(BaseModel):
     expenses = models.FloatField('维修费用', null=True, blank=True)
     result = models.CharField('处理结果', max_length=128, null=True, blank=True)
     solution = models.TextField('解决方案', max_length=2048, null=True, blank=True)
-    doc_list = models.CharField('附件', max_length=16, null=True, blank=True)
+    # 存放id，id之间用分隔符分隔
+    files = models.CharField('附件列表', max_length=16, null=True, blank=True)
     priority = models.CharField(
         '优先级', max_length=2, choices=PRIORITY_CHOICES, default='',
         null=True, blank=True
     )
-    assert_devices = models.ManyToManyField(
+    repair_devices = models.ManyToManyField(
         'devices.AssertDevice', verbose_name='报修设备清单',
         related_name="repair_device_list", blank=True
     )
@@ -426,7 +427,7 @@ class RepairOrder(BaseModel):
 
     VALID_ATTRS = [
         'applicant', 'fault_type', 'desc', 'maintainer', 'expenses', 'result', 'repair_device_list',
-        'solution', 'doc_list', 'priority', 'status', 'comment_grade', 'comment_content', 'comment_time',
+        'solution', 'files', 'priority', 'status', 'comment_grade', 'comment_content', 'comment_time',
         'modifier', 'modified_time'
     ]
 
@@ -566,7 +567,8 @@ class FaultSolution(BaseModel):
         related_name='related_problem_solution', on_delete=models.PROTECT
     )
     solution = models.TextField('解决方案', max_length=2048)
-    doc_list = models.CharField('附件', max_length=16, null=True, blank=True)
+    # 存放id，id之间用分隔符分隔
+    files = models.CharField('附件列表', max_length=16, null=True, blank=True)
     status = models.CharField('状态', max_length=3, choices=FAULT_SOLUTION_STATUS_CHOICES, default=FAULT_SOLUTION_STATUS_NEW)
     page_views = models.IntegerField('浏览次数', null=True, blank=True)
     likes = models.IntegerField('点赞数', null=True, blank=True)
@@ -592,7 +594,7 @@ class FaultSolution(BaseModel):
         db_table = 'devices_fault_solution'
 
     VALID_ATTRS = [
-        'title', 'desc', 'fault_type', 'solution', 'doc_list',
+        'title', 'desc', 'fault_type', 'solution', 'files',
         'status', 'page_views', 'likes', 'modifier', 'modified_time', 'auditor', 'audited_time',
     ]
 

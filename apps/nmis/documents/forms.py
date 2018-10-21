@@ -9,20 +9,21 @@
 
 import logging
 
+import settings
+from nmis.documents.consts import ARCHIVE
 from nmis.documents.models import File
-from nmis.hospitals.consts import ARCHIVE
-from nmis.projects.consts import DOCUMENT_DIR
 from base.forms import BaseForm
-from utils.files import upload_file
+from utils.files import upload_file, is_file_exist
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class UploadFileForm(BaseForm):
 
-    def __init__(self, req, *args, **kwargs):
+    def __init__(self, req, doc_base_dir, *args, **kwargs):
         BaseForm.__init__(self, req, *args, **kwargs)
         self.req = req
+        self.doc_base_dir = doc_base_dir
         self.init_err_codes()
 
     def init_err_codes(self):
@@ -73,7 +74,7 @@ class UploadFileForm(BaseForm):
         for tag in self.req.FILES.keys():
             files = self.req.FILES.getlist(tag)
             for file in files:
-                result = upload_file(file, DOCUMENT_DIR, file.name)
+                result = upload_file(file, self.doc_base_dir)
                 if result:
                     upload_success_files.append(result)
                 else:
@@ -83,53 +84,87 @@ class UploadFileForm(BaseForm):
 
 class FileBulkCreateOrUpdateForm(BaseForm):
 
-    def __init__(self, files, cate_choices, *args, **kwargs):
+    def __init__(self, req_user, files, cate_dict, *args, **kwargs):
         BaseForm.__init__(self, files, *args, **kwargs)
+        self.req_user = req_user
         self.files = files
-        self.cate_choices = cate_choices
+        self.cate_dict = cate_dict
         self.init_err_codes()
 
     def init_err_codes(self):
         self.ERR_CODES.update({
             'file_cate_err': '文档类为空或数据错误',
             'files_blank': '文件列表为空或数据错误',
-            'file_name_or_path_error': '文件名字或路径为空或数据错误'
+            'file_name_error': '文件名称为空或数据错误',
+            'file_path_error': '文件路径为空或数据错误',
+            'file_not_exists': '文件不存在',
         })
 
     def is_valid(self):
+        if not self.check_files():
+            return False
+        if not self.check_file_name():
+            return False
+        if not self.check_file_path():
+            return False
         if not self.check_file_cate():
+            return False
+        return True
+
+    def check_files(self):
+        if not self.files:
+            self.update_errors('files', 'files_blank')
             return False
         return True
 
     def check_file_cate(self):
         if self.files:
             for files in self.files:
-                if files.get('cate') not in dict(self.cate_choices):
+                if files.get('cate') not in self.cate_dict:
                     self.update_errors('file_cate', 'file_cate_err')
                     return False
         return True
 
-    def check_file(self):
-        if not self.files:
-            self.update_errors('files', 'files_blank')
-            return False
-        for file in self.files:
-            if not file.get('name') or not file.get('path'):
-                self.update_errors('file.name or file.path', 'file_name_or_path_error')
+    def check_file_name(self):
+        if self.files:
+            for file in self.files:
+                if not file.get('name'):
+                    self.update_errors('name', 'file_name_error')
+                    return False
+        return True
+
+    def check_file_path(self):
+        if self.files:
+            import os
+            for file in self.files:
+                if not file.get('path'):
+                    self.update_errors('path', 'file_path_error')
+                    return False
+                path = os.path.join(settings.MEDIA_ROOT, file.get('path'))
+                if not is_file_exist(path):
+                    self.update_errors('path', 'file_not_exists')
+                    return False
+        return True
+
+    def check_file_id(self):
+        if self.files:
+            file_ids = [file.get('id') for file in self.files if file.get('id')]
+            file_list = File.objects.filter(id__in=file_ids).all()
+            if len(file_ids) > len(file_list):
+                self.update_errors('id', 'file_not_exists')
                 return False
         return True
 
     def save(self):
-        file_data_list = []
+        file_data_list = list()
         if self.files:
             for file in self.files:
-                if file.get('files'):
-                    for file in file.get('files'):
-                        file_data = {
-                            'cate': file.get('cate'),
-                            'path': file.get('path'),
-                            'name': file.get('name')
-                        }
-                        file_data_list.append(file_data)
-        return File.objects.bulk_save_or_update_project_doc(
-            file_data_list) if file_data_list else None
+                file_data = {
+                    'cate': file.get('cate'),
+                    'path': file.get('path'),
+                    'name': file.get('name'),
+                    'creator': self.req_user,
+                }
+                file_data_list.append(file_data)
+        file_list = File.objects.bulk_create_or_update(file_data_list)
+        return file_list

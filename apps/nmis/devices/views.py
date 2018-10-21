@@ -1,12 +1,12 @@
 # coding=utf-8
 #
-# Created by gonghuaiqian, on 2018-10-16
+# Created by gong, on 2018-10-16
 #
 
 import logging
 
 from rest_framework.permissions import AllowAny
-from django.db.models import Q
+from django.db.models import Q, Count, F
 
 from base import resp
 from base.authtoken import CustomTokenAuthentication
@@ -14,18 +14,19 @@ from base.common.decorators import check_params_not_null, check_id
 from base.common.param_utils import get_id_list
 from base.views import BaseAPIView
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES, \
-    REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_DISPATCH, REPAIR_ORDER_STATUS_DOING, \
-    REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
+    REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_DISPATCH, \
+    REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, ASSERT_DEVICE_CATE_CHOICES, \
     REPAIR_ORDER_STATUS_SUBMITTED, ORDERS_ACTION_CHOICES, MY_REPAIR_ORDERS, MY_MAINTAIN_ORDERS, ALL_ORDERS, \
-    TO_DISPATCH_ORDERS
+    TO_DISPATCH_ORDERS, REPAIR_ORDER_STATUS_DOING, REPAIR_ORDER_STATUS_DONE
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
-    RepairOrderCreateForm, MaintenancePlanCreateForm,     RepairOrderHandleForm, RepairOrderCommentForm, RepairOrderDispatchForm
+    RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, RepairOrderCommentForm, \
+    RepairOrderDispatchForm, FaultSolutionCreateForm
 
-from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
-    MaintenancePlan, FaultType
+from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, FaultType, FaultSolution
+from nmis.documents.consts import FILE_CATE_CHOICES
+from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.hospitals.models import Staff, Department, HospitalAddress
-from nmis.devices.serializers import RepairOrderSerializer
-from utils import times
+from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -287,6 +288,8 @@ class RepairOrderView(BaseAPIView):
             return resp.failed('请求数据异常')
         """ 分派报销单"""
         if action == REPAIR_ORDER_OPERATION_DISPATCH:
+            if not repair_order == REPAIR_ORDER_STATUS_SUBMITTED:
+                return resp.failed('请求数据异常')
             form = RepairOrderDispatchForm(req.user.get_profile(), repair_order, req.data)
             if not form.is_valid():
                 return resp.form_err(form.errors)
@@ -296,11 +299,16 @@ class RepairOrderView(BaseAPIView):
 
         """ 维修工处理报修单 """
         if action == REPAIR_ORDER_OPERATION_HANDLE:
-            if self.data.get('files'):
-                files_param = self.data.get('files')
-
-
-            form = RepairOrderHandleForm(req.user.get_profile(), repair_order, req.data)
+            if not repair_order == REPAIR_ORDER_STATUS_DOING:
+                return resp.failed('请求数据异常')
+            file_list = list()
+            if req.data.get('files'):
+                files_data = req.data.get('files')
+                file_form = FileBulkCreateOrUpdateForm(req.user, files_data, dict(FILE_CATE_CHOICES))
+                if not file_form.is_valid():
+                    return resp.failed(file_form.errors)
+                file_list = file_form.save()
+            form = RepairOrderHandleForm(req.user.get_profile(), repair_order, req.data, files=file_list)
             if not form.is_valid():
                 return resp.form_err(form.errors)
             new_order = form.save()
@@ -309,6 +317,8 @@ class RepairOrderView(BaseAPIView):
 
         """ 评论此次报修 """
         if action == REPAIR_ORDER_OPERATION_COMMENT:
+            if not repair_order == REPAIR_ORDER_STATUS_DONE:
+                return resp.failed('请求数据异常')
             form = RepairOrderCommentForm(req.user.get_profile(), repair_order, req.data)
             if not form.is_valid():
                 return resp.form_err(form.errors)
@@ -354,3 +364,79 @@ class RepairOrderListView(BaseAPIView):
                 Q(creator__name__contains=search)
             )
         return self.get_pages(queryset, srl_cls_name='RepairOrderSerializer', results_name='repair_orders')
+
+
+class FaultSolutionCreateView(BaseAPIView):
+    permission_classes = ()
+
+    def post(self, req):
+        file_list = list()
+        if req.data.get('files'):
+            files_data = req.data.get('files')
+            file_form = FileBulkCreateOrUpdateForm(req.user, files_data, dict(FILE_CATE_CHOICES))
+            if not file_form.is_valid():
+                return resp.failed(file_form.errors)
+            file_list = file_form.save()
+        form = FaultSolutionCreateForm(req.user.get_profile(), req.data, files=file_list)
+        if not form.is_valid():
+            return resp.failed(form.errors)
+        fault_solution = form.save()
+        if not fault_solution:
+            return resp.failed('操作失败')
+        return resp.serialize_response(fault_solution, 'fault_solution', srl_cls_name='FaultSolutionSerializer')
+
+
+class FaultSolutionView(BaseAPIView):
+    permission_classes = ()
+
+    def get(self, req, fault_solution_id):
+        fault_solution = self.get_object_or_404(fault_solution_id, FaultSolution)
+        logger.info(fault_solution)
+        queryset = FaultSolutionSerializer.setup_eager_loading(
+            FaultSolution.objects.filter(id=fault_solution_id)
+        )
+        return resp.serialize_response(queryset.first(), results_name='fault_solution', srl_cls_name='FaultSolutionSerializer')
+
+    def put(self, req):
+        pass
+
+    def delete(self, req):
+        pass
+
+
+class FaultSolutionListView(BaseAPIView):
+    permission_classes = ()
+
+    def get(self, req):
+        search = req.GET.get('search', '').strip()
+
+        queryset = FaultSolution.objects.all()
+
+        if search:
+            queryset = queryset.filter(
+                Q(fault_type__title__contains=search) | Q(title__contains=search)
+            )
+        return self.get_pages(queryset, results_name='fault_solutions', srl_cls_name='FaultSolutionSerializer')
+
+
+class OperationMaintenanceReportView(BaseAPIView):
+    permission_classes = ()
+
+    def get(self, req):
+        start_date = '%s %s' % (req.GET.get('start_date'), '00:00:00.000000')
+        end_date = '%s %s' % (req.GET.get('end_date'), '23:59:59.999999')
+        queryset = RepairOrder.objects \
+            .filter(created_time__range=(start_date, end_date)) \
+            .values('status') \
+            .annotate(nums=Count('id', distinct=True))
+
+        queryset2 = RepairOrder.objects \
+            .filter(created_time__range=(start_date, end_date)) \
+            .annotate(fault_type_title=F('fault_type__title')) \
+            .values('fault_type_title') \
+            .annotate(nums=Count('id', distinct=True))
+        data = {
+            'opt_report_status': list(queryset),
+            'opt_report_fault_type': list(queryset2),
+        }
+        return resp.ok('ok', data)

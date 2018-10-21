@@ -13,7 +13,7 @@ from nmis.documents.models import File
 logger = logging.getLogger(__name__)
 
 
-class ProjectDocumentSerializer(BaseModelSerializer):
+class FileSerializer(BaseModelSerializer):
 
     class Meta:
         model = File

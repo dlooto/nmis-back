@@ -8,9 +8,13 @@ import json
 import logging
 import os
 
+from django.db.models import Max, Count, Sum, F
+from django.db.models.functions import ExtractMonth, ExtractYear
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.views.generic import RedirectView
+from rest_framework.parsers import JSONParser
+from rest_framework.renderers import JSONRenderer
 from rest_framework.reverse import reverse
 
 import settings
@@ -1774,3 +1778,34 @@ class DeleteFileView(BaseAPIView):
                         return resp.ok('删除成功')
 
         return resp.failed('系统找不到指定的路径')
+
+
+class ProjectReport(BaseAPIView):
+
+    def get(self, req):
+        # status=PRO_STATUS_DONE,
+        # .extra(select={'month': 'extract(month from created_time)'}) \
+        start_date = '%s %s' % (req.GET.get('start_date'), '00:00:00.000000')
+        end_date = '%s %s' % (req.GET.get('end_date'), '23:59:59.999999')
+        queryset = ProjectPlan.objects\
+            .filter(created_time__range=(start_date, end_date))\
+            .annotate(year=ExtractYear('created_time'), month=ExtractMonth('created_time')) \
+            .values('year', 'month')\
+            .annotate(sum_amount=Sum('pre_amount', distinct=True), nums=Count('id', distinct=True))
+
+        queryset2 = ProjectPlan.objects\
+            .filter(created_time__range=(start_date, end_date))\
+            .annotate(dept=F('related_dept'))\
+            .values('dept') \
+            .annotate(sum_amount=Sum('pre_amount', distinct=True), nums=Count('id', distinct=True))
+
+        queryset3 = ProjectPlan.objects\
+            .filter(created_time__range=(start_date, end_date))\
+            .values('status') \
+            .annotate(sum_amount=Sum('pre_amount', distinct=True), nums=Count('id', distinct=True))
+        data = {
+            'project_report_month': list(queryset),
+            'project_report_dept': list(queryset2),
+            'project__report_status': list(queryset3),
+        }
+        return resp.ok('ok', data)

@@ -517,7 +517,7 @@ class UploadFileForm(BaseForm):
             files = self.req.FILES.getlist(tag)
             result_files = []
             for file in files:
-                result = upload_file(file, PROJECT_DOCUMENT_DIR+str(self.project_id)+'/', file.name)
+                result = upload_file(file, PROJECT_DOCUMENT_DIR+str(self.project_id)+'/')
                 print(result)
                 if not result:
                     return '%s%s' % (file.name, '上传失败'), False

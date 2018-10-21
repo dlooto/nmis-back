@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Created by gonghuaiqian, on 2018-10-16
+# Created by gong, on 2018-10-16
 #
 
 import logging
@@ -8,8 +8,7 @@ import logging
 from base.forms import BaseForm
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
     MAINTENANCE_PLAN_TYPE_CHOICES, PRIORITY_CHOICES
-from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan
-from nmis.documents.models import File
+from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan, FaultSolution
 from utils.times import now
 from nmis.hospitals.models import Staff
 
@@ -383,6 +382,7 @@ class RepairOrderHandleForm(BaseForm):
         self.repair_order = repair_order
         self.user_profile = user_profile
         self.data = data
+        self.files = kwargs.get('files')
         self.init_err_codes()
 
     def init_err_codes(self):
@@ -391,7 +391,7 @@ class RepairOrderHandleForm(BaseForm):
             'expenses_error': '维修费用为空或数据错误',
             'files_error': '文件名和文件路径不能为空',
             'solution_error': '为空或数据错误',
-            'assert_devices_error': '设备id为空或异常',
+            'repair_devices_error': '设备id为空或异常',
         })
 
     def is_valid(self):
@@ -400,14 +400,12 @@ class RepairOrderHandleForm(BaseForm):
         # 校验非必传参数
         if self.data.get('expenses') and not self.check_expenses():
             return False
-        if self.data.get('files') and not self.check_file():
-            return False
-        if self.data.get('assert_devices') and not self.check_assert_devices():
+        if self.data.get('repair_devices') and not self.check_repair_devices():
             return False
         return True
 
     def check_result(self):
-        result = self.data.get('result').strip()
+        result = self.data.get('result', '').strip()
         if not result:
             self.update_errors('result', 'result_error')
             return False
@@ -422,26 +420,22 @@ class RepairOrderHandleForm(BaseForm):
             return False
         return True
 
-    def check_file(self):
-        files = self.data.get('files')
-        for file in files:
-            if not file.get('name') or not file.path('path'):
-                self.update_errors('files', 'files_error')
-                return False
-        return True
-
-    def check_assert_devices(self):
-        assert_devices = self.data.get('assert_devices')
-        for device in assert_devices:
+    def check_repair_devices(self):
+        assert_devices_data = self.data.get('repair_devices')
+        for device in assert_devices_data:
             if not device.get('id'):
-                self.update_errors('assert_devices', 'assert_devices_error')
+                self.update_errors('repair_devices', 'repair_devices_error')
                 return False
             try:
                 int(device.get('id'))
             except ValueError as e:
                 logger.exception(e)
-                self.update_errors('assert_devices', 'assert_devices_error')
+                self.update_errors('repair_devices', 'repair_devices_error')
                 return False
+        assert_devices = AssertDevice.objects.filter(id__in=[item.get('id') for item in assert_devices_data]).all()
+        if len(assert_devices_data) > len(assert_devices):
+            self.update_errors('repair_devices', 'repair_devices_error')
+            return False
         return True
 
     def save(self):
@@ -449,17 +443,13 @@ class RepairOrderHandleForm(BaseForm):
         update_data = dict()
         if self.data.get('expenses'):
             update_data['expenses'] = self.data.get('expenses')
-        files = self.data.get('files')
-        if files:
-            files = File.objects.filter(id__in=[file.get('id') for file in files]).all()
-            update_data['files'] = self.data.get('files')
-        assert_devices_param = self.data.get('assert_devices')
-        assert_devices_data = AssertDevice.objects.filter(id__in=[item.get('id') for item in assert_devices_param]).all()
-
-        update_data = {
-            "expenses": expenses, "files": files,
-            "repair_device_list": assert_devices_data
-        }
+        if self.files:
+            files_ids_str = ','.join('%d' % file.id for file in self.files)
+            update_data['files'] = files_ids_str
+        repair_devices_data = self.data.get('repair_devices')
+        if repair_devices_data:
+            repair_devices = AssertDevice.objects.filter(id__in=[item.get('id') for item in repair_devices_data]).all()
+            update_data['repair_devices'] = repair_devices
         return RepairOrder.objects.handle_repair_order(self.repair_order, self.user_profile, result, **update_data)
 
 
@@ -559,3 +549,53 @@ class MaintenancePlanCreateForm(BaseForm):
         }
         return MaintenancePlan.objects.create_maintenance_plan(
             self.storage_places, self.assert_devices, **maintenance_plan_data)
+
+
+class FaultSolutionCreateForm(BaseForm):
+
+    def __init__(self, user_profile, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.user_profile = user_profile
+        self.files = kwargs.get('files')
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'title_error': '标题为空或数据错误',
+            'desc_error': '描述为空或数据错误',
+            'fault_type_error': '故障类型为空或数据错误',
+            'solution_error': '解决方案为空或数据错误',
+        })
+
+    def is_valid(self):
+        return True
+
+    def check_title(self):
+        return True
+
+    def check_desc(self):
+        return True
+
+    def check_fault_type(self):
+        return True
+
+    def check_solution(self):
+        return True
+
+    def save(self):
+        title = self.data.get('title', '').strip()
+        desc = self.data.get('desc', '').strip()
+        fault_type_id = self.data.get('fault_type').get('id')
+        fault_type = FaultType.objects.get_obj_by_id(fault_type_id)
+        solution = self.data.get('solution')
+        update_data = dict()
+        if self.files:
+            files_ids_str = ','.join('%d' % file.id for file in self.files)
+            update_data['files'] = files_ids_str
+        return FaultSolution.objects.create_fault_solution(
+            self.user_profile, title, desc, fault_type, solution, **update_data
+        )
+
+
+
+

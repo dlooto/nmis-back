@@ -59,12 +59,12 @@ def save_file(file, base_dir, file_name):
     return file_name
 
 
-def upload_file(file, base_dir, stored_file_name):
+def upload_file(file, base_dir, stored_name=None):
     """
 
     :param file: 文件
     :param base_dir: 文件保存地址
-    :param storge_file_name: 文件名
+    :param stored_name: 文件名
     :return: 由上传的文件名和保存路径
     """
     try:
@@ -72,8 +72,9 @@ def upload_file(file, base_dir, stored_file_name):
         if not os.path.exists(path):
             os.makedirs(path)
         # 对文件名重命名
-        rename = '%s%s' % (gen_uuid1(), os.path.splitext(stored_file_name)[1])
-        file_path = '%s%s' % (path, rename)
+        if not stored_name:
+            stored_name = '%s%s' % (gen_uuid1(), os.path.splitext(file.name)[1])
+        file_path = '%s%s' % (path, stored_name)
         destination = open(file_path, 'wb+')
         for chunk in file.chunks():
             destination.write(chunk)
@@ -81,7 +82,7 @@ def upload_file(file, base_dir, stored_file_name):
     except Exception as e:
         logger.info(e)
         return None
-    data = {'file_name': file.name, 'file_url': base_dir + rename}
+    data = {'file_name': file.name, 'file_url': base_dir + stored_name}
     return data
 
 
@@ -90,7 +91,7 @@ def single_upload_file(file, base_dir, stored_file_name):
 
     :param file:
     :param base_dir:
-    :param storge_file_name:
+    :param stored_file_name:
     :return: 由上传的文件名和
     """
     try:

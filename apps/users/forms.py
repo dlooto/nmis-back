@@ -325,7 +325,7 @@ class UploadFileForm(BaseForm):
         for tag in self.req.FILES.keys():
             files = self.req.FILES.getlist(tag)
             for file in files:
-                result = upload_file(file, DOCUMENT_DIR, file.name)
+                result = upload_file(file, DOCUMENT_DIR)
                 if result:
                     upload_success_files.append(result)
                 else:

@@ -49,7 +49,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
         return queryset
 
         """
-        pass
+        return queryset
 
 
 class PlugPageNumberPagination(PageNumberPagination):
