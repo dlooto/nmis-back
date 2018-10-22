@@ -63,9 +63,9 @@ def upload_file(file, base_dir, stored_name=None):
     """
 
     :param file: 文件
-    :param base_dir: 文件保存地址
+    :param base_dir: 文件在服务器的存储路径
     :param stored_name: 文件名
-    :return: 由上传的文件名和保存路径
+    :return: 上传的文件名和文件在服务器的存储路径组成字典{'name': 'ddd.txt', 'path': 'upload/documents/d434324324dsf23.txt'}
     """
     try:
         path = os.path.join(settings.MEDIA_ROOT, base_dir)
@@ -82,7 +82,7 @@ def upload_file(file, base_dir, stored_name=None):
     except Exception as e:
         logger.info(e)
         return None
-    data = {'file_name': file.name, 'file_url': base_dir + stored_name}
+    data = {'name': file.name, 'path': base_dir + stored_name}
     return data
 
 
@@ -164,10 +164,6 @@ def single_upload_file_test(file, base_dir, stored_file_name):
 #         return None
 #
 #     return file.name, '%s%s' % (base_dir, stored_file_name)
-
-
-
-
 
 
 def get_file_extension(path):
