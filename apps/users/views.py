@@ -357,21 +357,3 @@ class AssignRolesDeptDomains(BaseAPIView):
             logs.exception(e)
             return resp.failed("操作失败")
 
-
-class UploadFileView(BaseAPIView):
-
-    permission_classes = (AllowAny, )
-
-    def post(self, req):
-        """
-        文件上传
-        :return: 保存至服务器，返回保存路径和原文件名称
-        """
-        self.check_object_permissions(req, req.user.get_profile().organ)
-        form = UploadFileForm(req)
-        if not form.is_valid():
-            return resp.failed(form.errors)
-        result, is_success = form.save()
-        if not is_success:
-            return resp.failed(msg=result)
-        return resp.ok(data={'file': result})

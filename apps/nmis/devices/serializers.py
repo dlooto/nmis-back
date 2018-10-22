@@ -199,8 +199,7 @@ class MaintenancePlanSerializer(BaseModelSerializer):
         fields = ('id', 'plan_no', 'title', 'start_date', 'type', 'expired_date',
                   'executor_id', 'executor_name', 'creator_id', 'creator_name',
                   'modifier_id', 'modifier_name', 'modified_time', 'status',
-                  'storage_places',
-                  'assert_devices', 'result', 'executed_date')
+                  'storage_places', 'assert_devices', 'result', 'executed_date')
 
     def _get_storage_places(self, obj):
         storage_places = obj.places.all()

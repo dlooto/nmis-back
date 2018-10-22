@@ -249,17 +249,15 @@ class MaintenancePlanView(BaseAPIView):
 
     permission_classes = (AllowAny, )
 
-    def get(self, req, m_plan_id):
+    def get(self, req, maintenance_plan_id):
         """
         设备维护计划详情
         :param req:
-        :param m_plan_id:
+        :param maintenance_plan_id:
         :return:
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
-        maintenance_plan = self.get_object_or_404(m_plan_id, MaintenancePlan)
-        logger.info(maintenance_plan.places.all())
-        logger.info(maintenance_plan.assert_devices.all())
+        maintenance_plan = self.get_object_or_404(maintenance_plan_id, MaintenancePlan)
         return resp.serialize_response(maintenance_plan, results_name='maintenance_plan')
 
 
