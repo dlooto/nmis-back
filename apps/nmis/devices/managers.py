@@ -9,11 +9,16 @@ from django.db import transaction
 
 from base.models import BaseManager
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_USING, MAINTENANCE_PLAN_NO_PREFIX, \
-    MAINTENANCE_PLAN_NO_SEQ_CODE, MAINTENANCE_PLAN_NO_SEQ_DIGITS, REPAIR_ORDER_NO_SEQ_CODE, \
+    MAINTENANCE_PLAN_NO_SEQ_CODE, MAINTENANCE_PLAN_NO_SEQ_DIGITS, \
+    REPAIR_ORDER_NO_SEQ_CODE, \
     REPAIR_ORDER_NO_PREFIX, REPAIR_ORDER_NO_SEQ_DIGITS, \
-    REPAIR_ORDER_STATUS_DONE, REPAIR_ORDER_STATUS_CLOSED, REPAIR_ORDER_STATUS_DOING
+    REPAIR_ORDER_STATUS_DONE, REPAIR_ORDER_STATUS_CLOSED, REPAIR_ORDER_STATUS_DOING, \
+    MAINTENANCE_PLAN_EXPIRED_DATE_ON_MONTH, MAINTENANCE_PLAN_EXPIRED_DATE_ON_WEEK, \
+    MAINTENANCE_PLAN_EXPIRED_DATE_THREE_DAY, MAINTENANCE_PLAN_EXPIRED_DATE_NOW_DAY, \
+    MAINTENANCE_PLAN_EXPIRED_DATE_BE_OVERDUE
 from nmis.hospitals.models import Sequence
 from utils import times
+from utils.times import str_to_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +78,7 @@ class AssertDeviceManager(BaseManager):
             logger.exception(e)
             return None
 
-    def get_assert_devices(self, cate=None, search_key=None, status=None, storage_place=None):
+    def get_assert_devices(self, cate=None, search_key=None, status=None, storage_places=None):
         """
         资产设备列表
         :param cate: 资产设备类型
@@ -89,8 +94,8 @@ class AssertDeviceManager(BaseManager):
             assert_devices = assert_devices.filter(title__contains=search_key)
         if status:
             assert_devices = assert_devices.filter(status__in=status)
-        if storage_place:
-            assert_devices = assert_devices.filter(storage_place=storage_place)
+        if storage_places:
+            assert_devices = assert_devices.filter(storage_place__in=storage_places)
         return assert_devices.order_by('id')
 
     def get_assert_device_by_assert_no(self, assert_no):
@@ -293,7 +298,6 @@ class MaintenancePlanManager(BaseManager):
                 timestamp = times.datetime_to_str(times.now(), format='%Y%m%d')
                 plan_no = MaintenancePlanManager.gen_maintenance_plan_no(
                     MAINTENANCE_PLAN_NO_PREFIX, timestamp, next_value, seq_max_digits=MAINTENANCE_PLAN_NO_SEQ_DIGITS)
-                logger.info(plan_no)
                 if not plan_no:
                     return False
                 data['plan_no'] = plan_no
@@ -333,6 +337,52 @@ class MaintenancePlanManager(BaseManager):
 
         maintenance_plan_no = "%s%s%s" % (prefix, timestamp, seq_str)
         return maintenance_plan_no
+
+    def get_maintenance_plan_list(self, search_key=None, status=None, period=None):
+        """
+        获取所有设备维护计划列表
+        :param search_key: 搜索关键字（设备维护计划编号，设备维护计划名称）
+        :param status: 设备状态（NW：未执行，DN：已执行）
+        :param period: 时间查询参数（逾期、今天到期、三日内到期、一周内到期、一个月内到期）
+        """
+        from django.db.models import Q
+        query_set = self.all()
+        if search_key:
+            query_set = query_set.filter(
+                Q(title__contains=search_key) | Q(plan_no__contains=search_key)
+            ).distinct()
+        if status:
+            query_set = query_set.filter(status=status)
+
+        if period:
+            if period == MAINTENANCE_PLAN_EXPIRED_DATE_BE_OVERDUE:
+                query_set = query_set.filter(expired_date__lt=times.get_day_begin_time(times.now()))
+            if period == MAINTENANCE_PLAN_EXPIRED_DATE_NOW_DAY:
+
+                query_set = query_set.filter(
+                    expired_date__range=(times.get_day_begin_time(times.now()),
+                                         times.get_day_end_time(times.now()))
+                        )
+            if period == MAINTENANCE_PLAN_EXPIRED_DATE_THREE_DAY:
+
+                query_set = query_set.filter(
+                    expired_date__range=(
+                        times.get_day_begin_time(times.now()),
+                        times.get_day_end_time(times.after_days(interval=2)))
+                        )
+            if period == MAINTENANCE_PLAN_EXPIRED_DATE_ON_WEEK:
+
+                query_set = query_set.filter(
+                    expired_date__range=(
+                        times.get_day_begin_time(times.now()),
+                        times.get_day_end_time(times.after_days(interval=6)))
+                )
+            if period == MAINTENANCE_PLAN_EXPIRED_DATE_ON_MONTH:
+
+                query_set = query_set.filter(expired_date__range=(
+                    times.get_day_begin_time(times.now()),
+                    times.get_day_end_time(times.before_days(times.get_next_month(), interval=1))))
+        return query_set.order_by('id')
 
 
 class FaultSolutionManager(BaseManager):

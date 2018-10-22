@@ -208,13 +208,38 @@ class MaintenancePlanSerializer(BaseModelSerializer):
         fields = ('id', 'plan_no', 'title', 'start_date', 'type', 'expired_date',
                   'executor_id', 'executor_name', 'creator_id', 'creator_name',
                   'modifier_id', 'modifier_name', 'modified_time', 'status',
-                  'storage_places',
-                  'assert_devices', 'result', 'executed_date')
+                  'storage_places', 'assert_devices', 'result', 'executed_date')
 
     def _get_storage_places(self, obj):
         storage_places = obj.places.all()
 
         return resp.serialize_data(storage_places) if storage_places else []
+
+    def _get_executor_name(self, obj):
+
+        return obj.executor.name if obj.executor else ''
+
+    def _get_creator_name(self, obj):
+
+        return obj.creator.name if obj.creator else ''
+
+    def _get_modifier_name(self, obj):
+
+        return obj.modifier.name if obj.modifier else ''
+
+
+class MaintenancePlanListSerializer(BaseModelSerializer):
+
+    executor_name = serializers.SerializerMethodField('_get_executor_name')
+    creator_name = serializers.SerializerMethodField('_get_creator_name')
+    modifier_name = serializers.SerializerMethodField('_get_modifier_name')
+
+    class Meta:
+        model = MaintenancePlan
+        fields = ('id', 'plan_no', 'title', 'start_date', 'type', 'expired_date',
+                  'executor_id', 'executor_name', 'creator_id', 'creator_name',
+                  'modifier_id', 'modifier_name', 'modified_time', 'status',
+                  'result', 'executed_date')
 
     def _get_executor_name(self, obj):
 

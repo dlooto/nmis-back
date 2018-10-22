@@ -15,15 +15,18 @@ from base.common.param_utils import get_id_list
 from base.views import BaseAPIView
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES, \
     REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_DISPATCH, \
-    REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, ASSERT_DEVICE_CATE_CHOICES, \
-    REPAIR_ORDER_STATUS_SUBMITTED, ORDERS_ACTION_CHOICES, MY_REPAIR_ORDERS, MY_MAINTAIN_ORDERS, ALL_ORDERS, \
-    TO_DISPATCH_ORDERS, REPAIR_ORDER_STATUS_DOING, REPAIR_ORDER_STATUS_DONE
+    REPAIR_ORDER_OPERATION_HANDLE, REPAIR_ORDER_OPERATION_COMMENT, \
+    ASSERT_DEVICE_CATE_CHOICES, \
+    REPAIR_ORDER_STATUS_SUBMITTED, ORDERS_ACTION_CHOICES, MY_REPAIR_ORDERS, \
+    MY_MAINTAIN_ORDERS, ALL_ORDERS, \
+    TO_DISPATCH_ORDERS, REPAIR_ORDER_STATUS_DOING, REPAIR_ORDER_STATUS_DONE, \
+    MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, RepairOrderCommentForm, \
     RepairOrderDispatchForm, FaultSolutionCreateForm
 
-from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, FaultType, FaultSolution, \
-    MaintenancePlan
+from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
+    FaultType, FaultSolution, MaintenancePlan
 from nmis.documents.consts import FILE_CATE_CHOICES
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.hospitals.models import Staff, Department, HospitalAddress
@@ -46,14 +49,17 @@ class AssertDeviceListView(BaseAPIView):
 
         search_key = req.GET.get('search_key')
         str_status = req.GET.get('status')
-        storage_place_id = req.GET.get('storage_place_id')
         cate = req.GET.get('cate')
+        storage_place_ids = get_id_list(req.GET.get('storage_place_ids', '').strip())
         if cate:
             if cate not in dict(ASSERT_DEVICE_CATE_CHOICES):
                 return resp.failed('资产设备类型错误')
-        storage_place = None
-        if storage_place_id:
-            storage_place = self.get_object_or_404(storage_place_id, HospitalAddress)
+        logger.info(storage_place_ids)
+        storage_places = HospitalAddress.objects.get_hospital_address_by_ids(storage_place_ids)
+        logger.info(storage_places)
+        if len(storage_places) < len(storage_place_ids):
+            return resp.failed('请确认是否有不存在的存储地点信息')
+
         status_list = None
         if str_status:
             status_list = list(set([status.strip() for status in str_status.split(',')]))
@@ -63,7 +69,7 @@ class AssertDeviceListView(BaseAPIView):
                     return resp.failed('资产设备状态错误')
 
         assert_devices = AssertDevice.objects.get_assert_devices(
-            cate=cate, search_key=search_key, status=status_list, storage_place=storage_place)
+            cate=cate, search_key=search_key, status=status_list, storage_places=storage_places)
         self.get_pages(assert_devices, results_name='assert_devices')
         return self.get_pages(assert_devices, results_name='assert_devices')
 
@@ -82,11 +88,11 @@ class AssertDeviceCreateView(BaseAPIView):
         :return:
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
-        performer = self.get_object_or_404(req.data.get('performer_id'), Staff)
-        responsible_dept = self.get_object_or_404(req.data.get('responsible_dept_id'), Department)
-        use_dept = self.get_object_or_404(req.data.get('use_dept_id'), Department)
-        medical_device_cate = self.get_object_or_404(req.data.get('medical_device_cate_id'), MedicalDeviceSix8Cate)
-        storage_place = self.get_object_or_404(req.data.get('storage_place_id'), HospitalAddress)
+        self.get_object_or_404(req.data.get('performer_id'), Staff)
+        self.get_object_or_404(req.data.get('responsible_dept_id'), Department)
+        self.get_object_or_404(req.data.get('use_dept_id'), Department)
+        self.get_object_or_404(req.data.get('medical_device_cate_id'), MedicalDeviceSix8Cate)
+        self.get_object_or_404(req.data.get('storage_place_id'), HospitalAddress)
         creator = req.user.get_profile()
         form = AssertDeviceCreateForm(creator, req.data)
         if not form.is_valid():
@@ -229,19 +235,16 @@ class MaintenancePlanCreateView(BaseAPIView):
         storage_places = HospitalAddress.objects.get_hospital_address_by_ids(storage_place_ids)
         if len(storage_places) < len(storage_place_ids):
             return resp.failed('请确认是否有不存在的存储地点信息')
-        logger.info(storage_places)
 
         assert_device_ids = get_id_list(req.data.get('assert_device_ids', '').strip())
         assert_devices = AssertDevice.objects.get_assert_device_by_ids(assert_device_ids)
         if len(assert_devices) < len(assert_device_ids):
             return resp.failed('请确认是否有不存在的资产设备信息')
-        logger.info(assert_devices)
         form = MaintenancePlanCreateForm(
             req.data, storage_places, assert_devices, executor, req.user.get_profile())
         if not form.is_valid():
             return resp.failed(form.errors)
         maintenance_plan = form.save()
-        logger.info(maintenance_plan)
         if not maintenance_plan:
             return resp.failed('创建失败')
         return resp.serialize_response(maintenance_plan, results_name='maintenance_plans')
@@ -251,18 +254,45 @@ class MaintenancePlanView(BaseAPIView):
 
     permission_classes = (AllowAny, )
 
-    def get(self, req, m_plan_id):
+    def get(self, req, maintenance_plan_id):
         """
         设备维护计划详情
         :param req:
-        :param m_plan_id:
+        :param maintenance_plan_id:
         :return:
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
-        maintenance_plan = self.get_object_or_404(m_plan_id, MaintenancePlan)
-        logger.info(maintenance_plan.places.all())
-        logger.info(maintenance_plan.assert_devices.all())
+        maintenance_plan = self.get_object_or_404(maintenance_plan_id, MaintenancePlan)
         return resp.serialize_response(maintenance_plan, results_name='maintenance_plan')
+
+
+class MaintenancePlanListView(BaseAPIView):
+
+    permission_classes = (AllowAny, )
+
+    def get(self, req):
+        """
+        资产设备维护计划列表
+        搜索字段：
+            search_key: 维护计划编号/维护计划名称
+            status: 维护计划状态（DN: 已执行，NW: 未执行）
+            period: 时间段（逾期、今天到期、三日内到期、一周内到期、一年内到期）
+        """
+        self.check_object_permissions(req, req.user.get_profile().organ)
+        if req.GET.get('search_key', '').strip():
+            if not req.GET.get('search_key', '').strip() not in dict(MAINTENANCE_PLAN_STATUS_CHOICES):
+                return resp.failed('资产设备维护计划状态错误')
+        if req.GET.get('period', '').strip():
+            if not req.GET.get('period', '').strip() not in dict(MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES):
+                return resp.failed('截止时间段错误')
+
+        maintenance_plans = MaintenancePlan.objects.get_maintenance_plan_list(
+            search_key=req.GET.get('search_key', '').strip(),
+            status=req.GET.get('status', '').strip(),
+            period=req.GET.get('period', '').strip()
+        )
+
+        return self.get_pages(maintenance_plans, srl_cls_name='MaintenancePlanListSerializer', results_name='maintenance_plans')
 
 
 class FaultTypeListView(BaseAPIView):
