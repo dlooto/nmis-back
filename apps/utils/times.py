@@ -8,6 +8,7 @@ import time
 ##################################################
 #  date and time processing utils
 ##################################################
+from dateutil.relativedelta import relativedelta
 
 
 def now():
@@ -110,6 +111,7 @@ def incr(a_datetime, hours=0):
         return a_datetime
     return a_datetime + datetime.timedelta(hours=hours)
 
+
 def get_hour_time(a_datetime):
     """
     返回整点小时时间. 如传入2015-07-23 16:12:39, 将返回 2015-07-23 16:00:00
@@ -122,6 +124,7 @@ def get_current_hour_time():
     如当前系统时间为2015-07-23 16:12:39, 则返回2015-07-23 16:00:00
     """
     return get_hour_time(now())
+
 
 def time_cost(begin_time):
     """
@@ -136,8 +139,18 @@ def get_day_begin_time(date_time, format=DEFAULT_TIME_FORMAT):
     """
     return date_time.replace(hour=0, minute=0, second=0).strftime(format)
 
+
 def get_day_end_time(date_time, format=DEFAULT_TIME_FORMAT):
     """
     返回当前日期的结束时间. 如传入2017-04-07 16:12:39, 将返回 2017-04-07 23:59:59
     """
     return date_time.replace(hour=23, minute=59, second=59).strftime(format)
+
+
+def get_next_month():
+    """
+    返回在当前时间的基础上增加一个月后的日期
+    """
+    # startTime = datetime.datetime.strptime("2018-02-02", '%Y-%m-%d').date()
+
+    return now() + relativedelta(months=+1)
