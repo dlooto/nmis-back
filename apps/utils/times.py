@@ -141,3 +141,37 @@ def get_day_end_time(date_time, format=DEFAULT_TIME_FORMAT):
     返回当前日期的结束时间. 如传入2017-04-07 16:12:39, 将返回 2017-04-07 23:59:59
     """
     return date_time.replace(hour=23, minute=59, second=59).strftime(format)
+
+
+COLON = ':'
+HYPHEN = '-'
+FORWARD_SLASH = '/'
+TIME_FORMAT_YM_HY = '%Y-%m'
+TIME_FORMAT_YMD_HY = '%Y-%m-%d'
+TIME_FORMAT_YMD_HMS_HY = '%Y-%m-%d %H:%M:%S'
+
+
+def is_valid_date(timestr, format=None):
+
+    if not timestr:
+        return False
+    try:
+        if format:
+            time.strptime(timestr, format)
+        if FORWARD_SLASH in timestr:
+            timestr = timestr.replace(FORWARD_SLASH, HYPHEN, 2)
+        char_count = dict()
+        for char in timestr:
+            char_count[char] = timestr.count(char)
+        if COLON not in timestr:
+            if char_count.get(HYPHEN) == 1:
+                time.strptime(timestr, TIME_FORMAT_YM_HY)
+            else:
+                time.strptime(timestr, TIME_FORMAT_YMD_HY)
+        else:
+            time.strptime(timestr, TIME_FORMAT_YMD_HMS_HY)
+        return True
+    except Exception as e:
+        print(e)
+        return False
+

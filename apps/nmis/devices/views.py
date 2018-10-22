@@ -22,7 +22,8 @@ from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, RepairOrderCommentForm, \
     RepairOrderDispatchForm, FaultSolutionCreateForm
 
-from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, FaultType, FaultSolution
+from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, FaultType, FaultSolution, \
+    MaintenancePlan
 from nmis.documents.consts import FILE_CATE_CHOICES
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.hospitals.models import Staff, Department, HospitalAddress
@@ -411,7 +412,6 @@ class FaultSolutionView(BaseAPIView):
 
     def get(self, req, fault_solution_id):
         fault_solution = self.get_object_or_404(fault_solution_id, FaultSolution)
-        logger.info(fault_solution)
         queryset = FaultSolutionSerializer.setup_eager_loading(
             FaultSolution.objects.filter(id=fault_solution_id)
         )

@@ -242,7 +242,7 @@ class FaultSolutionSerializer(BaseModelSerializer):
         fields = (
             'id', 'title', 'fault_type_id', 'fault_type_title', 'desc', 'solution', 'files',
             'creator_id', 'created_time', 'creator_name', 'creator_dept_name', 'creator_contact',
-            'modifier_id', 'modified_time'
+            'modifier_id', 'modified_time', 'auditor_id',  'audited_time'
         )
 
     def setup_eager_loading(queryset):
