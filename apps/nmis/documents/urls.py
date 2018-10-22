@@ -17,6 +17,6 @@ logger = logging.getLogger(__name__)
 
 urlpatterns = [
     # 用户上传文件通用接口
-    path('upload-file/', views.UploadFileView.as_view(), ),
+    path('upload-file', views.UploadFileView.as_view(), ),
 
 ]

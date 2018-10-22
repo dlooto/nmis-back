@@ -7,6 +7,7 @@ import logging
 
 from base import resp
 from base.views import BaseAPIView
+from nmis.documents.consts import DOC_BASE_DIR
 from nmis.documents.forms import UploadFileForm
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ class UploadFileView(BaseAPIView):
         :return: 保存至服务器，返回保存路径和原文件名称
         """
         self.check_object_permissions(req, req.user.get_profile().organ)
-        form = UploadFileForm(req)
+        form = UploadFileForm(req, DOC_BASE_DIR)
         if not form.is_valid():
             return resp.failed(form.errors)
         result, is_success = form.save()

@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Created by gonghuaiqian, on 2018-10-16
+# Created by gong, on 2018-10-16
 #
 
 import logging
@@ -191,8 +191,8 @@ class RepairOrderManager(BaseManager):
         try:
             update_data = dict(
                 {
-                    "modifier": dispatcher, 'modified_time': times.now(), "maintainer": maintainer,
-                    'priority': priority, 'status': REPAIR_ORDER_STATUS_DOING
+                    "maintainer": maintainer, 'priority': priority, 'status': REPAIR_ORDER_STATUS_DOING,
+                    "modifier": dispatcher, 'modified_time': times.now(),
                 },
                 **kwargs
             )
@@ -216,14 +216,15 @@ class RepairOrderManager(BaseManager):
         try:
             update_data = dict(
                 {
-                    "modifier": operator, "result": result,
-                    "status": REPAIR_ORDER_STATUS_DONE
+                    "result": result, "status": REPAIR_ORDER_STATUS_DONE,
+                    "modifier": operator, 'modified_time': times.now()
                 },
                 **kwargs
             )
-            assert_devices = kwargs.get('repair_device_list')
+            repair_devices = kwargs.get('repair_devices')
             repair_order.update(update_data)
-            repair_order.assert_devices.set(assert_devices)
+            if repair_devices:
+                repair_order.repair_devices.set(repair_devices)
             repair_order.cache()
             return repair_order
         except Exception as e:
@@ -242,7 +243,8 @@ class RepairOrderManager(BaseManager):
         """
         update_data = dict(
             {
-                'comment_time': times.now(), "status": REPAIR_ORDER_STATUS_CLOSED
+                'comment_time': times.now(), "status": REPAIR_ORDER_STATUS_CLOSED,
+                'modifier': commentator, 'modified_time': times.now()
             },
             **kwargs
         )
@@ -335,7 +337,21 @@ class MaintenancePlanManager(BaseManager):
 
 class FaultSolutionManager(BaseManager):
 
-    def create(self):
-        pass
+    def create_fault_solution(self, creator, title, desc, fault_type, solution, *args, **kwargs):
+        data = dict(
+            {
+                'creator': creator,
+                'title': title,
+                'desc': desc,
+                'fault_type': fault_type,
+                'solution': solution,
+            },
+            **kwargs
+        )
+        try:
+            return self.create(**data)
+        except Exception as e:
+            logger.info(e)
+            return None
 
 

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class FileAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'name', 'cate', "path", 'uuid_name'
+        'id', 'name', 'cate', "path"
     )
 
 

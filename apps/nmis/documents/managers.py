@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Created by gonghuaiqian, on 2018-10-16
+# Created by gong, on 2018-10-16
 #
 
 import logging
@@ -15,7 +15,7 @@ class FileManager(BaseManager):
     def create(self):
         pass
 
-    def bulk_save_or_update(self, files):
+    def bulk_create_or_update(self, files):
         """
         批量保存文档
         :param files: {'id: 1, 'name': '', 'path': '', 'cate': ''}
@@ -25,18 +25,19 @@ class FileManager(BaseManager):
         result_dict = {
             'updated': [],
             'created': [],
-            'all': [],
+            'saved': [],
         }
-        import os
+        result_list = list()
         for file in files:
-            file['uuid_name'] = os.path.basename(file.get('path'))
-            file_obj, created = self.update_or_create(file)
-            result_dict['all'].append(file_obj)
+            file_obj, created = self.update_or_create(path=file.pop('path'), defaults=file)
+            logger.info(file_obj)
+            result_dict['saved'].append(file_obj)
+            result_list.append(file_obj)
             if created:
                 result_dict['created'].append(file_obj)
             else:
                 result_dict['updated'].append(file_obj)
 
-        return result_dict
+        return result_list
 
 

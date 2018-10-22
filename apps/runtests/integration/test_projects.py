@@ -890,11 +890,13 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                         item.save()
                         item.cache()
                         file_name = 'upload_file_test%s.xlsx' % (index,)
-                        file_name, file_path = upload_file(
+                        upload_result = upload_file(
                             UploadedFile(file_io),
                             '%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/'),
                             file_name
                         )
+                        file_name = upload_result.get('file_name')
+                        file_path = upload_result.get('file_url')
                         file = {'name': file_name, 'path': file_path}
                         cate_document = {'category': 'product', 'files': [file]}
                         cate_documents = [cate_document]

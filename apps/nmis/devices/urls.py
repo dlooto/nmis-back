@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Created by gonghuaiqian, on 2018-10-16
+# Created by gong, on 2018-10-16
 #
 
 """
@@ -48,5 +48,14 @@ urlpatterns = [
     path('repair_orders/<int:order_id>', views.RepairOrderView.as_view(), ),
     # 报修单列表
     path('repair_orders', views.RepairOrderListView.as_view(), ),
+
+    # 创建故障/问题解决方案
+    path('fault_solutions/create', views.FaultSolutionCreateView.as_view()),
+    # 单个故障/问题解决方案详情/修改/删除/分派/处理/评价
+    path('fault_solutions/<int:fault_solution_id>', views.FaultSolutionView.as_view(), ),
+    # 故障/问题解决方案列表
+    path('fault_solutions', views.FaultSolutionListView.as_view(), ),
+
+    path('report', views.OperationMaintenanceReportView.as_view(), ),
 
 ]

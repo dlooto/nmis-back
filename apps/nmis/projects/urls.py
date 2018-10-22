@@ -182,6 +182,10 @@ urlpatterns = [
     path('<int:project_id>/single-upload-file', views.UploadFileView.as_view(), ),
 
     # 删除附件
-    path('single-del-file/<int:doc_id>', views.DeleteFileView.as_view())
+    path('single-del-file/<int:doc_id>', views.DeleteFileView.as_view()),
+
+
+    # ------------------报表----------------
+    path('report', views.ProjectReport.as_view()),
 
 ]
