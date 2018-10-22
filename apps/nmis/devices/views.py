@@ -291,10 +291,8 @@ class MaintenancePlanListView(BaseAPIView):
             status=req.GET.get('status', '').strip(),
             period=req.GET.get('period', '').strip()
         )
-        logger.info(maintenance_plans.count())
-        return resp.serialize_response(
-            maintenance_plans, srl_cls_name='MaintenancePlanListSerializer', results_name='maintenance_plans'
-        )
+
+        return self.get_pages(maintenance_plans, srl_cls_name='MaintenancePlanListSerializer', results_name='maintenance_plans')
 
 
 class FaultTypeListView(BaseAPIView):
