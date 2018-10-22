@@ -142,7 +142,8 @@ class RepairOrderSerializer(BaseModelSerializer):
     fault_type_title = serializers.SerializerMethodField('_get_fault_type_title')
     maintainer_name = serializers.SerializerMethodField('_get_maintainer_name')
     maintainer_contact = serializers.SerializerMethodField('_get_maintainer_contact')
-    assert_devices = AssertDeviceBriefSerializer(many=True)
+    repair_devices = AssertDeviceBriefSerializer(many=True)
+    files = serializers.SerializerMethodField('_get_files')
     creator_name = serializers.SerializerMethodField('_get_creator_name')
     modifier_name = serializers.SerializerMethodField('_get_modifier_name')
 
@@ -151,7 +152,7 @@ class RepairOrderSerializer(BaseModelSerializer):
         fields = (
             'id', 'order_no', 'applicant_id', 'applicant_name', 'applicant_dept_name', 'applicant_contact',
             'fault_type_id', 'fault_type_title', 'desc', 'maintainer_id', 'maintainer_name', 'maintainer_contact',
-            'expenses', 'result', 'solution', 'doc_list', 'priority', 'status', 'assert_devices',
+            'expenses', 'result', 'solution', 'files', 'priority', 'status', 'repair_devices',
             'comment_grade', 'comment_content', 'comment_time',
             'creator_id', 'creator_name', 'created_time', 'modifier_id', 'modifier_name', 'modified_time'
         )
