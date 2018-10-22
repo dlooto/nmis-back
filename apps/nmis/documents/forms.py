@@ -107,6 +107,9 @@ class FileBulkCreateOrUpdateForm(BaseForm):
             return False
         if not self.check_file_path():
             return False
+        # 测试时可屏蔽check_file_exists
+        if not self.check_file_exists():
+            return False
         if not self.check_file_cate():
             return False
         return True
@@ -135,15 +138,21 @@ class FileBulkCreateOrUpdateForm(BaseForm):
 
     def check_file_path(self):
         if self.files:
-            import os
             for file in self.files:
                 if not file.get('path'):
                     self.update_errors('path', 'file_path_error')
                     return False
-                path = os.path.join(settings.MEDIA_ROOT, file.get('path'))
-                if not is_file_exist(path):
-                    self.update_errors('path', 'file_not_exists')
-                    return False
+        return True
+
+    def check_file_exists(self):
+        if self.files:
+            import os
+            for file in self.files:
+                if file.get('path'):
+                    path = os.path.join(settings.MEDIA_ROOT, file.get('path'))
+                    if not is_file_exist(path):
+                        self.update_errors('path', 'file_not_exists')
+                        return False
         return True
 
     def check_file_id(self):

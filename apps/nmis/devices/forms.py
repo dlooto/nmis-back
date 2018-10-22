@@ -585,7 +585,7 @@ class FaultSolutionCreateForm(BaseForm):
     def save(self):
         title = self.data.get('title', '').strip()
         desc = self.data.get('desc', '').strip()
-        fault_type_id = self.data.get('fault_type').get('id')
+        fault_type_id = self.data.get('fault_type_id')
         fault_type = FaultType.objects.get_obj_by_id(fault_type_id)
         solution = self.data.get('solution')
         update_data = dict()

@@ -895,8 +895,8 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                             '%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/'),
                             file_name
                         )
-                        file_name = upload_result.get('file_name')
-                        file_path = upload_result.get('file_url')
+                        file_name = upload_result.get('name')
+                        file_path = upload_result.get('path')
                         file = {'name': file_name, 'path': file_path}
                         cate_document = {'category': 'product', 'files': [file]}
                         cate_documents = [cate_document]

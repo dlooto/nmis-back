@@ -308,7 +308,7 @@ class RepairOrderView(BaseAPIView):
             return resp.failed('请求数据异常')
         """ 分派报销单"""
         if action == REPAIR_ORDER_OPERATION_DISPATCH:
-            if not repair_order == REPAIR_ORDER_STATUS_SUBMITTED:
+            if not repair_order.status == REPAIR_ORDER_STATUS_SUBMITTED:
                 return resp.failed('请求数据异常')
             form = RepairOrderDispatchForm(req.user.get_profile(), repair_order, req.data)
             if not form.is_valid():
@@ -319,7 +319,7 @@ class RepairOrderView(BaseAPIView):
 
         """ 维修工处理报修单 """
         if action == REPAIR_ORDER_OPERATION_HANDLE:
-            if not repair_order == REPAIR_ORDER_STATUS_DOING:
+            if not repair_order.status == REPAIR_ORDER_STATUS_DOING:
                 return resp.failed('请求数据异常')
             file_list = list()
             if req.data.get('files'):
@@ -337,7 +337,7 @@ class RepairOrderView(BaseAPIView):
 
         """ 评论此次报修 """
         if action == REPAIR_ORDER_OPERATION_COMMENT:
-            if not repair_order == REPAIR_ORDER_STATUS_DONE:
+            if not repair_order.status == REPAIR_ORDER_STATUS_DONE:
                 return resp.failed('请求数据异常')
             form = RepairOrderCommentForm(req.user.get_profile(), repair_order, req.data)
             if not form.is_valid():
