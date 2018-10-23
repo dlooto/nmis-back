@@ -22,7 +22,7 @@ from nmis.devices.consts import MGT_CATE_CHOICE, ASSERT_DEVICE_CATE_CHOICES, \
     MAINTENANCE_PLAN_PERIOD_MEASURE_CHOICES, MAINTENANCE_PLAN_PERIOD_MEASURE_DAY, \
     ASSERT_DEVICE_OPERATION_CHOICES, \
     ASSERT_DEVICE_OPERATION_SUBMIT, FAULT_SOLUTION_STATUS_CHOICES, \
-    FAULT_SOLUTION_STATUS_NEW, ASSERT_DEVICE_STATUS_SCRAPPED
+    FAULT_SOLUTION_STATUS_NEW, ASSERT_DEVICE_STATUS_SCRAPPED, MAINTENANCE_PLAN_STATUS_DONE
 from nmis.devices.managers import AssertDeviceManager, MedicalDeviceSix8CateManager, FaultTypeManager, \
     RepairOrderManager, MaintenancePlanManager, FaultSolutionManager
 
@@ -553,6 +553,21 @@ class MaintenancePlan(BaseModel):
 
     def __str__(self):
         return '%d' % (self.id, )
+
+    def change_status(self, result):
+        """
+        执行操作改变资产设备维护计划的状态：改为已执行状态
+        :param result: 处理结果
+        """
+        try:
+            self.result = result
+            self.status = MAINTENANCE_PLAN_STATUS_DONE
+            self.save()
+            self.cache()
+            return True
+        except Exception as e:
+            logger.exception(e)
+            return False
 
 
 class FaultSolution(BaseModel):

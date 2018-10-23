@@ -20,7 +20,8 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATU
     REPAIR_ORDER_STATUS_SUBMITTED, ORDERS_ACTION_CHOICES, MY_REPAIR_ORDERS, \
     MY_MAINTAIN_ORDERS, ALL_ORDERS, \
     TO_DISPATCH_ORDERS, REPAIR_ORDER_STATUS_DOING, REPAIR_ORDER_STATUS_DONE, \
-    MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES
+    MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES, \
+    MAINTENANCE_PLAN_STATUS_DONE
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, RepairOrderCommentForm, \
     RepairOrderDispatchForm, FaultSolutionCreateForm
@@ -293,6 +294,28 @@ class MaintenancePlanListView(BaseAPIView):
         )
 
         return self.get_pages(maintenance_plans, srl_cls_name='MaintenancePlanListSerializer', results_name='maintenance_plans')
+
+
+class MaintenancePlanExecuteView(BaseAPIView):
+
+    permission_classes = (AllowAny, )
+
+    def put(self, req, maintenance_plan_id):
+        """
+        资产设备维护单执行操作
+        """
+        self.check_object_permissions(req, req.user.get_profile())
+        maintenance_plan = self.get_object_or_404(maintenance_plan_id, MaintenancePlan)
+        if maintenance_plan.status == MAINTENANCE_PLAN_STATUS_DONE:
+            return resp.failed('维护单已执行')
+        result = req.data.get('result', '').strip()
+        if not result:
+            return resp.failed('请输入处理结果')
+        success = maintenance_plan.change_status(result)
+
+        if not success:
+            return resp.failed('操作失败')
+        return resp.ok('操作成功')
 
 
 class FaultTypeListView(BaseAPIView):
