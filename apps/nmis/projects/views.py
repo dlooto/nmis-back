@@ -1784,9 +1784,16 @@ class ProjectReport(BaseAPIView):
 
     def get(self, req):
         # status=PRO_STATUS_DONE,
-        # .extra(select={'month': 'extract(month from created_time)'}) \
-        start_date = '%s %s' % (req.GET.get('start_date'), '00:00:00.000000')
-        end_date = '%s %s' % (req.GET.get('end_date'), '23:59:59.999999')
+        # extra(select={'month': 'extract(month from created_time)'})
+
+        # 校验日期格式
+        if not times.is_valid_date(req.GET.get('start_date', '')) and not times.is_valid_date(req.GET.get('end_date', '')):
+            return resp.failed('请求数据异常')
+        start_date = '%s %s' % (req.GET.get('start_date', times.now().strftime('%Y-01-01')), '00:00:00.000000')
+        end_date = '%s %s' % (req.GET.get('end_date', times.now().strftime('%Y-12-31')), '23:59:59.999999')
+        logger.info(start_date)
+        logger.info(end_date)
+
         queryset = ProjectPlan.objects\
             .filter(created_time__range=(start_date, end_date))\
             .annotate(year=ExtractYear('created_time'), month=ExtractMonth('created_time')) \

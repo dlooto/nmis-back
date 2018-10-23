@@ -242,4 +242,8 @@ except ImportError as e:
     print('Import Error in base settings')
     print(e)
 
+# 设置自定义Token过期时长（计量单位：分钟）
+TOKEN_EXPIRED_MINUTES = 30 * 2 * 24 * 30
+
+
 

@@ -154,3 +154,37 @@ def get_next_month():
     # startTime = datetime.datetime.strptime("2018-02-02", '%Y-%m-%d').date()
 
     return now() + relativedelta(months=+1)
+
+
+COLON = ':'
+HYPHEN = '-'
+FORWARD_SLASH = '/'
+TIME_FORMAT_YM_HY = '%Y-%m'
+TIME_FORMAT_YMD_HY = '%Y-%m-%d'
+TIME_FORMAT_YMD_HMS_HY = '%Y-%m-%d %H:%M:%S'
+
+
+def is_valid_date(timestr, format=None):
+
+    if not timestr:
+        return False
+    try:
+        if format:
+            time.strptime(timestr, format)
+        if FORWARD_SLASH in timestr:
+            timestr = timestr.replace(FORWARD_SLASH, HYPHEN, 2)
+        char_count = dict()
+        for char in timestr:
+            char_count[char] = timestr.count(char)
+        if COLON not in timestr:
+            if char_count.get(HYPHEN) == 1:
+                time.strptime(timestr, TIME_FORMAT_YM_HY)
+            else:
+                time.strptime(timestr, TIME_FORMAT_YMD_HY)
+        else:
+            time.strptime(timestr, TIME_FORMAT_YMD_HMS_HY)
+        return True
+    except Exception as e:
+        print(e)
+        return False
+

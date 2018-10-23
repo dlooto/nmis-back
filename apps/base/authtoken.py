@@ -10,6 +10,8 @@ import datetime
 
 from rest_framework.authentication import TokenAuthentication, get_authorization_header
 from rest_framework import exceptions
+
+from settings import TOKEN_EXPIRED_MINUTES
 from base.exceptions import AuthenticationTokenExpired
 
 from rest_framework.authtoken.models import Token
@@ -22,8 +24,6 @@ class CustomToken(Token):
     !!! Don't put this class into users app, CircularDependencyError would occurred
     自定义Token模型: 代理DRF框架的Token模型, 添加额外的方法和属性
     """
-    expired_days = 30    # Token默认超时天数
-    expired_minutes = 30*2*24*30
 
     class Meta:
         proxy = True
@@ -31,7 +31,7 @@ class CustomToken(Token):
     def is_expired(self):
         """ token是否过期 """
         # return self.created + datetime.timedelta(days=self.expired_days) < self.created.now()
-        return self.created + datetime.timedelta(minutes=self.expired_minutes) < self.created.now()
+        return self.created + datetime.timedelta(minutes=TOKEN_EXPIRED_MINUTES) < self.created.now()
 
     @staticmethod
     def refresh(token):
@@ -85,16 +85,16 @@ class CustomTokenAuthentication(TokenAuthentication):
             return None
 
         if len(auth) == 1:
-            msg = _('Invalid token header. No credentials provided.')
+            msg = 'Invalid token header. No credentials provided.'
             raise exceptions.AuthenticationFailed(msg)
         elif len(auth) > 2:
-            msg = _('Invalid token header. Token string should not contain spaces.')
+            msg = 'Invalid token header. Token string should not contain spaces.'
             raise exceptions.AuthenticationFailed(msg)
 
         try:
             token = auth[1].decode()
         except UnicodeError:
-            msg = _('Invalid token header. Token string should not contain invalid characters.')
+            msg = 'Invalid token header. Token string should not contain invalid characters.'
             raise exceptions.AuthenticationFailed(msg)
 
         return self.authenticate_credentials(token)

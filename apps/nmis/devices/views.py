@@ -442,7 +442,6 @@ class FaultSolutionView(BaseAPIView):
 
     def get(self, req, fault_solution_id):
         fault_solution = self.get_object_or_404(fault_solution_id, FaultSolution)
-        logger.info(fault_solution)
         queryset = FaultSolutionSerializer.setup_eager_loading(
             FaultSolution.objects.filter(id=fault_solution_id)
         )
