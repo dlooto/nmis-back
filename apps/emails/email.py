@@ -11,7 +11,7 @@ import logging
 import requests
 
 import settings
-from nmis.common.param_utils import get_params_after_pop
+from base.common.param_utils import get_params_after_pop
 from emails import aliyun_email
 
 logs = logging.getLogger('django')

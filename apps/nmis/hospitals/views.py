@@ -15,8 +15,10 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
 from base.common.permissions import CustomerAllPermission, CustomerAnyPermission
+from nmis.devices.models import RepairOrder
 from nmis.hospitals.serializers import StaffSerializer, RoleSerializer, \
     DepartmentStaffsCountSerializer, StaffWithRoleSerializer
+from nmis.projects.models import ProjectPlan
 
 from utils.files import ExcelBasedOXL
 
@@ -129,8 +131,36 @@ class HospitalGlobalDataView(BaseAPIView):
         perm_groups = hospital.get_all_groups()
         response.data.update({"perm_groups": resp.serialize_data(perm_groups)})
 
-        #
-
+        # 我负责的项目数量
+        performer_project_count = ProjectPlan.objects.get_my_performer_projects(hospital, req.user.get_profile()).count()
+        # 我协助的项目数量
+        assistant_project_count = ProjectPlan.objects.get_my_assistant_projects(hospital, req.user.get_profile()).count()
+        # 我申请的项目数量
+        apply_project_count = ProjectPlan.objects.get_applied_projects(hospital, req.user.get_profile()).count()
+        response.data.update(
+            {
+                "project_count": {
+                    "performer_project_count": performer_project_count,
+                    "assistant_project_count": assistant_project_count,
+                    "apply_project_count": apply_project_count
+                }
+             }
+        )
+        # 我申请的保修单数量
+        apply_repair_order_count = RepairOrder.objects.get_my_create_repair_order(req.user.get_profile()).count()
+        # 处理中的保修单（我申请的保修单）
+        dispose_repair_order_count = RepairOrder.objects.get_repair_order_in_repair(req.user.get_profile()).count()
+        # 已完成的保修单
+        complete_repair_order = RepairOrder.objects.get_completed_repair_order(req.user.get_profile()).count()
+        response.data.update(
+            {
+                "repair_order_count": {
+                    "apply_repair_order_count": apply_repair_order_count,
+                    "dispose_repair_order_count": dispose_repair_order_count,
+                    "complete_repair_order": complete_repair_order
+                }
+            }
+        )
         return response
 
 
@@ -584,5 +614,4 @@ class HospitalAddressListView(BaseAPIView):
         """
         self.get_object_or_404(hid, Hospital)
         hospital_address_list = HospitalAddress.objects.get_hospital_address_list()
-
         return resp.serialize_response(hospital_address_list, results_name='hospital_address')
