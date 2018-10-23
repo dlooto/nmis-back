@@ -23,7 +23,7 @@ urlpatterns = [
     # 资产设备列表API接口
     path("assert-devices", views.AssertDeviceListView.as_view()),
 
-    # 医疗器械类型列表
+    # 医疗器械68码类型列表
     path('medical-device-six8-cates', views.MedicalDeviceSix8CateListView.as_view(), ),
 
     # 资产设备详情/修改/删除
