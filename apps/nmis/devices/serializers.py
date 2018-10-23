@@ -14,7 +14,7 @@ from base.serializers import BaseModelSerializer
 from nmis.documents.models import File
 from .models import OrderedDevice, SoftwareDevice, ContractDevice, AssertDevice, \
     MedicalDeviceSix8Cate, MaintenancePlan
-from nmis.devices.models import RepairOrder, FaultType, FaultSolution
+from nmis.devices.models import RepairOrder, FaultType, FaultSolution, RepairOrderRecord
 from nmis.hospitals.serializers import StaffSerializer, HospitalAddressSerializer
 
 
@@ -193,6 +193,35 @@ class RepairOrderSerializer(BaseModelSerializer):
         file_ids = [int(id_str) for id_str in file_ids_str]
         file_list = File.objects.filter(id__in=file_ids).all()
         return resp.serialize_data(file_list, srl_cls_name='FileSerializer') if file_list else []
+
+
+class RepairOrderRecordSerializer(BaseModelSerializer):
+    operator_name = serializers.SerializerMethodField('_get_operator_name')
+    operator_dept_name = serializers.SerializerMethodField('_get_operator_dept_name')
+    receiver_name = serializers.SerializerMethodField('_get_receiver_name')
+    receiver_dept_name = serializers.SerializerMethodField('_get_receiver_dept_name')
+
+    class Meta:
+        model = RepairOrderRecord
+        fields = (
+            'id', 'repair_order_id', 'order_no', 'operation', 'reason', 'operator_id', 'operator_name', 'operator_dept_name',
+            'receiver_id', 'receiver_name', 'receiver_dept_name', 'msg_content', 'created_time'
+        )
+
+    def _get_order_no(self, obj):
+        return obj.repair_order.order_no if obj.repair_order and obj.repair_order.order_no else ''
+
+    def _get_operator_name(self, obj):
+        return obj.operator.name if obj.operator else ''
+
+    def _get_operator_dept_name(self, obj):
+        return obj.operator.dept.name if obj.operator and obj.operator.dept else ''
+
+    def _get_receiver_name(self, obj):
+        return obj.receiver.name if obj.receiver else ''
+
+    def _get_receiver_dept_name(self, obj):
+        return obj.receiver.dept.name if obj.receiver and obj.receiver.dept else ''
 
 
 class MaintenancePlanSerializer(BaseModelSerializer):

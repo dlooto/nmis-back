@@ -42,3 +42,4 @@ vine==1.1.4
 djangorestframework-composed-permissions==0.2
 openpyxl==2.5.4
 django-bulk-update==2.2.0
+python-dateutil==2.7.3

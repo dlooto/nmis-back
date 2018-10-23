@@ -19,7 +19,7 @@ def gen_operation_record(sender, **kwargs):
     created = kwargs.get('created')
     creator = repair_order.creator
     if created:
-        msg_content = '%s(%s)%s%s%s' % (
+        msg_content = '%s(%s)%s%s(%s)' % (
             creator.name, creator.dept.name,
             dict(REPAIR_ORDER_OPERATION_CHOICES).get(REPAIR_ORDER_OPERATION_SUBMIT),
             '了报修单', repair_order.order_no,
@@ -31,7 +31,7 @@ def gen_operation_record(sender, **kwargs):
     if repair_order.status == REPAIR_ORDER_STATUS_DOING:
         operator = repair_order.modifier
         maintainer = repair_order.maintainer
-        msg_content = '%s(%s)%s%s%s%s(%s)' % (
+        msg_content = '%s(%s)%s(%s)%s%s(%s)' % (
             operator.name, operator.dept.name, '已分派了报修单', repair_order.order_no,
             '给', maintainer.name, maintainer.dept.name,
         )
@@ -41,7 +41,7 @@ def gen_operation_record(sender, **kwargs):
         )
     if repair_order.status == REPAIR_ORDER_STATUS_DONE:
         operator = repair_order.modifier
-        msg_content = '%s(%s)%s%s' % (
+        msg_content = '%s(%s)%s(%s)' % (
             operator.name, operator.dept.name, '已处理完报修单', repair_order.order_no,
         )
         RepairOrderRecord.objects.create(
@@ -50,7 +50,7 @@ def gen_operation_record(sender, **kwargs):
         )
     if repair_order.status == REPAIR_ORDER_STATUS_CLOSED and repair_order.comment_time:
         operator = repair_order.modifier
-        msg_content = '%s(%s)%s%s' % (
+        msg_content = '%s(%s)%s(%s)' % (
             operator.name, operator.dept.name, '评论了报修单', repair_order.order_no,
         )
         RepairOrderRecord.objects.create(

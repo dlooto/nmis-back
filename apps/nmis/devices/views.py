@@ -26,7 +26,7 @@ from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderDispatchForm, FaultSolutionCreateForm
 
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
-    FaultType, FaultSolution, MaintenancePlan
+    FaultType, FaultSolution, MaintenancePlan, RepairOrderRecord
 from nmis.documents.consts import FILE_CATE_CHOICES
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.hospitals.models import Staff, Department, HospitalAddress
@@ -121,8 +121,6 @@ class MedicalDeviceSix8CateListView(BaseAPIView):
 
 class AssertDeviceView(BaseAPIView):
 
-    permission_classes = (AllowAny, )
-
     def put(self, req, device_id):
         """
         修改资产设备
@@ -175,8 +173,6 @@ class AssertDeviceView(BaseAPIView):
 
 class AssertDeviceScrapView(BaseAPIView):
 
-    permission_classes = (AllowAny, )
-
     def put(self, req, device_id):
         """
         资产设备报废处理
@@ -193,8 +189,6 @@ class AssertDeviceScrapView(BaseAPIView):
 
 
 class AssertDeviceAllocateView(BaseAPIView):
-
-    permission_classes = (AllowAny, )
 
     @check_id('use_dept_id')
     @check_params_not_null(['assert_device_ids'])
@@ -218,8 +212,6 @@ class AssertDeviceAllocateView(BaseAPIView):
 
 
 class MaintenancePlanCreateView(BaseAPIView):
-
-    permission_classes = (AllowAny, )
 
     @check_id('executor_id')
     @check_params_not_null(['title', 'storage_place_ids', 'type', 'start_date',
@@ -252,8 +244,6 @@ class MaintenancePlanCreateView(BaseAPIView):
 
 class MaintenancePlanView(BaseAPIView):
 
-    permission_classes = (AllowAny, )
-
     def get(self, req, maintenance_plan_id):
         """
         设备维护计划详情
@@ -267,8 +257,6 @@ class MaintenancePlanView(BaseAPIView):
 
 
 class MaintenancePlanListView(BaseAPIView):
-
-    permission_classes = (AllowAny, )
 
     def get(self, req):
         """
@@ -417,8 +405,15 @@ class RepairOrderListView(BaseAPIView):
         return self.get_pages(queryset, srl_cls_name='RepairOrderSerializer', results_name='repair_orders')
 
 
+class RepairOrderRecordListView(BaseAPIView):
+
+    def get(self, req, order_id):
+        order = self.get_object_or_404(order_id, RepairOrder)
+        record_query_set = order.get_repair_order_records().order_by('-created_time')
+        return resp.serialize_response(record_query_set, results_name='repair_order_records', srl_cls_name='RepairOrderRecordSerializer')
+
+
 class FaultSolutionCreateView(BaseAPIView):
-    permission_classes = ()
 
     def post(self, req):
         file_list = list()
@@ -438,7 +433,6 @@ class FaultSolutionCreateView(BaseAPIView):
 
 
 class FaultSolutionView(BaseAPIView):
-    permission_classes = ()
 
     def get(self, req, fault_solution_id):
         fault_solution = self.get_object_or_404(fault_solution_id, FaultSolution)
@@ -455,7 +449,6 @@ class FaultSolutionView(BaseAPIView):
 
 
 class FaultSolutionListView(BaseAPIView):
-    permission_classes = ()
 
     def get(self, req):
         search = req.GET.get('search', '').strip()
@@ -470,7 +463,6 @@ class FaultSolutionListView(BaseAPIView):
 
 
 class OperationMaintenanceReportView(BaseAPIView):
-    permission_classes = ()
 
     def get(self, req):
         start_date = '%s %s' % (req.GET.get('start_date'), '00:00:00.000000')

@@ -562,38 +562,64 @@ class FaultSolutionCreateForm(BaseForm):
     def init_err_codes(self):
         self.ERR_CODES.update({
             'title_error': '标题为空或数据错误',
-            'desc_error': '描述为空或数据错误',
             'fault_type_error': '故障类型为空或数据错误',
             'solution_error': '解决方案为空或数据错误',
+            'desc_error': '详情描述为空或数据错误',
         })
 
     def is_valid(self):
+        if not self.check_title() or not self.check_fault_type() or not self.check_solution():
+            return False
         return True
 
     def check_title(self):
+        if not self.data.get('title', '').strip():
+            self.update_errors('title', 'title_error')
+            return False
         return True
 
     def check_desc(self):
+        if not self.data.get('desc', '').strip():
+            self.update_errors('desc', 'desc_error')
+            return False
         return True
 
     def check_fault_type(self):
+        fault_type_id = self.data.get('fault_type_id')
+        if not fault_type_id:
+            self.update_errors('fault_type_id', 'fault_type_error')
+        try:
+            int(fault_type_id)
+        except ValueError as e:
+            logger.exception(e)
+            self.update_errors('fault_type_id', 'fault_type_error')
+            return False
+        fault_type = FaultType.objects.get_obj_by_id(fault_type_id)
+        if not fault_type:
+            self.update_errors('fault_type_id', 'fault_type_error')
+            return False
+
         return True
 
     def check_solution(self):
+        if not self.data.get('solution', '').strip():
+            self.update_errors('solution', 'solution_error')
+            return False
         return True
 
     def save(self):
         title = self.data.get('title', '').strip()
-        desc = self.data.get('desc', '').strip()
         fault_type_id = self.data.get('fault_type_id')
         fault_type = FaultType.objects.get_obj_by_id(fault_type_id)
         solution = self.data.get('solution')
         update_data = dict()
+        if self.data.get('desc') is not None:
+            update_data['files'] = self.data.get('desc', '').strip()
         if self.files:
             files_ids_str = ','.join('%d' % file.id for file in self.files)
             update_data['files'] = files_ids_str
         return FaultSolution.objects.create_fault_solution(
-            self.user_profile, title, desc, fault_type, solution, **update_data
+            self.user_profile, title, fault_type, solution, **update_data
         )
 
 

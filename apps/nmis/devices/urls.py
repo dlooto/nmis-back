@@ -53,6 +53,7 @@ urlpatterns = [
     path('repair_orders/<int:order_id>', views.RepairOrderView.as_view(), ),
     # 报修单列表
     path('repair_orders', views.RepairOrderListView.as_view(), ),
+    path('repair_orders/<int:order_id>/repair_order_records', views.RepairOrderRecordListView.as_view(), ),
 
     # 创建故障/问题解决方案
     path('fault_solutions/create', views.FaultSolutionCreateView.as_view()),

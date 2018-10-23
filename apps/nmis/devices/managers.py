@@ -387,12 +387,11 @@ class MaintenancePlanManager(BaseManager):
 
 class FaultSolutionManager(BaseManager):
 
-    def create_fault_solution(self, creator, title, desc, fault_type, solution, *args, **kwargs):
+    def create_fault_solution(self, creator, title, fault_type, solution, *args, **kwargs):
         data = dict(
             {
                 'creator': creator,
                 'title': title,
-                'desc': desc,
                 'fault_type': fault_type,
                 'solution': solution,
             },

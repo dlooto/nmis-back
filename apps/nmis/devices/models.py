@@ -462,6 +462,9 @@ class RepairOrder(BaseModel):
         """
         pass
 
+    def get_repair_order_records(self):
+        return RepairOrderRecord.objects.filter(repair_order=self)
+
 
 class RepairOrderRecord(BaseModel):
     """
