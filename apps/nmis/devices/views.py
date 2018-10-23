@@ -5,11 +5,10 @@
 
 import logging
 
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q, Count, F
 
 from base import resp
-from base.authtoken import CustomTokenAuthentication
 from base.common.decorators import check_params_not_null, check_id
 from base.common.param_utils import get_id_list
 from base.views import BaseAPIView
@@ -37,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 class AssertDeviceListView(BaseAPIView):
 
-    permission_classes = (AllowAny, )
+    permission_classes = (IsAuthenticated, )
 
     def get(self, req):
         """
@@ -76,7 +75,7 @@ class AssertDeviceListView(BaseAPIView):
 
 class AssertDeviceCreateView(BaseAPIView):
 
-    permission_classes = (AllowAny, )
+    permission_classes = (IsAuthenticated, )
 
     @check_params_not_null(['assert_no', 'title', 'medical_device_cate_id', 'serial_no',
                             'type_spec', 'service_life', 'production_date',
@@ -105,7 +104,7 @@ class AssertDeviceCreateView(BaseAPIView):
 
 class MedicalDeviceSix8CateListView(BaseAPIView):
 
-    permission_classes = (AllowAny, )
+    permission_classes = (IsAuthenticated, )
 
     def get(self, req):
         """
@@ -120,6 +119,8 @@ class MedicalDeviceSix8CateListView(BaseAPIView):
 
 
 class AssertDeviceView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
 
     def put(self, req, device_id):
         """
@@ -172,6 +173,7 @@ class AssertDeviceView(BaseAPIView):
 
 
 class AssertDeviceScrapView(BaseAPIView):
+    permission_classes = (IsAuthenticated, )
 
     def put(self, req, device_id):
         """
@@ -189,6 +191,8 @@ class AssertDeviceScrapView(BaseAPIView):
 
 
 class AssertDeviceAllocateView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
 
     @check_id('use_dept_id')
     @check_params_not_null(['assert_device_ids'])
@@ -212,6 +216,9 @@ class AssertDeviceAllocateView(BaseAPIView):
 
 
 class MaintenancePlanCreateView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
+
 
     @check_id('executor_id')
     @check_params_not_null(['title', 'storage_place_ids', 'type', 'start_date',
@@ -244,6 +251,8 @@ class MaintenancePlanCreateView(BaseAPIView):
 
 class MaintenancePlanView(BaseAPIView):
 
+    permission_classes = (IsAuthenticated, )
+
     def get(self, req, maintenance_plan_id):
         """
         设备维护计划详情
@@ -257,6 +266,8 @@ class MaintenancePlanView(BaseAPIView):
 
 
 class MaintenancePlanListView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
 
     def get(self, req):
         """
@@ -285,7 +296,7 @@ class MaintenancePlanListView(BaseAPIView):
 
 class FaultTypeListView(BaseAPIView):
 
-    permission_classes = ()
+    permission_classes = (IsAuthenticated, )
 
     def get(self, req):
         queryset = FaultType.objects.all()
@@ -296,7 +307,7 @@ class RepairOrderCreateView(BaseAPIView):
     """
     提交报修单
     """
-    permission_classes = ()
+    permission_classes = (IsAuthenticated, )
 
     def post(self, req, ):
         form = RepairOrderCreateForm(req.user.get_profile(), req.data)
@@ -311,7 +322,7 @@ class RepairOrderCreateView(BaseAPIView):
 
 class RepairOrderView(BaseAPIView):
 
-    permission_classes = ()
+    permission_classes = (IsAuthenticated, )
 
     def get(self, req, order_id):
         repair_order = self.get_object_or_404(order_id, RepairOrder)
@@ -371,7 +382,8 @@ class RepairOrderView(BaseAPIView):
 
 
 class RepairOrderListView(BaseAPIView):
-    authentication_classes = (CustomTokenAuthentication,)
+
+    permission_classes = (IsAuthenticated, )
 
     def get_queryset(self):
         return RepairOrder.objects.all()
@@ -407,6 +419,8 @@ class RepairOrderListView(BaseAPIView):
 
 class RepairOrderRecordListView(BaseAPIView):
 
+    permission_classes = (IsAuthenticated, )
+
     def get(self, req, order_id):
         order = self.get_object_or_404(order_id, RepairOrder)
         record_query_set = order.get_repair_order_records().order_by('-created_time')
@@ -414,6 +428,8 @@ class RepairOrderRecordListView(BaseAPIView):
 
 
 class FaultSolutionCreateView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
 
     def post(self, req):
         file_list = list()
@@ -434,6 +450,8 @@ class FaultSolutionCreateView(BaseAPIView):
 
 class FaultSolutionView(BaseAPIView):
 
+    permission_classes = (IsAuthenticated, )
+
     def get(self, req, fault_solution_id):
         fault_solution = self.get_object_or_404(fault_solution_id, FaultSolution)
         queryset = FaultSolutionSerializer.setup_eager_loading(
@@ -450,6 +468,8 @@ class FaultSolutionView(BaseAPIView):
 
 class FaultSolutionListView(BaseAPIView):
 
+    permission_classes = (IsAuthenticated, )
+
     def get(self, req):
         search = req.GET.get('search', '').strip()
 
@@ -463,6 +483,8 @@ class FaultSolutionListView(BaseAPIView):
 
 
 class OperationMaintenanceReportView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
 
     def get(self, req):
         start_date = '%s %s' % (req.GET.get('start_date'), '00:00:00.000000')

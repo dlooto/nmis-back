@@ -5,6 +5,8 @@
 
 import logging
 
+from rest_framework.permissions import IsAuthenticated
+
 from base import resp
 from base.views import BaseAPIView
 from nmis.documents.consts import DOC_BASE_DIR
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class UploadFileView(BaseAPIView):
 
-    permission_classes = ()
+    permission_classes = (IsAuthenticated, )
 
     def post(self, req):
         """

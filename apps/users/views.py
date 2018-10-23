@@ -6,12 +6,10 @@
 """
 Users view
 """
-import copy
 import logging
 
 from django.db import transaction
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from base import codes
 from base import resp
@@ -23,15 +21,16 @@ from django.contrib.auth import logout as system_logout
 
 from nmis.hospitals.models import Role, Department, UserRoleShip
 from nmis.hospitals.serializers import SimpleRoleSerializer, SimplePermissionSerializer
-from users.forms import UserSignupForm, UserLoginForm, CheckEmailForm, UploadFileForm
+from users.forms import UserSignupForm, UserLoginForm, CheckEmailForm
 from users.models import User, ResetRecord
-from utils.eggs import get_email_host_url, gen_uuid1
-from utils.files import upload_file
+from utils.eggs import get_email_host_url
 
 logs = logging.getLogger(__name__)
 
 
 class RefreshAuthtokenView(BaseAPIView):
+    permission_classes = (IsAuthenticated, )
+
     """
     使用旧的authtoken刷新authtoken.
     """
@@ -51,8 +50,7 @@ class VerifyAuthtokenView(BaseAPIView):
     """
     验证authtoken. 判断是否有效: token合法性, 是否过期(根据created属性)
     """
-    authentication_classes = (TokenAuthentication, )
-    # permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticated, )
 
     @check_not_null('token')
     def post(self, req):
@@ -111,6 +109,8 @@ class LoginView(BaseAPIView):
 
 
 class PasswordChangeView(BaseAPIView):
+    permission_classes = (IsAuthenticated, )
+
     """ 登录用户修改密码 """
 
     def post(self,req):
@@ -294,7 +294,7 @@ class AssignRolesDeptDomains(BaseAPIView):
     """
     给用户分配角色及权限域
     """
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticated, )
 
     @check_params_not_null(['role_ids', 'dept_domain_ids', 'user_ids'])
     def post(self, req):

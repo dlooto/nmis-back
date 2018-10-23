@@ -293,7 +293,7 @@ class RepairOrderCreateForm(BaseForm):
             logger.exception(e)
             self.update_errors('applicant_id', 'applicant_error')
             return False
-        applicant = Staff.objects.get_obj_by_id(applicant_id)
+        applicant = Staff.objects.get_by_id(applicant_id)
         if not applicant:
             self.update_errors('applicant_id', 'applicant_error')
             return False
@@ -310,7 +310,7 @@ class RepairOrderCreateForm(BaseForm):
             logger.exception(e)
             self.update_errors('fault_type_id', 'fault_type_error')
             return False
-        fault_type = FaultType.objects.get_obj_by_id(fault_type_id)
+        fault_type = FaultType.objects.get_cached(fault_type_id)
         if not fault_type:
             self.update_errors('fault_type_id', 'fault_type_error')
             return False
@@ -363,14 +363,14 @@ class RepairOrderDispatchForm(BaseForm):
             logger.exception(e)
             self.update_errors('maintainer_id', 'maintainer_error')
             return False
-        maintainer = Staff.objects.get_obj_by_id(maintainer_id)
+        maintainer = Staff.objects.get_by_id(maintainer_id)
         if not maintainer:
             self.update_errors('maintainer_id', 'maintainer_error')
             return False
         return True
 
     def save(self):
-        maintainer = Staff.objects.get_obj_by_id(self.data.get('maintainer_id'))
+        maintainer = Staff.objects.get_by_id(self.data.get('maintainer_id'))
         priority = self.data.get('priority')
         return RepairOrder.objects.dispatch_repair_order(self.repair_order, self.user_profile, maintainer, priority)
 
@@ -594,7 +594,7 @@ class FaultSolutionCreateForm(BaseForm):
             logger.exception(e)
             self.update_errors('fault_type_id', 'fault_type_error')
             return False
-        fault_type = FaultType.objects.get_obj_by_id(fault_type_id)
+        fault_type = FaultType.objects.get_cached(fault_type_id)
         if not fault_type:
             self.update_errors('fault_type_id', 'fault_type_error')
             return False
@@ -610,7 +610,7 @@ class FaultSolutionCreateForm(BaseForm):
     def save(self):
         title = self.data.get('title', '').strip()
         fault_type_id = self.data.get('fault_type_id')
-        fault_type = FaultType.objects.get_obj_by_id(fault_type_id)
+        fault_type = FaultType.objects.get_cached(fault_type_id)
         solution = self.data.get('solution')
         update_data = dict()
         if self.data.get('desc') is not None:

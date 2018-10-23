@@ -13,8 +13,7 @@ from base.common.decorators import check_params_not_all_null, check_params_not_n
 from base.common.param_utils import get_id_list
 from django.conf import settings
 from django.db import transaction
-from rest_framework.permissions import AllowAny
-from base.common.permissions import CustomerAllPermission, CustomerAnyPermission
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from nmis.devices.models import RepairOrder
 from nmis.hospitals.serializers import StaffSerializer, RoleSerializer, \
     DepartmentStaffsCountSerializer, StaffWithRoleSerializer
@@ -28,8 +27,7 @@ from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
     DepartmentBatchUploadForm, RoleCreateForm, RoleUpdateForm
 from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission, \
     ProjectDispatcherPermission
-from nmis.hospitals.models import Hospital, Department, Staff, Group, Role, UserRoleShip, \
-    HospitalAddress
+from nmis.hospitals.models import Hospital, Department, Staff, Group, Role, HospitalAddress
 from .forms import (
     HospitalSignupForm,
     DepartmentUpdateFrom,
@@ -84,6 +82,7 @@ class HospitalView(BaseAPIView):
     """
     单个企业的get/update/delete操作
     """
+    permission_classes = (IsAuthenticated, )
 
     def get(self, req, hid):
         organ = self.get_object_or_404(hid, Hospital)
@@ -113,7 +112,7 @@ class HospitalView(BaseAPIView):
 
 class HospitalGlobalDataView(BaseAPIView):
 
-    permission_classes = [HospitalStaffPermission, ]
+    permission_classes = [IsAuthenticated, HospitalStaffPermission, ]
 
     def get(self, req, hid):
         hospital = self.get_object_or_404(hid, Hospital)
@@ -168,7 +167,7 @@ class StaffCreateView(BaseAPIView):
     """
     添加员工, 同时会为员工注册账号
     """
-    permission_classes = (IsHospitalAdmin, )
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
 
     @check_params_not_null(['username', 'password', 'staff_name', 'dept_id'])
     def post(self, req, hid):
@@ -203,7 +202,7 @@ class StaffsPermChangeView(BaseAPIView):
     """
     同时修改多个职员的权限为新的一种权限
     """
-    permission_classes = (IsHospitalAdmin, )
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
 
     @check_params_not_null(['perm_group_id', 'staffs'])
     def put(self, req, hid):
@@ -236,7 +235,7 @@ class StaffView(BaseAPIView):
     """
     单个员工删、查、改操作
     """
-    permission_classes = (IsHospitalAdmin, )
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
 
     def get(self, req, hid, staff_id):
         organ = self.get_object_or_404(hid, Hospital)
@@ -298,7 +297,7 @@ class StaffView(BaseAPIView):
 
 class StaffListView(BaseAPIView):
 
-    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
     # permission_codes = ('GNS', 'GPA', 'GAD')
     # permission_classes = (CustomerAnyPermission,)
 
@@ -317,7 +316,7 @@ class StaffListView(BaseAPIView):
 
 
 class ChunkStaffListView(BaseAPIView):
-    permission_classes = (IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
 
     def get(self, req, hid):
         """
@@ -335,7 +334,7 @@ class ChunkStaffListView(BaseAPIView):
 
 class StaffBatchUploadView(BaseAPIView):
 
-    permission_classes = (IsHospitalAdmin, )
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
 
     @check_params_not_null(['staff_excel_file'])
     def post(self, req, hid):
@@ -387,7 +386,7 @@ class StaffBatchUploadView(BaseAPIView):
 
 class DepartmentCreateView(BaseAPIView):
 
-    permission_classes = (IsHospitalAdmin, )
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
 
     @check_params_not_null(['name'])
     def post(self, req, hid):
@@ -416,7 +415,7 @@ class DepartmentCreateView(BaseAPIView):
 
 class DepartmentListView(BaseAPIView):
 
-    permission_classes = (IsHospitalAdmin, )
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
 
     def get(self, req, hid):
         """
@@ -435,7 +434,7 @@ class DepartmentView(BaseAPIView):
     """
     单个科室/部门的get/update/delete
     """
-    permission_classes = (IsHospitalAdmin, )
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
 
     def get(self, req, hid, dept_id):
         """
@@ -496,7 +495,7 @@ class DepartmentView(BaseAPIView):
 
 class DepartmentBatchUploadView(BaseAPIView):
 
-    permission_classes = (IsHospitalAdmin, )
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
 
     @check_params_not_null(['dept_excel_file'])
     def post(self, req, hid):
@@ -545,7 +544,7 @@ class DepartmentBatchUploadView(BaseAPIView):
 
 class GroupListView(BaseAPIView):
 
-    permission_classes = (IsHospitalAdmin, )
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
 
     def get(self, req, hid):
         """
@@ -559,6 +558,8 @@ class GroupListView(BaseAPIView):
 
 class RoleCreateView(BaseAPIView):
 
+    permission_classes = (IsAuthenticated, )
+
     def post(self, req):
 
         form = RoleCreateForm(req.data)
@@ -571,6 +572,8 @@ class RoleCreateView(BaseAPIView):
 
 
 class RoleView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
 
     def get(self, req, role_id):
         role = self.get_object_or_404(role_id, Role)
@@ -596,7 +599,8 @@ class RoleView(BaseAPIView):
 
 
 class RoleListView(BaseAPIView):
-    permission_classes = (IsHospitalAdmin, )
+
+    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
 
     def get(self, req):
         roles = Role.objects.all()
@@ -606,7 +610,7 @@ class RoleListView(BaseAPIView):
 
 class HospitalAddressListView(BaseAPIView):
 
-    permission_classes = (AllowAny, )
+    permission_classes = (IsAuthenticated, )
 
     def get(self, req, hid):
         """
