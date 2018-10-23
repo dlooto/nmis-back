@@ -31,6 +31,7 @@ from nmis.documents.consts import FILE_CATE_CHOICES
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
+from utils import times
 
 logger = logging.getLogger(__name__)
 
@@ -506,24 +507,42 @@ class FaultSolutionListView(BaseAPIView):
 
 
 class OperationMaintenanceReportView(BaseAPIView):
+    """
+    维修相关统计报表
+    """
 
     permission_classes = (IsAuthenticated, )
+    queryset = RepairOrder.objects.all()
 
     def get(self, req):
-        start_date = '%s %s' % (req.GET.get('start_date'), '00:00:00.000000')
-        end_date = '%s %s' % (req.GET.get('end_date'), '23:59:59.999999')
-        queryset = RepairOrder.objects \
-            .filter(created_time__range=(start_date, end_date)) \
+
+        # 校验日期格式
+        if not times.is_valid_date(req.GET.get('start_date', '')) or not times.is_valid_date(req.GET.get('expired_date', '')):
+            return resp.form_err({'start_date or expired_date': '开始日期/截止日期为空或数据错误'})
+
+        start_date = '%s %s' % (req.GET.get('start_date', times.now().strftime('%Y-01-01')), '00:00:00.000000')
+        expired_date = '%s %s' % (req.GET.get('end_date', times.now().strftime('%Y-12-31')), '23:59:59.999999')
+
+        # 已处理维修总数、维修申请总数、维修完成率
+        rp_order_nums_status_queryset = self.queryset.filter(created_time__range=(start_date, expired_date)) \
             .values('status') \
             .annotate(nums=Count('id', distinct=True))
 
-        queryset2 = RepairOrder.objects \
-            .filter(created_time__range=(start_date, end_date)) \
+        # 最高故障类型
+        rp_order_nums_first_fault_type_queryset = self.queryset.filter(created_time__range=(start_date, expired_date)) \
             .annotate(fault_type_title=F('fault_type__title')) \
             .values('fault_type_title') \
-            .annotate(nums=Count('id', distinct=True))
+            .annotate(nums=Count('id', distinct=True)).order_by('-nums')[0:1]
+
+        # 科室故障申请Top3
+        rp_order_nums_top_dept_queryset = self.queryset.filter(created_time__range=(start_date, expired_date))\
+            .annotate(dept=F('applicant__dept__name'))\
+            .values('dept')\
+            .annotate(nums=Count('id', distinct=True)).order_by('-nums')[0:3]
+
         data = {
-            'opt_report_status': list(queryset),
-            'opt_report_fault_type': list(queryset2),
+            'rp_order_nums_status': list(rp_order_nums_status_queryset),
+            'rp_order_nums_first_fault_type': list(rp_order_nums_first_fault_type_queryset),
+            'rp_order_nums_top_dept': list(rp_order_nums_top_dept_queryset),
         }
         return resp.ok('ok', data)

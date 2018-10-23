@@ -1782,14 +1782,14 @@ class DeleteFileView(BaseAPIView):
 class ProjectStatisticReport(BaseAPIView):
     permission_classes = (IsAuthenticated, )
 
-    queryset = ProjectPlan.objects.filter()
+    queryset = ProjectPlan.objects.all()
 
     def get(self, req):
         # status=PRO_STATUS_DONE,
         # extra(select={'month': 'extract(month from created_time)'})
 
         # 校验日期格式
-        if not times.is_valid_date(req.GET.get('start_date', '')) and not times.is_valid_date(req.GET.get('expired_date', '')):
+        if not times.is_valid_date(req.GET.get('start_date', '')) or not times.is_valid_date(req.GET.get('expired_date', '')):
             return resp.form_err({'start_date or expired_date': '开始日期/截止日期为空或数据错误'})
 
         start_date = '%s %s' % (req.GET.get('start_date', times.now().strftime('%Y-01-01')), '00:00:00.000000')
@@ -1814,27 +1814,27 @@ class ProjectStatisticReport(BaseAPIView):
         # 按部门统计项目总数和总金额
 
         rp_dept_queryset = self.queryset.filter(**filter_dict)\
-            .annotate(dept=F('related_dept')).values('dept').annotate(**ann_aggregate_dict)
+            .annotate(dept=F('related_dept__name')).values('dept').annotate(**ann_aggregate_dict)
 
-        # 按状态统计项目总数和总金额
+        # 按状态统计项目总数
         filter_dict = {
             'created_time__range': (start_date, end_date)
         }
 
         rp_pro_status_queryset = self.queryset.filter(**filter_dict).values('status')\
-            .annotate(sum_amount=Sum('pre_amount'), nums=Count('id')).distinct()
+            .annotate(nums=Count('id')).distinct()
 
         # 重大项目数据top10
-        rp_pro_amount_top10 = self.queryset.annotate(
+        rp_pro_amount_top_queryset = self.queryset.annotate(
             dept=F('related_dept__name'), amount=F('pre_amount')
         ).values(
-            'title', 'status', 'dept', 'amount'
+            'id', 'title', 'creator', 'performer', 'dept', 'amount', 'status',
         ).order_by('-pre_amount')[:10]
 
         data = {
             'rp_pro_amount_nums_month': list(rp_month_query_set),
             'rp_pro_amount_nums_dept': list(rp_dept_queryset),
             'rp_pro_amount_nums_status': list(rp_pro_status_queryset),
-            'rp_pro_amount_top10': list(rp_pro_amount_top10),
+            'rp_pro_amount_top': list(rp_pro_amount_top_queryset),
         }
         return resp.ok('ok', data)

@@ -186,6 +186,6 @@ urlpatterns = [
 
 
     # ---项目统计报表----------------
-    path('report', views.ProjectStatisticReport.as_view()),
+    path('reports/hosp_pro_report', views.ProjectStatisticReport.as_view()),
 
 ]

@@ -65,6 +65,6 @@ urlpatterns = [
     # 故障/问题解决方案列表
     path('fault_solutions', views.FaultSolutionListView.as_view(), ),
 
-    path('report', views.OperationMaintenanceReportView.as_view(), ),
+    path('reports/hosp_dev_report', views.OperationMaintenanceReportView.as_view(), ),
 
 ]
