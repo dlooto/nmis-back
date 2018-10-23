@@ -44,6 +44,9 @@ urlpatterns = [
     # 设备维护计划列表
     path('maintenance_plans', views.MaintenancePlanListView.as_view(), ),
 
+    # 执行资产设备维护计划
+    path('maintenance_plan/<int:maintenance_plan_id>/execute', views.MaintenancePlanExecuteView.as_view(), ),
+
     # 故障类型列表
     path('fault_types', views.FaultTypeListView.as_view()),
 
