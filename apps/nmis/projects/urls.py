@@ -185,7 +185,7 @@ urlpatterns = [
     path('single-del-file/<int:doc_id>', views.DeleteFileView.as_view()),
 
 
-    # ------------------报表----------------
-    path('report', views.ProjectReport.as_view()),
+    # ---项目统计报表----------------
+    path('report', views.ProjectStatisticReport.as_view()),
 
 ]

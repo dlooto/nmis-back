@@ -297,7 +297,7 @@ class MaintenancePlanListView(BaseAPIView):
 
 class MaintenancePlanExecuteView(BaseAPIView):
 
-    permission_classes = (AllowAny, )
+    permission_classes = (IsAuthenticated, )
 
     def put(self, req, maintenance_plan_id):
         """

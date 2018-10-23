@@ -1779,40 +1779,62 @@ class DeleteFileView(BaseAPIView):
         return resp.failed('系统找不到指定的路径')
 
 
-class ProjectReport(BaseAPIView):
+class ProjectStatisticReport(BaseAPIView):
     permission_classes = (IsAuthenticated, )
+
+    queryset = ProjectPlan.objects.filter()
 
     def get(self, req):
         # status=PRO_STATUS_DONE,
         # extra(select={'month': 'extract(month from created_time)'})
 
         # 校验日期格式
-        if not times.is_valid_date(req.GET.get('start_date', '')) and not times.is_valid_date(req.GET.get('end_date', '')):
-            return resp.failed('请求数据异常')
+        if not times.is_valid_date(req.GET.get('start_date', '')) and not times.is_valid_date(req.GET.get('expired_date', '')):
+            return resp.form_err({'start_date or expired_date': '开始日期/截止日期为空或数据错误'})
+
         start_date = '%s %s' % (req.GET.get('start_date', times.now().strftime('%Y-01-01')), '00:00:00.000000')
         end_date = '%s %s' % (req.GET.get('end_date', times.now().strftime('%Y-12-31')), '23:59:59.999999')
-        logger.info(start_date)
-        logger.info(end_date)
 
-        queryset = ProjectPlan.objects\
-            .filter(created_time__range=(start_date, end_date))\
-            .annotate(year=ExtractYear('created_time'), month=ExtractMonth('created_time')) \
-            .values('year', 'month')\
-            .annotate(sum_amount=Sum('pre_amount', distinct=True), nums=Count('id', distinct=True))
+        filter_dict = {
+            'status__in': [PRO_STATUS_DONE],
+            'created_time__range': (start_date, end_date)
+        }
+        ann_aggregate_dict = {
+            'sum_amount': Sum('pre_amount', distinct=True),
+            'nums': Count('id', distinct=True)
+        }
+        ann_extra_dict = {
+            'year': ExtractYear('created_time'),
+            'month': ExtractMonth('created_time')
+        }
+        # 按年月统计项目总数和总金额
+        rp_month_query_set = self.queryset.filter(**filter_dict).annotate(**ann_extra_dict)\
+            .values('year', 'month').annotate(**ann_aggregate_dict)
 
-        queryset2 = ProjectPlan.objects\
-            .filter(created_time__range=(start_date, end_date))\
-            .annotate(dept=F('related_dept'))\
-            .values('dept') \
-            .annotate(sum_amount=Sum('pre_amount', distinct=True), nums=Count('id', distinct=True))
+        # 按部门统计项目总数和总金额
 
-        queryset3 = ProjectPlan.objects\
-            .filter(created_time__range=(start_date, end_date))\
-            .values('status') \
-            .annotate(sum_amount=Sum('pre_amount', distinct=True), nums=Count('id', distinct=True))
+        rp_dept_queryset = self.queryset.filter(**filter_dict)\
+            .annotate(dept=F('related_dept')).values('dept').annotate(**ann_aggregate_dict)
+
+        # 按状态统计项目总数和总金额
+        filter_dict = {
+            'created_time__range': (start_date, end_date)
+        }
+
+        rp_pro_status_queryset = self.queryset.filter(**filter_dict).values('status')\
+            .annotate(sum_amount=Sum('pre_amount'), nums=Count('id')).distinct()
+
+        # 重大项目数据top10
+        rp_pro_amount_top10 = self.queryset.annotate(
+            dept=F('related_dept__name'), amount=F('pre_amount')
+        ).values(
+            'title', 'status', 'dept', 'amount'
+        ).order_by('-pre_amount')[:10]
+
         data = {
-            'project_report_month': list(queryset),
-            'project_report_dept': list(queryset2),
-            'project__report_status': list(queryset3),
+            'rp_pro_amount_nums_month': list(rp_month_query_set),
+            'rp_pro_amount_nums_dept': list(rp_dept_queryset),
+            'rp_pro_amount_nums_status': list(rp_pro_status_queryset),
+            'rp_pro_amount_top10': list(rp_pro_amount_top10),
         }
         return resp.ok('ok', data)
