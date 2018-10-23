@@ -23,6 +23,13 @@ class BaseManager(Manager):
         pass
 
     def get_by_id(self, obj_id):
+        """
+        从数据库获取对象数据
+        注: 不做对象缓存
+
+        :param obj_id: 对象id, 一般为int型
+        :return:
+        """
         if not obj_id:
             return None
 
@@ -35,12 +42,10 @@ class BaseManager(Manager):
             return None
 
     def get_cached(self, obj_id):
-        """通过对象id, 获取单个的缓存数据对象"""
-
-        if not obj_id:
-            return None
-
-        obj = cache.get(self.make_key(obj_id))
+        """
+        通过对象id, 获取单个的缓存数据对象. 若缓存中没有该数据, 则从数据库获取对象并进行缓存.
+        """
+        obj = self.get_cached_only(obj_id)
         if not obj:
             try:
                 obj = self.get(id=int(obj_id))
@@ -53,6 +58,12 @@ class BaseManager(Manager):
                 return None
 
         return obj
+
+    def get_cached_only(self, obj_id):
+        """
+        通过对象id获取单个的缓存数据对象(仅从缓存中获取对象)
+        """
+        return cache.get(self.make_key(obj_id)) if obj_id else None
 
     def get_cached_many(self, obj_id_list):
         """
@@ -95,18 +106,18 @@ class BaseManager(Manager):
         else:
             cache.delete(type(objs).objects.make_key(objs.id))
 
-    def get_obj_by_id(self, obj_id, use_cache=True):
-        """
-        :param obj_id: 对象id
-        :param use_cache: 是否优先从缓存中获取数据, 默认优先从缓存中取
-        :return: obj
-        """
-        if use_cache:
-            obj = self.get_cached(obj_id)
-        else:
-            obj = self.get_by_id(obj_id)
-        if obj:
-            return obj
+    # def get_obj_by_id(self, obj_id, use_cache=True):
+    #     """
+    #     :param obj_id: 对象id
+    #     :param use_cache: 是否优先从缓存中获取数据, 默认优先从缓存中取
+    #     :return: obj
+    #     """
+    #     if use_cache:
+    #         obj = self.get_cached(obj_id)
+    #     else:
+    #         obj = self.get_by_id(obj_id)
+    #     if obj:
+    #         return obj
 
 
 class BaseModel(models.Model):
