@@ -286,6 +286,28 @@ class RepairOrderManager(BaseManager):
         order_no = "%s%s%s" % (prefix, timestamp, seq_str)
         return order_no
 
+    def get_my_create_repair_order(self, staff):
+        """
+        获取当前登录用户申请/创建的资产设备保修单
+        """
+        return self.filter(creator=staff)
+
+    def get_repair_order_in_repair(self, staff):
+        """
+        获取当前登录用户申请的资产设备保修单处于维修中的列表
+        """
+        return self.filter(maintainer=staff, status=REPAIR_ORDER_STATUS_DOING)
+
+    def get_completed_repair_order(self, staff):
+        """
+        获取当前登录用户已完成的保修单
+        """
+        from django.db.models import Q
+        query_set = self.filter(
+            Q(status=REPAIR_ORDER_STATUS_DONE) | Q(status=REPAIR_ORDER_STATUS_CLOSED)
+        ).filter(creator=staff)
+        return query_set
+
 
 class MaintenancePlanManager(BaseManager):
 
