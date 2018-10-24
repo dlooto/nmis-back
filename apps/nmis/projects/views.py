@@ -1826,9 +1826,9 @@ class ProjectStatisticReport(BaseAPIView):
 
         # 重大项目数据top10
         rp_pro_amount_top_queryset = self.queryset.annotate(
-            dept=F('related_dept__name'), amount=F('pre_amount')
+            F('creator__name').strftime('%Y-%m-%d %H%M%S'), dept_name=F('related_dept__name'), amount=F('pre_amount'),  performer_name=F('performer__name')
         ).values(
-            'id', 'title', 'creator', 'performer', 'dept', 'amount', 'status',
+            'id', 'title', 'creator_name', 'dept_name', 'performer_name', 'created_time', 'amount', 'status',
         ).order_by('-pre_amount')[:10]
 
         data = {
@@ -1837,4 +1837,5 @@ class ProjectStatisticReport(BaseAPIView):
             'rp_pro_amount_nums_status': list(rp_pro_status_queryset),
             'rp_pro_amount_top': list(rp_pro_amount_top_queryset),
         }
+        logger.info(rp_pro_amount_top_queryset)
         return resp.ok('ok', data)
