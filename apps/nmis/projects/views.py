@@ -8,8 +8,8 @@ import json
 import logging
 import os
 
-from django.db.models import Count, Sum, F
-from django.db.models.functions import ExtractMonth, ExtractYear
+from django.db.models import Count, Sum, F, DateTimeField, CharField
+from django.db.models.functions import ExtractMonth, ExtractYear, Cast, TruncSecond
 from django.http import HttpResponseRedirect
 from django.views.generic import RedirectView
 from rest_framework.permissions import IsAuthenticated
@@ -1785,8 +1785,6 @@ class ProjectStatisticReport(BaseAPIView):
     queryset = ProjectPlan.objects.all()
 
     def get(self, req):
-        # status=PRO_STATUS_DONE,
-        # extra(select={'month': 'extract(month from created_time)'})
 
         # 校验日期格式
         if not times.is_valid_date(req.GET.get('start_date', '')) or not times.is_valid_date(req.GET.get('expired_date', '')):
@@ -1807,16 +1805,16 @@ class ProjectStatisticReport(BaseAPIView):
             'year': ExtractYear('created_time'),
             'month': ExtractMonth('created_time')
         }
-        # 按年月统计项目总数和总金额
+        """ 1 按年月统计项目总数和总金额 """
         rp_month_query_set = self.queryset.filter(**filter_dict).annotate(**ann_extra_dict)\
             .values('year', 'month').annotate(**ann_aggregate_dict)
 
-        # 按部门统计项目总数和总金额
+        """ 2 按部门统计项目总数和总金额 """
 
         rp_dept_queryset = self.queryset.filter(**filter_dict)\
             .annotate(dept=F('related_dept__name')).values('dept').annotate(**ann_aggregate_dict)
 
-        # 按状态统计项目总数
+        """ 3 按状态统计项目总数 """
         filter_dict = {
             'created_time__range': (start_date, end_date)
         }
@@ -1824,12 +1822,15 @@ class ProjectStatisticReport(BaseAPIView):
         rp_pro_status_queryset = self.queryset.filter(**filter_dict).values('status')\
             .annotate(nums=Count('id')).distinct()
 
-        # 重大项目数据top10
+        """ 4 重大项目数据top10 """
+        #
         rp_pro_amount_top_queryset = self.queryset.annotate(
-            F('creator__name').strftime('%Y-%m-%d %H%M%S'), dept_name=F('related_dept__name'), amount=F('pre_amount'),  performer_name=F('performer__name')
+            created_date=Cast(TruncSecond('created_time', DateTimeField()), CharField()),
+            creator_name=F('creator__name'), dept_name=F('related_dept__name'),
+            amount=F('pre_amount'),  performer_name=F('performer__name')
         ).values(
-            'id', 'title', 'creator_name', 'dept_name', 'performer_name', 'created_time', 'amount', 'status',
-        ).order_by('-pre_amount')[:10]
+            'id', 'title', 'creator_name', 'dept_name', 'performer_name', 'amount', 'status', 'created_date'
+        ).order_by('-amount')[:10]
 
         data = {
             'rp_pro_amount_nums_month': list(rp_month_query_set),
