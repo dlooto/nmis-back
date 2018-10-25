@@ -196,6 +196,7 @@ class RepairOrderSerializer(BaseModelSerializer):
 
 
 class RepairOrderRecordSerializer(BaseModelSerializer):
+    order_no = serializers.SerializerMethodField('_get_order_no')
     operator_name = serializers.SerializerMethodField('_get_operator_name')
     operator_dept_name = serializers.SerializerMethodField('_get_operator_dept_name')
     receiver_name = serializers.SerializerMethodField('_get_receiver_name')
