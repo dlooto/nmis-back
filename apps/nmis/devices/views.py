@@ -20,7 +20,7 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATU
     MY_MAINTAIN_ORDERS, ALL_ORDERS, \
     TO_DISPATCH_ORDERS, REPAIR_ORDER_STATUS_DOING, REPAIR_ORDER_STATUS_DONE, \
     MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES, \
-    MAINTENANCE_PLAN_STATUS_DONE
+    MAINTENANCE_PLAN_STATUS_DONE, UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, RepairOrderCommentForm, \
     RepairOrderDispatchForm, FaultSolutionCreateForm
@@ -29,6 +29,7 @@ from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder
     FaultType, FaultSolution, MaintenancePlan, RepairOrderRecord
 from nmis.documents.consts import FILE_CATE_CHOICES, DOC_UPLOAD_BASE_DIR, DOC_DOWNLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
+from nmis.hospitals.consts import ARCHIVE
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
 from utils import times
@@ -193,6 +194,71 @@ class AssertDeviceScrapView(BaseAPIView):
         return resp.serialize_response(assert_device, results_name='assert_device')
 
 
+class AssertDeviceBatchUploadView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
+
+    def post(self, req):
+        """
+        资产设备的批量导入
+        """
+        import os
+        from openpyxl import load_workbook
+
+        self.check_object_permissions(req, req.user.get_profile().organ)
+        file_obj = req.FILES.get('file')
+        if not file_obj:
+            return resp.failed('请选择上传的Excel表格')
+
+        if not file_obj.content_type == ARCHIVE['.xlsx']:
+            return resp.failed('请上传Excel表格')
+        success, result = ExcelBasedOXL.open_excel(file_obj)
+        if not success:
+            return resp.failed(result)
+        head_dict = UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT
+        is_success, ret = ExcelBasedOXL.read_excel(result, head_dict)
+        if not is_success:
+            return resp.failed(ret)
+        logger.info(ret)
+
+        # wb = load_workbook(file_obj)
+        #
+        # # 获取sheet
+        # sheet = wb[wb.sheetnames[0]]
+        # max_row = sheet.max_row
+        # max_column = sheet.max_column
+        #
+        # # 获取头部信息
+        # head_list = []
+        # # for row in range(max_row):
+        # #     for column in range(max_column):
+        # #         logger.info(sheet.cell(row+1, column+1).value)
+        # logger.info(type(sheet.cell(row=2, column=10).value))
+        #
+        # for cell in list(sheet.rows)[0]:
+        #     head_list.append(cell.value)
+        # logger.info(head_list)
+        # head_dict = UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT
+        # if not len(head_list) == len(head_dict):
+        #     return resp.failed('传入表格头部长度与系统定义字段不一致，请按标准表格上传')
+        #
+        # for key, value in head_dict.items():
+        #         if value not in head_list:
+        #             return resp.failed('传入表格头部与系统定义不一致，请按标准表格上传')
+        # import datetime
+        # # 获取表格内容
+        # content_list = []
+        # for i in range(2, max_row+1):
+        #     row_dict = {}
+        #     for j in range(0, max_column):
+        #         # if sheet.cell(i, j+1).is_date:
+        #         #     row_dict[list(head_dict.keys())[j]] = datetime.datetime(**sheet.cell(i, j+1).value)
+        #         row_dict[list(head_dict.keys())[j]] = sheet.cell(i, j+1).value
+        #     content_list.append(row_dict)
+        # logger.info(content_list)
+        return resp.ok('')
+
+
 class AssertDeviceAllocateView(BaseAPIView):
 
     permission_classes = (IsAuthenticated, )
@@ -221,7 +287,6 @@ class AssertDeviceAllocateView(BaseAPIView):
 class MaintenancePlanCreateView(BaseAPIView):
 
     permission_classes = (IsAuthenticated, )
-
 
     @check_id('executor_id')
     @check_params_not_null(['title', 'storage_place_ids', 'type', 'start_date',

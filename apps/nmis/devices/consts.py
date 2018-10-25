@@ -171,3 +171,24 @@ MAINTENANCE_PLAN_NO_PREFIX = 'HP'
 MAINTENANCE_PLAN_NO_SEQ_CODE = 'SEQ-MNPL-NO'
 # 维护单自增序列标识支持的最大位数
 MAINTENANCE_PLAN_NO_SEQ_DIGITS = 3
+
+
+# 上传的资产设备excel模板文件表头字典
+UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT = {
+    'assert_no':                    '资产编号',
+    'title':                        '资产名称',
+    'medical_device_cate':          '医疗设备分类',
+    'serial_no':                    '资产序列号',
+    'type_spec':                    '规格型号',
+    'service_life':                 '预计使用年限',
+    'performer':                    '资产负责人',
+    'responsible_dept':             '负责部门',
+    'use_dept':                     '使用部门',
+    'production_date':              '出厂日期',
+    'bar_code':                     '设备条形码',
+    'status':                       '资产状态',
+    'storage_place':                '存储地点',
+    'producer':                     '厂家',
+    'purchase_date':                '购入日期',
+    # 'cate':                         '资产设备类型'
+}
