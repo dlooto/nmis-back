@@ -27,11 +27,12 @@ from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
 
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
     FaultType, FaultSolution, MaintenancePlan, RepairOrderRecord
-from nmis.documents.consts import FILE_CATE_CHOICES
+from nmis.documents.consts import FILE_CATE_CHOICES, DOC_UPLOAD_BASE_DIR, DOC_DOWNLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
 from utils import times
+from utils.files import ExcelBasedOXL
 
 logger = logging.getLogger(__name__)
 
@@ -506,6 +507,34 @@ class FaultSolutionListView(BaseAPIView):
         return self.get_pages(queryset, results_name='fault_solutions', srl_cls_name='FaultSolutionSerializer')
 
 
+class FaultSolutionListExportView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
+
+    def get(self, req):
+        search = req.GET.get('search', '').strip()
+
+        queryset = FaultSolution.objects.all()
+
+        if search:
+            queryset = queryset.filter(
+                Q(fault_type__title__contains=search) | Q(title__contains=search)
+            )
+        records = list()
+        for item in queryset:
+            records.append([item.title, item.solution, item.fault_type.title,  item.creator.name, times.datetime_to_str(item.created_time)])
+        header_rows = [['标题', '解决方案', '故障类型', '贡献人', '创建时间'], ]
+        file_name = '知识库-故障问题解决方案'
+        filename, file_path = ExcelBasedOXL.export_excel(
+            DOC_DOWNLOAD_BASE_DIR,
+            file_name,
+            [records],
+            ['知识库-故障问题解决方案', ],
+            header_rows
+        )
+        return resp.ok('操作成功', {'file': {'name': filename, 'path': file_path}})
+
+
 class OperationMaintenanceReportView(BaseAPIView):
     """
     维修相关统计报表
@@ -528,11 +557,11 @@ class OperationMaintenanceReportView(BaseAPIView):
             .values('status') \
             .annotate(nums=Count('id', distinct=True))
 
-        # 最高故障类型
-        rp_order_nums_first_fault_type_queryset = self.queryset.filter(created_time__range=(start_date, expired_date)) \
+        # 按故障类型统计报修单数量
+        rp_order_nums_fault_type_queryset = self.queryset.filter(created_time__range=(start_date, expired_date)) \
             .annotate(fault_type_title=F('fault_type__title')) \
             .values('fault_type_title') \
-            .annotate(nums=Count('id', distinct=True)).order_by('-nums')[0:1]
+            .annotate(nums=Count('id', distinct=True)).order_by('-nums')
 
         # 科室故障申请Top3
         rp_order_nums_top_dept_queryset = self.queryset.filter(created_time__range=(start_date, expired_date))\
@@ -542,7 +571,7 @@ class OperationMaintenanceReportView(BaseAPIView):
 
         data = {
             'rp_order_nums_status': list(rp_order_nums_status_queryset),
-            'rp_order_nums_first_fault_type': list(rp_order_nums_first_fault_type_queryset),
+            'rp_order_nums_fault_type': list(rp_order_nums_fault_type_queryset),
             'rp_order_nums_top_dept': list(rp_order_nums_top_dept_queryset),
         }
         return resp.ok('ok', data)

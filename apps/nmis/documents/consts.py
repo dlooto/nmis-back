@@ -10,7 +10,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 # 上传文件基础路径
-DOC_BASE_DIR = 'upload/document/'
+DOC_UPLOAD_BASE_DIR = 'upload/document/'
+DOC_DOWNLOAD_BASE_DIR = 'download/document/'
+
 
 # 文档类别
 FILE_CATE_UNKNOWN = 'UNKNOWN'

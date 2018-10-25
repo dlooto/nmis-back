@@ -6,14 +6,18 @@ used for file process
 
 import os, logging
 from zipfile import BadZipFile
-
+import openpyxl
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
 from openpyxl.utils.exceptions import InvalidFileException
 from openpyxl.worksheet import Worksheet
+from openpyxl.writer.excel import ExcelWriter
 
 import settings
 from openpyxl import Workbook, load_workbook
 
-from utils.eggs import gen_uuid1
+from utils import times
+from utils.eggs import gen_uuid1, b64encode
 
 logger = logging.getLogger('django')
 
@@ -265,6 +269,7 @@ class ExcelBasedOXL(object):
             logger.exception(e)
             return False, "表头数据和指定的标准不一致或excel解析错误"
 
+
     @staticmethod
     def read_sheet(ws: Worksheet, header_dict=None):
         """
@@ -318,6 +323,72 @@ class ExcelBasedOXL(object):
             sheet_data.append(row_data)
 
         return sheet_data
+
+    @staticmethod
+    def gen_sheet_name(param):
+        return param.__unicode__()
+
+    @staticmethod
+    def gen_workbook():
+        return Workbook()
+
+    @staticmethod
+    def export_excel(base_dir, file_name, records_list, sheet_names=[], header_rows=[],):
+        """ 导出Excel文件 """
+        wb = Workbook()
+        filename = gen_filename(file_name)
+        path = os.path.join(settings.MEDIA_ROOT, base_dir)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        file_path = '%s%s' % (path, filename)
+        wb.remove(wb.active)
+        try:
+            for index, records in enumerate(records_list):
+                ws = wb.create_sheet(('Sheet' + str(index+1)), index)
+                if sheet_names:
+                    if index <= len(sheet_names)-1:
+                        if sheet_names[index]:
+                            ws.title = sheet_names[index]
+                if header_rows and index <= len(header_rows)-1:
+                    ExcelBasedOXL.write_to_sheet_by_row(ws, records, header_rows[index])
+                else:
+                    ExcelBasedOXL.write_to_sheet_by_row(ws, records)
+            wb.save(filename=file_path)
+            return '%s.xlsx' % file_name, '%s%s' % (base_dir, filename)
+        except Exception as e:
+            logger.exception(e)
+            raise Exception("Write data to file exception!")
+        finally:
+            wb.close()
+
+    @staticmethod
+    def write_to_sheet_by_row(worksheet, data_rows, header_row=None):
+        """
+        添加数据到Worksheet对象中，按行添加
+        :param worksheet: Worksheet对象
+        :param header_row: 表头列表
+        :param data_rows: data_rows为行数据列表，每个元素是一行（row）数据，也是list对象
+        :return:
+        """
+        try:
+            if header_row:
+                worksheet.append(header_row)
+            if data_rows:
+                for data in data_rows:
+                    worksheet.append(data)
+        except Exception as e:
+            logger.exception(e)
+            raise Exception("Write data to sheet exception!")
+
+
+def gen_filename(file_name: str):
+    return '%s%s.xlsx' % (file_name, times.datetime_to_str(times.now(), '%Y%m%d%H%M%S%f'))
+
+
+
+
+
+
 
 
 

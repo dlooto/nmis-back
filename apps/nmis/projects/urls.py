@@ -185,7 +185,7 @@ urlpatterns = [
     path('single-del-file/<int:doc_id>', views.DeleteFileView.as_view()),
 
 
-    # ---项目统计报表----------------
+    # ---项目统计医院全局报表----------------
     path('reports/hosp_pro_report', views.ProjectStatisticReport.as_view()),
 
 ]

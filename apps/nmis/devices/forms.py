@@ -588,6 +588,7 @@ class FaultSolutionCreateForm(BaseForm):
         fault_type_id = self.data.get('fault_type_id')
         if not fault_type_id:
             self.update_errors('fault_type_id', 'fault_type_error')
+            return False
         try:
             int(fault_type_id)
         except ValueError as e:
