@@ -66,6 +66,8 @@ urlpatterns = [
     path('fault_solutions/<int:fault_solution_id>', views.FaultSolutionView.as_view(), ),
     # 故障/问题解决方案列表--知识库
     path('fault_solutions', views.FaultSolutionListView.as_view(), ),
+    # 批量删除问题解决方案--知识库
+    path('fault_solutions/batch-delete', views.FaultSolutionBatchDeleteView.as_view(), ),
 
     # 导出故障/问题解决方案列表-知识库
     path('fault_solutions/export-excel', views.FaultSolutionListExportView.as_view(), ),

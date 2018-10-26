@@ -8,6 +8,7 @@ import logging
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q, Count, F
 
+import settings
 from base import resp
 from base.common.decorators import check_params_not_null, check_id
 from base.common.param_utils import get_id_list
@@ -26,14 +27,14 @@ from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderDispatchForm, FaultSolutionCreateForm
 
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
-    FaultType, FaultSolution, MaintenancePlan, RepairOrderRecord
-from nmis.documents.consts import FILE_CATE_CHOICES, DOC_UPLOAD_BASE_DIR, DOC_DOWNLOAD_BASE_DIR
+    FaultType, FaultSolution, MaintenancePlan
+from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.hospitals.consts import ARCHIVE
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
 from utils import times
-from utils.files import ExcelBasedOXL
+from utils.files import ExcelBasedOXL, file_read_iterator
 
 logger = logging.getLogger(__name__)
 
@@ -556,6 +557,29 @@ class FaultSolutionView(BaseAPIView):
         pass
 
 
+class FaultSolutionBatchDeleteView(BaseAPIView):
+
+    def post(self, req):
+        ids_str = req.data.get('ids')
+        fs_ids = list()
+        try:
+            for id_str in ids_str:
+                fs_ids.append(int(id_str))
+            queryset = FaultSolution.objects.filter(id__in=fs_ids)
+            count = queryset.count()
+            if count < len(fs_ids):
+                return resp.form_err({'fs_ids': 'id为空或数据错误'})
+            FaultSolution.objects.clear_cache(queryset)
+            queryset.delete()
+            return resp.ok('操作成功')
+        except ValueError as ve:
+            logger.exception(ve)
+            return resp.form_err({'fs_ids': 'id为空或数据错误'})
+        except Exception as exc:
+            logger.exception(exc)
+            return resp.failed('操作失败')
+
+
 class FaultSolutionListView(BaseAPIView):
 
     permission_classes = (IsAuthenticated, )
@@ -576,7 +600,7 @@ class FaultSolutionListExportView(BaseAPIView):
 
     permission_classes = (IsAuthenticated, )
 
-    def get(self, req):
+    def post(self, req):
         search = req.GET.get('search', '').strip()
 
         queryset = FaultSolution.objects.all()
@@ -589,15 +613,21 @@ class FaultSolutionListExportView(BaseAPIView):
         for item in queryset:
             records.append([item.title, item.solution, item.fault_type.title,  item.creator.name, times.datetime_to_str(item.created_time)])
         header_rows = [['标题', '解决方案', '故障类型', '贡献人', '创建时间'], ]
-        file_name = '知识库-故障问题解决方案'
-        filename, file_path = ExcelBasedOXL.export_excel(
+        name = 'operation-maintenance-knowledge'
+        excel_file_name, file_path = ExcelBasedOXL.export_excel(
             DOC_DOWNLOAD_BASE_DIR,
-            file_name,
+            name,
             [records],
             ['知识库-故障问题解决方案', ],
             header_rows
         )
-        return resp.ok('操作成功', {'file': {'name': filename, 'path': file_path}})
+        from django.http import StreamingHttpResponse
+        import os
+        path = os.path.join(settings.MEDIA_ROOT, file_path)
+        response = StreamingHttpResponse(file_read_iterator(path))
+        response['Content-Type'] = 'application/octet-stream'
+        response['Content-Disposition'] = 'attachment;filename="{0}"'.format(u'%s' % excel_file_name)
+        return response
 
 
 class OperationMaintenanceReportView(BaseAPIView):
