@@ -192,3 +192,10 @@ UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT = {
     'producer':                     '厂家',
     'purchase_date':                '购入日期',
 }
+
+# 导入故障/问题解决方案excel模板文件表头字典
+UPLOADED_FS_EXCEL_HEAD_DICT = {
+    'title':             '标题',
+    'fault_type_title':        '故障类型',
+    'solution':          '解决方案',
+}

@@ -8,6 +8,7 @@ import logging
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q, Count, F
 
+import settings
 from base import resp
 from base.common.decorators import check_params_not_null, check_id
 from base.common.param_utils import get_id_list
@@ -20,21 +21,20 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATU
     MY_MAINTAIN_ORDERS, ALL_ORDERS, \
     TO_DISPATCH_ORDERS, REPAIR_ORDER_STATUS_DOING, REPAIR_ORDER_STATUS_DONE, \
     MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES, \
-    MAINTENANCE_PLAN_STATUS_DONE, UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT
+    MAINTENANCE_PLAN_STATUS_DONE, UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT, UPLOADED_FS_EXCEL_HEAD_DICT
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
-    RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, \
-    RepairOrderCommentForm, \
-    RepairOrderDispatchForm, FaultSolutionCreateForm, AssertDeviceBatchUploadForm
+    RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, RepairOrderCommentForm, \
+    RepairOrderDispatchForm, FaultSolutionCreateForm, FaultSolutionsImportForm, AssertDeviceBatchUploadForm
 
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
-    FaultType, FaultSolution, MaintenancePlan, RepairOrderRecord
-from nmis.documents.consts import FILE_CATE_CHOICES
+    FaultType, FaultSolution, MaintenancePlan
+from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR, DOC_UPLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.hospitals.consts import ARCHIVE
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
-from utils import times
-from utils.files import ExcelBasedOXL
+from utils import times, files
+from utils.files import ExcelBasedOXL, file_read_iterator
 
 logger = logging.getLogger(__name__)
 
@@ -527,6 +527,29 @@ class FaultSolutionView(BaseAPIView):
         pass
 
 
+class FaultSolutionBatchDeleteView(BaseAPIView):
+
+    def post(self, req):
+        ids_str = req.data.get('ids')
+        fs_ids = list()
+        try:
+            for id_str in ids_str:
+                fs_ids.append(int(id_str))
+            queryset = FaultSolution.objects.filter(id__in=fs_ids)
+            count = queryset.count()
+            if count < len(fs_ids):
+                return resp.form_err({'ids': 'id为空或数据错误'})
+            FaultSolution.objects.clear_cache(queryset)
+            queryset.delete()
+            return resp.ok('操作成功')
+        except ValueError as ve:
+            logger.exception(ve)
+            return resp.form_err({'ids': 'id为空或数据错误'})
+        except Exception as exc:
+            logger.exception(exc)
+            return resp.failed('操作失败')
+
+
 class FaultSolutionListView(BaseAPIView):
 
     permission_classes = (IsAuthenticated, )
@@ -541,6 +564,79 @@ class FaultSolutionListView(BaseAPIView):
                 Q(fault_type__title__contains=search) | Q(title__contains=search)
             )
         return self.get_pages(queryset, results_name='fault_solutions', srl_cls_name='FaultSolutionSerializer')
+
+
+class FaultSolutionsImportView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
+
+    @check_params_not_null(['file'])
+    def post(self, req):
+        """
+         批量导入故障问题解决方案
+         :param req:
+         :return:
+         """
+        file_obj = req.FILES.get('file')
+        if not file_obj:
+            return resp.failed('请选择要上传的文件')
+
+        if not ARCHIVE['.xlsx'] == file_obj.content_type:
+            return resp.failed('导入文件不是Excel文件，请检查')
+
+        # 将文件存放到服务器
+        # import os
+        # file_server_path = open(os.path.join('/media/', '', file_obj.name), 'wb')
+        # file = open('file_server_path', 'wb')
+        # file_info = files.upload_file(file_obj, DOC_UPLOAD_BASE_DIR)
+
+        is_success, ret = ExcelBasedOXL.open_excel(file_obj)
+        if not is_success:
+            return resp.failed(ret)
+        success, result = ExcelBasedOXL.read_excel(ret, UPLOADED_FS_EXCEL_HEAD_DICT)
+        ExcelBasedOXL.close(ret)
+        if not success:
+            return resp.failed(result)
+
+        form = FaultSolutionsImportForm(req.user.get_profile(), result)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+
+        return resp.ok('导入成功') if form.save() else resp.failed('导入失败')
+
+
+class FaultSolutionsExportView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
+
+    def post(self, req):
+        search = req.GET.get('search', '').strip()
+
+        queryset = FaultSolution.objects.all()
+
+        if search:
+            queryset = queryset.filter(
+                Q(fault_type__title__contains=search) | Q(title__contains=search)
+            )
+        records = list()
+        for item in queryset:
+            records.append([item.title, item.solution, item.fault_type.title,  item.creator.name, times.datetime_to_str(item.created_time)])
+        header_rows = [['标题', '解决方案', '故障类型', '贡献人', '创建时间'], ]
+        name = 'operation-maintenance-knowledge'
+        excel_file_name, file_path = ExcelBasedOXL.export_excel(
+            DOC_DOWNLOAD_BASE_DIR,
+            name,
+            [records],
+            ['知识库-故障问题解决方案', ],
+            header_rows
+        )
+        from django.http import StreamingHttpResponse
+        import os
+        path = os.path.join(settings.MEDIA_ROOT, file_path)
+        response = StreamingHttpResponse(file_read_iterator(path))
+        response['Content-Type'] = 'application/octet-stream'
+        response['Content-Disposition'] = 'attachment;filename="{0}"'.format(u'%s' % excel_file_name)
+        return response
 
 
 class OperationMaintenanceReportView(BaseAPIView):
@@ -565,11 +661,11 @@ class OperationMaintenanceReportView(BaseAPIView):
             .values('status') \
             .annotate(nums=Count('id', distinct=True))
 
-        # 最高故障类型
-        rp_order_nums_first_fault_type_queryset = self.queryset.filter(created_time__range=(start_date, expired_date)) \
+        # 按故障类型统计报修单数量
+        rp_order_nums_fault_type_queryset = self.queryset.filter(created_time__range=(start_date, expired_date)) \
             .annotate(fault_type_title=F('fault_type__title')) \
             .values('fault_type_title') \
-            .annotate(nums=Count('id', distinct=True)).order_by('-nums')[0:1]
+            .annotate(nums=Count('id', distinct=True)).order_by('-nums')
 
         # 科室故障申请Top3
         rp_order_nums_top_dept_queryset = self.queryset.filter(created_time__range=(start_date, expired_date))\
@@ -579,7 +675,7 @@ class OperationMaintenanceReportView(BaseAPIView):
 
         data = {
             'rp_order_nums_status': list(rp_order_nums_status_queryset),
-            'rp_order_nums_first_fault_type': list(rp_order_nums_first_fault_type_queryset),
+            'rp_order_nums_fault_type': list(rp_order_nums_fault_type_queryset),
             'rp_order_nums_top_dept': list(rp_order_nums_top_dept_queryset),
         }
         return resp.ok('ok', data)

@@ -6,13 +6,15 @@ used for file process
 
 import os, logging
 from zipfile import BadZipFile
-
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
 from openpyxl.utils.exceptions import InvalidFileException
 from openpyxl.worksheet import Worksheet
 
 import settings
 from openpyxl import Workbook, load_workbook
 
+from utils import times, eggs
 from utils.eggs import gen_uuid1
 
 logger = logging.getLogger('django')
@@ -265,6 +267,7 @@ class ExcelBasedOXL(object):
             logger.exception(e)
             return False, "表头数据和指定的标准不一致或excel解析错误"
 
+
     @staticmethod
     def read_sheet(ws: Worksheet, header_dict=None):
         """
@@ -318,10 +321,118 @@ class ExcelBasedOXL(object):
                 else:
                     value = ws.cell(row=row, column=col).value
 
-                row_data[key] = value
+                row_data[key] = value if value else ''
             sheet_data.append(row_data)
 
         return sheet_data
+
+    @staticmethod
+    def gen_sheet_name(param):
+        return param.__unicode__()
+
+    @staticmethod
+    def gen_workbook():
+        return Workbook()
+
+    @staticmethod
+    def export_excel(base_dir, file_name, records_list, sheet_names=[], header_rows=[],):
+        """
+        导出Excel文件
+        :param base_dir: 文件存放基本路径
+        :param file_name: 文件名（不带后缀）
+        :param records_list: sheet数据list， 列表的每个元素，代表一个sheet的数据，每个元素也是list对象，该列表存放每行的数据
+        :param sheet_names:  自定义的sheet名称列表，sheet_names[index] 和records_list[index]相对应
+        :param header_rows:  标题行列表, header_rows[index] 和records_list[index]相对应
+        :return:
+        """
+        wb = Workbook()
+        postfix = 'xlsx'
+        filename = gen_filename(file_name, postfix, date_format=None)
+        path = os.path.join(settings.MEDIA_ROOT, base_dir)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        file_path = '%s%s' % (path, filename)
+        wb.remove(wb.active)
+        try:
+            for index, records in enumerate(records_list):
+                ws = wb.create_sheet(('Sheet' + str(index+1)), index)
+                if sheet_names:
+                    if index <= len(sheet_names)-1:
+                        if sheet_names[index]:
+                            ws.title = sheet_names[index]
+                if header_rows and index <= len(header_rows)-1:
+                    ExcelBasedOXL.write_to_sheet_by_row(ws, records, header_rows[index])
+                else:
+                    ExcelBasedOXL.write_to_sheet_by_row(ws, records)
+            wb.save(filename=file_path)
+            return '%s.%s' % (file_name, postfix), '%s%s' % (base_dir, filename)
+        except Exception as e:
+            logger.exception(e)
+            raise Exception("Write data to file exception!")
+        finally:
+            wb.close()
+
+    @staticmethod
+    def write_to_sheet_by_row(worksheet, data_rows, header_row=None):
+        """
+        添加数据到Worksheet对象中，按行添加
+        :param worksheet: Worksheet对象
+        :param header_row: 表头列表
+        :param data_rows: data_rows为行数据列表，每个元素是一行（row）数据，也是list对象
+        :return:
+        """
+        try:
+            if header_row:
+                worksheet.append(header_row)
+            if data_rows:
+                for data in data_rows:
+                    worksheet.append(data)
+        except Exception as e:
+            logger.exception(e)
+            raise Exception("Write data to sheet exception!")
+
+
+def gen_filename(file_name, postfix,  date_format='%Y%m%d%H%M%S%f', uuid_first=False):
+    """
+    生成文件名
+    :param file_name: 文件名称（不带后缀）string
+    :param postfix: 文件后缀 string
+    :param date_format: 时间戳转换格式， string
+    :return:
+    """
+    if not file_name or not postfix:
+        return None
+    if uuid_first:
+        return '%{filename}_{uuid}.{postfix}'.format(
+            filename=file_name, uuid=eggs.gen_uuid1(), postfix=postfix
+        )
+    if not date_format:
+        return '%{filename}.{postfix}'.format(filename=file_name, postfix=postfix)
+    return '%{filename}_{timestamp}.{postfix}' .format(
+        filename=file_name, timestamp=times.datetime_to_str(times.now(), date_format), postfix=postfix
+    )
+
+
+def file_read_iterator(file_name, chunk_size=1024):
+    """文件读取迭代器"""
+    try:
+        with open(file_name, 'rb') as f:
+            while True:
+                c = f.read(chunk_size)
+                if c:
+                    yield c
+                else:
+                    break
+    except Exception as e:
+        print('Read file exception!')
+        raise Exception('Read file exception!')
+
+
+
+
+
+
+
 
 
 

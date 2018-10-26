@@ -60,13 +60,21 @@ urlpatterns = [
     path('repair_orders', views.RepairOrderListView.as_view(), ),
     path('repair_orders/<int:order_id>/repair_order_records', views.RepairOrderRecordListView.as_view(), ),
 
-    # 创建故障/问题解决方案
+    # 创建故障/问题解决方案- -知识库
     path('fault_solutions/create', views.FaultSolutionCreateView.as_view()),
-    # 单个故障/问题解决方案详情/修改/删除/分派/处理/评价
+    # 单个故障/问题解决方案详情/修改/删除
     path('fault_solutions/<int:fault_solution_id>', views.FaultSolutionView.as_view(), ),
-    # 故障/问题解决方案列表
+    # 故障/问题解决方案列表--知识库
     path('fault_solutions', views.FaultSolutionListView.as_view(), ),
+    # 批量删除问题解决方案--知识库
+    path('fault_solutions/batch-delete', views.FaultSolutionBatchDeleteView.as_view(), ),
 
+    # 导入故障/问题解决方案列表-知识库
+    path('fault_solutions/import', views.FaultSolutionsImportView.as_view(), ),
+    # 导出故障/问题解决方案列表-知识库
+    path('fault_solutions/export-excel', views.FaultSolutionsExportView.as_view(), ),
+
+    # 医院设备维修统计全局报表
     path('reports/hosp_dev_report', views.OperationMaintenanceReportView.as_view(), ),
 
 ]

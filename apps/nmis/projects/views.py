@@ -1780,6 +1780,9 @@ class DeleteFileView(BaseAPIView):
 
 
 class ProjectStatisticReport(BaseAPIView):
+    """
+    项目统计医院全局报表
+    """
     permission_classes = (IsAuthenticated, )
 
     queryset = ProjectPlan.objects.all()
@@ -1820,7 +1823,7 @@ class ProjectStatisticReport(BaseAPIView):
         }
 
         rp_pro_status_queryset = self.queryset.filter(**filter_dict).values('status')\
-            .annotate(nums=Count('id')).distinct()
+            .annotate(sum_amount=Sum('pre_amount'), nums=Count('id')).distinct()
 
         """ 4 重大项目数据top10 """
         #
