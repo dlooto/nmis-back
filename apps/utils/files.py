@@ -314,7 +314,7 @@ class ExcelBasedOXL(object):
             for col in range(1, ws_column_len+1):
                 key = header_keys[col-1]
                 if ws.cell(row=row, column=col).is_date:
-                    value = ws.cell(row=row, column=col).value.strftime('%Y-%m-%d %H:%M:%S')
+                    value = ws.cell(row=row, column=col).value.strftime('%Y-%m-%d')
                 else:
                     value = ws.cell(row=row, column=col).value
 

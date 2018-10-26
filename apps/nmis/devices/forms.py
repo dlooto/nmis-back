@@ -8,9 +8,12 @@ import logging
 from base.forms import BaseForm
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
     MAINTENANCE_PLAN_TYPE_CHOICES, PRIORITY_CHOICES
-from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan, FaultSolution
+from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan, \
+    FaultSolution, MedicalDeviceSix8Cate
 from utils.times import now
-from nmis.hospitals.models import Staff
+from nmis.hospitals.models import Staff, Department, HospitalAddress
+
+from collections import defaultdict
 
 
 logger = logging.getLogger(__name__)
@@ -623,5 +626,329 @@ class FaultSolutionCreateForm(BaseForm):
         )
 
 
+class AssertDeviceBatchUploadForm(BaseForm):
 
+    def __init__(self, data, creator, cate, *args, **kwargs):
+        BaseForm.__init__(self, data, creator, cate, *args, **kwargs)
+        self.creator = creator
+        self.cate = cate
+        self.default_dict = defaultdict(list)
+        self.performer_list = None
+        self.use_dept_list = None
+        self.res_dept_list = None
+        self.storage_place_list = None
+        self.medical_device_cate_list = None
 
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'assert_no_err':            '资产设备编号存在重复或系统中已存在相关资产设备编号信息',
+            'assert_no_null_err':       '资产设别编号不能为空',
+            'serial_no_err':            '资产设备序列号存在重复或系统中已存在相关资产设备序列号信息',
+            'serial_no_null_err':       '资产设备序列号不能为空',
+            'use_dept_err':             '系统不存在相关使用部门信息',
+            'performer_err':            '系统不存在相关负责人信息',
+            'resp_dept_err':            '系统不存在相关负责部门信息',
+            'storage_place_err':        '系统不存在相关存储地点信息',
+            'medical_code_err':         '系统不存在相关医疗分类编号信息',
+            'medical_code_null_err':    '医疗分类编号不能为空值',
+            'medical_device_cate_err':  '医疗设备分类不能为空',
+            'type_spec_err':            '资产设备规格型号不能为空',
+            'production_date_err':      '资产设备出厂日期不能为空',
+            'purchase_date_err':        '资产设备购入日期不能为空',
+            'status_err':               '资产设备状态输入错误',
+            'status_null_err':          '资产设备状态不能为空',
+            'service_life_null_err':    '使用年限不能为空',
+            'service_life_data_type_err': '使用年限数据类型错误'
+        })
+
+    def is_valid(self):
+        if not self.check_medical_device_cate() or not self.check_serial_no()\
+                or not self.check_performer() or not self.check_medical_code()\
+                or not self.check_use_dept() or not self.check_responsible_dept()\
+                or not self.check_storage_place() or not self.check_assert_no()\
+                or not self.check_type_spec() or not self.check_production_date()\
+                or not self.check_purchase_date() or not self.check_status()\
+                or not self.check_service_life():
+            return False
+        return True
+
+    def check_assert_no(self):
+        assert_no_list = []
+        for row_data in self.data[0]:
+            assert_no_list.append(row_data.get('assert_no'))
+        if not len(assert_no_list) == len(self.data[0]):
+            self.update_errors('assert_no', 'assert_no_null_err')
+            return False
+
+        # 校验资产编号在Excel中是否重复
+        for k, va in [(v, i) for i, v in enumerate(assert_no_list)]:
+            self.default_dict[k].append(va)
+        assert_no_check_result = []
+        for d in list(self.default_dict.values()):
+            if not len(d) == 1:
+                result_list = []
+                for row in d:
+                    result_list.append(row+2)
+                assert_no_check_result.append(result_list)
+        if assert_no_check_result:
+            self.update_errors('assert_no', 'assert_no_err')
+            return False
+        # 校验设备资产编号在数据库中是否存在相关信息
+        assert_devices = AssertDevice.objects.filter(assert_no__in=assert_no_list)
+        assert_no_db_list = []
+        for assert_device in assert_devices:
+            assert_no_db_list.append(assert_device.assert_no)
+        check_assert_no_list = []
+        for assert_no in assert_no_list:
+            if assert_no in assert_no_db_list:
+                check_assert_no_list.append(assert_no)
+        if check_assert_no_list:
+            self.update_errors('assert_no', 'assert_no_err')
+            return False
+        return True
+
+    def check_serial_no(self):
+        serial_no_list = []
+        for row_data in self.data[0]:
+            serial_no_list.append(row_data.get('serial_no'))
+        if not len(serial_no_list) == len(self.data[0]):
+            self.update_errors('serial_no', 'serial_no_null_err')
+            return False
+        # 校验excel中序列号是否出现重复项目
+        for k, va in [(v, i) for i, v in enumerate(serial_no_list)]:
+            self.default_dict[k].append(va)
+        serial_no_check_result = []
+        for d in list(self.default_dict.values()):
+            if not len(d) == 1:
+                result_list = []
+                for row in d:
+                    result_list.append(row+2)
+                serial_no_check_result.append(result_list)
+
+        if serial_no_check_result:
+            self.update_errors('serial_no', 'serial_no_err')
+            return False
+
+        # 校验数据库中属否存在相关序列号信息
+        assert_devices = AssertDevice.objects.filter(serial_no__in=serial_no_list)
+        assert_device_serial_no = []
+        for assert_device in assert_devices:
+            assert_device_serial_no.append(assert_device.serial_no)
+
+        serial_no_check_db_result = []
+        for serial_no in serial_no_list:
+            if serial_no in assert_device_serial_no:
+                serial_no_check_db_result.append(serial_no)
+        if serial_no_check_db_result:
+            self.update_errors('serial_no', 'serial_no_err')
+            return False
+        return True
+
+    def check_use_dept(self):
+
+        # 检验数据库是否存在相关使用科室
+        use_dept_list = []
+        for row_data in self.data[0]:
+            use_dept_list.append(row_data.get('use_dept'))
+        use_dept_db_list = Department.objects.filter(name__in=set(use_dept_list))
+        use_dept_names = []
+        for dept_db in use_dept_db_list:
+            use_dept_names.append(dept_db.name)
+        dept_check_result = []
+        if not len(set(use_dept_list)) == len(use_dept_db_list):
+            for dept in use_dept_list:
+                if dept not in use_dept_names:
+                    dept_check_result.append(dept)
+            self.update_errors('use_dept', 'use_dept_err')
+            return False
+        self.use_dept_list = use_dept_db_list
+        return True
+
+    def check_performer(self):
+
+        # 检验数据库中是否存在相关负责人信息
+        performer_list = []
+        for row_data in self.data[0]:
+            performer_list.append(row_data.get('performer'))
+        performer_db_list = Staff.objects.filter(name__in=set(performer_list))
+        performer_names = []
+        for performer_db in performer_db_list:
+            performer_names.append(performer_db.name)
+        performer_check_list = []
+        if not len(set(performer_list)) == len(performer_names):
+            for performer_name in performer_list:
+                if performer_name not in performer_names:
+                    performer_check_list.append(performer_name)
+            self.update_errors('performer', 'performer_err')
+            return False
+        self.performer_list = performer_db_list
+        return True
+
+    def check_responsible_dept(self):
+        # 检验数据库是否存在相关负责部门信息
+        res_dept_list = []
+        for row_data in self.data[0]:
+            res_dept_list.append(row_data.get('responsible_dept'))
+        resp_dept_db_list = Department.objects.filter(name__in=set(res_dept_list))
+        resp_dept_db_names = []
+        for resp_dept_db in resp_dept_db_list:
+            resp_dept_db_names.append(resp_dept_db.name)
+
+        resp_dept_check_result = []
+        if not len(set(res_dept_list)) == len(resp_dept_db_names):
+            for dept_name in res_dept_list:
+                if dept_name not in resp_dept_db_names:
+                    resp_dept_check_result.append(dept_name)
+            self.update_errors('resp_dept', 'resp_dept_err')
+            return False
+        self.res_dept_list = resp_dept_db_list
+        return True
+
+    def check_medical_code(self):
+        # 检验数据库中是否存在医院68码分类编号相关信息
+        code_list = []
+        for row_data in self.data[0]:
+            code_list.append(row_data.get('code'))
+
+        if not len(code_list) == len(self.data[0]):
+            self.update_errors('medical_code', 'medical_code_null_err')
+            return False
+
+        medical_device_cate_db_list = MedicalDeviceSix8Cate.objects.exclude(parent=None).filter(code__in=set(code_list))
+
+        medical_device_cate_db_codes = []
+        for medical_device_cate in medical_device_cate_db_list:
+            medical_device_cate_db_codes.append(medical_device_cate.code)
+        code_check_list = []
+        if not len(set(code_list)) == len(medical_device_cate_db_codes):
+            for code in code_list:
+                if code not in medical_device_cate_db_codes:
+                    code_check_list.append(code)
+            self.update_errors('medical_code', 'medical_code_err')
+            return False
+
+        self.medical_device_cate_list = medical_device_cate_db_list
+        return True
+
+    def check_medical_device_cate(self):
+        medical_device_cate_list = []
+        for row_data in self.data[0]:
+            medical_device_cate_list.append(row_data.get('medical_device_cate'))
+        if not len(medical_device_cate_list) == len(self.data[0]):
+            self.update_errors('medical_device_cate', 'medical_device_cate_err')
+            return False
+        return True
+
+    def check_storage_place(self):
+
+        # 检验数据库中是否存在存储地点相关信息
+        storage_place_list = []
+        for row_data in self.data[0]:
+            storage_place_list.append(row_data.get('storage_place'))
+        storage_place_db_list = HospitalAddress.objects.exclude(parent=None).filter(title__in=set(storage_place_list))
+        storage_place_titles = []
+        for storage_place_db in storage_place_db_list:
+            storage_place_titles.append(storage_place_db.title)
+        storage_place_check_list = []
+        if not len(set(storage_place_list)) == len(storage_place_titles):
+            for storage_place_title in storage_place_list:
+                if storage_place_title not in storage_place_titles:
+                    storage_place_check_list.append(storage_place_title)
+            self.update_errors('storage_place', 'storage_place_err')
+            return False
+        self.storage_place_list = storage_place_db_list
+        return True
+
+    def check_type_spec(self):
+        type_spec_list = []
+        for row_data in self.data[0]:
+            type_spec_list.append(row_data.get('type_spec'))
+        if not len(type_spec_list) == len(self.data[0]):
+            self.update_errors('type_spec', 'type_spec_err')
+            return False
+        return True
+
+    def check_production_date(self):
+        production_date_list = []
+        for row_data in self.data[0]:
+            production_date_list.append(row_data.get('production_date'))
+        if not len(production_date_list) == len(self.data[0]):
+            self.update_errors('production_date', 'production_date_err')
+            return False
+        return True
+
+    def check_purchase_date(self):
+        purchase_date_list = []
+        for row_data in  self.data[0]:
+            purchase_date_list.append(row_data.get('purchase_date'))
+        if not len(purchase_date_list) == len(self.data[0]):
+            self.update_errors('purchase_date', 'purchase_date_err')
+            return False
+        return True
+
+    def check_status(self):
+        status_list = []
+        for row_data in self.data[0]:
+            status_list.append(row_data.get('status'))
+        if not len(status_list) == len(self.data[0]):
+            self.update_errors('status', 'status_null_err')
+            return False
+        status_set = set(status_list)
+        status_value = []
+        for key, value in dict(ASSERT_DEVICE_STATUS_CHOICES).items():
+            status_value.append(value)
+        check_status_result = []
+        for status in status_set:
+            if status not in status_value:
+                check_status_result.append(status)
+        if check_status_result:
+            self.update_errors('status', 'status_err')
+            return False
+        return True
+
+    def check_service_life(self):
+        service_life_list = []
+        for row_data in self.data[0]:
+            service_life_list.append(row_data.get('service_life'))
+        if not len(service_life_list) == len(self.data[0]):
+            self.update_errors('service_life', 'service_life_null_err')
+            return False
+        for service_life in service_life_list:
+            if not isinstance(service_life, int):
+                self.update_errors('service_life', 'service_life_data_type_err')
+                return False
+        return True
+
+    def save(self):
+        assert_devices = []
+        for row_data in self.data[0]:
+            for performer in self.performer_list:
+                if row_data.get('performer') == performer.name:
+                    row_data['performer'] = performer
+
+            for use_dept in self.use_dept_list:
+                if row_data.get('use_dept') == use_dept.name:
+                    row_data['use_dept'] = use_dept
+
+            for resp_dept in self.res_dept_list:
+                if row_data.get('responsible_dept') == resp_dept.name:
+                    row_data['responsible_dept'] = resp_dept
+
+            for storage_place in self.storage_place_list:
+                if row_data.get('storage_place') == storage_place.title:
+                    row_data['storage_place'] = storage_place
+
+            for medical_device_code in self.medical_device_cate_list:
+                if row_data.get('code') == medical_device_code.code:
+                    row_data['medical_device_cate'] = medical_device_code
+            row_data['creator'] = self.creator
+            row_data['cate'] = self.cate
+            del row_data['code']
+
+            assert_devices.append(
+                AssertDevice(**row_data)
+            )
+
+        return AssertDevice.objects.bulk_create_assert_device(assert_devices)

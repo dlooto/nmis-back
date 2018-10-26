@@ -142,6 +142,15 @@ class AssertDeviceManager(BaseManager):
             logger.exception(e)
             return None
 
+    def bulk_create_assert_device(self, assert_devices):
+
+        try:
+            self.bulk_create(assert_devices)
+            return True
+        except Exception as e:
+            logger.exception(e)
+            return False
+
 
 class FaultTypeManager(BaseManager):
 

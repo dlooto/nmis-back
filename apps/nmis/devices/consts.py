@@ -178,6 +178,7 @@ UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT = {
     'assert_no':                    '资产编号',
     'title':                        '资产名称',
     'medical_device_cate':          '医疗设备分类',
+    'code':                         '分类编号',
     'serial_no':                    '资产序列号',
     'type_spec':                    '规格型号',
     'service_life':                 '预计使用年限',
@@ -190,5 +191,4 @@ UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT = {
     'storage_place':                '存储地点',
     'producer':                     '厂家',
     'purchase_date':                '购入日期',
-    # 'cate':                         '资产设备类型'
 }

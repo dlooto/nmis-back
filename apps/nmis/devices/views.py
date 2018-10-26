@@ -22,8 +22,9 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATU
     MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES, \
     MAINTENANCE_PLAN_STATUS_DONE, UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
-    RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, RepairOrderCommentForm, \
-    RepairOrderDispatchForm, FaultSolutionCreateForm
+    RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, \
+    RepairOrderCommentForm, \
+    RepairOrderDispatchForm, FaultSolutionCreateForm, AssertDeviceBatchUploadForm
 
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
     FaultType, FaultSolution, MaintenancePlan, RepairOrderRecord
@@ -198,15 +199,16 @@ class AssertDeviceBatchUploadView(BaseAPIView):
 
     permission_classes = (IsAuthenticated, )
 
+    @check_params_not_null(['cate'])
     def post(self, req):
         """
         资产设备的批量导入
         """
-        import os
-        from openpyxl import load_workbook
 
         self.check_object_permissions(req, req.user.get_profile().organ)
         file_obj = req.FILES.get('file')
+        cate = req.data.get('cate')
+
         if not file_obj:
             return resp.failed('请选择上传的Excel表格')
 
@@ -217,46 +219,15 @@ class AssertDeviceBatchUploadView(BaseAPIView):
             return resp.failed(result)
         head_dict = UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT
         is_success, ret = ExcelBasedOXL.read_excel(result, head_dict)
+
         if not is_success:
             return resp.failed(ret)
-        logger.info(ret)
-
-        # wb = load_workbook(file_obj)
-        #
-        # # 获取sheet
-        # sheet = wb[wb.sheetnames[0]]
-        # max_row = sheet.max_row
-        # max_column = sheet.max_column
-        #
-        # # 获取头部信息
-        # head_list = []
-        # # for row in range(max_row):
-        # #     for column in range(max_column):
-        # #         logger.info(sheet.cell(row+1, column+1).value)
-        # logger.info(type(sheet.cell(row=2, column=10).value))
-        #
-        # for cell in list(sheet.rows)[0]:
-        #     head_list.append(cell.value)
-        # logger.info(head_list)
-        # head_dict = UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT
-        # if not len(head_list) == len(head_dict):
-        #     return resp.failed('传入表格头部长度与系统定义字段不一致，请按标准表格上传')
-        #
-        # for key, value in head_dict.items():
-        #         if value not in head_list:
-        #             return resp.failed('传入表格头部与系统定义不一致，请按标准表格上传')
-        # import datetime
-        # # 获取表格内容
-        # content_list = []
-        # for i in range(2, max_row+1):
-        #     row_dict = {}
-        #     for j in range(0, max_column):
-        #         # if sheet.cell(i, j+1).is_date:
-        #         #     row_dict[list(head_dict.keys())[j]] = datetime.datetime(**sheet.cell(i, j+1).value)
-        #         row_dict[list(head_dict.keys())[j]] = sheet.cell(i, j+1).value
-        #     content_list.append(row_dict)
-        # logger.info(content_list)
-        return resp.ok('')
+        form = AssertDeviceBatchUploadForm(ret, creator=req.user.get_profile(), cate=cate)
+        if not form.is_valid():
+            return resp.failed(form.errors)
+        if not form.save():
+            return resp.failed('导入失败')
+        return resp.ok('导入成功')
 
 
 class AssertDeviceAllocateView(BaseAPIView):
