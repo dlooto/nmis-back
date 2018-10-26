@@ -69,8 +69,10 @@ urlpatterns = [
     # 批量删除问题解决方案--知识库
     path('fault_solutions/batch-delete', views.FaultSolutionBatchDeleteView.as_view(), ),
 
+    # 导入故障/问题解决方案列表-知识库
+    path('fault_solutions/import', views.FaultSolutionsImportView.as_view(), ),
     # 导出故障/问题解决方案列表-知识库
-    path('fault_solutions/export-excel', views.FaultSolutionListExportView.as_view(), ),
+    path('fault_solutions/export-excel', views.FaultSolutionsExportView.as_view(), ),
 
     # 医院设备维修统计全局报表
     path('reports/hosp_dev_report', views.OperationMaintenanceReportView.as_view(), ),

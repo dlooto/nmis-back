@@ -416,6 +416,7 @@ class FaultSolutionManager(BaseManager):
                 'title': title,
                 'fault_type': fault_type,
                 'solution': solution,
+                'modified_time': times.now()
             },
             **kwargs
         )
@@ -424,5 +425,26 @@ class FaultSolutionManager(BaseManager):
         except Exception as e:
             logger.info(e)
             return None
+
+    def bulk_create_fault_solution(self, fs_data, *args, **kwargs):
+        if not fs_data:
+            return False
+        objs = list()
+        for data_dict in fs_data:
+            objs.append(
+                self.model(
+                    title=data_dict.get('title'),
+                    fault_type=data_dict.get('fault_type'),
+                    solution=data_dict.get('solution'),
+                    creator=data_dict.get('creator'),
+                    modified_time=times.now()
+                )
+            )
+        try:
+            self.bulk_create(objs)
+            return True
+        except Exception as e:
+            logger.exception(e)
+            return False
 
 

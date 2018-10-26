@@ -321,7 +321,7 @@ class ExcelBasedOXL(object):
                 else:
                     value = ws.cell(row=row, column=col).value
 
-                row_data[key] = value
+                row_data[key] = value if value else ''
             sheet_data.append(row_data)
 
         return sheet_data

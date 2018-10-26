@@ -5,10 +5,13 @@
 
 import logging
 
+from django.utils.datastructures import MultiValueDict
+
 from base.forms import BaseForm
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
     MAINTENANCE_PLAN_TYPE_CHOICES, PRIORITY_CHOICES
 from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan, FaultSolution
+from utils import times
 from utils.times import now
 from nmis.hospitals.models import Staff
 
@@ -622,6 +625,124 @@ class FaultSolutionCreateForm(BaseForm):
         return FaultSolution.objects.create_fault_solution(
             self.user_profile, title, fault_type, solution, **update_data
         )
+
+
+class FaultSolutionsImportForm(BaseForm):
+
+    def __init__(self, user_profile, data, *args, **kwargs):
+        BaseForm.__init__(self, data, args, kwargs)
+        self.user_profile = user_profile
+        self.pre_data = self.init_check_data()
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'title_error': '第{0}行: 标题为空或数据错误',
+            'fault_type_error': '第{0}行: 故障类型为空或数据错误',
+            'fault_type_not_exists': '第{0}行: 故障类型不存在，请检查',
+            'fault_type_not_in_setting':  '系统尚未设置故障类型，请联系管理员',
+            'solution_error': '第{0}行: 解决方案为空或数据错误',
+            'title_fault_type_exists': '第{0}行: 已存在相同故障类型的标题'
+        })
+
+    def init_check_data(self):
+        """
+        封装各列数据, 用以进行数据验证
+        :return:
+        """
+        pre_data = dict()
+        if self.data and self.data[0] and self.data[0][0]:
+            titles, fault_type_titles, solutions = [], [], []
+            logger.info(self.data[0][0])
+            for row_data in self.data[0]:
+                titles.append(row_data.get('title', '').strip())
+                fault_type_titles.append(row_data.get('fault_type_title', '').strip())
+                solutions.append(row_data.get('solution', '').strip())
+            pre_data['titles'] = titles
+            pre_data['fault_type_titles'] = fault_type_titles
+            pre_data['solutions'] = solutions
+        return pre_data
+
+    def is_valid(self):
+        if not self.check_title() or not self.check_fault_type() or not self.check_solution() \
+                or not self.check_title_fault_type_unique():
+            return False
+        return True
+
+    def check_title(self):
+        # 非空校验
+        if self.pre_data.get('titles'):
+            for index, title in enumerate(self.pre_data.get('titles')):
+                if not title:
+                    self.update_errors('title', 'title_error', index+1)
+                    return False
+        return True
+
+    def check_fault_type(self):
+        # 非空校验
+        if self.pre_data.get('fault_type_titles'):
+            queryset = FaultType.objects.all()
+            if not queryset:
+                self.update_errors('fault_type', 'fault_type_not_in_setting')
+                return False
+            fault_type_list = [item.get('title') for item in queryset.values('title')]
+
+            for index, fault_type_title in enumerate(self.pre_data.get('fault_type_titles')):
+                if not fault_type_title:
+                    self.update_errors('fault_type', 'fault_type_error', index+1)
+                    return False
+                if fault_type_title not in fault_type_list:
+                    self.update_errors('fault_type', 'fault_type_not_exists', index+1)
+                    return False
+        return True
+
+    def check_solution(self):
+        # 非空校验
+        if self.pre_data.get('solutions'):
+            for index, solution in enumerate(self.pre_data.get('solutions')):
+                if not solution:
+                    self.update_errors('solution', 'solution_error', index+1)
+                    return False
+        return True
+
+    def check_title_fault_type_unique(self):
+        """
+        校验title和fault_type联合唯一性
+        需先进行非空校验后进行该项校验
+        :return:
+        """
+        if self.data and self.data[0]:
+            query_data = FaultSolution.objects.all().values_list('title', 'fault_type__title')
+            for index, row_data in enumerate(self.data[0]):
+                if (row_data.get('title'), row_data.get('fault_type_title')) in query_data:
+                    self.update_errors('unique', 'title_fault_type_exists', index+1)
+                    return False
+        return True
+
+    def save(self):
+
+        # 封装excel数据
+        fault_solution_data = []
+        if self.data and self.data[0] and self.data[0][0]:
+            for row_data in self.data[0]:
+                fault_solution_data.append({
+                    'title': row_data.get('title', '').strip(),
+                    'fault_type_title': row_data.get('fault_type_title', '').strip(),
+                    'solution': row_data.get('solution', '').strip(),
+                    'creator': self.user_profile,
+                })
+            fault_type_dict = dict()
+            fault_type_titles = set(self.pre_data['fault_type_titles'])
+            fault_types = FaultType.objects.filter(title__in=fault_type_titles)
+            for ft in fault_types:
+                fault_type_dict[ft.title] = ft
+
+            for fs in fault_solution_data:
+                fs['fault_type'] = fault_type_dict[fs['fault_type_title']]
+                del fs['fault_type_title']
+        return FaultSolution.objects.bulk_create_fault_solution(fault_solution_data)
+
+
 
 
 

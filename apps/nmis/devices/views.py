@@ -21,19 +21,19 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATU
     MY_MAINTAIN_ORDERS, ALL_ORDERS, \
     TO_DISPATCH_ORDERS, REPAIR_ORDER_STATUS_DOING, REPAIR_ORDER_STATUS_DONE, \
     MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES, \
-    MAINTENANCE_PLAN_STATUS_DONE, UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT
+    MAINTENANCE_PLAN_STATUS_DONE, UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT, UPLOADED_FS_EXCEL_HEAD_DICT
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, RepairOrderCommentForm, \
-    RepairOrderDispatchForm, FaultSolutionCreateForm
+    RepairOrderDispatchForm, FaultSolutionCreateForm, FaultSolutionsImportForm
 
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
     FaultType, FaultSolution, MaintenancePlan
-from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR
+from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR, DOC_UPLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.hospitals.consts import ARCHIVE
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
-from utils import times
+from utils import times, files
 from utils.files import ExcelBasedOXL, file_read_iterator
 
 logger = logging.getLogger(__name__)
@@ -568,13 +568,13 @@ class FaultSolutionBatchDeleteView(BaseAPIView):
             queryset = FaultSolution.objects.filter(id__in=fs_ids)
             count = queryset.count()
             if count < len(fs_ids):
-                return resp.form_err({'fs_ids': 'id为空或数据错误'})
+                return resp.form_err({'ids': 'id为空或数据错误'})
             FaultSolution.objects.clear_cache(queryset)
             queryset.delete()
             return resp.ok('操作成功')
         except ValueError as ve:
             logger.exception(ve)
-            return resp.form_err({'fs_ids': 'id为空或数据错误'})
+            return resp.form_err({'ids': 'id为空或数据错误'})
         except Exception as exc:
             logger.exception(exc)
             return resp.failed('操作失败')
@@ -596,7 +596,46 @@ class FaultSolutionListView(BaseAPIView):
         return self.get_pages(queryset, results_name='fault_solutions', srl_cls_name='FaultSolutionSerializer')
 
 
-class FaultSolutionListExportView(BaseAPIView):
+class FaultSolutionsImportView(BaseAPIView):
+
+    permission_classes = (IsAuthenticated, )
+
+    @check_params_not_null(['file'])
+    def post(self, req):
+        """
+         批量导入故障问题解决方案
+         :param req:
+         :return:
+         """
+        file_obj = req.FILES.get('file')
+        if not file_obj:
+            return resp.failed('请选择要上传的文件')
+
+        if not ARCHIVE['.xlsx'] == file_obj.content_type:
+            return resp.failed('导入文件不是Excel文件，请检查')
+
+        # 将文件存放到服务器
+        # import os
+        # file_server_path = open(os.path.join('/media/', '', file_obj.name), 'wb')
+        # file = open('file_server_path', 'wb')
+        # file_info = files.upload_file(file_obj, DOC_UPLOAD_BASE_DIR)
+
+        is_success, ret = ExcelBasedOXL.open_excel(file_obj)
+        if not is_success:
+            return resp.failed(ret)
+        success, result = ExcelBasedOXL.read_excel(ret, UPLOADED_FS_EXCEL_HEAD_DICT)
+        ExcelBasedOXL.close(ret)
+        if not success:
+            return resp.failed(result)
+
+        form = FaultSolutionsImportForm(req.user.get_profile(), result)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+
+        return resp.ok('导入成功') if form.save() else resp.failed('导入失败')
+
+
+class FaultSolutionsExportView(BaseAPIView):
 
     permission_classes = (IsAuthenticated, )
 
