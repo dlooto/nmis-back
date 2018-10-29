@@ -208,7 +208,7 @@ class AssertDevice(BaseModel):
     cate = models.CharField('资产设备类型', choices=ASSERT_DEVICE_CATE_CHOICES, max_length=2, default=ASSERT_DEVICE_CATE_MEDICAL, )
     medical_device_cate = models.ForeignKey(
         'devices.MedicalDeviceSix8Cate', related_name='related_assert_device', verbose_name='医疗器械分类',
-        on_delete=models.PROTECT
+        on_delete=models.PROTECT, null=True
     )
     serial_no = models.CharField('资产序列号', max_length=64, unique=True)
     type_spec = models.CharField('规格型号', max_length=32, )

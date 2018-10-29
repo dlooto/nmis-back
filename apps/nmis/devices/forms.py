@@ -5,13 +5,11 @@
 
 import logging
 
-from django.utils.datastructures import MultiValueDict
-
 from base.forms import BaseForm
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
-    MAINTENANCE_PLAN_TYPE_CHOICES, PRIORITY_CHOICES
+    MAINTENANCE_PLAN_TYPE_CHOICES, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_INFORMATION, \
+    ASSERT_DEVICE_CATE_MEDICAL
 from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan, FaultSolution, MedicalDeviceSix8Cate
-from utils import times
 from utils.times import now
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 
@@ -811,6 +809,8 @@ class AssertDeviceBatchUploadForm(BaseForm):
 
     def check_medical_code(self):
         # 检验数据库中是否存在医院68码分类编号相关信息
+        if self.cate == ASSERT_DEVICE_CATE_INFORMATION:
+            return True
         code_list = []
         for row_data in self.data[0]:
             code_list.append(row_data.get('code'))
@@ -836,6 +836,9 @@ class AssertDeviceBatchUploadForm(BaseForm):
         return True
 
     def check_medical_device_cate(self):
+        # 校验医疗分类类型
+        if self.cate == ASSERT_DEVICE_CATE_INFORMATION:
+            return True
         medical_device_cate_list = []
         for row_data in self.data[0]:
             medical_device_cate_list.append(row_data.get('medical_device_cate'))
@@ -942,14 +945,13 @@ class AssertDeviceBatchUploadForm(BaseForm):
             for storage_place in self.storage_place_list:
                 if row_data.get('storage_place') == storage_place.title:
                     row_data['storage_place'] = storage_place
-
-            for medical_device_code in self.medical_device_cate_list:
-                if row_data.get('code') == medical_device_code.code:
-                    row_data['medical_device_cate'] = medical_device_code
+            if self.cate == ASSERT_DEVICE_CATE_MEDICAL:
+                for medical_device_code in self.medical_device_cate_list:
+                    if row_data.get('code') == medical_device_code.code:
+                        row_data['medical_device_cate'] = medical_device_code
+                del row_data['code']
             row_data['creator'] = self.creator
             row_data['cate'] = self.cate
-            del row_data['code']
-
             assert_devices.append(
                 AssertDevice(**row_data)
             )
