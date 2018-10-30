@@ -25,8 +25,15 @@ logger = logging.getLogger(__name__)
 
 class MedicalDeviceSix8CateManager(BaseManager):
 
-    def create(self):
-        pass
+    def create_medical_device_six8_cate(self, medical_devices_six8_cate):
+        try:
+            medical_device_cate = []
+            for medical_device_six8_cate in medical_devices_six8_cate:
+                medical_device_cate.append(self.model(**medical_device_six8_cate))
+            return self.bulk_create(medical_device_cate)
+        except Exception as e:
+            logger.exception(e)
+            return None
 
     def get_medical_device_six8_cates(self):
         """

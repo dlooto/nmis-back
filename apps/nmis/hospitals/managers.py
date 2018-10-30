@@ -243,3 +243,19 @@ class HospitalAddressManager(BaseManager):
         :param ids: 资产设备存储地点list
         """
         return self.filter(id__in=ids)
+
+    def create_storage_place(self, storage_places):
+        """
+        批量创建资产设备存储地点
+        :return:
+        """
+        try:
+            storage_place_list = []
+            for sp in storage_places:
+                storage_place_list.append(self.model(**sp))
+
+            return self.bulk_create(storage_place_list)
+
+        except Exception as e:
+            logs.exception(e)
+            return None

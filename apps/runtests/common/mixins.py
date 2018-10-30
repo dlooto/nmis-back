@@ -7,6 +7,8 @@
 
 import logging
 
+from nmis.devices.models import MedicalDeviceSix8Cate
+from nmis.hospitals.models import HospitalAddress
 from nmis.projects.consts import PRO_HANDING_TYPE_SELF, PRO_CATE_SOFTWARE
 from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectMilestoneState, \
     Milestone, PurchaseContract
@@ -163,6 +165,120 @@ MILESTONES = [
     }
 ]
 
+MEDICAL_DEVICES_SIX8_CATE = [
+    {
+        "id": 60030001,
+        "code": "6801",
+        "title": "基础外科手术器械",
+        "level": 1,
+        "mgt_cate": 2,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
+        "id": 60030002,
+        "code": "6830",
+        "title": "医用X射线设备",
+        "level": 1,
+        "mgt_cate": 3,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
+        "id": 60030003,
+        "code": "6801-02",
+        "title": "基础外科用刀",
+        "level": 2,
+        "parent_id": 60030001,
+        "example": "手术刀柄和刀片、皮片刀、疣体剥离刀、柳叶刀、铲刀、剃毛刀、皮屑刮刀、挑刀、锋刀、修脚刀、修甲刀、解剖刀",
+        "mgt_cate": 1,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
+        "id": 60030004,
+        "code": "6801-03",
+        "title": "基础外科用剪",
+        "level": 2,
+        "parent_id": 60030001,
+        "example": "普通手术剪、组织剪、综合组织剪、拆线剪、石膏剪、解剖剪、纱布绷带剪、教育用手术剪",
+        "mgt_cate": 1,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
+        "id": 60030005,
+        "code": "6830-03",
+        "title": "X射线手术影像设备",
+        "level": 2,
+        "parent_id": 60030002,
+        "example": "介入治疗X射线机",
+        "mgt_cate": 3,
+        "created_time": "2018-10-30 15:00"
+    }
+]
+
+STORAGE_PLACE = [
+    {
+        "id": 50020001,
+        "title": "住院大楼A座",
+        "type": "BD",
+        "parent_id": None,
+        "parent_path": "",
+        "level": 1,
+        "sort": 1,
+        "dept": None,
+        "desc": "简介住院大楼A座",
+        "disabled": False,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
+        "id": 50020002,
+        "title": "综合楼B座",
+        "type": "BD",
+        "parent_id": None,
+        "parent_path": "",
+        "level": 1,
+        "sort": 2,
+        "dept": None,
+        "desc": "简介综合楼B座",
+        "disabled": False,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
+        "id": 50020003,
+        "title": "消毒设备库房001",
+        "type": "RM",
+        "parent_id": 50020001,
+        "parent_path": "50020001",
+        "level": 2,
+        "sort": 1,
+        "desc": "简介消毒设备库房001",
+        "disabled": False,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
+        "id": 50020004,
+        "title": "消毒设备库房002",
+        "type": "RM",
+        "parent_id": 50020001,
+        "parent_path": "50020001",
+        "level": 2,
+        "sort": 2,
+        "desc": "简介消毒设备库房002",
+        "disabled": False,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
+        "id": 50020005,
+        "title": "手术器械存放室001",
+        "type": "RM",
+        "parent_id": 50020002,
+        "parent_path": "50020002",
+        "level": 2,
+        "sort": 1,
+        "desc": "简介手术器械存放室001",
+        "disabled": False,
+        "created_time": "2018-10-30 15:00"
+    },
+]
+
 
 class ProjectPlanMixin(object):
     """
@@ -274,3 +390,32 @@ class ProjectPlanMixin(object):
         }
         return PurchaseContract.objects.create_purchase_contract(
             project_milestone_state, contract_devices, **purchase_contract_data)
+
+
+class AssertDevicesMixin(object):
+
+    def create_medical_devices_six8_cate(self, creator, medical_devices_six8_cate=MEDICAL_DEVICES_SIX8_CATE):
+        """
+        创建医疗器械分类测试数据
+        :param creator: 创建人
+        :param medical_devices_six8_cate: 医疗器械分类部分数据
+        :return:
+        """
+        for mc in medical_devices_six8_cate:
+            mc['creator'] = creator
+        return MedicalDeviceSix8Cate.objects.create_medical_device_six8_cate(
+            medical_devices_six8_cate)
+
+
+class HospitalMixin(object):
+
+    def create_storage_places(self, dept, storage_places=STORAGE_PLACE):
+        """
+        创建资产设备存储地点
+        :param dept:
+        :param storage_places:
+        :return:
+        """
+        for sp in storage_places:
+            sp['dept'] = sp.get('dept', dept)
+        return HospitalAddress.objects.create_storage_place(storage_places)

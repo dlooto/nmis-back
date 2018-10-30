@@ -35,13 +35,14 @@ class AssertDeviceCreateForm(BaseForm):
             'assert_no_err': '资产编号已存在',
             'serial_no_err': '资产序列号已存在',
             'bar_code_err': '设备条形码已存在',
-            'cate_err': '资产设备类型错误'
+            'cate_err': '资产设备类型错误',
+            'medical_device_cate_err': '资产设备医疗器械分类不能为空'
         })
 
     def is_valid(self):
         if not self.check_service_life() or not self.check_status()\
                 or not self.check_assert_no() or not self.check_serial_no()\
-                or not self.check_bar_code():
+                or not self.check_bar_code() or not self.check_medical_device_cate():
             return False
         return True
 
@@ -110,13 +111,20 @@ class AssertDeviceCreateForm(BaseForm):
             return False
         return True
 
+    def check_medical_device_cate(self):
+
+        if self.data.get('cate') == ASSERT_DEVICE_CATE_MEDICAL:
+            if not self.data.get('medical_device_cate_id'):
+                self.update_errors('medical_device_cate', 'medical_device_cate_err')
+                return False
+        return True
+
     def save(self):
 
         assert_data = {
             'creator': self.creator,
             'assert_no': self.data.get('assert_no', '').strip(),
             'title': self.data.get('title', '').strip(),
-            'medical_device_cate_id': self.data.get('medical_device_cate_id'),
             'serial_no': self.data.get('serial_no', '').strip(),
             'type_spec': self.data.get('type_spec', '').strip(),
             'service_life': self.data.get('service_life'),
@@ -126,6 +134,8 @@ class AssertDeviceCreateForm(BaseForm):
             'purchase_date': self.data.get('purchase_date', '').strip(),
             'cate': self.data.get('cate', '').strip(),
         }
+        if self.data.get('cate', '').strip() == ASSERT_DEVICE_CATE_MEDICAL:
+            assert_data['medical_device_cate_id'] = self.data.get('medical_device_cate_id')
 
         if self.data.get('bar_code', '').strip():
             assert_data['bar_code'] = self.data.get('bar_code', '').strip()
@@ -665,6 +675,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
         })
 
     def is_valid(self):
+        logger.info(self.data[0])
         if not self.check_medical_device_cate() or not self.check_serial_no()\
                 or not self.check_performer() or not self.check_medical_code()\
                 or not self.check_use_dept() or not self.check_responsible_dept()\
@@ -826,7 +837,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
             medical_device_cate_db_codes.append(medical_device_cate.code)
         code_check_list = []
         if not len(set(code_list)) == len(medical_device_cate_db_codes):
-            for code in code_list:
+            for code in set(code_list):
                 if code not in medical_device_cate_db_codes:
                     code_check_list.append(code)
             self.update_errors('medical_code', 'medical_code_err')
