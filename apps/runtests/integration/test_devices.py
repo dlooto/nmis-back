@@ -37,9 +37,16 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         medical_devices_six8_cate = self.create_medical_devices_six8_cate(creator=self.user.get_profile())
         self.assertIsNotNone(medical_devices_six8_cate)
 
-        # 创建资产设备存储地点
-        storage_places = self.create_storage_places(dept=self.dept)
-        self.assertIsNotNone(storage_places)
+        # 创建父类存储地点（指医院某个大楼）
+        title = '信息综合大楼'
+        storage = self.create_parent_storage_place(title=title)
+        self.assertIsNotNone(storage)
+        self.assertEquals(storage.title, title)
+        # 创建子类存储地点（指某个大楼中楼层房间）
+        storage_place = self.create_storage_place(dept=self.dept, parent=storage,
+                                                  title='信息设备存储室_{}'.format(self.get_random_suffix()))
+        self.assertIsNotNone(storage_place)
+        self.assertIsNotNone(storage_place)
         medical_assert_device_data = {
             "assert_no": "TEST0007_{}".format(self.get_random_suffix()),
             "title": "柳叶刀",
@@ -53,7 +60,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
             "production_date": "2018-09-12",
             "bar_code": "123123123_{}".format(self.get_random_suffix()),
             "status": "US",
-            "storage_place_id": 50020005,
+            "storage_place_id": storage_place.id,
             "purchase_date": "2018-10-09",
             "cate": "ME",
         }
@@ -70,7 +77,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
             "production_date": "2018-09-12",
             "bar_code": "123123124_{}".format(self.get_random_suffix()),
             "status": "US",
-            "storage_place_id": 50020005,
+            "storage_place_id": storage_place.id,
             "purchase_date": "2018-10-09",
             "cate": "IN"
         }
@@ -89,5 +96,43 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         for key, value in information_assert_device_data.items():
             self.assertEquals(value, information_assert_device.get(key))
 
+    def test_assert_device_detail(self):
+        """
+        API测试: 查看资产设备详情
+        """
+        api = '/api/v1/devices/{}'
 
+        self.login_with_username(self.user)
 
+        # 创建父类存储地点（指医院某个大楼）
+        title = '信息综合楼'
+        storage = self.create_parent_storage_place(title=title)
+        self.assertIsNotNone(storage)
+        self.assertEquals(storage.title, title)
+        # 创建子类存储地点（指某个大楼中楼层房间）
+        storage_place = self.create_storage_place(dept=self.dept, parent=storage, title='信息设备存储室_{}'.format(self.get_random_suffix()))
+        self.assertIsNotNone(storage_place)
+        information_assert_device_data = {
+            "assert_no": "TEST0008_{}".format(self.get_random_suffix()),
+            "title": "Mac电脑",
+            "serial_no": "TEST03420353_{}".format(self.get_random_suffix()),
+            "type_spec": "BN3004",
+            "service_life": 3,
+            "responsible_dept_id": self.dept.id,
+            "production_date": "2018-09-12",
+            "bar_code": "123123124_{}".format(self.get_random_suffix()),
+            "status": "US",
+            "storage_place_id": storage_place.id,
+            "purchase_date": "2018-10-09",
+            "cate": "IN",
+            "creator_id": self.user.get_profile().id
+        }
+        # 创建信息化资产设备
+        assert_device = self.create_assert_device(**information_assert_device_data)
+
+        response = self.get(api.format(assert_device.id))
+        self.assert_response_success(response)
+        self.assertIsNotNone(response.get('assert_device'))
+        self.assertEquals(response.get('assert_device').get('id'), assert_device.id)
+        for key, value in information_assert_device_data.items():
+            self.assertEquals(value, response.get('assert_device').get(key))

@@ -7,11 +7,12 @@
 
 import logging
 
-from nmis.devices.models import MedicalDeviceSix8Cate
+from nmis.devices.models import MedicalDeviceSix8Cate, AssertDevice
 from nmis.hospitals.models import HospitalAddress
 from nmis.projects.consts import PRO_HANDING_TYPE_SELF, PRO_CATE_SOFTWARE
 from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectMilestoneState, \
     Milestone, PurchaseContract
+from utils import times
 
 logs = logging.getLogger(__name__)
 
@@ -406,12 +407,22 @@ class AssertDevicesMixin(object):
         return MedicalDeviceSix8Cate.objects.create_medical_device_six8_cate(
             medical_devices_six8_cate)
 
+    def create_assert_device(self, **data):
+        """
+        创建资产设备
+        """
+        try:
+            return AssertDevice.objects.create(**data)
+        except Exception as e:
+            logs.exception(e)
+            return None
+
 
 class HospitalMixin(object):
 
     def create_storage_places(self, dept, storage_places=STORAGE_PLACE):
         """
-        创建资产设备存储地点
+        创建资产设备存储地点集
         :param dept:
         :param storage_places:
         :return:
@@ -419,3 +430,56 @@ class HospitalMixin(object):
         for sp in storage_places:
             sp['dept'] = sp.get('dept', dept)
         return HospitalAddress.objects.create_storage_place(storage_places)
+
+    def create_storage_place(self, dept, parent, title, type="RM", level=2, sort=1, disabled=False, created_time=times.now()):
+        """
+        创建子类存储地点
+        :param dept:
+        :param parent:
+        :param title:
+        :param type:
+        :param level:
+        :param sort:
+        :param disabled:
+        :param created_time:
+        """
+        storage_place_data = {
+            "dept": dept,
+            "parent": parent,
+            "title": title,
+            "type": type,
+            "level": level,
+            "sort": sort,
+            "disabled": disabled,
+            "created_time": created_time
+        }
+
+        try:
+            return HospitalAddress.objects.create(**storage_place_data)
+        except Exception as e:
+            logs.exception(e)
+            return None
+
+    def create_parent_storage_place(self, title, type="RM", level=2, sort=1,  disabled=False, created_time=times.now()):
+        """
+        创建父类存储地点
+        :param title:
+        :param type:
+        :param level:
+        :param sort:
+        :param disabled:
+        :param created_time:
+        """
+        storage_place_data = {
+            "title": title,
+            "type": type,
+            "level": level,
+            "sort": sort,
+            "disabled": disabled,
+            "created_time": created_time
+        }
+        try:
+            return HospitalAddress.objects.create(**storage_place_data)
+        except Exception as e:
+            logs.exception(e)
+            return None
