@@ -236,7 +236,6 @@ class AssertDeviceBatchUploadView(BaseAPIView):
             return resp.failed('导入失败')
         return resp.ok('导入成功')
 
-
 class AssertDeviceAllocateView(BaseAPIView):
 
     permission_classes = (IsAuthenticated, )

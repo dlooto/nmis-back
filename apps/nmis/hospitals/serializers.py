@@ -7,6 +7,7 @@
 
 import logging
 
+from django.contrib.auth.models import Permission
 from rest_framework import serializers
 
 from base import resp
@@ -150,7 +151,7 @@ class UserRoleShipSerializer(BaseModelSerializer):
         if not obj.role:
             return []
         return resp.serialize_data(
-            obj.role.permissions.all(), srl_cls_name='SimplePermissionSerializer'
+            obj.role.permissions.all(), app_name='nmis.hospitals', srl_cls_name='SimplePermissionSerializer'
         )
 
 
@@ -258,37 +259,35 @@ class GroupSerializer(BaseModelSerializer):
 
 class PermissionSerializer(BaseModelSerializer):
     """
-    权限序列化类.
-    TODO:暂时把group当做permission处理，后续改造为真正的Permission,要去掉is_admin
+    权限序列化类
     """
-    codename = serializers.SerializerMethodField('_get_codename')
+    app_label = serializers.SerializerMethodField('get_content_type_app_label')
+    model = serializers.SerializerMethodField('get_content_type_model')
 
     @staticmethod
     def set_eager_loading(queryset):
-        queryset = queryset.select_related('organ')
+        queryset = queryset.select_related('content_type')
         return queryset
 
     class Meta:
-        model = Group
-        fields = ('id', 'name', 'codename', 'desc',  'created_time')
+        model = Permission
+        fields = ('id', 'name', 'codename', 'content_type_id', 'app_label', 'model')
 
-    def _get_codename(self, obj):
-        return obj.cate
+    def get_content_type_app_label(self, obj):
+        return obj.content_type.app_label if obj.content_type else ''
+
+    def get_content_type_model(self, obj):
+        return obj.content_type.model if obj.content_type else ''
 
 
 class SimplePermissionSerializer(BaseModelSerializer):
     """
-    权限序列化类.
-    TODO:暂时把group当做permission处理，后续改造为真正的Permission,要去掉is_admin
+    权限序列化类
     """
-    codename = serializers.SerializerMethodField('_get_codename')
 
     class Meta:
-        model = Group
-        fields = ('id', 'name', 'codename')
-
-    def _get_codename(self, obj):
-        return obj.cate
+        model = Permission
+        fields = ('id', 'name', 'codename', 'content_type_id')
 
 
 class ChunkRoleSerializer(BaseModelSerializer):

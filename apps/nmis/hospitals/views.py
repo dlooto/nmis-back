@@ -299,7 +299,7 @@ class StaffListView(BaseAPIView):
 
     permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
     # permission_codes = ('GNS', 'GPA', 'GAD')
-    # permission_classes = (CustomerAnyPermission,)
+    # permission_classes = (CustomAnyPermission,)
 
     def get(self, req, hid):
         """

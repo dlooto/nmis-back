@@ -83,7 +83,7 @@ class TestCaseDataUtils(object):
         )
         organ = self.create_organ(user)
         organ.init_default_groups()
-        roles = self.init_roles(organ)
+        roles = self.init_roles()
         dept = self.create_department(
             organ, dept_name="测试科室_{}".format(self.get_random_suffix())
         )
@@ -105,27 +105,13 @@ class TestCaseDataUtils(object):
     def create_role(self):
         pass
 
-    def init_roles(self, organ):
-        from nmis.hospitals.consts import GROUP_CATE_PROJECT_APPROVER, \
-            GROUP_CATE_NORMAL_STAFF
-        from nmis.hospitals.models import Role, Group
-        roles = list()
-        group_admin = organ.get_admin_group()
-        group_approver = Group.objects.filter(cate=GROUP_CATE_PROJECT_APPROVER).first()
-        group_staff = Group.objects.filter(cate=GROUP_CATE_NORMAL_STAFF).first()
-        role1 = Role.objects.create(name='管理员', codename='isadmin',)
-        role1.permissions.set([group_admin])
-        role2 = Role.objects.create(name='项目分配者', codename='approver', )
-        role2.permissions.set([group_approver])
-        role3 = Role.objects.create(name='普通员工', codename='normal_staff', )
-        role3.permissions.set([group_staff])
-        # role1.cache()
-        # role2.cache()
-        # role3.cache()
-        roles.append(role1)
-        roles.append(role2)
-        roles.append(role3)
+    def init_roles(self):
+        from nmis.hospitals.models import Role
+        roles = list(Role.objects.all())
+        if not roles:
+            roles = Role.objects.init_default_roles()
         return roles
+
 
 class BaseTestCase(TestCase, TestCaseDataUtils):
     logger = logging.getLogger('django.test')

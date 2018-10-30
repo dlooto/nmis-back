@@ -107,6 +107,77 @@ GROUPS = {
     },
 }
 
+ROLE_CATE_NORMAL = 'CNM'
+
+ROLE_CATE_CHOICES = (
+    (ROLE_CATE_NORMAL, '普通角色类'),
+)
+
+ROLE_CODE_HOSP_SUPER_ADMIN = 'HOS-SUP-ADM'
+ROLE_CODE_SYSTEM_SETTING_ADMIN = 'SYS-SET-ADM'
+
+ROLE_CODE_NORMAL_STAFF = 'HOS-NOR-STF'
+ROLE_CODE_HOSP_REPORT_ASSESS = 'HOS-RPT-ASS'
+
+ROLE_CODE_ASSERT_DEVICE_ADMIN = 'DEV-ASS-ADM'
+ROLE_CODE_REPAIR_ORDER_DISPATCHER = 'DEV-REO-DIS'
+ROLE_CODE_MAINTAINER = 'DEV-MAI'
+ROLE_CODE_PRO_DISPATCHER = 'PRO-DIS'
+
+ROLE_CODE_CHOICES = (
+    (ROLE_CODE_NORMAL_STAFF, '普通员工'),
+    (ROLE_CODE_HOSP_SUPER_ADMIN, '超级管理员'),
+    (ROLE_CODE_SYSTEM_SETTING_ADMIN, '系统管理员'),
+    (ROLE_CODE_ASSERT_DEVICE_ADMIN, '资产管理员'),
+    (ROLE_CODE_REPAIR_ORDER_DISPATCHER, '维修任务分配者'),
+    (ROLE_CODE_MAINTAINER, '维修工程师'),
+    (ROLE_CODE_HOSP_REPORT_ASSESS, '统计信息查看者'),
+    (ROLE_CODE_PRO_DISPATCHER, '项目分配者'),
+)
+
+ROLES = {
+    ROLE_CODE_NORMAL_STAFF: {
+        'name': '普通员工',
+        'codename': ROLE_CODE_NORMAL_STAFF,
+        'cate': ROLE_CATE_NORMAL
+    },
+    ROLE_CODE_HOSP_SUPER_ADMIN: {
+        'name': '超级管理员',
+        'codename': ROLE_CODE_HOSP_SUPER_ADMIN,
+        'cate': ROLE_CATE_NORMAL
+    },
+    ROLE_CODE_SYSTEM_SETTING_ADMIN: {
+        'name': '系统管理员',
+        'codename': ROLE_CODE_SYSTEM_SETTING_ADMIN,
+        'cate': ROLE_CATE_NORMAL
+    },
+    ROLE_CODE_ASSERT_DEVICE_ADMIN: {
+        'name': '资产管理员',
+        'codename': ROLE_CODE_ASSERT_DEVICE_ADMIN,
+        'cate': ROLE_CATE_NORMAL
+    },
+    ROLE_CODE_REPAIR_ORDER_DISPATCHER: {
+        'name': '维修任务分配者',
+        'codename': ROLE_CODE_REPAIR_ORDER_DISPATCHER,
+        'cate': ROLE_CATE_NORMAL
+    },
+    ROLE_CODE_MAINTAINER: {
+        'name': '统计信息查看者',
+        'codename': ROLE_CODE_MAINTAINER,
+        'cate': ROLE_CATE_NORMAL
+    },
+    ROLE_CODE_HOSP_REPORT_ASSESS: {
+        'name': '普通员工',
+        'codename': ROLE_CODE_HOSP_REPORT_ASSESS,
+        'cate': ROLE_CATE_NORMAL
+    },
+    ROLE_CODE_PRO_DISPATCHER: {
+        'name': '项目分配者',
+        'codename': ROLE_CODE_PRO_DISPATCHER,
+        'cate': ROLE_CATE_NORMAL
+    },
+}
+
 # 上传的员工excel模板文件表头字典
 UPLOADED_STAFF_EXCEL_HEADER_DICT = {
     'username':      '用户名',

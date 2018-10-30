@@ -7,13 +7,8 @@ import logging
 import random
 from unittest import skip
 
-from django.core.files.uploadedfile import UploadedFile
-from django.http.multipartparser import FILE
-from django.test import Client
 
-from nmis.hospitals.models import Staff, Group, Role
 from runtests import BaseTestCase
-from settings import FIXTURE_DIRS
 
 logger = logging.getLogger('runtests')
 
@@ -385,11 +380,19 @@ class RoleAPITestCase(BaseTestCase):
         """
         api = '/api/v1/hospitals/roles/create'
         self.login_with_username(self.user)
+        from nmis.hospitals.models import Role
+        from django.contrib.auth.models import Permission
+
+        role = Role.objects.get_super_admin().first()
         role_data = {
             'name': '测试角色001',
+            'codename': 'ceshi001',
             'desc': '描述',
             'permissions': [
-                self.organ.get_admin_group().id,
+                Permission.objects.filter(
+                    content_type__app_label='hospitals',
+                    content_type__model='hospital'
+                ).first().id,
             ]
         }
         response = self.post(api.format(), data=role_data)
@@ -405,17 +408,17 @@ class RoleAPITestCase(BaseTestCase):
     def test_role_list(self):
         api = '/api/v1/hospitals/roles'
         self.login_with_username(self.user)
-        groups = Group.objects.all()
-        permissions =[]
+        from django.contrib.auth.models import Permission
+        from nmis.hospitals.models import Role
 
-        for group in groups:
-            permissions.append(group.id)
+        permissions = Permission.objects.filter(content_type__app_label='hospitals', content_type__model='hospital')
+
         init_roles = Role.objects.all()
         init_roles_len = len(init_roles)
-        data1 = {'name': '测试角色0001', 'permissions': [permissions[0]]}
-        data2 = {'name': '测试角色0002', 'permissions': [permissions[1]]}
-        role1 = Role.objects.create_role(data=data1)
-        role2 = Role.objects.create_role(data=data2)
+        data1 = {'name': '测试角色0001', 'codename': 'ceshi0001', 'permissions': [permissions[0]]}
+        data2 = {'name': '测试角色0002', 'codename': 'ceshi0002', 'permissions': [permissions[1]]}
+        role1 = Role.objects.create_role_with_permissions(data=data1)
+        role2 = Role.objects.create_role_with_permissions(data=data2)
         resp1 = self.get(api.format())
         self.assert_response_success(resp1)
         roles = resp1['roles']

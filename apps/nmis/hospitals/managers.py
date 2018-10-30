@@ -7,14 +7,15 @@
 
 import logging
 from django.db import transaction
+from django.db.models import Q
 
-
+from nmis.hospitals.consts import ROLE_CODE_HOSP_SUPER_ADMIN, ROLES, ROLE_CODE_CHOICES
 from users.models import User
 
 from base.models import BaseManager
 from utils import times
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class HospitalManager(BaseManager):
@@ -81,7 +82,7 @@ class StaffManager(BaseManager):
                 self.bulk_create(staff_list)
             return True
         except Exception as e:
-            logging.exception(e)
+            logger.exception(e)
             return False
 
     def get_by_name(self, organ, staff_name):
@@ -126,17 +127,85 @@ class GroupManager(BaseManager):
 
 class RoleManager(BaseManager):
 
-    def create_role(self, data, commit=True, **kwargs):
-        role = self.model(name=data.get("name"), codename=data.get("codename"), desc=data.get('desc'), **kwargs)
+    def create_role_with_permissions(self, data, commit=True, **kwargs):
+        name = data.get("name", '')
+        codename = data.get("codename", '')
+        desc = data.get('desc', '')
+        permissions = data.get('permissions', [])
+        if not name or not codename or not permissions:
+            logger.warn('Parameter Error: name, codename or permissions required')
+            return None
+        if self.filter(Q(codename=codename) | Q(name=name)):
+            logger.warn('Create Error: role existed')
+            return None
+        role = self.model(name=name, codename=codename, desc=desc, **kwargs)
         try:
             if commit:
                 role.save()
-                role.permissions.set(data.get("permissions"))
+                role.permissions.set(permissions)
                 role.cache()
             return role
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return None
+
+    def get_all_roles(self):
+        """返回所有角色"""
+        return self.all()
+
+    def create_role(self, **kwargs):
+        """
+        创建角色
+        """
+        if not kwargs.get('name') or not kwargs.get('codename'):
+            logger.warn('Parameter Error: name or codename required')
+            return None
+        if self.filter(Q(name=kwargs.get('name')) | Q(codename=kwargs.get('codename'))):
+            logger.warn('Create Error: role existed')
+            return None
+        try:
+            return self.create(self, **kwargs)
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+    def init_default_roles(self):
+        """
+        初始化默认角色
+        :return:
+        """
+
+        role_list = []
+        for k in dict(ROLE_CODE_CHOICES).keys():
+            role_list.append(
+                self.create_role(**ROLES.get(k))
+            )
+        try:
+            with transaction.atomic():
+                self.bulk_create(role_list)
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+    def create_super_admin(self):
+        """创建超级管理员角色"""
+        if self.get_super_admin():
+            logger.warn('Create Error:  super admin role existed')
+            return None
+        role_data = ROLES.get(ROLE_CODE_HOSP_SUPER_ADMIN)
+        return self.create_role(**role_data)
+
+    def get_super_admin(self):
+        """
+        获取超级管理员角色
+        :return:
+        """
+        role = self.filter(codename=ROLE_CODE_HOSP_SUPER_ADMIN)
+
+        if not role:
+            logger.warn('Error: super admin role not existed')
+            return None
+        return role
 
 
 class UserRoleShipManager(BaseManager):
