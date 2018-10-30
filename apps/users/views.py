@@ -283,7 +283,7 @@ def append_extra_info(user, request, response):
     permissions = SimplePermissionSerializer.setup_eager_loading(permissions)
     response.data.update({
         'roles': resp.serialize_data(roles, srl_cls_name='SimpleRoleSerializer'),
-        "permissions":  resp.serialize_data(permissions, srl_cls_name='SimplePermissionSerializer')})
+        "permissions":  resp.serialize_data(permissions, app_name='nmis.hospitals', srl_cls_name='SimplePermissionSerializer')})
 
     # 设置登录成功后的跳转页面, 默认到index页
     response.data.update({'next': request.data.get('next', 'index')})

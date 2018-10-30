@@ -9,6 +9,7 @@
 
 import logging
 
+from django.contrib.auth.models import Permission
 from django.db import models, transaction
 
 from base.models import BaseModel
@@ -302,11 +303,10 @@ class Role(BaseModel):
     角色数据模型
     """
     name = models.CharField('角色名称', max_length=40)
-    codename = models.CharField('角色代码', max_length=100, unique=False, null=True, blank=True, default='')
-    cate = models.CharField('类别', max_length=4, choices=GROUP_CATE_CHOICES,
-                            null=False, blank=True)
+    codename = models.CharField('角色代码', max_length=100, unique=True, default='')
+    cate = models.CharField('类别', max_length=4, choices=ROLE_CATE_CHOICES, default=ROLE_CATE_NORMAL)
     permissions = models.ManyToManyField(
-        Group, verbose_name='权限集',
+        Permission, verbose_name='权限集',
         related_name="roles", related_query_name='role',
         blank=True
     )
@@ -320,8 +320,8 @@ class Role(BaseModel):
     objects = RoleManager()
 
     class Meta:
-        verbose_name = '角色'
-        verbose_name_plural = '角色'
+        verbose_name = '角色管理'
+        verbose_name_plural = '角色管理'
         db_table = 'perm_role'
 
     def __str__(self):

@@ -248,6 +248,11 @@ class AssertDevice(BaseModel):
         verbose_name = '资产设备'
         verbose_name_plural = verbose_name
         db_table = 'devices_assert_device'
+        permissions = (
+            ('view_assert_device', 'can view assert devices'),    # 查看设备
+            ('scrap_assert_device', 'can scrap assert devices'),  # 报废设备
+            ('allocate_assert_device', 'can allocate assert devices'),  # 调配设备
+        )
 
     VALID_ATTRS = [
         'assert_no', 'title', 'cate', 'medical_device_cate', 'serial_no', 'type_spec',
@@ -367,7 +372,7 @@ class FaultType(BaseModel):
     objects = FaultTypeManager()
 
     class Meta:
-        verbose_name = '故障类型',
+        verbose_name = '故障类型'
         verbose_name_plural = verbose_name
         db_table = 'devices_fault_type'
 

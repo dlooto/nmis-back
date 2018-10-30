@@ -16,7 +16,7 @@ def is_login(request):
     return request.user and request.user.is_authenticated
 
 
-class CustomerAllPermission(BasePermission):
+class CustomAllPermission(BasePermission):
     """
     自定义检查用户权限类
     """
@@ -24,18 +24,6 @@ class CustomerAllPermission(BasePermission):
         """
         View/接口级权限检查
         """
-        # permissions = request.user.get_permissions()
-        #
-        # code_names = []
-        #
-        # for permission in permissions:
-        #     code_names.append(permission.cate)
-        #
-        # for code in view.permission_codes:
-        #     if code not in code_names:
-        #         return False
-        # return True
-
         return is_login(request)
 
     def has_object_permission(self, request, view, obj):
@@ -58,7 +46,7 @@ class CustomerAllPermission(BasePermission):
         return True
 
 
-class CustomerAnyPermission(BasePermission):
+class CustomAnyPermission(BasePermission):
     """
     自定义检查用户权限类
     """
@@ -67,16 +55,6 @@ class CustomerAnyPermission(BasePermission):
         """
         View/接口级权限检查
         """
-        # permissions = request.user.get_permissions()
-        # code_names = []
-        #
-        # for permission in permissions:
-        #     code_names.append(permission.cate)
-        #
-        # for code in view.permission_codes:
-        #     if code in code_names:
-        #         return True
-        # return False
         return is_login(request)
 
     def has_object_permission(self, request, view, obj):
@@ -96,6 +74,7 @@ class CustomerAnyPermission(BasePermission):
             if code in code_names:
                 return True
         return False
+
 
 def check_organ_any_permissions(request, view):
     staff = request.user.get_profile() if hasattr(request.user, 'get_profile') else None

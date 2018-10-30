@@ -10,12 +10,13 @@
 import logging
 import re
 
+from django.contrib.auth.models import Permission
 from django.db import transaction
 from utils import eggs
 from nmis.hospitals.models import Hospital, Department, Staff, Group, Role
 from organs.forms import OrganSignupForm
 from base.forms import BaseForm
-from nmis.hospitals.consts import DPT_ATTRI_CHOICES, GROUP_CATE_NORMAL_STAFF
+from nmis.hospitals.consts import DPT_ATTRI_CHOICES, GROUP_CATE_NORMAL_STAFF, ROLE_CATE_NORMAL
 
 from users.models import User
 
@@ -709,7 +710,7 @@ class RoleCreateForm(BaseForm):
         if not perm_keys or len(perm_keys) <= 0:
             self.update_errors('permissions', 'permission_error')
             return False
-        permissions = Group.objects.filter(id__in=perm_keys)
+        permissions = Permission.objects.filter(id__in=perm_keys)
         if not permissions or len(permissions) < len(perm_keys):
             self.update_errors('permissions', 'permission_not_exists')
             return False
@@ -718,13 +719,13 @@ class RoleCreateForm(BaseForm):
     def save(self):
         role_data = {
             'name': self.data.get('name', '').strip(),
-            'codename': "",
-            'cate': 'GCR',
+            'codename': self.data.get('codename', '').strip(),
+            'cate': ROLE_CATE_NORMAL,
             'desc': self.data.get('desc').strip(),
         }
-        permissions = Group.objects.filter(id__in=self.data.get('permissions'))
+        permissions = Permission.objects.filter(id__in=self.data.get('permissions'))
         role_data['permissions'] = permissions
-        return Role.objects.create_role(role_data)
+        return Role.objects.create_role_with_permissions(role_data)
 
 
 class RoleUpdateForm(BaseForm):
@@ -760,7 +761,7 @@ class RoleUpdateForm(BaseForm):
         if not perm_keys or len(perm_keys) <= 0:
             self.update_errors('permissions', 'permission_error')
             return False
-        permissions = Group.objects.filter(id__in=perm_keys)
+        permissions = Permission.objects.filter(id__in=perm_keys)
         if not permissions or len(permissions) < len(perm_keys):
             self.update_errors('permissions', 'permission_not_exists')
             return False
@@ -769,11 +770,11 @@ class RoleUpdateForm(BaseForm):
     def save(self):
         role_data = {
             'name': self.data.get('name', '').strip(),
-            'codename': "",
-            'cate': 'GCR',
+            'codename': self.data.get('codename', '').strip(),
+            'cate': ROLE_CATE_NORMAL,
             'desc': self.data.get('desc').strip(),
         }
-        permissions = Group.objects.filter(id__in=self.data.get('permissions'))
+        permissions = Permission.objects.filter(id__in=self.data.get('permissions'))
         role_data['permissions'] = permissions
         try:
             new_role = self.old_role.update(role_data)

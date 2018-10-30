@@ -6,6 +6,7 @@ python manage.py test runtests.test_user
 from collections import defaultdict
 from copy import deepcopy
 
+from django.contrib.auth.models import Permission
 from django.urls import reverse
 
 from nmis.hospitals.models import Role, Group
@@ -196,14 +197,10 @@ class RoleTestCase(BaseTestCase):
         staff2 = self.create_staff(user2, self.organ, self.dept, '测试员工0002')
         dept2 = self.create_department(self.organ, dept_name='测试部门0002')
 
-        groups = Group.objects.all()
-        permissions =[]
+        permissions = Permission.objects.filter(content_type__app_label='hospitals', content_type__model='hospital')
 
-        for group in groups:
-            permissions.append(group.id)
-
-        role1 = Role.objects.create_role(data={'name': '测试角色0001', 'permissions': [permissions[0]]})
-        role2 = Role.objects.create_role(data={'name': '测试角色0002', 'permissions': [permissions[1]]})
+        role1 = Role.objects.create_role_with_permissions(data={'name': '测试角色0001', 'codename': 'test001', 'permissions': [permissions[0]]})
+        role2 = Role.objects.create_role_with_permissions(data={'name': '测试角色0002', 'codename': 'test002', 'permissions': [permissions[1]]})
 
         self.login_with_username(self.user)
         # 封装请求参数
