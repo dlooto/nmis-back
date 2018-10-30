@@ -21,7 +21,9 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATU
     MY_MAINTAIN_ORDERS, ALL_ORDERS, \
     TO_DISPATCH_ORDERS, REPAIR_ORDER_STATUS_DOING, REPAIR_ORDER_STATUS_DONE, \
     MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES, \
-    MAINTENANCE_PLAN_STATUS_DONE, UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT, UPLOADED_FS_EXCEL_HEAD_DICT
+    MAINTENANCE_PLAN_STATUS_DONE, UPLOADED_FS_EXCEL_HEAD_DICT, ASSERT_DEVICE_CATE_MEDICAL, \
+    UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT, \
+    UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, RepairOrderCommentForm, \
     RepairOrderDispatchForm, FaultSolutionCreateForm, FaultSolutionsImportForm, AssertDeviceBatchUploadForm
@@ -208,7 +210,8 @@ class AssertDeviceBatchUploadView(BaseAPIView):
         self.check_object_permissions(req, req.user.get_profile().organ)
         file_obj = req.FILES.get('file')
         cate = req.data.get('cate')
-
+        if cate not in dict(ASSERT_DEVICE_CATE_CHOICES):
+            return resp.failed('资产医疗设备分类异常')
         if not file_obj:
             return resp.failed('请选择上传的Excel表格')
 
@@ -217,7 +220,10 @@ class AssertDeviceBatchUploadView(BaseAPIView):
         success, result = ExcelBasedOXL.open_excel(file_obj)
         if not success:
             return resp.failed(result)
-        head_dict = UPLOADED_ASSERT_DEVICE_EXCEL_HEADER_DICT
+        if req.data.get('cate') == ASSERT_DEVICE_CATE_MEDICAL:
+            head_dict = UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT
+        else:
+            head_dict = UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT
         is_success, ret = ExcelBasedOXL.read_excel(result, head_dict)
 
         if not is_success:
