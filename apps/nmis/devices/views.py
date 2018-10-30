@@ -84,7 +84,7 @@ class AssertDeviceCreateView(BaseAPIView):
 
     permission_classes = (IsAuthenticated, )
 
-    @check_params_not_null(['assert_no', 'title', 'medical_device_cate_id', 'serial_no',
+    @check_params_not_null(['assert_no', 'title', 'serial_no',
                             'type_spec', 'service_life', 'production_date',
                             'status', 'storage_place_id', 'purchase_date', 'cate'])
     def post(self, req):
@@ -97,7 +97,8 @@ class AssertDeviceCreateView(BaseAPIView):
         self.get_object_or_404(req.data.get('performer_id'), Staff)
         self.get_object_or_404(req.data.get('responsible_dept_id'), Department)
         self.get_object_or_404(req.data.get('use_dept_id'), Department)
-        self.get_object_or_404(req.data.get('medical_device_cate_id'), MedicalDeviceSix8Cate)
+        if req.data.get('medical_device_cate_id'):
+            self.get_object_or_404(req.data.get('medical_device_cate_id'), MedicalDeviceSix8Cate)
         self.get_object_or_404(req.data.get('storage_place_id'), HospitalAddress)
         creator = req.user.get_profile()
         form = AssertDeviceCreateForm(creator, req.data)

@@ -97,10 +97,10 @@ class AssertDeviceSerializer(BaseModelSerializer):
         return obj.storage_place.title if obj.storage_place else ''
 
     def _get_creator_name(self, obj):
-        return obj.creator.title if obj.creator else ''
+        return obj.creator.name if obj.creator else ''
 
     def _get_modifier_name(self, obj):
-        return obj.modifier.title if obj.modifier else ''
+        return obj.modifier.name if obj.modifier else ''
 
 
 class AssertDeviceBriefSerializer(BaseModelSerializer):
