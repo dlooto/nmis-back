@@ -395,27 +395,56 @@ class ProjectPlanMixin(object):
 
 class AssertDevicesMixin(object):
 
-    def create_medical_devices_six8_cate(self, creator, medical_devices_six8_cate=MEDICAL_DEVICES_SIX8_CATE):
-        """
-        创建医疗器械分类测试数据
-        :param creator: 创建人
-        :param medical_devices_six8_cate: 医疗器械分类部分数据
-        :return:
-        """
-        for mc in medical_devices_six8_cate:
-            mc['creator'] = creator
-        return MedicalDeviceSix8Cate.objects.create_medical_device_six8_cate(
-            medical_devices_six8_cate)
-
-    def create_assert_device(self, **data):
+    def create_assert_device(self, title, dept, storage_place, creator, assert_no, bar_code, serial_no):
         """
         创建资产设备
         """
+        assert_device_data = {
+            "assert_no": assert_no,
+            "title": title,
+            "serial_no": serial_no,
+            "type_spec": "BN3004",
+            "service_life": 3,
+            "responsible_dept_id": dept.id,
+            "production_date": "2018-09-12",
+            "bar_code": bar_code,
+            "status": "US",
+            "storage_place_id": storage_place.id,
+            "purchase_date": "2018-10-09",
+            "cate": "IN",
+            "creator_id": creator.id
+        }
         try:
-            return AssertDevice.objects.create(**data)
+            return AssertDevice.objects.create(**assert_device_data)
         except Exception as e:
             logs.exception(e)
             return None
+
+    def create_medical_device_cate(self, creator):
+        """
+        创建资产设备医疗器械分类数据
+        :return:
+        """
+        medical_cate_data = {
+            "code": "6830-03",
+            "title": "X射线手术影像设备",
+            "level": 2,
+            "example": "介入治疗X射线机",
+            "mgt_cate": 3,
+            "created_time": "2018-10-30 15:00"
+        }
+        medical_cate_parent_data = {
+            "code": "6830",
+            "title": "X射线手术影像设备",
+            "level": 2,
+            "example": "介入治疗X射线机",
+            "created_time": "2018-10-30 15:00"
+        }
+        medical_device_cate = MedicalDeviceSix8Cate.objects.create(
+            creator=creator, **medical_cate_parent_data)
+        logs.info(medical_device_cate)
+        return MedicalDeviceSix8Cate.objects.create(
+            parent=medical_device_cate, creator=creator, **medical_cate_data)
 
 
 class HospitalMixin(object):
@@ -431,55 +460,26 @@ class HospitalMixin(object):
             sp['dept'] = sp.get('dept', dept)
         return HospitalAddress.objects.create_storage_place(storage_places)
 
-    def create_storage_place(self, dept, parent, title, type="RM", level=2, sort=1, disabled=False, created_time=times.now()):
+    def create_storage_place(self, dept, parent, title):
         """
-        创建子类存储地点
-        :param dept:
-        :param parent:
-        :param title:
-        :param type:
-        :param level:
-        :param sort:
-        :param disabled:
-        :param created_time:
+        创建大楼中的存储地点
+        :param dept: 存储地点所属科室
+        :param parent: 存储地点所属大楼
+        :param title: 存储地点名称
         """
-        storage_place_data = {
-            "dept": dept,
-            "parent": parent,
-            "title": title,
-            "type": type,
-            "level": level,
-            "sort": sort,
-            "disabled": disabled,
-            "created_time": created_time
-        }
 
         try:
-            return HospitalAddress.objects.create(**storage_place_data)
+            return HospitalAddress.objects.create(
+                dept=dept, parent=parent, title=title, type="RM", level=2, sort=1, disabled=False, created_time=times.now())
         except Exception as e:
             logs.exception(e)
             return None
 
-    def create_parent_storage_place(self, title, type="RM", level=2, sort=1,  disabled=False, created_time=times.now()):
+    def create_hospital_address(self, title):
         """
-        创建父类存储地点
-        :param title:
-        :param type:
-        :param level:
-        :param sort:
-        :param disabled:
-        :param created_time:
+        创建机构中某个大楼信息
+        :param title: 大楼名称
         """
-        storage_place_data = {
-            "title": title,
-            "type": type,
-            "level": level,
-            "sort": sort,
-            "disabled": disabled,
-            "created_time": created_time
-        }
-        try:
-            return HospitalAddress.objects.create(**storage_place_data)
-        except Exception as e:
-            logs.exception(e)
-            return None
+        from nmis.hospitals.models import HospitalAddress
+        return HospitalAddress.objects.create(
+            title=title, type="RM", level=2, sort=1,  disabled=False, created_time=times.now())

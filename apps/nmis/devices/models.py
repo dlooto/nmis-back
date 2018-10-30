@@ -170,7 +170,7 @@ class MedicalDeviceSix8Cate(BaseModel):
         null=True, blank=True
     )
     example = models.TextField('品名举例', max_length=2048, null=True, blank=True)
-    mgt_cate = models.SmallIntegerField('管理类别', choices=MGT_CATE_CHOICE, default=1)
+    mgt_cate = models.SmallIntegerField('管理类别', null=True)
     creator = models.ForeignKey(
         'hospitals.Staff', related_name='created_medical_device_cate', verbose_name='创建人', on_delete=models.PROTECT
     )
