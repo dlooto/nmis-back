@@ -592,7 +592,7 @@ class FaultSolutionBatchDeleteView(BaseAPIView):
 
 class FaultSolutionListView(BaseAPIView):
 
-    permission_classes = (HospitalStaffPermission, )
+    permission_classes = (HospitalStaffPermission, IsHospSuperAdmin)
 
     def get(self, req):
         self.check_object_any_permissions(req, None)
