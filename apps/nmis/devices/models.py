@@ -3,7 +3,7 @@
 # Created by junn, on 2018/5/29
 #
 
-# 
+#
 
 import logging
 
@@ -59,6 +59,9 @@ class OrderedDevice(Device):
         verbose_name = u'申购的硬件设备'
         verbose_name_plural = u'申购的硬件设备'
         db_table = 'devices_ordered_device'
+        permissions = (
+            ('view_ordered_device', 'can view ordered device'),
+        )
 
     VALID_ATTRS = [
         'name', 'cate', 'producer', "num", "planned_price", "measure",
@@ -86,6 +89,9 @@ class SoftwareDevice(Device):
         verbose_name = '申购的软件设备'
         verbose_name_plural = verbose_name
         db_table = 'devices_software_device'
+        permissions = (
+            ('view_software_device', 'can view software device'),
+        )
 
     VALID_ATTRS = [
         'name', 'cate', 'purpose'
@@ -129,6 +135,9 @@ class ContractDevice(Device):
         verbose_name = '采购合同产品明细'
         verbose_name_plural = verbose_name
         db_table = 'devices_contract_device'
+        permissions = (
+            ('view_contract_device', 'can view contract device'),
+        )
 
     VALID_ATTRS = [
         'name', 'cate', 'supplier',
@@ -181,6 +190,9 @@ class MedicalDeviceSix8Cate(BaseModel):
         verbose_name = ' 医疗器械分类(68码)'
         verbose_name_plural = verbose_name
         db_table = 'devices_medical_device_six8_cate'
+        permissions = (
+            ('view_medical_device_six8_cate', 'can view medical device six8 cate'),
+        )
 
     VALID_ATTRS = [
         'code', 'title', 'parent', 'level', 'example', 'mgt_cate',
@@ -249,9 +261,10 @@ class AssertDevice(BaseModel):
         verbose_name_plural = verbose_name
         db_table = 'devices_assert_device'
         permissions = (
-            ('view_assert_device', 'can view assert devices'),    # 查看设备
-            ('scrap_assert_device', 'can scrap assert devices'),  # 报废设备
-            ('allocate_assert_device', 'can allocate assert devices'),  # 调配设备
+            ('view_assert_device', 'can view assert device'),    # 查看设备
+            ('scrap_assert_device', 'can scrap assert device'),  # 报废设备
+            ('allocate_assert_device', 'can allocate assert device'),  # 调配设备
+            ('import_fault_solution', 'can import fault_solution'),  # 导入设备
         )
 
     VALID_ATTRS = [
@@ -344,6 +357,9 @@ class AssertDeviceRecord(BaseModel):
         verbose_name = '设备变更记录'
         verbose_name_plural = verbose_name
         db_table = 'devices_assert_device_record'
+        permissions = (
+            ('view_assert_device_record', 'can view assert device record'),  # 查看设备变更记录
+        )
 
     VALID_ATTRS = [
         'operation', 'msg_content', 'reason'
@@ -375,6 +391,9 @@ class FaultType(BaseModel):
         verbose_name = '故障类型'
         verbose_name_plural = verbose_name
         db_table = 'devices_fault_type'
+        permissions = (
+            ('view_fault_type', 'can view fault type'),  # 查看故障类型
+        )
 
     VALID_ATTRS = [
         'title', 'desc', 'parent', 'level', 'sort',
@@ -429,6 +448,10 @@ class RepairOrder(BaseModel):
         verbose_name = '报修单/维修工单'
         verbose_name_plural = verbose_name
         db_table = 'devices_repair_order'
+        permissions = (
+            ('view_repair_order', 'can view repair order'),  # 查看报修单
+            ('dispatch_repair_order', 'can dispatch repair order'),  # 分派报修单
+        )
 
     VALID_ATTRS = [
         'applicant', 'fault_type', 'desc', 'maintainer', 'expenses', 'result', 'repair_device_list',
@@ -496,6 +519,9 @@ class RepairOrderRecord(BaseModel):
         verbose_name = '报修单操作记录'
         verbose_name_plural = verbose_name
         db_table = 'devices_repair_order_record'
+        permissions = (
+            ('view_repair_order_record', 'can view repair order record'),  # 查看报修单操作记录
+        )
 
     VALID_ATTRS = [
         'operation', 'msg_content', 'reason'
@@ -553,6 +579,9 @@ class MaintenancePlan(BaseModel):
         verbose_name = '设备维护保养计划'
         verbose_name_plural = verbose_name
         db_table = 'devices_maintenance_plan'
+        permissions = (
+            ('view_maintenance_plan', 'can view maintenance plan'),  # 查看设备维护保养记录
+        )
 
     VALID_ATTRS = [
         'title', 'places', 'type', 'start_date', 'period_measure', 'period_num', 'expired_date',
@@ -615,6 +644,12 @@ class FaultSolution(BaseModel):
         verbose_name = '故障/问题解决方案'
         verbose_name_plural = verbose_name
         db_table = 'devices_fault_solution'
+        permissions = (
+            ('view_fault_solution', 'can view fault solution'),   # 查看故障/问题解决方案
+            ('import_fault_solution', 'can import fault solution'),   # 导入故障/问题解决方案
+            ('export_fault_solution', 'can export fault solution'),   # 导出故障/问题解决方案
+            ('audit_fault_solution', 'can audit fault solution'),   # 审核故障/问题解决方案
+        )
 
     VALID_ATTRS = [
         'title', 'desc', 'fault_type', 'solution', 'files',

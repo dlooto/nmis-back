@@ -26,35 +26,35 @@ class IsSuperAdmin(BasePermission):
         return request.user and request.user.is_superuser
 
 
-class IsOrganAdmin(BasePermission):
-
-    message = u'仅企业管理员可操作'
-
-    def has_object_permission(self, request, view, obj):
-        """
-        :param obj: organ object
-        """
-        if not is_login(request):
-            return False
-        return request.user.get_profile().is_admin_for_organ(obj)
-
-
-class OrganStaffPermission(BasePermission):
-    """
-    仅允许登录的企业员工操作
-    """
-    message = u'仅允许登录的企业员工操作'
-
-    def has_object_permission(self, request, view, obj):
-        """
-        :param obj: organ object
-        """
-        if not is_login(request):
-            return False
-        staff = request.user.get_profile()
-        if staff.is_admin_for_organ(obj):
-            return True
-        return staff.organ == obj
+# class IsOrganAdmin(BasePermission):
+#
+#     message = u'仅企业管理员可操作'
+#
+#     def has_object_permission(self, request, view, obj):
+#         """
+#         :param obj: organ object
+#         """
+#         if not is_login(request):
+#             return False
+#         return request.user.get_profile().is_admin_for_organ(obj)
+#
+#
+# class OrganStaffPermission(BasePermission):
+#     """
+#     仅允许登录的企业员工操作
+#     """
+#     message = u'仅允许登录的企业员工操作'
+#
+#     def has_object_permission(self, request, view, obj):
+#         """
+#         :param obj: organ object
+#         """
+#         if not is_login(request):
+#             return False
+#         staff = request.user.get_profile()
+#         if staff.is_admin_for_organ(obj):
+#             return True
+#         return staff.organ == obj
 
 
 class UnloginStaffPermission(BasePermission):

@@ -20,6 +20,7 @@ from base.views import BaseAPIView
 from django.contrib.auth import logout as system_logout
 
 from nmis.hospitals.models import Role, Department, UserRoleShip
+from nmis.hospitals.permissions import IsHospSuperAdmin, SystemManagePermission
 from nmis.hospitals.serializers import SimpleRoleSerializer, SimplePermissionSerializer
 from users.forms import UserSignupForm, UserLoginForm, CheckEmailForm
 from users.models import User, ResetRecord
@@ -294,7 +295,8 @@ class AssignRolesDeptDomains(BaseAPIView):
     """
     给用户分配角色及权限域
     """
-    permission_classes = (IsAuthenticated, )
+
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     @check_params_not_null(['role_ids', 'dept_domain_ids', 'user_ids'])
     def post(self, req):

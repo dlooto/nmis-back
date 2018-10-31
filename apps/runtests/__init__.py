@@ -89,7 +89,6 @@ class TestCaseDataUtils(object):
         )
         staff = self.create_staff(user, organ, dept=dept)
         organ.assign_roles_dept_domains([user], roles, [dept])
-        staff.set_group(organ.get_admin_group())
         return organ
 
     def get_random_suffix(self):

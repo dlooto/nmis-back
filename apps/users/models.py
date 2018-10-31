@@ -23,7 +23,7 @@ from utils import eggs, images
 from base.authtoken import CustomToken
 from users.managers import UserManager
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 signer = TimestampSigner()
 sign = lambda string: base64.b64encode(signer.sign(string))
@@ -134,7 +134,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
                 token = CustomToken.refresh(token)
             return token.key if token else ''
         except Exception as e:
-            logs.exception(e.message)
+            logger.exception(e.message)
             return ''
 
     def get_profile(self):
@@ -149,7 +149,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
             self.cache()
             return self._cached_profile
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return None
 
     def generate_secure_record(self, klass, expire_hours):
@@ -164,6 +164,30 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
         """获取用户拥有的角色"""
         return self.roles.all()
 
+    def has_role(self, role):
+        from nmis.hospitals.models import Role
+        if not isinstance(role, Role):
+            return False
+        if role not in self.get_roles():
+            return False
+        return True
+
+    def set_roles(self, roles):
+        from nmis.hospitals.models import Role, UserRoleShip
+        if not iter(roles):
+            return
+        ships = list()
+        for role in roles:
+            if not isinstance(role, Role):
+                return
+            ship = UserRoleShip(user=self, role=role)
+            ships.append(ship)
+        try:
+            return UserRoleShip.objects.bulk_create(ships)
+        except Exception as e:
+            logger.exception(e)
+            return
+
     def get_permissions(self):
         """获取用户拥有的权限"""
         user_perms = []
@@ -172,6 +196,39 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
                 if perm not in user_perms:
                     user_perms.append(perm)
         return user_perms
+
+    # def has_perm(self, perm, obj=None):
+    #     """
+    #     :param perm: 权限codename字符串
+    #     """
+    #     return True if perm in self.get_group_permissions() else False
+    #
+    # def has_perms(self, perm_list, obj=None):
+    #     """
+    #     """
+    #     for perm in perm_list:
+    #         if not self.has_perm(perm, obj):
+    #             return False
+    #     return True
+
+    # def has_group_perm(self, group):
+    #     """
+    #     员工是否拥有所属企业指定某权限组的权限
+    #     :return:
+    #     """
+    #     if not group.organ == self.organ:
+    #         return False
+    #
+    #     return self.is_organ_admin() or group == self.group
+    #
+    # def get_group_permissions(self, obj=None):  # TODO: 权限组及权限可以考虑从cache中读取
+    #     """
+    #     返回权限码列表. 若传入obj, 则仅返回与obj匹配的权限码列表
+    #     """
+    #     if self.is_organ_admin():
+    #         return Permission.objects.values_list(['codename'])
+    #
+    #     return Permission.objects.filter(group__in=self.groups).values('codename')
 
 
 class UserSecureRecord(BaseModel):

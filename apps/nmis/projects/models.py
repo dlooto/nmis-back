@@ -91,6 +91,13 @@ class ProjectPlan(BaseModel):
         verbose_name = 'A 项目申请'
         verbose_name_plural = 'A 项目申请'
         db_table = 'projects_project_plan'
+        permissions = (
+            ('view_project_plan', 'can view project plan'),  # 查看项目申请
+            ('dispatch_project_plan', 'can dispatch project plan'),  # 分配项目申请
+            ('overrule_project_plan', 'can overrule project plan'),  # 驳回项目申请
+            ('pause_project_plan', 'can pause project plan'),  # 挂起项目申请
+            ('startup_project_plan', 'can startup project plan'),  # 启动项目申请
+        )
 
     VALID_ATTRS = [
         'title', 'purpose', 'handing_type', 'project_introduce', 'pre_amount', 'status'
@@ -528,6 +535,9 @@ class ProjectFlow(BaseModel):
         verbose_name = 'B 项目流程'
         verbose_name_plural = 'B 项目流程'
         db_table = 'projects_project_flow'
+        permissions = (
+            ('view_project_flow', 'can view project flow'),  # 查看项目流程
+        )
 
     VALID_ATTRS = [
         'title',
@@ -632,6 +642,9 @@ class Milestone(BaseModel):
         verbose_name_plural = '里程碑项'
         db_table = 'projects_milestone'
         ordering = ['index']
+        permissions = (
+            ('view_milestone', 'can view milestone'),   # 查看里程碑
+        )
 
     def __str__(self):
         return '%s %s' % (self.id, self.title)
@@ -881,6 +894,9 @@ class ProjectMilestoneState(BaseModel):
         verbose_name_plural = '项目里程碑'
         unique_together = ('project', 'milestone')
         db_table = 'projects_project_milestone_state'
+        permissions = (
+            ('view_project_milestone_state', 'can view project milestone state'),   # 查看项目里程碑
+        )
 
     def __str__(self):
         return '%s %s' % (self.project_id, self.milestone_id)
@@ -1093,6 +1109,9 @@ class Supplier(BaseModel):
         verbose_name = '供应商'
         verbose_name_plural = verbose_name
         db_table = 'projects_supplier'
+        permissions = (
+            ('view_supplier', 'can view supplier'),   # 查看供应商
+        )
 
     VALID_ATTRS = [
         'name', 'contact', 'contact_tel',
@@ -1126,6 +1145,9 @@ class SupplierSelectionPlan(BaseModel):
         verbose_name = '供应商选择方案'
         verbose_name_plural = verbose_name
         db_table = 'projects_supplier_selection_plan'
+        permissions = (
+            ('view_supplier_selection_plan', 'can view supplier selection plan'),   # 查看供应商选择方案
+        )
 
     VALID_ATTRS = [
         'supplier', 'total_amount', 'remark', 'doc_list', 'selected',
@@ -1166,6 +1188,9 @@ class PurchaseContract(BaseModel):
         verbose_name = u'采购合同'
         verbose_name_plural = verbose_name
         db_table = 'projects_purchase_contract'
+        permissions = (
+            ('view_purchase_contract', 'can view supplier purchase contract'),   # 查看采购合同
+        )
 
     VALID_ATTRS = [
         'contract_no', 'title', 'signed_date',
@@ -1198,6 +1223,9 @@ class Receipt(BaseModel):
         verbose_name = u'收货确认单'
         verbose_name_plural = verbose_name
         db_table = 'projects_receipt'
+        permissions = (
+            ('view_receipt', 'can view receipt'),   # 查看收货确认单
+        )
 
     VALID_ATTRS = [
         'served_date', 'delivery_man', 'contact_phone', 'doc_list'
@@ -1222,3 +1250,6 @@ class ProjectOperationRecord(BaseModel):
         verbose_name = u'项目操作日志'
         verbose_name_plural = verbose_name
         db_table = 'projects_operation_record'
+        permissions = (
+            ('view_project_operation_record', 'can view project operation record'),    # 查看项目操作日志
+        )

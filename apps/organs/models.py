@@ -16,7 +16,6 @@ from utils import times
 from base.models import BaseModel
 from users.models import UserSecureRecord
 
-from .groups import GROUPS
 from .managers import OrganManager, PermissionManager, StaffManager
 
 logs = logging.getLogger(__name__)
@@ -227,57 +226,57 @@ class BaseStaff(BaseModel):
 
     def __unicode__(self):
         return u'%s, %s' % (self.id, self.name)
-
-    def is_organ_admin(self):
-        """是否为所属企业的管理员"""
-        return self.organ.get_admin_group() == self.group
-
-    def is_admin_for_organ(self, organ):
-        """
-        是否为指定企业的管理员
-        """
-        return self.organ == organ and self.is_organ_admin()
-
-    def set_group(self, group):
-        """
-        给员工设置权限组
-        :param group: Group object
-        """
-        self.group = group
-        self.save()
-
-    def has_group_perm(self, group):
-        """
-        员工是否拥有所属企业指定某权限组的权限
-        :return:
-        """
-        if not group.organ == self.organ:
-            return False
-
-        return self.is_organ_admin() or group == self.group
-
-    def get_group_permissions(self, obj=None):  # TODO: 权限组及权限可以考虑从cache中读取
-        """
-        返回权限码列表. 若传入obj, 则仅返回与obj匹配的权限码列表
-        """
-        if self.is_organ_admin():
-            return Permission.objects.values_list(['codename'])
-
-        return Permission.objects.filter(group__in=self.groups).values('codename')
-
-    def has_perm(self, perm, obj=None):
-        """
-        :param perm: 权限codename字符串
-        """
-        return True if perm in self.get_group_permissions() else False
-
-    def has_perms(self, perm_list, obj=None):
-        """
-        """
-        for perm in perm_list:
-            if not self.has_perm(perm, obj):
-                return False
-        return True
+    #
+    # def is_organ_admin(self):
+    #     """是否为所属企业的管理员"""
+    #     return self.organ.get_admin_group() == self.group
+    #
+    # def is_admin_for_organ(self, organ):
+    #     """
+    #     是否为指定企业的管理员
+    #     """
+    #     return self.organ == organ and self.is_organ_admin()
+    #
+    # def set_group(self, group):
+    #     """
+    #     给员工设置权限组
+    #     :param group: Group object
+    #     """
+    #     self.group = group
+    #     self.save()
+    #
+    # def has_group_perm(self, group):
+    #     """
+    #     员工是否拥有所属企业指定某权限组的权限
+    #     :return:
+    #     """
+    #     if not group.organ == self.organ:
+    #         return False
+    #
+    #     return self.is_organ_admin() or group == self.group
+    #
+    # def get_group_permissions(self, obj=None):  # TODO: 权限组及权限可以考虑从cache中读取
+    #     """
+    #     返回权限码列表. 若传入obj, 则仅返回与obj匹配的权限码列表
+    #     """
+    #     if self.is_organ_admin():
+    #         return Permission.objects.values_list(['codename'])
+    #
+    #     return Permission.objects.filter(group__in=self.groups).values('codename')
+    #
+    # def has_perm(self, perm, obj=None):
+    #     """
+    #     :param perm: 权限codename字符串
+    #     """
+    #     return True if perm in self.get_group_permissions() else False
+    #
+    # def has_perms(self, perm_list, obj=None):
+    #     """
+    #     """
+    #     for perm in perm_list:
+    #         if not self.has_perm(perm, obj):
+    #             return False
+    #     return True
 
     def get_secure_key(self):
         """

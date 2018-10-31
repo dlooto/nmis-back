@@ -79,9 +79,9 @@ class StaffSerializer(BaseModelSerializer):
     staff_name = serializers.CharField(source='name')
     staff_title = serializers.CharField(source='title')
     username = serializers.SerializerMethodField('_get_user_username')
-    is_admin = serializers.SerializerMethodField('_is_admin')
-    group_name = serializers.SerializerMethodField('_get_group_name')
-    group_cate = serializers.SerializerMethodField('_get_group_cate')
+    # is_admin = serializers.SerializerMethodField('_is_admin')
+    # group_name = serializers.SerializerMethodField('_get_group_name')
+    # group_cate = serializers.SerializerMethodField('_get_group_cate')
     contact_phone = serializers.CharField(source='contact')
 
     class Meta:
@@ -90,8 +90,9 @@ class StaffSerializer(BaseModelSerializer):
             'id', 'organ_id', 'organ_name',
             'dept_id', 'dept_name',
             'staff_name', 'staff_title',
-            'user_id', 'username', 'is_admin',
-            'group_id', 'group_name', 'group_cate',
+            'user_id', 'username',
+            # 'is_admin',
+            # 'group_id', 'group_name', 'group_cate',
             'contact_phone', 'email', 'created_time', # 'roles'
         )
 
@@ -100,14 +101,14 @@ class StaffSerializer(BaseModelSerializer):
         queryset = queryset.select_related('organ', 'dept', 'user', 'group')
         return queryset
 
-    def _get_group_name(self, obj):
-        return '' if not obj.group else obj.group.name
-
-    def _get_group_cate(self, obj):
-        return '' if not obj.group else obj.group.cate
-
-    def _is_admin(self, obj):
-        return False if not obj.group else obj.group.is_admin
+    # def _get_group_name(self, obj):
+    #     return '' if not obj.group else obj.group.name
+    #
+    # def _get_group_cate(self, obj):
+    #     return '' if not obj.group else obj.group.cate
+    #
+    # def _is_admin(self, obj):
+    #     return False if not obj.group else obj.group.is_admin
 
     def _get_user_username(self, obj):
         return '' if not obj.user else obj.user.username
@@ -177,8 +178,9 @@ class StaffWithRoleSerializer(StaffSerializer):
             'id', 'organ_id', 'organ_name',
             'dept_id', 'dept_name',
             'staff_name', 'staff_title',
-            'user_id', 'username', 'is_admin',
-            'group_id', 'group_name', 'group_cate',
+            'user_id', 'username',
+            # 'is_admin',
+            # 'group_id', 'group_name', 'group_cate',
             'contact_phone', 'email', 'created_time',
             'user_role_ships',
         )
@@ -199,9 +201,9 @@ class SimpleStaffSerializer(BaseModelSerializer):
     staff_name = serializers.CharField(source='name')
     staff_title = serializers.CharField(source='title')
     username = serializers.SerializerMethodField('_get_user_username')
-    is_admin = serializers.SerializerMethodField('_is_admin')
-    group_name = serializers.SerializerMethodField('_get_group_name')
-    group_cate = serializers.SerializerMethodField('_get_group_cate')
+    # is_admin = serializers.SerializerMethodField('_is_admin')
+    # group_name = serializers.SerializerMethodField('_get_group_name')
+    # group_cate = serializers.SerializerMethodField('_get_group_cate')
     contact_phone = serializers.CharField(source='contact')
 
     @staticmethod
@@ -215,19 +217,20 @@ class SimpleStaffSerializer(BaseModelSerializer):
             'id', 'organ_id', 'organ_name',
             'dept_id', 'dept_name',
             'staff_name', 'staff_title',
-            'user_id', 'username', 'is_admin',
-            'group_id', 'group_name', 'group_cate',
+            'user_id', 'username',
+            # 'is_admin',
+            # 'group_id', 'group_name', 'group_cate',
             'contact_phone', 'email', 'created_time',
         )
 
-    def _get_group_name(self, obj):
-        return '' if not obj.group else obj.group.name
-
-    def _get_group_cate(self, obj):
-        return '' if not obj.group else obj.group.cate
-
-    def _is_admin(self, obj):
-        return False if not obj.group else obj.group.is_admin
+    # def _get_group_name(self, obj):
+    #     return '' if not obj.group else obj.group.name
+    #
+    # def _get_group_cate(self, obj):
+    #     return '' if not obj.group else obj.group.cate
+    #
+    # def _is_admin(self, obj):
+    #     return False if not obj.group else obj.group.is_admin
 
     def _get_user_username(self, obj):
         return '' if not obj.user else obj.user.username
@@ -239,22 +242,22 @@ class SimpleStaffSerializer(BaseModelSerializer):
         return '' if not obj.dept else obj.dept.name
 
 
-class GroupSerializer(BaseModelSerializer):
-
-    organ_name = serializers.SerializerMethodField('_get_organ_name')
-
-    @staticmethod
-    def set_eager_loading(queryset):
-        queryset = queryset.select_related('organ')
-        return queryset
-
-    class Meta:
-        model = Group
-        fields = ('id', 'created_time', 'name', 'is_admin', 'desc', 'cate', 'organ_id',
-                  'organ_name',)
-
-    def _get_organ_name(self, obj):
-        return '' if not obj.organ else obj.organ.organ_name
+# class GroupSerializer(BaseModelSerializer):
+#
+#     organ_name = serializers.SerializerMethodField('_get_organ_name')
+#
+#     @staticmethod
+#     def set_eager_loading(queryset):
+#         queryset = queryset.select_related('organ')
+#         return queryset
+#
+#     class Meta:
+#         model = Group
+#         fields = ('id', 'created_time', 'name', 'is_admin', 'desc', 'cate', 'organ_id',
+#                   'organ_name',)
+#
+#     def _get_organ_name(self, obj):
+#         return '' if not obj.organ else obj.organ.organ_name
 
 
 class PermissionSerializer(BaseModelSerializer):

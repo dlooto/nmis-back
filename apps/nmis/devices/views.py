@@ -5,6 +5,7 @@
 
 import logging
 
+from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q, Count, F
 
@@ -30,11 +31,16 @@ from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
 
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
     FaultType, FaultSolution, MaintenancePlan
+from nmis.devices.permissions import AssertDeviceAdminPermission, RepairOrderCreatorPermission, \
+    MaintenancePlanExecutePermission, RepairOrderHandlePermission, RepairOrderDispatchPermission, \
+    KnowledgeManagePermission
 from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR, DOC_UPLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.hospitals.consts import ARCHIVE
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
+from nmis.hospitals.permissions import IsHospSuperAdmin, SystemManagePermission, HospGlobalReportAssessPermission, \
+    HospitalStaffPermission
 from utils import times, files
 from utils.files import ExcelBasedOXL, file_read_iterator
 
@@ -43,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 class AssertDeviceListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     def get(self, req):
         """
@@ -51,8 +57,7 @@ class AssertDeviceListView(BaseAPIView):
         筛选条件：关键词搜索（设备名称）、设备状态（维修、使用中、报废、闲置）、资产存储地点、设备类型
         ）
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
-
+        self.check_object_any_permissions(req, req.user)
         search_key = req.GET.get('search_key')
         str_status = req.GET.get('status')
         cate = req.GET.get('cate')
@@ -82,7 +87,7 @@ class AssertDeviceListView(BaseAPIView):
 
 class AssertDeviceCreateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     @check_params_not_null(['assert_no', 'title', 'serial_no',
                             'type_spec', 'service_life', 'production_date',
@@ -93,7 +98,7 @@ class AssertDeviceCreateView(BaseAPIView):
         :param req:
         :return:
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user)
         self.get_object_or_404(req.data.get('performer_id'), Staff)
         self.get_object_or_404(req.data.get('responsible_dept_id'), Department)
         self.get_object_or_404(req.data.get('use_dept_id'), Department)
@@ -112,13 +117,13 @@ class AssertDeviceCreateView(BaseAPIView):
 
 class MedicalDeviceSix8CateListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req):
         """
         获取医疗器械类型列表
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user)
 
         medical_device_six8_cate_list = MedicalDeviceSix8Cate.objects.get_medical_device_six8_cates()
 
@@ -128,13 +133,13 @@ class MedicalDeviceSix8CateListView(BaseAPIView):
 
 class AssertDeviceView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     def put(self, req, device_id):
         """
         修改资产设备
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
         assert_device = self.get_object_or_404(device_id, AssertDevice)
 
         if req.data.get("performer_id"):
@@ -162,7 +167,7 @@ class AssertDeviceView(BaseAPIView):
         """
         资产设备详情
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
 
         assert_device = self.get_object_or_404(device_id, AssertDevice)
 
@@ -172,7 +177,7 @@ class AssertDeviceView(BaseAPIView):
         """
         删除资产设备
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
         assert_device = self.get_object_or_404(device_id, AssertDevice)
 
         if not assert_device.deleted():
@@ -181,14 +186,14 @@ class AssertDeviceView(BaseAPIView):
 
 
 class AssertDeviceScrapView(BaseAPIView):
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     def put(self, req, device_id):
         """
         资产设备报废处理
         """
 
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
 
         assert_device = self.get_object_or_404(device_id, AssertDevice)
 
@@ -200,7 +205,7 @@ class AssertDeviceScrapView(BaseAPIView):
 
 class AssertDeviceBatchUploadView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     @check_params_not_null(['cate'])
     def post(self, req):
@@ -208,7 +213,7 @@ class AssertDeviceBatchUploadView(BaseAPIView):
         资产设备的批量导入
         """
 
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
         file_obj = req.FILES.get('file')
         cate = req.data.get('cate')
         if cate not in dict(ASSERT_DEVICE_CATE_CHOICES):
@@ -236,9 +241,10 @@ class AssertDeviceBatchUploadView(BaseAPIView):
             return resp.failed('导入失败')
         return resp.ok('导入成功')
 
+
 class AssertDeviceAllocateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     @check_id('use_dept_id')
     @check_params_not_null(['assert_device_ids'])
@@ -246,7 +252,7 @@ class AssertDeviceAllocateView(BaseAPIView):
         """
         资产设备调配操作（单个设备调配、多个设备调配）
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
 
         assert_device_ids = get_id_list(req.data.get('assert_device_ids', '').strip())
 
@@ -263,7 +269,7 @@ class AssertDeviceAllocateView(BaseAPIView):
 
 class MaintenancePlanCreateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     @check_id('executor_id')
     @check_params_not_null(['title', 'storage_place_ids', 'type', 'start_date',
@@ -272,7 +278,7 @@ class MaintenancePlanCreateView(BaseAPIView):
         """
         新建设备维护单（维护单号自动生产）
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
         executor = self.get_object_or_404(req.data.get('executor_id'), Staff)
 
         storage_place_ids = get_id_list(req.data.get('storage_place_ids', '').strip())
@@ -296,7 +302,7 @@ class MaintenancePlanCreateView(BaseAPIView):
 
 class MaintenancePlanView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, MaintenancePlanExecutePermission)
 
     def get(self, req, maintenance_plan_id):
         """
@@ -305,14 +311,14 @@ class MaintenancePlanView(BaseAPIView):
         :param maintenance_plan_id:
         :return:
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
         maintenance_plan = self.get_object_or_404(maintenance_plan_id, MaintenancePlan)
         return resp.serialize_response(maintenance_plan, results_name='maintenance_plan')
 
 
 class MaintenancePlanListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (MaintenancePlanExecutePermission, AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     def get(self, req):
         """
@@ -322,7 +328,7 @@ class MaintenancePlanListView(BaseAPIView):
             status: 维护计划状态（DN: 已执行，NW: 未执行）
             period: 时间段（逾期、今天到期、三日内到期、一周内到期、一年内到期）
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
         if req.GET.get('search_key', '').strip():
             if not req.GET.get('search_key', '').strip() not in dict(MAINTENANCE_PLAN_STATUS_CHOICES):
                 return resp.failed('资产设备维护计划状态错误')
@@ -336,18 +342,20 @@ class MaintenancePlanListView(BaseAPIView):
             period=req.GET.get('period', '').strip()
         )
 
-        return self.get_pages(maintenance_plans, srl_cls_name='MaintenancePlanListSerializer', results_name='maintenance_plans')
+        return self.get_pages(
+            maintenance_plans, srl_cls_name='MaintenancePlanListSerializer', results_name='maintenance_plans'
+        )
 
 
 class MaintenancePlanExecuteView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (MaintenancePlanExecutePermission, AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     def put(self, req, maintenance_plan_id):
         """
         资产设备维护单执行操作
         """
-        self.check_object_permissions(req, req.user.get_profile())
+        self.check_object_any_permissions(req, req.user.get_profile())
         maintenance_plan = self.get_object_or_404(maintenance_plan_id, MaintenancePlan)
         if maintenance_plan.status == MAINTENANCE_PLAN_STATUS_DONE:
             return resp.failed('维护单已执行')
@@ -363,7 +371,7 @@ class MaintenancePlanExecuteView(BaseAPIView):
 
 class FaultTypeListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req):
         queryset = FaultType.objects.all()
@@ -374,9 +382,10 @@ class RepairOrderCreateView(BaseAPIView):
     """
     提交报修单
     """
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (HospitalStaffPermission, )
 
     def post(self, req, ):
+        self.check_object_any_permissions(req, None)
         form = RepairOrderCreateForm(req.user.get_profile(), req.data)
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -389,9 +398,14 @@ class RepairOrderCreateView(BaseAPIView):
 
 class RepairOrderView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (
+        RepairOrderCreatorPermission, RepairOrderHandlePermission,
+        RepairOrderDispatchPermission, IsHospSuperAdmin
+    )
 
     def get(self, req, order_id):
+        self.check_object_any_permissions(req, None)
+
         repair_order = self.get_object_or_404(order_id, RepairOrder)
         repair_order_queryset = RepairOrderSerializer.setup_eager_loading(RepairOrder.objects.filter(id=order_id))
 
@@ -399,6 +413,8 @@ class RepairOrderView(BaseAPIView):
                                        srl_cls_name='RepairOrderSerializer')
 
     def put(self, req, order_id):
+        self.check_object_any_permissions(req, None)
+
         repair_order = self.get_object_or_404(order_id, RepairOrder)
         action = req.data.get('action', '').strip()
         if not action or action not in dict(REPAIR_ORDER_OPERATION_CHOICES):
@@ -450,13 +466,16 @@ class RepairOrderView(BaseAPIView):
 
 class RepairOrderListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (
+        RepairOrderCreatorPermission, RepairOrderHandlePermission,
+        RepairOrderDispatchPermission, IsHospSuperAdmin
+    )
 
     def get_queryset(self):
         return RepairOrder.objects.all()
 
     def get(self, req):
-
+        self.check_object_any_permissions(req, None)
         action = req.GET.get('action', '').strip()
         status = req.GET.get('status', '').strip()
         search = req.GET.get('search', '').strip()
@@ -486,19 +505,26 @@ class RepairOrderListView(BaseAPIView):
 
 class RepairOrderRecordListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (
+        RepairOrderCreatorPermission, RepairOrderHandlePermission,
+        RepairOrderDispatchPermission, IsHospSuperAdmin
+    )
 
     def get(self, req, order_id):
+        self.check_object_any_permissions(req, None)
         order = self.get_object_or_404(order_id, RepairOrder)
         record_query_set = order.get_repair_order_records().order_by('-created_time')
-        return resp.serialize_response(record_query_set, results_name='repair_order_records', srl_cls_name='RepairOrderRecordSerializer')
+        return resp.serialize_response(
+            record_query_set, results_name='repair_order_records', srl_cls_name='RepairOrderRecordSerializer'
+        )
 
 
 class FaultSolutionCreateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (KnowledgeManagePermission, IsHospSuperAdmin)
 
     def post(self, req):
+        self.check_object_any_permissions(req, None)
         file_list = list()
         if req.data.get('files'):
             files_data = req.data.get('files')
@@ -517,16 +543,20 @@ class FaultSolutionCreateView(BaseAPIView):
 
 class FaultSolutionView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
-
+    @permission_classes((HospitalStaffPermission, ))
     def get(self, req, fault_solution_id):
+        self.check_object_any_permissions(req, None)
         fault_solution = self.get_object_or_404(fault_solution_id, FaultSolution)
         queryset = FaultSolutionSerializer.setup_eager_loading(
             FaultSolution.objects.filter(id=fault_solution_id)
         )
-        return resp.serialize_response(queryset.first(), results_name='fault_solution', srl_cls_name='FaultSolutionSerializer')
+        return resp.serialize_response(
+            queryset.first(), results_name='fault_solution', srl_cls_name='FaultSolutionSerializer'
+        )
 
+    @permission_classes((KnowledgeManagePermission, IsHospSuperAdmin))
     def put(self, req):
+        self.check_object_any_permissions(req, None)
         pass
 
     def delete(self, req):
@@ -535,7 +565,11 @@ class FaultSolutionView(BaseAPIView):
 
 class FaultSolutionBatchDeleteView(BaseAPIView):
 
+    permission_classes = (KnowledgeManagePermission, IsHospSuperAdmin)
+
     def post(self, req):
+        self.check_object_any_permissions(req, None)
+
         ids_str = req.data.get('ids')
         fs_ids = list()
         try:
@@ -558,9 +592,10 @@ class FaultSolutionBatchDeleteView(BaseAPIView):
 
 class FaultSolutionListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (HospitalStaffPermission, )
 
     def get(self, req):
+        self.check_object_any_permissions(req, None)
         search = req.GET.get('search', '').strip()
 
         queryset = FaultSolution.objects.all()
@@ -574,7 +609,7 @@ class FaultSolutionListView(BaseAPIView):
 
 class FaultSolutionsImportView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (KnowledgeManagePermission, IsHospSuperAdmin)
 
     @check_params_not_null(['file'])
     def post(self, req):
@@ -583,6 +618,8 @@ class FaultSolutionsImportView(BaseAPIView):
          :param req:
          :return:
          """
+        self.check_object_any_permissions(req, None)
+
         file_obj = req.FILES.get('file')
         if not file_obj:
             return resp.failed('请选择要上传的文件')
@@ -613,9 +650,11 @@ class FaultSolutionsImportView(BaseAPIView):
 
 class FaultSolutionsExportView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (KnowledgeManagePermission, IsHospSuperAdmin)
 
     def post(self, req):
+        self.check_object_any_permissions(req, None)
+
         search = req.GET.get('search', '').strip()
 
         queryset = FaultSolution.objects.all()
@@ -650,10 +689,11 @@ class OperationMaintenanceReportView(BaseAPIView):
     维修相关统计报表
     """
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsHospSuperAdmin, HospGlobalReportAssessPermission)
     queryset = RepairOrder.objects.all()
 
     def get(self, req):
+        self.check_object_any_permissions(req, None)
 
         # 校验日期格式
         if not times.is_valid_date(req.GET.get('start_date', '')) or not times.is_valid_date(req.GET.get('expired_date', '')):

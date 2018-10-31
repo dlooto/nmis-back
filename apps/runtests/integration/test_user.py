@@ -31,7 +31,6 @@ class UserTestCase(BaseTestCase):
         }
         user = self.create_user_with_username(active=True, **account)
         a_staff = self.create_staff(user, self.organ, self.dept)
-        a_staff.set_group(self.organ.get_admin_group())
 
         data = deepcopy(account)
         data.update({'authkey': 'username'})
