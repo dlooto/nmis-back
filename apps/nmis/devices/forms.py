@@ -675,7 +675,6 @@ class AssertDeviceBatchUploadForm(BaseForm):
         })
 
     def is_valid(self):
-        logger.info(self.data[0])
         if not self.check_medical_device_cate() or not self.check_serial_no()\
                 or not self.check_performer() or not self.check_medical_code()\
                 or not self.check_use_dept() or not self.check_responsible_dept()\
