@@ -121,7 +121,7 @@ class HospitalGlobalDataView(BaseAPIView):
 
     def get(self, req, hid):
         hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
+        self.check_object_any_permissions(req, hospital)
 
         # 医院所有科室
         depts = hospital.get_all_depts()

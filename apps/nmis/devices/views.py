@@ -328,7 +328,7 @@ class MaintenancePlanListView(BaseAPIView):
             status: 维护计划状态（DN: 已执行，NW: 未执行）
             period: 时间段（逾期、今天到期、三日内到期、一周内到期、一年内到期）
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
         if req.GET.get('search_key', '').strip():
             if not req.GET.get('search_key', '').strip() not in dict(MAINTENANCE_PLAN_STATUS_CHOICES):
                 return resp.failed('资产设备维护计划状态错误')
@@ -355,7 +355,7 @@ class MaintenancePlanExecuteView(BaseAPIView):
         """
         资产设备维护单执行操作
         """
-        self.check_object_permissions(req, req.user.get_profile())
+        self.check_object_any_permissions(req, req.user.get_profile())
         maintenance_plan = self.get_object_or_404(maintenance_plan_id, MaintenancePlan)
         if maintenance_plan.status == MAINTENANCE_PLAN_STATUS_DONE:
             return resp.failed('维护单已执行')
@@ -545,7 +545,7 @@ class FaultSolutionView(BaseAPIView):
 
     @permission_classes((HospitalStaffPermission, ))
     def get(self, req, fault_solution_id):
-        self.check_object_permissions(req, None)
+        self.check_object_any_permissions(req, None)
         fault_solution = self.get_object_or_404(fault_solution_id, FaultSolution)
         queryset = FaultSolutionSerializer.setup_eager_loading(
             FaultSolution.objects.filter(id=fault_solution_id)
