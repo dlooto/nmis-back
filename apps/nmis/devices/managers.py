@@ -25,15 +25,8 @@ logger = logging.getLogger(__name__)
 
 class MedicalDeviceSix8CateManager(BaseManager):
 
-    def create_medical_device_six8_cate(self, medical_devices_six8_cate):
-        try:
-            medical_device_cate = []
-            for medical_device_six8_cate in medical_devices_six8_cate:
-                medical_device_cate.append(self.model(**medical_device_six8_cate))
-            return self.bulk_create(medical_device_cate)
-        except Exception as e:
-            logger.exception(e)
-            return None
+    def create_medical_device_six8_cate(self, creator, medical_device_six8_cate):
+        pass
 
     def get_medical_device_six8_cates(self):
         """
@@ -327,7 +320,7 @@ class RepairOrderManager(BaseManager):
 
 class MaintenancePlanManager(BaseManager):
 
-    def create_maintenance_plan(self, storage_places=None, assert_devices=None, **data):
+    def create_maintenance_plan(self, storage_places, assert_devices, **data):
         try:
             with transaction.atomic():
                 seq = Sequence.objects.select_for_update().get(seq_code=MAINTENANCE_PLAN_NO_SEQ_CODE)
