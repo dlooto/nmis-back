@@ -7,7 +7,7 @@
 
 import logging
 
-from nmis.devices.models import MedicalDeviceSix8Cate, AssertDevice
+from nmis.devices.models import MedicalDeviceSix8Cate, AssertDevice, MaintenancePlan
 from nmis.hospitals.models import HospitalAddress
 from nmis.projects.consts import PRO_HANDING_TYPE_SELF, PRO_CATE_SOFTWARE
 from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectMilestoneState, \
@@ -445,6 +445,29 @@ class AssertDevicesMixin(object):
         logs.info(medical_device_cate)
         return MedicalDeviceSix8Cate.objects.create(
             parent=medical_device_cate, creator=creator, **medical_cate_data)
+
+    def get_assert_device(self, assert_device_id):
+
+        return AssertDevice.objects.filter(id=assert_device_id).first()
+
+    def create_maintenance_plan(self, title, storage_places, executor, creator, assert_devices, type="PL"):
+        """
+        创建资产设备维护计划
+        """
+        m_plan_data = {
+            "plan_no": "",
+            "title": title,
+            "type": type,
+            "start_date": "2018-10-31",
+            "expired_date": "2018-11-10",
+            "executor_id": executor.id,
+            "creator_id": creator.id
+        }
+        try:
+            return MaintenancePlan.objects.create_maintenance_plan(storage_places, assert_devices, **m_plan_data)
+        except Exception as e:
+            logs.exception(e)
+            return None
 
 
 class HospitalMixin(object):

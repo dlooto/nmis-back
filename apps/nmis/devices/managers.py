@@ -320,7 +320,7 @@ class RepairOrderManager(BaseManager):
 
 class MaintenancePlanManager(BaseManager):
 
-    def create_maintenance_plan(self, storage_places=None, assert_devices=None, **data):
+    def create_maintenance_plan(self, storage_places, assert_devices, **data):
         try:
             with transaction.atomic():
                 seq = Sequence.objects.select_for_update().get(seq_code=MAINTENANCE_PLAN_NO_SEQ_CODE)

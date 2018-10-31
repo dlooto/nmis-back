@@ -291,7 +291,7 @@ class MaintenancePlanCreateView(BaseAPIView):
         maintenance_plan = form.save()
         if not maintenance_plan:
             return resp.failed('创建失败')
-        return resp.serialize_response(maintenance_plan, results_name='maintenance_plans')
+        return resp.serialize_response(maintenance_plan, results_name='maintenance_plan')
 
 
 class MaintenancePlanView(BaseAPIView):
