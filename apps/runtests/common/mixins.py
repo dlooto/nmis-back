@@ -426,18 +426,18 @@ class AssertDevicesMixin(object):
         :return:
         """
         medical_cate_data = {
-            "code": "6830-03",
-            "title": "X射线手术影像设备",
+            "code": "6801-02",
+            "title": "基础外科用刀",
             "level": 2,
-            "example": "介入治疗X射线机",
-            "mgt_cate": 3,
+            "example": "手术刀柄和刀片、皮片刀、疣体剥离刀、柳叶刀、铲刀、剃毛刀、皮屑刮刀、挑刀、锋刀、修脚刀、修甲刀、解剖刀",
+            "mgt_cate": 1,
             "created_time": "2018-10-30 15:00"
         }
         medical_cate_parent_data = {
-            "code": "6830",
-            "title": "X射线手术影像设备",
+            "code": "6801",
+            "title": "基础外科手术器械",
             "level": 2,
-            "example": "介入治疗X射线机",
+            "example": "",
             "created_time": "2018-10-30 15:00"
         }
         medical_device_cate = MedicalDeviceSix8Cate.objects.create(

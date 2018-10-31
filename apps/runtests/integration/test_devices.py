@@ -11,8 +11,6 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_SCRAPPED
 from runtests import BaseTestCase
 from runtests.common.mixins import AssertDevicesMixin, HospitalMixin
 
-from utils import times
-
 logs = logging.getLogger(__name__)
 
 
@@ -36,8 +34,6 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         use_department = self.create_department(self.organ, dept_name='测试科室')
         # 创建医疗器械68分类数据
         medical_devices_six8_cate = self.create_medical_device_cate(creator=self.user.get_profile())
-        logs.info(medical_devices_six8_cate)
-
         self.assertIsNotNone(medical_devices_six8_cate)
 
         # 创建机构大楼信息
@@ -211,6 +207,9 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
             self.assertEquals(assert_device.get('storage_place_id'), storage_place.id)
 
     def test_update_assert_device(self):
+        """
+        API测试: 修改资产设备API接口测试
+        """
         api = '/api/v1/devices/{}'
 
         self.login_with_username(self.user)
@@ -325,6 +324,51 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         for assert_device in assert_device_list:
             self.assertIsNotNone(assert_device.get('use_dept_id'))
             self.assertEquals(assert_device.get('use_dept_id'), department.id)
+
+    def test_assert_device_batch_upload(self):
+        """
+        API测试: 资产设备批量导入API接口测试
+        """
+        api = '/api/v1/devices/assert_devices/batch-upload'
+
+        self.login_with_username(self.user)
+        # 创建测试科室
+        dept = self.create_department(self.organ, dept_name='测试科室')
+        # 创建负责人
+        performer_data = {
+            'title': '设备负责人',
+            'contact': '18943823433',
+            'email': 'nmis@qq.com'
+        }
+        performer = self.create_completed_staff(self.organ, self.dept, name='曾老师', **performer_data)
+        # 创建机构大楼信息
+        title = '信息综合大楼'
+        hospital_address = self.create_hospital_address(title=title)
+        self.assertIsNotNone(hospital_address)
+        self.assertEquals(hospital_address.title, title)
+        # 创建大楼中的存储地点
+        storage_place = self.create_storage_place(
+            dept=self.dept, parent=hospital_address,
+            title='信息设备存储室'
+        )
+        self.assertIsNotNone(storage_place)
+        self.assertEquals(storage_place.parent.id, hospital_address.id)
+        # 创建医疗器械68分类数据
+        medical_devices_six8_cate = self.create_medical_device_cate(
+            creator=self.user.get_profile())
+        self.assertIsNotNone(medical_devices_six8_cate)
+
+        import os
+        curr_path = os.path.dirname(__file__)
+        file_obj = open(curr_path + '/data/medical_assert_devices.xlsx', 'rb')
+        response = self.raw_post(
+            api, {
+                'file': file_obj,
+                'cate': 'ME'
+            })
+        file_obj.close()
+        self.assert_response_success(response)
+        self.assertEquals(response.get('code'), 10000)
 
 
 class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
