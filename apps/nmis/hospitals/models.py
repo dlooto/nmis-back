@@ -13,6 +13,9 @@ from django.contrib.auth.models import Permission
 from django.db import models, transaction
 
 from base.models import BaseModel
+from nmis.hospitals.consts import HOSP_GRADE_CHOICES, GROUP_CATE_DICT, GROUPS, DPT_ATTRI_MEDICAL, DPT_ATTRI_CHOICES, \
+    DOCTOR_TITLE_CHOICES, GROUP_CATE_CHOICES, ROLE_CATE_CHOICES, ROLE_CATE_NORMAL, \
+    HOSPITAL_AREA_TYPE_CHOICES, ROLE_CODE_PRO_DISPATCHER, ROLE_CODE_HOSP_SUPER_ADMIN
 from nmis.hospitals.managers import GroupManager, RoleManager, SequenceManager, \
     HospitalAddressManager
 
@@ -20,9 +23,7 @@ from organs.models import BaseOrgan, BaseStaff, BaseDepartment, BaseGroup
 from users.models import User
 from .managers import StaffManager, HospitalManager
 
-from .consts import *
-
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Hospital(BaseOrgan):
@@ -39,6 +40,9 @@ class Hospital(BaseOrgan):
         verbose_name = u'A 医疗机构'
         verbose_name_plural = u'A 医疗机构'
         db_table = 'hosp_hospital'
+        permissions = (
+            ('view_hospital', 'can view hospital'),   # 查看医疗结构
+        )
 
     def __str__(self):
         return '%s %s' % (self.id, self.organ_name)
@@ -145,7 +149,7 @@ class Hospital(BaseOrgan):
     def create_admin_group(self):
         """创建管理员组"""
         if self.get_admin_group():
-            logs.warn('Create Error: admin group existed for organ: %s' % self.id)
+            logger.warn('Create Error: admin group existed for organ: %s' % self.id)
             return
 
         group_data = {'is_admin': True}
@@ -190,8 +194,8 @@ class Hospital(BaseOrgan):
                         s.cache
                 return True
         except Exception as e:
-            logs.info(e.__cause__)
-            logs.exception(e)
+            logger.info(e.__cause__)
+            logger.exception(e)
             return False
 
     def create_department(self, **dept_data):
@@ -212,7 +216,7 @@ class Hospital(BaseOrgan):
             Department.objects.bulk_create(dept_list)
             return True
         except Exception as e:
-            logging.exception(e)
+            logger.exception(e)
             return False
 
 
@@ -228,6 +232,9 @@ class Department(BaseDepartment):
         verbose_name = u'B 科室/部门'
         verbose_name_plural = u'B 科室/部门'
         db_table = 'hosp_department'
+        permissions = (
+            ('view_department', 'can view department'),   # 查看科室/部门
+        )
 
     VALID_ATTRS = [
         'name', 'contact', 'attri', 'desc'
@@ -257,16 +264,24 @@ class Staff(BaseStaff):
         verbose_name = 'C 员工'
         verbose_name_plural = 'C 员工'
         permissions = (
-            ('view_staff', 'can view staffs'),
+            ('view_staff', 'can view staff'),   # 查看员工
+            ('import_staff', 'can import staff')   # 导入员工信息
         )
         db_table = 'hosp_staff'
 
     def __str__(self):
         return '%s %s' % (self.id, self.name)
 
-    def has_project_dispatcher_perm(self, ):
-        group = self.organ.get_specified_group(GROUP_CATE_PROJECT_APPROVER)
-        return self.has_group_perm(group)
+    def is_admin_for_hospital(self, hospital):
+        """
+        是否为指定企业的管理员
+        """
+        if not isinstance(hospital, Hospital):
+            return False
+        if not self.organ == hospital:
+            return False
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_HOSP_SUPER_ADMIN).first()
+        return self.user.has_role(role)
 
 
 class Doctor(Staff):
@@ -279,6 +294,9 @@ class Doctor(Staff):
         verbose_name = 'D 医生'
         verbose_name_plural = 'D 医生'
         db_table = 'hosp_doctor'
+        permissions = (
+            ('view_doctor', 'can view doctor'),   # 查看医生
+        )
 
 
 class Group(BaseGroup):
@@ -302,8 +320,8 @@ class Role(BaseModel):
     """
     角色数据模型
     """
-    name = models.CharField('角色名称', max_length=40)
-    codename = models.CharField('角色代码', max_length=100, unique=True, default='')
+    name = models.CharField('角色名称', max_length=40, unique=True)
+    codename = models.CharField('角色代码', max_length=100, unique=True)
     cate = models.CharField('类别', max_length=4, choices=ROLE_CATE_CHOICES, default=ROLE_CATE_NORMAL)
     permissions = models.ManyToManyField(
         Permission, verbose_name='权限集',
@@ -320,9 +338,13 @@ class Role(BaseModel):
     objects = RoleManager()
 
     class Meta:
-        verbose_name = '角色管理'
-        verbose_name_plural = '角色管理'
+        verbose_name = 'E 角色管理'
+        verbose_name_plural = verbose_name
         db_table = 'perm_role'
+        permissions = (
+            ('view_role', 'can view role'),   # 查看角色
+            ('assign_role', 'can assign role'),   # 分配角色
+        )
 
     def __str__(self):
         return u'%s' % self.name
@@ -379,10 +401,13 @@ class UserRoleShip(BaseModel):
     )
 
     class Meta:
-        verbose_name = '用户角色关系'
+        verbose_name = 'F 用户角色关系'
         verbose_name_plural = verbose_name
         unique_together = ('user', 'role')
         db_table = 'perm_user_roles'
+        permissions = (
+            ('view_user_role_ship', 'can view user role ship'),   # 查看用户角色关系
+        )
 
     def __str__(self):
         return '%s %s' % (self.user_id, self.role_id)
@@ -410,9 +435,12 @@ class HospitalAddress(BaseModel):
     objects = HospitalAddressManager()
 
     class Meta:
-        verbose_name = '医院内部地址'
+        verbose_name = 'G 医院内部地址'
         verbose_name_plural = verbose_name
         db_table = 'hosp_hospital_address'
+        permissions = (
+            ('view_hospital_address', 'can view hospital address'),    # 查看医院地址
+        )
 
     VALID_ATTRS = [
         'title', 'type', 'parent', 'parent_path', 'level', 'sort', 'disabled', 'dept', 'desc',
@@ -436,9 +464,12 @@ class Sequence(BaseModel):
     objects = SequenceManager()
 
     class Meta:
-        verbose_name = '序列'
+        verbose_name = 'H 序列管理'
         verbose_name_plural = verbose_name
         db_table = 'hosp_sequence'
+        permissions = (
+            ('view_sequence', 'can view sequence'),   # 查看序列
+        )
 
     VALID_ATTRS = [
         'seq_code', 'seq_name', 'seq_value', 'increment', 'remark',

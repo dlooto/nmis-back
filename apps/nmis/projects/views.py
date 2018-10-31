@@ -29,8 +29,8 @@ from base.views import BaseAPIView
 from nmis.devices.models import OrderedDevice, SoftwareDevice, ContractDevice
 from nmis.hospitals.models import Hospital, Staff, Department
 from nmis.hospitals.permissions import (
-    HospitalStaffPermission, IsHospitalAdmin, ProjectDispatcherPermission
-)
+    HospitalStaffPermission, IsHospSuperAdmin, ProjectDispatcherPermission,
+    HospGlobalReportAssessPermission, SystemManagePermission)
 from nmis.projects.forms import (
     ProjectPlanCreateForm,
     ProjectPlanUpdateForm,
@@ -44,7 +44,7 @@ from nmis.projects.forms import (
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, ProjectDocument, \
     ProjectMilestoneState, SupplierSelectionPlan, PurchaseContract
 from nmis.projects.permissions import ProjectPerformerPermission, \
-    ProjectAssistantPermission
+    ProjectAssistantPermission, ProjectCreatorPermission
 from nmis.projects.serializers import ChunkProjectPlanSerializer, ProjectPlanSerializer, \
     get_project_status_count, ProjectMilestoneStateAndPurchaseContractSerializer, \
     ChunkProjectMilestoneStateSerializer, ProjectMilestoneStateAndReceiptSerializer
@@ -71,7 +71,7 @@ logger = logging.getLogger(__name__)
 
 class ProjectPlanListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectDispatcherPermission)
 
     def get(self, req):
         """
@@ -84,7 +84,7 @@ class ProjectPlanListView(BaseAPIView):
         """
         # 检查管理员权限,允许管理员/项目分配者操作
 
-        self.check_object_any_permissions(req, req.user.get_profile().organ)
+        self.check_object_any_permissions(req, None)
 
         status = req.GET.get('pro_status', '').strip()
         # 项目状态校验
@@ -118,7 +118,7 @@ class ProjectPlanCreateView(BaseAPIView):
     """
     创建项目信息化项目申请（信息化硬件项目申请、信息化软件项目申请）
     """
-    permission_classes = [IsAuthenticated, HospitalStaffPermission, ]
+    permission_classes = (HospitalStaffPermission, )
 
     @check_id_list(["organ_id", "creator_id", "related_dept_id"])
     @check_params_not_null(['project_title', 'handing_type', 'pro_type'])
@@ -197,7 +197,7 @@ class ProjectPlanCreateView(BaseAPIView):
             "related_dept_id":  Department
         })
 
-        self.check_object_permissions(req, objects['organ_id'])
+        self.check_objects_any_permissions(req, None)
 
         if req.data.get('pro_type') not in dict(PROJECT_CATE_CHOICES).keys():
             return resp.form_err({'type_error': '不存在的操作类型'})
@@ -223,7 +223,7 @@ class ProjectPlanView(BaseAPIView):
     """
 
     permission_classes = (
-        IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission
+        IsHospSuperAdmin, ProjectDispatcherPermission, ProjectCreatorPermission
     )
 
     @check_id('organ_id')
@@ -233,7 +233,7 @@ class ProjectPlanView(BaseAPIView):
         """
         project = self.get_object_or_404(project_id, ProjectPlan)
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-        self.check_object_any_permissions(req, hospital)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
 
         project_queryset = ProjectPlan.objects.filter(id=project_id)
         project = ChunkProjectPlanSerializer.setup_eager_loading(project_queryset).first()
@@ -251,9 +251,11 @@ class ProjectPlanView(BaseAPIView):
         """
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
 
-        self.check_object_any_permissions(req, hospital)
+        self.check_object_any_permissions(req, None)
 
         old_project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, old_project])
+
 
         if not old_project.is_unstarted or old_project.is_paused() or old_project.is_finished():
             return resp.failed('项目已启动或完成或被挂起，无法修改')
@@ -280,7 +282,7 @@ class ProjectPlanView(BaseAPIView):
         """
         project = self.get_object_or_404(project_id, ProjectPlan)
         hospital = self.get_object_or_404(req.user.get_profile().organ.id, Hospital)
-        self.check_object_any_permissions(req, hospital)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
 
         if not project.performer:
             if project.deleted():
@@ -293,7 +295,7 @@ class ProjectPlanDispatchView(BaseAPIView):
     """
     项目分配责任人(管理员或项目分配者才可分配负责人，分配默认流程，改变项目状态，项目直接进入默认流程的需求论证里程碑)
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectDispatcherPermission,)
 
     @check_id('performer_id')
     def put(self, req, project_id):
@@ -328,7 +330,7 @@ class ProjectPlanRedispatchView(BaseAPIView):
     """
     重新分配项目负责人（不改变项目里程碑状态，只改变负责人信息）
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission,)
+    permission_classes = (IsHospSuperAdmin, ProjectDispatcherPermission,)
 
     @check_id('performer_id')
     def put(self, req, project_id):
@@ -357,7 +359,7 @@ class ProjectPlanRedispatchView(BaseAPIView):
 
 class ProjectPlanOverruleView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission,)
+    permission_classes = (IsHospSuperAdmin, ProjectDispatcherPermission,)
 
     @check_params_not_null(['reason'])
     def put(self, req, project_id):
@@ -390,7 +392,7 @@ class ProjectPlanOverruleView(BaseAPIView):
 
 class ProjectPlanPauseView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission)
 
     @check_params_not_null(['reason'])
     def put(self, req, project_id):
@@ -415,15 +417,15 @@ class ProjectPlanPauseView(BaseAPIView):
 
 class ProjectPlanCancelPauseView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission)
 
     def put(self, req, project_id):
         """
         项目负责人取消挂起的项目
         """
-        self.check_object_any_permissions(req, req.user.get_profile().organ)
-
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         if project.status == PRO_STATUS_DONE:
             return resp.failed('项目已完成，不能进行该操作')
         if project.cancel_pause():
@@ -436,15 +438,15 @@ class ProjectPlanCancelPauseView(BaseAPIView):
 
 class ProjectPlanDispatchAssistantView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (ProjectPerformerPermission, )
 
     @check_id('assistant_id')
     def put(self, req, project_id):
         """
         项目负责人分配项目协助办理人
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
 
         staff = self.get_object_or_404(req.data.get('assistant_id'), Staff)
 
@@ -456,7 +458,7 @@ class ProjectPlanDispatchAssistantView(BaseAPIView):
 
 class ProjectPlanAssistedListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (HospitalStaffPermission, )
 
     def get(self, req):
         """
@@ -500,7 +502,7 @@ class ProjectPlanAssistedListView(BaseAPIView):
 
 class ProjectPlanPerformedListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (HospitalStaffPermission, )
 
     def get(self, req):
         """
@@ -541,7 +543,7 @@ class ProjectPlanPerformedListView(BaseAPIView):
 
 class ProjectPlanAppliedListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (HospitalStaffPermission, )
 
     def get(self, req):
         """
@@ -581,13 +583,14 @@ class ProjectPlanStartupView(BaseAPIView):
     启动项目
     TODO: 权限后续需优化
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, HospitalStaffPermission, ProjectDispatcherPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectDispatcherPermission, ProjectPerformerPermission)
 
     @check_id_list(['flow_id', ])
     @check_params_not_null(["expired_time"])
     def put(self, req, project_id):
-        self.check_object_any_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         if not req.user.get_profile().id == project.performer_id:
             return resp.failed("无操作权限")
 
@@ -612,7 +615,7 @@ class ProjectPlanChangeMilestoneStateView(BaseAPIView):
     """
     变更当前项目里程碑的状态:
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission,)
 
     def check_milestone_state_data(self, project, milestone_state):
         """
@@ -704,7 +707,7 @@ class ProjectPlanChangeMilestoneStateView(BaseAPIView):
 
 
 class ProjectDeviceCreateView(BaseAPIView):
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission)
+    permission_classes = (IsHospSuperAdmin, HospitalStaffPermission)
 
     def post(self, req, project_id):
         """ 添加设备 """
@@ -720,12 +723,12 @@ class ProjectDeviceCreateView(BaseAPIView):
 
 
 class ProjectSoftwareDeviceCreateView(BaseAPIView):
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission)
+    permission_classes = (IsHospSuperAdmin, HospitalStaffPermission)
 
 
 class ProjectDeviceView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission)
+    permission_classes = (IsHospSuperAdmin, HospitalStaffPermission)
 
     def put(self, req, project_id, device_id):
         """ 修改设备信息 """
@@ -778,7 +781,7 @@ class ProjectChildMilestoneStatesView(BaseAPIView):
     获取项目流程某里程碑项的所有直接子里程碑项
     """
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectDispatcherPermission)
 
     def get(self, req, project_id, project_milestone_state_id):
 
@@ -797,7 +800,7 @@ class ProjectFlowCreateView(BaseAPIView):
     创建项目流程对象
     """
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     @check_id('organ_id')
     @check_params_not_null(['flow_title', 'milestones'])
@@ -832,7 +835,7 @@ class ProjectFlowCreateView(BaseAPIView):
 
 class ProjectFlowListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req):
         """ 返回流程列表 """
@@ -841,7 +844,7 @@ class ProjectFlowListView(BaseAPIView):
 
 class ProjectFlowView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req, flow_id):
         """
@@ -896,7 +899,7 @@ class FlowChildMilestonesView(BaseAPIView):
     获取流程某里程碑项的所有直接子里程碑项
     """
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin)
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req, flow_id, mid):
 
@@ -910,7 +913,7 @@ class FlowChildMilestonesView(BaseAPIView):
 
 class ProjectPlanDispatchedListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectDispatcherPermission)
 
     def get(self, req):
         """
@@ -936,7 +939,7 @@ class ProjectPlanDispatchedListView(BaseAPIView):
 
 class ProjectPlanUndispatchedListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectDispatcherPermission)
 
     def get(self, req):
         """
@@ -959,7 +962,7 @@ class ProjectPlanUndispatchedListView(BaseAPIView):
 
 class MilestoneCreateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin,)
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     def post(self, req, flow_id):
         """
@@ -970,7 +973,7 @@ class MilestoneCreateView(BaseAPIView):
 
 class MilestoneView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     def put(self, req, flow_id, mid):
         """ 修改里程碑项 """
@@ -1010,7 +1013,7 @@ def check_project_milestone_state(project, project_milestone_state, milestone_ti
 
 
 class DefaultCommonCreateOrUpdateView(RedirectView, BaseAPIView):
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def post(self, req, project_id, project_milestone_state_id, *args, **kwargs):
         project = self.get_object_or_404(project_id, ProjectPlan)
@@ -1041,7 +1044,7 @@ class DefaultCommonProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
     仅对默认项目流程有效
 
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @check_params_not_all_null(['cate_documents', 'summary'])
     @transaction.atomic
@@ -1084,7 +1087,7 @@ class DefaultCommonProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
 
 
 class DefaultCommonProjectMilestoneStateDataView(BaseAPIView):
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def get(self, req, project_id, project_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
@@ -1119,7 +1122,7 @@ class DefaultCommonProjectMilestoneStateDataView(BaseAPIView):
 
 
 class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     """
     项目负责人/项目协助人保存/修改里程碑下的信息
@@ -1163,7 +1166,7 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
 
 
 class ProjectMilestoneStateResearchInfoView(BaseAPIView):
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     """
     查看【调研】里程碑下的信息
@@ -1182,7 +1185,7 @@ class ProjectMilestoneStateResearchInfoView(BaseAPIView):
 
 class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
     """保存【方案收集】里程碑下的信息"""
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @check_params_not_all_null(['plan_list', 'summary'])
     @transaction.atomic
@@ -1216,7 +1219,7 @@ class ProjectMilestoneStatePlanGatheredView(BaseAPIView):
     """
     查询[方案收集]里程碑下的信息
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def get(self, req, project_id, project_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
@@ -1231,7 +1234,7 @@ class ProjectMilestoneStatePlanGatheredView(BaseAPIView):
 
 class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @transaction.atomic
     def delete(self, req, project_id, project_milestone_state_id, plan_id, doc_id):
@@ -1276,7 +1279,7 @@ class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
 
 
 class ProjectMilestoneStateSupplierPlanView(BaseAPIView):
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @transaction.atomic
     def delete(self, req, project_id, project_milestone_state_id, plan_id):
@@ -1326,7 +1329,7 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
     """
     保存【方案论证】里程碑下的信息
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @check_id('selected_plan_id')
     @transaction.atomic
@@ -1387,7 +1390,7 @@ class ProjectMilestoneStatePlanArgumentView(BaseAPIView):
     """
     查看【方案论证】里程碑下的信息
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def get(self, req, project_id, project_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
@@ -1412,16 +1415,16 @@ class ProjectMilestoneStatePlanArgumentView(BaseAPIView):
 
 class MilestoneRecordPurchaseCreateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission,)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @transaction.atomic
     def post(self, req, project_id, project_milestone_state_id):
         """
         确定采购方式子里程碑记录操作（包括确定采购的方式，保存采购方式决策论证类附件，保存说明等操作）
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
-
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
         if pro_milestone_state.status in (PRO_MILESTONE_DONE, PRO_MILESTONE_TODO):
@@ -1465,13 +1468,14 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
 
 class MilestoneRecordPurchaseView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def get(self, req, project_id, project_milestone_state_id):
         """
         获取确定采购方案信息(包括:采购方式、决策论证资料、说明等)
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
 
         self.get_object_or_404(project_id, ProjectPlan)
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState, use_cache=False)
@@ -1483,7 +1487,7 @@ class MilestoneRecordPurchaseView(BaseAPIView):
 
 class MilestoneStartUpPurchaseCreateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @transaction.atomic
     @check_params_not_all_null(['cate_documents', 'summary'])
@@ -1491,9 +1495,9 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
         """
         启动采购里程碑中保存操作(保存资料文档url地址，项目里程碑中的说明、文档集合)
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
 
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
         if pro_milestone_state.status in (PRO_MILESTONE_DONE, PRO_MILESTONE_TODO):
@@ -1526,13 +1530,14 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
 
 class MilestoneStartUpPurchaseView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def get(self, req, project_id, project_milestone_state_id):
         """
         获取启动采购中附件和说明相关信息
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
 
         self.get_object_or_404(project_id, ProjectPlan)
         self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
@@ -1549,7 +1554,7 @@ class MilestoneStartUpPurchaseView(BaseAPIView):
 
 class MilestonePurchaseContractCreateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @transaction.atomic
     @check_params_not_null(['contract_no', 'title', 'signed_date', 'buyer_contact',
@@ -1559,9 +1564,10 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         """
         合同管理里程碑操作（保存合同信息、合同中设备信息、附件地址、说明信息）
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
 
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         pro_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
         if pro_milestone_state.status in (PRO_MILESTONE_DONE, PRO_MILESTONE_TODO):
@@ -1601,13 +1607,14 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
 
 class MilestonePurchaseContractView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def get(self, req, project_id, project_milestone_state_id):
         """
         获取合同管理里程碑中相关信息（合同信息，合同设备明细，合同文件，说明信息）
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
 
         self.get_object_or_404(project_id, ProjectPlan)
         self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
@@ -1624,13 +1631,14 @@ class MilestonePurchaseContractView(BaseAPIView):
 
 class ContractDeviceView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def delete(self, req, project_id, purchase_contract_id, contract_device_id):
         """
         删除合同中的某个合同设备
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
 
         self.get_object_or_404(project_id, ProjectPlan)
         purchase_contract = self.get_object_or_404(purchase_contract_id, PurchaseContract)
@@ -1646,7 +1654,7 @@ class ContractDeviceView(BaseAPIView):
 
 class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @transaction.atomic
     @check_params_not_null(['served_date', 'delivery_man', 'contact_phone'])
@@ -1654,9 +1662,9 @@ class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
         """
         到货项目里程碑的保存/修改操作
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
-
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         project_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
 
         if project_milestone_state.status in (PRO_MILESTONE_DONE, PRO_MILESTONE_TODO):
@@ -1698,13 +1706,14 @@ class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
 
 class MilestoneTakeDeliveryView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def get(self, req, project_id, project_milestone_state_id):
         """
         获取到货项目里程碑下的信息
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
 
         self.get_object_or_404(project_id, ProjectPlan)
         self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
@@ -1721,14 +1730,15 @@ class MilestoneTakeDeliveryView(BaseAPIView):
 
 class UploadFileView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission, )
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def post(self, req, project_id):
         """
         流程中每个子里程碑中的文件上传
         :return: 保存至服务器，返回保存路径
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
 
         self.get_object_or_404(project_id, ProjectPlan)
 
@@ -1747,7 +1757,7 @@ class UploadFileView(BaseAPIView):
 
 class DeleteFileView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, HospitalStaffPermission,)
+    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @check_id('project_milestone_state_id')
     @transaction.atomic
@@ -1756,13 +1766,16 @@ class DeleteFileView(BaseAPIView):
         单个文件的删除（删除project_document的记录，更新project_milestone_states中doc_list记录，从服务器中删除文件）
         :return:
         """
-        self.check_object_permissions(req, req.user.get_profile().organ)
+        self.check_objects_any_permissions(req, None)
         project_document = self.get_object_or_404(doc_id, ProjectDocument)
 
         # 获取项目里程碑state
         project_milestone_state = ProjectMilestoneState.objects.get_pro_milestone_states_by_id(
             req.data.get('project_milestone_state_id')
         )
+
+        project = project_milestone_state.project
+        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
         if project_milestone_state:
             if not project_milestone_state.doc_list:
                 return resp.failed('该项目里程碑中不存在此文件')
@@ -1783,11 +1796,12 @@ class ProjectStatisticReport(BaseAPIView):
     """
     项目统计医院全局报表
     """
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsHospSuperAdmin, HospGlobalReportAssessPermission)
 
     queryset = ProjectPlan.objects.all()
 
     def get(self, req):
+        self.check_object_any_permissions(req, None)
 
         # 校验日期格式
         if not times.is_valid_date(req.GET.get('start_date', '')) or not times.is_valid_date(req.GET.get('expired_date', '')):

@@ -137,12 +137,12 @@ class DepartmentApiTestCase(BaseTestCase):
         API = "/api/v1/hospitals/{}/global-data"
         staff = self.create_completed_staff(self.organ, self.dept, name="普通员工")
 
-        self.login_with_username(staff.user)
+        self.login_with_username(self.user)
         response = self.get(API.format(self.organ.id))
         self.assert_response_success(response)
         self.assertIsNotNone(response.get("depts"))
         self.assertIsNotNone(response.get("flows"))
-        self.assertIsNotNone(response.get("perm_groups"))
+        self.assertIsNotNone(response.get("roles"))
 
         staff.user.clear_cache()
         staff.clear_cache()
@@ -160,46 +160,6 @@ class DepartmentApiTestCase(BaseTestCase):
         dept_file_obj = open(curr_path+'/data/dept-normal-test.xlsx', 'rb')
         response = self.raw_post(api.format(self.organ.id), {'dept_excel_file': dept_file_obj})
         self.assert_response_success(response)
-
-
-class StaffsPermChangeTestCase(BaseTestCase):
-    """
-    测试staff权限分配相关API
-    """
-    staffs_perm_change_api = '/api/v1/hospitals/{0}/staffs/change-permission'
-
-    def test_staffs_perm_change(self):
-        """
-        测试管理员给员工非配权限
-        """
-
-        self.login_with_username(self.user)
-
-        # 初始化staff相应数据
-        staff_data = {
-            'title': '主治医师',
-            'contact': '19822012220',
-            'email': 'ceshi01@test.com',
-        }
-        self.create_completed_staff(self.organ, self.dept, name='测试01', **staff_data)
-
-        staffs = self.organ.get_staffs()
-        groups = self.organ.get_all_groups()
-        staff_id_list = [staff.id for staff in staffs]
-        group_id_list = [g.id for g in groups]
-
-        data = {
-            'perm_group_id': random.sample(group_id_list, 1)[0],
-            'staffs':        ','.join([str(id) for id in staff_id_list])
-        }
-
-        response = self.put(
-            self.staffs_perm_change_api.format(self.organ.id),
-            data=data
-        )
-
-        self.assert_response_success(response)
-        self.assertEquals(response.get('msg'), '员工权限已修改')
 
 
 class StaffAPITestCase(BaseTestCase):

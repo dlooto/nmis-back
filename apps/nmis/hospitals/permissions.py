@@ -19,9 +19,11 @@ from restfw_composed_permissions.generic.components import (
     ObjectAttrEqualToObjectAttr)
 
 from base.common.permissions import is_login
-from nmis.hospitals.models import Hospital
+from nmis.hospitals.consts import ROLE_CODE_HOSP_SUPER_ADMIN, ROLE_CODE_NORMAL_STAFF, ROLE_CODE_PRO_DISPATCHER, \
+    ROLE_CODE_HOSP_REPORT_ASSESS, ROLE_CODE_SYSTEM_SETTING_ADMIN
+from nmis.hospitals.models import Hospital, Role
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class IsSuperAdmin(BasePermission):
@@ -33,9 +35,9 @@ class IsSuperAdmin(BasePermission):
         return request.user and request.user.is_superuser
 
 
-class IsHospitalAdmin(BasePermission):
-
-    message = u'仅医院管理员可操作'
+class IsHospSuperAdmin(BasePermission):
+    # 区别于系统超级管理员(系统超级管理员可访问系统大后台)
+    message = u'仅医院超级管理员可操作'
 
     def has_permission(self, request, view):
         """
@@ -46,13 +48,52 @@ class IsHospitalAdmin(BasePermission):
     def has_object_permission(self, request, view, obj):
         """
         对象级权限检查.
-        :param obj: organ object
+        :param obj:  None
         """
-        if not isinstance(obj, Hospital):
-            return False
-        if not request.user.get_profile():
-            return False
-        return request.user.get_profile().is_admin_for_organ(obj)
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_HOSP_SUPER_ADMIN).first()
+        return request.user.has_role(role)
+
+
+class HospGlobalReportAssessPermission(BasePermission):
+    """
+    医院全局报表查看权限
+    """
+    message = u'仅统计信息查看者可查看'
+
+    def has_permission(self, request, view):
+        """
+        View/接口级权限检查
+        """
+        return is_login(request)
+
+    def has_object_permission(self, request, view, obj):
+        """
+        对象级权限检查.
+        :param obj: None
+        """
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_HOSP_REPORT_ASSESS).first()
+        return request.user.has_role(role)
+
+
+class SystemManagePermission(BasePermission):
+    """
+    系统设置管理权限
+    """
+    message = u'仅系统管理员可操作'
+
+    def has_permission(self, request, view):
+        """
+        View/接口级权限检查
+        """
+        return is_login(request)
+
+    def has_object_permission(self, request, view, obj):
+        """
+        对象级权限检查.
+        :param obj: None
+        """
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_SYSTEM_SETTING_ADMIN).first()
+        return request.user.has_role(role)
 
 
 class HospitalStaffPermission(BasePermission):
@@ -62,18 +103,22 @@ class HospitalStaffPermission(BasePermission):
 
     message = u'仅允许登录的医院员工可操作'
 
+    def has_permission(self, request, view):
+        return is_login(request)
+
     def has_object_permission(self, request, view, obj):
         """
         :param obj: organ对象
         """
-        if not isinstance(obj, Hospital):
-            return False
-        if not is_login(request):
-            return False
+        # if not isinstance(obj, Hospital):
+        #     return False
+        # if not is_login(request):
+        #     return False
         staff = request.user.get_profile()
-        # if staff.is_admin_for_organ(obj) or staff.has_project_dispatcher_perm():
-        #     return True
-        return staff.organ == obj if staff else False
+        if not staff:
+            return False
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_NORMAL_STAFF).first()
+        return request.user.has_role(role)
 
 
 class ProjectDispatcherPermission(BasePermission):
@@ -90,34 +135,13 @@ class ProjectDispatcherPermission(BasePermission):
         """
         :param obj: organ对象
         """
-        staff = request.user.get_profile()
-        if staff.is_admin_for_organ(obj):
-            return True
-        if not isinstance(obj, Hospital):
-            return False
-        return staff.organ == obj and staff.has_project_dispatcher_perm()
-
-
-# class ProjectAdminPermission(BaseComposedPermission):
-#     """
-#     医院项目管理者权限
-#
-#     Example:
-#         ```
-#         def global_permission_set(self):
-#             return Or(AllowOnlyAuthenticated, And(AllowAll, AllowOnlySafeHttpMethod))
-#
-#         def object_permission_set(self):
-#             return AllowAll
-#         ```
-#     """
-#     message = '仅允许项目管理者操作'
-#
-#     def global_permission_set(self):
-#         return AllowOnlyAuthenticated
-#
-#     def object_permission_set(self):
-#         return Or(IsHospitalAdmin, ProjectApproverPermission)
+        # staff = request.user.get_profile()
+        # if staff.is_admin_for_hospital(obj):
+        #     return True
+        # if not isinstance(obj, Hospital):
+        #     return False
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_PRO_DISPATCHER)
+        return request.user.has_role(role)
 
 
 class IsOwnerOrReadOnly(BasePermission):
@@ -132,6 +156,7 @@ class IsOwnerOrReadOnly(BasePermission):
             return True
         # Instance must have an attribute named `owner`.
         return obj == request.user.get_profile()
+
 
 class IsReadOnly(BasePermission):
     """

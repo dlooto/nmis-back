@@ -40,8 +40,8 @@ urlpatterns = [
     # 添加员工、
     path("<int:hid>/staffs/create",     views.StaffCreateView.as_view(), ),
 
-    # 批量修改员工权限
-    path("<int:hid>/staffs/change-permission",     views.StaffsPermChangeView.as_view(), ),
+    # # 批量修改员工权限
+    # path("<int:hid>/staffs/change-permission",     views.StaffsPermChangeView.as_view(), ),
 
     # 查询员工列表
     path("<int:hid>/staffs",            views.StaffListView.as_view(), ),
@@ -52,8 +52,8 @@ urlpatterns = [
     # 批量导入员工信息（以上传excel文件的形式）
     path("<int:hid>/staffs/batch-upload", views.StaffBatchUploadView.as_view(), ),
 
-    # 权限组API列表接口
-    path("<int:hid>/groups",             views.GroupListView.as_view(), ),
+    # # 权限组API列表接口
+    # path("<int:hid>/groups",             views.GroupListView.as_view(), ),
 
     # 创建角色
     path("roles/create", views.RoleCreateView.as_view(), ),

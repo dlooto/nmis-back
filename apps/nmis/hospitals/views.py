@@ -25,8 +25,8 @@ from base import resp
 from base.views import BaseAPIView
 from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
     DepartmentBatchUploadForm, RoleCreateForm, RoleUpdateForm
-from nmis.hospitals.permissions import IsHospitalAdmin, HospitalStaffPermission, \
-    ProjectDispatcherPermission
+from nmis.hospitals.permissions import IsHospSuperAdmin, HospitalStaffPermission, \
+    ProjectDispatcherPermission, IsSuperAdmin, SystemManagePermission
 from nmis.hospitals.models import Hospital, Department, Staff, Group, Role, HospitalAddress
 from .forms import (
     HospitalSignupForm,
@@ -46,10 +46,11 @@ class HospitalSignupView(BaseAPIView):
     医疗机构注册, 也即医疗机构管理员注册
     """
 
-    permission_classes = (AllowAny, )
+    permission_classes = (IsHospSuperAdmin, IsSuperAdmin)
     LOGIN_AFTER_SIGNUP = settings.LOGIN_AFTER_SIGNUP  # 默认注册后自动登录
 
     def post(self, req):
+        self.check_object_any_permissions(req, None)
         form = HospitalSignupForm(req, data=req.data)
 
         if not form.is_valid():
@@ -82,9 +83,11 @@ class HospitalView(BaseAPIView):
     """
     单个企业的get/update/delete操作
     """
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsHospSuperAdmin, IsSuperAdmin)
 
     def get(self, req, hid):
+        self.check_object_any_permissions(req, None)
+
         organ = self.get_object_or_404(hid, Hospital)
         return resp.serialize_response(organ, results_name='organ')
 
@@ -93,6 +96,8 @@ class HospitalView(BaseAPIView):
         通过opt_type参数判定将对organ对象进行何种修改操作.
         opt_type='auth_approved' 为企业注册审核操作
         """
+        self.check_object_any_permissions(req, None)
+
         opt_type = req.DATA.get('opt_type', '')
         if opt_type not in ('auth_approved', ):
             return resp.failed('请求参数错误')
@@ -112,7 +117,7 @@ class HospitalView(BaseAPIView):
 
 class HospitalGlobalDataView(BaseAPIView):
 
-    permission_classes = [IsAuthenticated, HospitalStaffPermission, ]
+    permission_classes = (HospitalStaffPermission, )
 
     def get(self, req, hid):
         hospital = self.get_object_or_404(hid, Hospital)
@@ -127,8 +132,11 @@ class HospitalGlobalDataView(BaseAPIView):
         response.data.update({"flows": resp.serialize_data(flows)})
 
         # 权限组
-        perm_groups = hospital.get_all_groups()
-        response.data.update({"perm_groups": resp.serialize_data(perm_groups)})
+        # perm_groups = hospital.get_all_groups()
+        # response.data.update({"perm_groups": resp.serialize_data(perm_groups)})
+
+        roles = Role.objects.get_all_roles()
+        response.data.update({"roles": resp.serialize_data(roles)})
 
         # 我负责的项目数量
         performer_project_count = ProjectPlan.objects.get_my_performer_projects(hospital, req.user.get_profile()).count()
@@ -167,7 +175,7 @@ class StaffCreateView(BaseAPIView):
     """
     添加员工, 同时会为员工注册账号
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     @check_params_not_null(['username', 'password', 'staff_name', 'dept_id'])
     def post(self, req, hid):
@@ -183,7 +191,7 @@ class StaffCreateView(BaseAPIView):
 
         """
         organ = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, organ)
+        self.check_object_any_permissions(req, organ)
         dept = self.get_object_or_404(req.data.get('dept_id'), Department)
         form = StaffSignupForm(organ, dept, req.data)
 
@@ -198,48 +206,48 @@ class StaffCreateView(BaseAPIView):
         return resp.serialize_response(staff_queryset.first(), results_name='staff', srl_cls_name='StaffSerializer')
 
 
-class StaffsPermChangeView(BaseAPIView):
-    """
-    同时修改多个职员的权限为新的一种权限
-    """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
-
-    @check_params_not_null(['perm_group_id', 'staffs'])
-    def put(self, req, hid):
-        """
-
-        the request param Example:
-        {
-            "perm_group_id": 1001,
-            "staffs": "2001,2002,2003"
-        }
-
-        """
-        hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
-        perm_group = self.get_objects_or_404({'perm_group_id': Group}).get('perm_group_id')
-
-        staff_id_list = get_id_list(req.data.get('staffs'))
-        if req.user.get_profile().id in staff_id_list:
-            return resp.failed('无权修改自身权限')
-        if Staff.objects.filter(id__in=staff_id_list).count() < len(staff_id_list):
-            return resp.failed('请确认是否有不存在的员工信息')
-        staffs = Staff.objects.filter(id__in=staff_id_list)
-        staffs.update(group=perm_group)
-        for staff in staffs:
-             staff.cache()
-        return resp.ok('员工权限已修改')
+# class StaffsPermChangeView(BaseAPIView):
+#     """
+#     同时修改多个职员的权限为新的一种权限
+#     """
+#     permission_classes = (IsAuthenticated, IsHospSuperAdmin,)
+#
+#     @check_params_not_null(['perm_group_id', 'staffs'])
+#     def put(self, req, hid):
+#         """
+#
+#         the request param Example:
+#         {
+#             "perm_group_id": 1001,
+#             "staffs": "2001,2002,2003"
+#         }
+#
+#         """
+#         hospital = self.get_object_or_404(hid, Hospital)
+#         self.check_object_permissions(req, hospital)
+#         perm_group = self.get_objects_or_404({'perm_group_id': Group}).get('perm_group_id')
+#
+#         staff_id_list = get_id_list(req.data.get('staffs'))
+#         if req.user.get_profile().id in staff_id_list:
+#             return resp.failed('无权修改自身权限')
+#         if Staff.objects.filter(id__in=staff_id_list).count() < len(staff_id_list):
+#             return resp.failed('请确认是否有不存在的员工信息')
+#         staffs = Staff.objects.filter(id__in=staff_id_list)
+#         staffs.update(group=perm_group)
+#         for staff in staffs:
+#              staff.cache()
+#         return resp.ok('员工权限已修改')
 
 
 class StaffView(BaseAPIView):
     """
     单个员工删、查、改操作
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req, hid, staff_id):
         organ = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, organ)
+        self.check_object_any_permissions(req, organ)
 
         staff = self.get_object_or_404(staff_id, Staff)
         staff_queryset = StaffSerializer.setup_eager_loading(Staff.objects.filter(id=staff_id))
@@ -251,7 +259,7 @@ class StaffView(BaseAPIView):
         """
 
         organ = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, organ)
+        self.check_object_any_permissions(req, organ)
 
         # 判断变更的员工是否存在；
         staff = self.get_object_or_404(staff_id, Staff)
@@ -277,7 +285,7 @@ class StaffView(BaseAPIView):
         :return:
         """
         organ = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, organ)
+        self.check_object_any_permissions(req, organ)
 
         staff = self.get_object_or_404(staff_id, Staff)
         if req.user.get_profile().id == staff_id:
@@ -297,7 +305,9 @@ class StaffView(BaseAPIView):
 
 class StaffListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+    permission_classes = (
+        IsHospSuperAdmin, ProjectDispatcherPermission, SystemManagePermission
+    )
     # permission_codes = ('GNS', 'GPA', 'GAD')
     # permission_classes = (CustomAnyPermission,)
 
@@ -309,6 +319,8 @@ class StaffListView(BaseAPIView):
         # self.check_object_permissions(req, {'permission_codes': permission_codes})
 
         organ = self.get_object_or_404(hid, Hospital)
+        self.check_object_any_permissions(req, organ)
+
         staff_list = organ.get_staffs(search_key=req.GET.get('search_key', '').strip())
         staff_list = StaffSerializer.setup_eager_loading(staff_list)
         # 分页查询员工列表
@@ -316,7 +328,9 @@ class StaffListView(BaseAPIView):
 
 
 class ChunkStaffListView(BaseAPIView):
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, ProjectDispatcherPermission, HospitalStaffPermission)
+    permission_classes = (
+        IsHospSuperAdmin, ProjectDispatcherPermission, SystemManagePermission
+    )
 
     def get(self, req, hid):
         """
@@ -334,7 +348,7 @@ class ChunkStaffListView(BaseAPIView):
 
 class StaffBatchUploadView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     @check_params_not_null(['staff_excel_file'])
     def post(self, req, hid):
@@ -353,7 +367,7 @@ class StaffBatchUploadView(BaseAPIView):
 
         """
         organ = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, organ)
+        self.check_object_any_permissions(req, organ)
 
         file_obj = req.FILES.get('staff_excel_file')
         if not file_obj:
@@ -386,7 +400,7 @@ class StaffBatchUploadView(BaseAPIView):
 
 class DepartmentCreateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     @check_params_not_null(['name'])
     def post(self, req, hid):
@@ -403,7 +417,7 @@ class DepartmentCreateView(BaseAPIView):
         """
 
         hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)    # 验证权限
+        self.check_object_any_permissions(req, hospital)
         form = DepartmentCreateForm(hospital, data=req.data)
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -415,14 +429,14 @@ class DepartmentCreateView(BaseAPIView):
 
 class DepartmentListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (HospitalStaffPermission, IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req, hid):
         """
         科室列表操作
         """
         hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
+        self.check_object_any_permissions(req, hospital)
         dept_list = hospital.get_all_depts()
         dept_list = DepartmentStaffsCountSerializer.setup_eager_loading(dept_list)
         return self.get_pages(
@@ -434,7 +448,7 @@ class DepartmentView(BaseAPIView):
     """
     单个科室/部门的get/update/delete
     """
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req, hid, dept_id):
         """
@@ -445,7 +459,7 @@ class DepartmentView(BaseAPIView):
         """
         dept = self.get_object_or_404(dept_id, Department)
         hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
+        self.check_object_any_permissions(req, hospital)
 
         return resp.serialize_response(dept, results_name='dept')
 
@@ -462,7 +476,7 @@ class DepartmentView(BaseAPIView):
         }
         """
         hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
+        self.check_object_any_permissions(req, hospital)
 
         dept = self.get_object_or_404(dept_id, Department)
         form = DepartmentUpdateFrom(dept, req.data)
@@ -481,7 +495,7 @@ class DepartmentView(BaseAPIView):
         }
         """
         hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
+        self.check_object_any_permissions(req, hospital)
 
         dept = self.get_object_or_404(dept_id, Department)
         # 查询当前科室是否存在员工
@@ -495,7 +509,7 @@ class DepartmentView(BaseAPIView):
 
 class DepartmentBatchUploadView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     @check_params_not_null(['dept_excel_file'])
     def post(self, req, hid):
@@ -511,7 +525,7 @@ class DepartmentBatchUploadView(BaseAPIView):
         检查科室是否有重复数据
         """
         organ = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, organ)
+        self.check_object_any_permissions(req, organ)
 
         file_obj = req.FILES.get('dept_excel_file')
         if not file_obj:
@@ -542,25 +556,26 @@ class DepartmentBatchUploadView(BaseAPIView):
         return resp.ok('导入成功') if form.save() else resp.failed('导入失败')
 
 
-class GroupListView(BaseAPIView):
-
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
-
-    def get(self, req, hid):
-        """
-        获取权限组集合
-        """
-        hospital = self.get_object_or_404(hid, Hospital)
-        self.check_object_permissions(req, hospital)
-        groups_list = hospital.get_all_groups()
-        return resp.serialize_response(groups_list, results_name='group')
+# class GroupListView(BaseAPIView):
+#
+#     permission_classes = (IsAuthenticated, IsHospSuperAdmin,)
+#
+#     def get(self, req, hid):
+#         """
+#         获取权限组集合
+#         """
+#         hospital = self.get_object_or_404(hid, Hospital)
+#         self.check_object_permissions(req, hospital)
+#         groups_list = hospital.get_all_groups()
+#         return resp.serialize_response(groups_list, results_name='group')
 
 
 class RoleCreateView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     def post(self, req):
+        self.check_object_any_permissions(req, None)
 
         form = RoleCreateForm(req.data)
         if not form.is_valid():
@@ -573,14 +588,18 @@ class RoleCreateView(BaseAPIView):
 
 class RoleView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (HospitalStaffPermission, IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req, role_id):
+        self.check_object_any_permissions(req, None)
+
         role = self.get_object_or_404(role_id, Role)
         role_queryset = RoleSerializer.setup_eager_loading(Role.objects.filter(id=role_id)).first()
         return resp.serialize_response(role_queryset, srl_cls_name='RoleSerializer', results_name='role')
 
     def put(self, req, role_id):
+        self.check_object_any_permissions(req, None)
+
         role = self.get_object_or_404(role_id, Role)
         form = RoleUpdateForm(role, req.data)
         if not form.is_valid():
@@ -592,6 +611,7 @@ class RoleView(BaseAPIView):
         return resp.serialize_response(new_role, srl_cls_name='ChunkRoleSerializer', results_name='role')
 
     def delete(self, req, role_id):
+        self.check_object_any_permissions(req, None)
         role = self.get_object_or_404(role_id, Role)
         role.clear_cache()
         role.delete()
@@ -600,9 +620,10 @@ class RoleView(BaseAPIView):
 
 class RoleListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, IsHospitalAdmin, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req):
+        self.check_object_any_permissions(req, None)
         roles = Role.objects.all()
         roles = RoleSerializer.setup_eager_loading(roles)
         return resp.serialize_response(roles, srl_cls_name='ChunkRoleSerializer', results_name='roles')
@@ -610,12 +631,13 @@ class RoleListView(BaseAPIView):
 
 class HospitalAddressListView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req, hid):
         """
         获取医疗机构下资产设备存储地点列表
         """
+        self.check_object_any_permissions(req, None)
         self.get_object_or_404(hid, Hospital)
         hospital_address_list = HospitalAddress.objects.get_hospital_address_list()
         return resp.serialize_response(hospital_address_list, results_name='hospital_address')

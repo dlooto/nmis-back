@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 class File(BaseModel):
     """
-    文件模型
-    处理上传文件
+    文件资料模型
+    文件存储信息
     """
     name = models.CharField('文件名称', max_length=128)
     path = models.CharField('文件存放路径', max_length=1024)
@@ -32,9 +32,12 @@ class File(BaseModel):
     objects = FileManager()
 
     class Meta:
-        verbose_name = '文件'
+        verbose_name = '文件资料'
         verbose_name_plural = verbose_name
         db_table = 'documents_file'
+        permissions = (
+            ('view_file', 'can view file'),   # 查看文件资料
+        )
 
     VALID_ATTRS = [
         'name', 'path', 'cate',

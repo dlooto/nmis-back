@@ -45,7 +45,7 @@ class StaffManager(BaseManager):
                 )
                 return self.create(organ=organ, dept=dept, user=user, **data)
         except Exception as e:
-            logging.exception(e)
+            logger.exception(e)
             return None
 
     def batch_upload_staffs(self, staffs_data):
@@ -169,6 +169,20 @@ class RoleManager(BaseManager):
             logger.exception(e)
             return None
 
+    def get_role_by_keyword(self, **keyword):
+        """
+        通过关键字查询角色
+        :param keyword: id, name 或 codename键值对
+        :return:
+        """
+        if keyword.get('id'):
+            return self.filter(id=keyword.get('id'))
+        if keyword.get('name'):
+            return self.filter(name=keyword.get('name'))
+        if keyword.get('codename'):
+            return self.filter(codename=keyword.get('codename'))
+        return None
+
     def init_default_roles(self):
         """
         初始化默认角色
@@ -257,5 +271,5 @@ class HospitalAddressManager(BaseManager):
             return self.bulk_create(storage_place_list)
 
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return None

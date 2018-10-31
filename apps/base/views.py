@@ -38,9 +38,13 @@ class BaseAPIView(GenericAPIView):
         检查是否满足任意某个权限(满足其中一个即可, 模仿check_object_permissions)
         """
         for permission in self.get_permissions():
-            for obj in objs:
-                if permission.has_object_permission(request, self, obj):
+            if not objs:
+                if permission.has_object_permission(request, self, None):
                     return
+            elif isinstance(objs, (list, tuple)):
+                for obj in objs:
+                    if permission.has_object_permission(request, self, obj):
+                        return
         self.permission_denied(request, message=u'无操作权限')
 
     def check_objects_all_permissions(self, request, objs):
@@ -48,9 +52,14 @@ class BaseAPIView(GenericAPIView):
         检查是否满足所有权限(满足所有方可, 模仿check_object_permissions)
         """
         for permission in self.get_permissions():
-            for obj in objs:
-                if not permission.has_object_permission(request, self, obj):
+            if not objs:
+                if not permission.has_object_permission(request, self, None):
                     self.permission_denied(request, message=u'无操作权限')
+
+            elif isinstance(objs, (list, tuple)):
+                for obj in objs:
+                    if not permission.has_object_permission(request, self, obj):
+                        self.permission_denied(request, message=u'无操作权限')
 
     def get_user_role_dept_domains(self, request, perm_keys, allOrAny="ALL" ):
         """

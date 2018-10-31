@@ -11,13 +11,14 @@ from base import resp
 from base.views import BaseAPIView
 from nmis.documents.consts import DOC_UPLOAD_BASE_DIR
 from nmis.documents.forms import UploadFileForm
+from nmis.hospitals.permissions import HospitalStaffPermission
 
 logger = logging.getLogger(__name__)
 
 
 class UploadFileView(BaseAPIView):
 
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (HospitalStaffPermission, )
 
     def post(self, req):
         """
