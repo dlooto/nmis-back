@@ -36,7 +36,8 @@ from nmis.devices.permissions import AssertDeviceAdminPermission, RepairOrderCre
     KnowledgeManagePermission
 from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR, DOC_UPLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
-from nmis.hospitals.consts import ARCHIVE
+from nmis.hospitals.consts import ARCHIVE, ROLE_CODE_HOSP_SUPER_ADMIN, \
+    ROLE_CODE_NORMAL_STAFF, ROLE_CODE_ASSERT_DEVICE_ADMIN
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
 from nmis.hospitals.permissions import IsHospSuperAdmin, SystemManagePermission, HospGlobalReportAssessPermission, \
@@ -318,7 +319,8 @@ class MaintenancePlanView(BaseAPIView):
 
 class MaintenancePlanListView(BaseAPIView):
 
-    permission_classes = (MaintenancePlanExecutePermission, AssertDeviceAdminPermission, IsHospSuperAdmin)
+    permission_classes = (MaintenancePlanExecutePermission, HospitalStaffPermission,
+                          AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     def get(self, req):
         """
@@ -342,8 +344,18 @@ class MaintenancePlanListView(BaseAPIView):
             period=req.GET.get('period', '').strip()
         )
 
+        for role in req.user.get_roles():
+            if role.codename in (ROLE_CODE_ASSERT_DEVICE_ADMIN, ROLE_CODE_HOSP_SUPER_ADMIN):
+                return self.get_pages(
+                    maintenance_plans, srl_cls_name='MaintenancePlanListSerializer',
+                    results_name='maintenance_plans'
+                )
+
+        maintenance_plans = maintenance_plans.filter(executor=req.user.get_profile())
+
         return self.get_pages(
-            maintenance_plans, srl_cls_name='MaintenancePlanListSerializer', results_name='maintenance_plans'
+            maintenance_plans, srl_cls_name='MaintenancePlanListSerializer',
+            results_name='maintenance_plans'
         )
 
 
@@ -355,8 +367,9 @@ class MaintenancePlanExecuteView(BaseAPIView):
         """
         资产设备维护单执行操作
         """
-        self.check_object_any_permissions(req, req.user.get_profile())
         maintenance_plan = self.get_object_or_404(maintenance_plan_id, MaintenancePlan)
+        self.check_object_any_permissions(req, maintenance_plan)
+
         if maintenance_plan.status == MAINTENANCE_PLAN_STATUS_DONE:
             return resp.failed('维护单已执行')
         result = req.data.get('result', '').strip()
