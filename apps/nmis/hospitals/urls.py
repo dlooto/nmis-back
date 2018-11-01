@@ -65,5 +65,8 @@ urlpatterns = [
     path("roles", views.RoleListView.as_view(), ),
 
     # 获取医院机构下资产设备存储地点列表
-    path('<int:hid>/hospital-address', views.HospitalAddressListView.as_view())
+    path('<int:hid>/hospital-address', views.HospitalAddressListView.as_view()),
+
+    # 获取用户列表（供下拉菜单使用）
+    path('<int:hid>/single-staffs',    views.SingleStaffView.as_view(),),
 ]

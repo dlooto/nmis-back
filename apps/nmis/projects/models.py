@@ -616,6 +616,14 @@ class ProjectFlow(BaseModel):
             return False
         return True
 
+    def is_default(self):
+        """
+        是否为默认流程
+        """
+        if self.default_flow:
+            return True
+        return False
+
 
 class Milestone(BaseModel):
     """

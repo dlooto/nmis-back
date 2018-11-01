@@ -878,14 +878,17 @@ class ProjectFlowView(BaseAPIView):
         """
         删除流程. 仅允许管理员操作
 
-        如果流程已经在使用，不能删除
+        如果流程已经在使用，不能删除；默认流程不能删除
         TODO： 添加删除限制条件
         """
         flow = self.get_object_or_404(flow_id, ProjectFlow)
-        self.check_object_permissions(req, flow.organ)
+        self.check_object_any_permissions(req, flow.organ)
 
+        if flow.is_default():
+            return resp.failed('不能删除默认流程')
         if flow.is_used():
             return resp.failed('流程已经在使用中，不能修改')
+
         flow.clear_cache()
         try:
             flow.delete()
