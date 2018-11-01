@@ -643,7 +643,7 @@ class HospitalAddressListView(BaseAPIView):
         return resp.serialize_response(hospital_address_list, results_name='hospital_address')
 
 
-class SingleStaffView(BaseAPIView):
+class SimpleStaffView(BaseAPIView):
 
     permission_classes = (HospitalStaffPermission, )
 
@@ -658,4 +658,4 @@ class SingleStaffView(BaseAPIView):
         staff_list = organ.get_staffs(search_key=req.GET.get('search_key', '').strip())
         staff_list = StaffSerializer.setup_eager_loading(staff_list)
         # 分页查询员工列表
-        return self.get_pages(staff_list, results_name='staffs', srl_cls_name='SingleStaffSerializer')
+        return self.get_pages(staff_list, results_name='staffs', srl_cls_name='SimpleStaffSerializer')
