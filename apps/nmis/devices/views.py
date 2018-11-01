@@ -467,15 +467,14 @@ class RepairOrderView(BaseAPIView):
 class RepairOrderListView(BaseAPIView):
 
     permission_classes = (
-        RepairOrderCreatorPermission, RepairOrderHandlePermission,
-        RepairOrderDispatchPermission, IsHospSuperAdmin
+         RepairOrderDispatchPermission, IsHospSuperAdmin, HospitalStaffPermission,
     )
 
     def get_queryset(self):
         return RepairOrder.objects.all()
 
     def get(self, req):
-        self.check_object_any_permissions(req, None)
+        self.check_objects_any_permissions(req, None)
         action = req.GET.get('action', '').strip()
         status = req.GET.get('status', '').strip()
         search = req.GET.get('search', '').strip()

@@ -9,7 +9,8 @@ import logging
 from django.db import transaction
 from django.db.models import Q
 
-from nmis.hospitals.consts import ROLE_CODE_HOSP_SUPER_ADMIN, ROLES, ROLE_CODE_CHOICES
+from nmis.hospitals.consts import ROLE_CODE_HOSP_SUPER_ADMIN, ROLES, ROLE_CODE_CHOICES, \
+    ROLE_CODE_NORMAL_STAFF
 from users.models import User
 
 from base.models import BaseManager
@@ -43,6 +44,12 @@ class StaffManager(BaseManager):
                 user = User.objects.create_param_user(
                     ('username', user_data.get('username')), user_data.get('password'), is_active=True,
                 )
+                from nmis.hospitals.models import Role
+                role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_NORMAL_STAFF)
+                if not role:
+                    logger.warn('Error: normal staff role not exists')
+                    return None
+                user.set_roles([role, ])
                 return self.create(organ=organ, dept=dept, user=user, **data)
         except Exception as e:
             logger.exception(e)
@@ -63,7 +70,10 @@ class StaffManager(BaseManager):
                 none_id_users = User.objects.bulk_create(user_list)
 
                 users = User.objects.filter(username__in=[user.username for user in none_id_users])
-
+                from nmis.hospitals.models import Role
+                role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_NORMAL_STAFF)
+                for user in users:
+                    user.set_roles([role])
                 user_dict = {}
                 for user in users:
                     user_dict[user.username] = user
@@ -77,8 +87,8 @@ class StaffManager(BaseManager):
                             name=data.get('staff_name'),
                             contact=data.get('contact_phone'),
                             email=data.get('email'),
-                            group=data.get('group')
-                    ))
+                        )
+                    )
                 self.bulk_create(staff_list)
             return True
         except Exception as e:
@@ -176,11 +186,11 @@ class RoleManager(BaseManager):
         :return:
         """
         if keyword.get('id'):
-            return self.filter(id=keyword.get('id'))
+            return self.filter(id=keyword.get('id')).first()
         if keyword.get('name'):
-            return self.filter(name=keyword.get('name'))
+            return self.filter(name=keyword.get('name')).first()
         if keyword.get('codename'):
-            return self.filter(codename=keyword.get('codename'))
+            return self.filter(codename=keyword.get('codename')).first()
         return None
 
     def init_default_roles(self):

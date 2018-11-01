@@ -16,7 +16,8 @@ from utils import eggs
 from nmis.hospitals.models import Hospital, Department, Staff, Group, Role
 from organs.forms import OrganSignupForm
 from base.forms import BaseForm
-from nmis.hospitals.consts import DPT_ATTRI_CHOICES, GROUP_CATE_NORMAL_STAFF, ROLE_CATE_NORMAL
+from nmis.hospitals.consts import DPT_ATTRI_CHOICES, GROUP_CATE_NORMAL_STAFF, \
+    ROLE_CATE_NORMAL, ROLE_CODE_NORMAL_STAFF
 
 from users.models import User
 
@@ -89,8 +90,7 @@ class StaffSignupForm(BaseForm):
         'err_contact_phone':        '联系电话格式错误',
         'err_email':                '无效邮箱',
         'err_staff_title':          '职位名为空或格式错误',
-        'err_group_is_null':        '权限组为空或数据错误',
-        'err_group_not_exist':      '权限组不存在',
+        'err_role_not_exist':       '系统未设置角色,请联系管理员',
     }
 
     def __init__(self, organ, dept, data, *args, **kwargs):
@@ -102,7 +102,7 @@ class StaffSignupForm(BaseForm):
         is_valid = True
         # 校验必输项
         if not self.check_username() or not self.check_password() \
-                or not self.check_staff_name() or not self.check_group():
+                or not self.check_staff_name() or not self.check_role_exists():
             is_valid = False
 
         # 校验非必输项
@@ -110,9 +110,6 @@ class StaffSignupForm(BaseForm):
             is_valid = False
 
         if self.data.get('contact_phone') and not self.check_contact_phone():
-            is_valid = False
-
-        if self.data.get('group_id') and not self.check_group():
             is_valid = False
 
         return is_valid
@@ -175,21 +172,29 @@ class StaffSignupForm(BaseForm):
 
         return True
 
-    def check_group(self):
-        group_id = self.data.get('group_id')
-        group = None
-        if not group_id:
-            group = Group.objects.filter(cate=GROUP_CATE_NORMAL_STAFF, is_admin=0).first()
-            if not group:
-                self.update_errors('group_id', 'err_group_not_exist')
-            self.data.update({'group': group})
-            return True
-        group = Group.objects.get_by_id(group_id)
-        if not group:
-            self.update_errors('group_id', 'err_group_not_exist')
+    def check_role_exists(self):
+        from nmis.hospitals.models import Role
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_NORMAL_STAFF)
+        if not role:
+            self.update_errors('role', 'err_group_not_exist')
             return False
-        self.data.update({'group': group})
         return True
+
+    # def check_group(self):
+    #     group_id = self.data.get('group_id')
+    #     group = None
+    #     if not group_id:
+    #         group = Group.objects.filter(cate=GROUP_CATE_NORMAL_STAFF, is_admin=0).first()
+    #         if not group:
+    #             self.update_errors('group_id', 'err_group_not_exist')
+    #         self.data.update({'group': group})
+    #         return True
+    #     group = Group.objects.get_by_id(group_id)
+    #     if not group:
+    #         self.update_errors('group_id', 'err_group_not_exist')
+    #         return False
+    #     self.data.update({'group': group})
+    #     return True
 
     def save(self):
         data = {
@@ -197,7 +202,6 @@ class StaffSignupForm(BaseForm):
             'title': self.data.get('staff_title', '').strip(),
             'contact': self.data.get('contact_phone', '').strip(),
             'email': self.data.get('email', '').strip(),
-            'group': self.data.get("group")
         }
 
         user_data = {

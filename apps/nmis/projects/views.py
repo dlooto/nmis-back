@@ -223,7 +223,8 @@ class ProjectPlanView(BaseAPIView):
     """
 
     permission_classes = (
-        IsHospSuperAdmin, ProjectDispatcherPermission, ProjectCreatorPermission
+        IsHospSuperAdmin, ProjectDispatcherPermission, ProjectCreatorPermission,
+        ProjectPerformerPermission, ProjectAssistantPermission
     )
 
     @check_id('organ_id')
@@ -255,7 +256,6 @@ class ProjectPlanView(BaseAPIView):
 
         old_project = self.get_object_or_404(project_id, ProjectPlan)
         self.check_objects_any_permissions(req, [req.user.get_profile().organ, old_project])
-
 
         if not old_project.is_unstarted or old_project.is_paused() or old_project.is_finished():
             return resp.failed('项目已启动或完成或被挂起，无法修改')
@@ -399,8 +399,8 @@ class ProjectPlanPauseView(BaseAPIView):
         """
         项目负责人挂起项目
         """
-        self.check_object_any_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_object_any_permissions(req, [project, ])
 
         operation_record_data = {
             'project': project_id,
@@ -438,7 +438,7 @@ class ProjectPlanCancelPauseView(BaseAPIView):
 
 class ProjectPlanDispatchAssistantView(BaseAPIView):
 
-    permission_classes = (ProjectPerformerPermission, )
+    permission_classes = (ProjectPerformerPermission, IsHospSuperAdmin)
 
     @check_id('assistant_id')
     def put(self, req, project_id):

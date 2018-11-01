@@ -15,7 +15,7 @@ from django.db import models, transaction
 from base.models import BaseModel
 from nmis.hospitals.consts import HOSP_GRADE_CHOICES, GROUP_CATE_DICT, GROUPS, DPT_ATTRI_MEDICAL, DPT_ATTRI_CHOICES, \
     DOCTOR_TITLE_CHOICES, GROUP_CATE_CHOICES, ROLE_CATE_CHOICES, ROLE_CATE_NORMAL, \
-    HOSPITAL_AREA_TYPE_CHOICES, ROLE_CODE_PRO_DISPATCHER, ROLE_CODE_HOSP_SUPER_ADMIN
+    HOSPITAL_AREA_TYPE_CHOICES, ROLE_CODE_HOSP_SUPER_ADMIN
 from nmis.hospitals.managers import GroupManager, RoleManager, SequenceManager, \
     HospitalAddressManager
 
@@ -280,7 +280,7 @@ class Staff(BaseStaff):
             return False
         if not self.organ == hospital:
             return False
-        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_HOSP_SUPER_ADMIN).first()
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_HOSP_SUPER_ADMIN)
         return self.user.has_role(role)
 
 

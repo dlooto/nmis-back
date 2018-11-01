@@ -50,7 +50,7 @@ class IsHospSuperAdmin(BasePermission):
         对象级权限检查.
         :param obj:  None
         """
-        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_HOSP_SUPER_ADMIN).first()
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_HOSP_SUPER_ADMIN)
         return request.user.has_role(role)
 
 
@@ -71,7 +71,7 @@ class HospGlobalReportAssessPermission(BasePermission):
         对象级权限检查.
         :param obj: None
         """
-        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_HOSP_REPORT_ASSESS).first()
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_HOSP_REPORT_ASSESS)
         return request.user.has_role(role)
 
 
@@ -92,7 +92,7 @@ class SystemManagePermission(BasePermission):
         对象级权限检查.
         :param obj: None
         """
-        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_SYSTEM_SETTING_ADMIN).first()
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_SYSTEM_SETTING_ADMIN)
         return request.user.has_role(role)
 
 
@@ -117,8 +117,9 @@ class HospitalStaffPermission(BasePermission):
         staff = request.user.get_profile()
         if not staff:
             return False
-        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_NORMAL_STAFF).first()
-        return request.user.has_role(role)
+        return True
+        # role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_NORMAL_STAFF)
+        # return request.user.has_role(role)
 
 
 class ProjectDispatcherPermission(BasePermission):
