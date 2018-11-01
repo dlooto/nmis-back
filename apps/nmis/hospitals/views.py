@@ -658,4 +658,4 @@ class SimpleStaffView(BaseAPIView):
         staff_list = organ.get_staffs(search_key=req.GET.get('search_key', '').strip())
         staff_list = StaffSerializer.setup_eager_loading(staff_list)
         # 分页查询员工列表
-        return self.get_pages(staff_list, results_name='staffs', srl_cls_name='SimpleStaffSerializer')
+        return self.get_pages(staff_list, results_name='staffs', srl_cls_name='BriefStaffSerializer')

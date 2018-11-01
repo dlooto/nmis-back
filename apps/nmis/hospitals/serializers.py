@@ -120,7 +120,7 @@ class StaffSerializer(BaseModelSerializer):
         return '' if not obj.dept else obj.dept.name
 
 
-class SimpleStaffSerializer(BaseModelSerializer):
+class BriefStaffSerializer(BaseModelSerializer):
     """
     获取单一员工serializer（供下拉菜单使用，只返回员工的ID，部门，姓名）
     """
