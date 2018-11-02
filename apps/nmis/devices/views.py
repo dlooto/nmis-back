@@ -766,6 +766,7 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
             return resp.failed(result)
         if req.data.get('cate') == ASSERT_DEVICE_CATE_MEDICAL:
             head_dict = UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT
+            logger.info(UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT)
         else:
             head_dict = UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT
 
