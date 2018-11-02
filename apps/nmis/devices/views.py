@@ -791,7 +791,9 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
         logger.info('===========================')
         logger.info(sheet_data_list)
 
-        keys = head_dict.keys()
+        keys = []
+        for key, value in head_dict.items():
+            keys.append(key)
         logger.info('============================')
         logger.info(keys)
 
