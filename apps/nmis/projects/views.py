@@ -27,7 +27,8 @@ from base.common.decorators import (
 from base.views import BaseAPIView
 
 from nmis.devices.models import OrderedDevice, SoftwareDevice, ContractDevice
-from nmis.hospitals.models import Hospital, Staff, Department
+from nmis.hospitals.consts import ROLE_CODE_HOSP_SUPER_ADMIN, ROLE_CODE_PRO_DISPATCHER
+from nmis.hospitals.models import Hospital, Staff, Department, Role
 from nmis.hospitals.permissions import (
     HospitalStaffPermission, IsHospSuperAdmin, ProjectDispatcherPermission,
     HospGlobalReportAssessPermission, SystemManagePermission)
@@ -877,14 +878,17 @@ class ProjectFlowView(BaseAPIView):
         """
         删除流程. 仅允许管理员操作
 
-        如果流程已经在使用，不能删除
+        如果流程已经在使用，不能删除；默认流程不能删除
         TODO： 添加删除限制条件
         """
         flow = self.get_object_or_404(flow_id, ProjectFlow)
-        self.check_object_permissions(req, flow.organ)
+        self.check_object_any_permissions(req, flow.organ)
 
+        if flow.is_default():
+            return resp.failed('不能删除默认流程')
         if flow.is_used():
             return resp.failed('流程已经在使用中，不能修改')
+
         flow.clear_cache()
         try:
             flow.delete()
@@ -920,10 +924,17 @@ class ProjectPlanDispatchedListView(BaseAPIView):
         获取已分配项目列表
         """
         self.check_object_any_permissions(req, req.user.get_profile().organ)
-        # 获取权限组ID
-        group_id_list = [group.id for group in req.user.get_permissions()]
+        super_admin = Role.objects.get_super_admin().first()
+        departments = None
+        if super_admin in req.user.get_roles():
+            departments = departments = Department.objects.all()
+        else:
+            for role in req.user.get_roles():
+                if role.codename == ROLE_CODE_PRO_DISPATCHER:
+                    departments = role.get_user_role_dept_domains(user=req.user)
+
         # 获取权限域中部门ID
-        dept_id_list = self.get_user_role_dept_domains(req, group_id_list)
+        dept_id_list = [dept.id for dept in departments]
 
         dispatched_projects = ProjectPlan.objects.get_dispatched_projects(
             dept_id_list, req.user.get_profile().organ
@@ -946,11 +957,17 @@ class ProjectPlanUndispatchedListView(BaseAPIView):
         获取项目待分配列表
         """
         self.check_object_any_permissions(req, req.user.get_profile().organ)
+        super_admin = Role.objects.get_super_admin().first()
+        departments = None
+        if super_admin in req.user.get_roles():
+            departments = departments = Department.objects.all()
+        else:
+            for role in req.user.get_roles():
+                if role.codename == ROLE_CODE_PRO_DISPATCHER:
+                    departments = role.get_user_role_dept_domains(user=req.user)
 
-        # 获取权限组ID
-        group_id_list = [group.id for group in req.user.get_permissions()]
         # 获取权限域中部门ID
-        dept_id_list = self.get_user_role_dept_domains(req, group_id_list)
+        dept_id_list = [dept.id for dept in departments]
 
         undispatched_projects = ProjectPlan.objects.get_undispatched_projects(
             dept_id_list, req.user.get_profile().organ

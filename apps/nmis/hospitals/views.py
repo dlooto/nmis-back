@@ -15,6 +15,7 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from nmis.devices.models import RepairOrder
+from nmis.devices.permissions import AssertDeviceAdminPermission
 from nmis.hospitals.serializers import StaffSerializer, RoleSerializer, \
     DepartmentStaffsCountSerializer, StaffWithRoleSerializer
 from nmis.projects.models import ProjectPlan
@@ -631,7 +632,7 @@ class RoleListView(BaseAPIView):
 
 class HospitalAddressListView(BaseAPIView):
 
-    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission, AssertDeviceAdminPermission)
 
     def get(self, req, hid):
         """
@@ -641,3 +642,21 @@ class HospitalAddressListView(BaseAPIView):
         self.get_object_or_404(hid, Hospital)
         hospital_address_list = HospitalAddress.objects.get_hospital_address_list()
         return resp.serialize_response(hospital_address_list, results_name='hospital_address')
+
+
+class SimpleStaffView(BaseAPIView):
+
+    permission_classes = (HospitalStaffPermission, )
+
+    def get(self, req, hid):
+        """
+        获取单一员工列表（供下拉菜单使用，只返回员工的ID，部门，姓名）
+        """
+
+        organ = self.get_object_or_404(hid, Hospital)
+        self.check_object_permissions(req, organ)
+
+        staff_list = organ.get_staffs(search_key=req.GET.get('search_key', '').strip())
+        staff_list = StaffSerializer.setup_eager_loading(staff_list)
+        # 分页查询员工列表
+        return self.get_pages(staff_list, results_name='staffs', srl_cls_name='BriefStaffSerializer')

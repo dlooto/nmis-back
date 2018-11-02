@@ -696,19 +696,25 @@ class AssertDeviceBatchUploadForm(BaseForm):
             self.update_errors('assert_no', 'assert_no_null_err')
             return False
 
-        # 校验资产编号在Excel中是否重复
-        for k, va in [(v, i) for i, v in enumerate(assert_no_list)]:
-            self.default_dict[k].append(va)
-        assert_no_check_result = []
-        for d in list(self.default_dict.values()):
-            if not len(d) == 1:
-                result_list = []
-                for row in d:
-                    result_list.append(row+2)
-                assert_no_check_result.append(result_list)
-        if assert_no_check_result:
+        if not len(set(assert_no_list)) == len(assert_no_list):
             self.update_errors('assert_no', 'assert_no_err')
             return False
+
+        # # 校验资产编号在Excel中是否重复
+        # for k, va in [(v, i) for i, v in enumerate(assert_no_list)]:
+        #     self.default_dict[k].append(va)
+        # assert_no_check_result = []
+        # for d in list(self.default_dict.values()):
+        #     if not len(d) == 1:
+        #         result_list = []
+        #         for row in d:
+        #             result_list.append(row+2)
+        #         assert_no_check_result.append(result_list)
+        # logger.info('=========')
+        # logger.info(assert_no_check_result)
+        # if assert_no_check_result:
+        #     self.update_errors('assert_no', 'assert_no_err')
+        #     return False
         # 校验设备资产编号在数据库中是否存在相关信息
         assert_devices = AssertDevice.objects.filter(assert_no__in=assert_no_list)
         assert_no_db_list = []
@@ -718,6 +724,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
         for assert_no in assert_no_list:
             if assert_no in assert_no_db_list:
                 check_assert_no_list.append(assert_no)
+        logger.info(check_assert_no_list)
         if check_assert_no_list:
             self.update_errors('assert_no', 'assert_no_err')
             return False
@@ -730,21 +737,23 @@ class AssertDeviceBatchUploadForm(BaseForm):
         if not len(serial_no_list) == len(self.data[0]):
             self.update_errors('serial_no', 'serial_no_null_err')
             return False
-        # 校验excel中序列号是否出现重复项目
-        for k, va in [(v, i) for i, v in enumerate(serial_no_list)]:
-            self.default_dict[k].append(va)
-        serial_no_check_result = []
-        for d in list(self.default_dict.values()):
-            if not len(d) == 1:
-                result_list = []
-                for row in d:
-                    result_list.append(row+2)
-                serial_no_check_result.append(result_list)
-
-        if serial_no_check_result:
+        # # 校验excel中序列号是否出现重复项目
+        # for k, va in [(v, i) for i, v in enumerate(serial_no_list)]:
+        #     self.default_dict[k].append(va)
+        # serial_no_check_result = []
+        # for d in list(self.default_dict.values()):
+        #     if not len(d) == 1:
+        #         result_list = []
+        #         for row in d:
+        #             result_list.append(row+2)
+        #         serial_no_check_result.append(result_list)
+        #
+        # if serial_no_check_result:
+        #     self.update_errors('serial_no', 'serial_no_err')
+        #     return False
+        if not len(set(serial_no_list)) == len(serial_no_list):
             self.update_errors('serial_no', 'serial_no_err')
             return False
-
         # 校验数据库中属否存在相关序列号信息
         assert_devices = AssertDevice.objects.filter(serial_no__in=serial_no_list)
         assert_device_serial_no = []

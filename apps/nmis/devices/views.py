@@ -36,7 +36,8 @@ from nmis.devices.permissions import AssertDeviceAdminPermission, RepairOrderCre
     KnowledgeManagePermission
 from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR, DOC_UPLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
-from nmis.hospitals.consts import ARCHIVE
+from nmis.hospitals.consts import ARCHIVE, ROLE_CODE_HOSP_SUPER_ADMIN, \
+    ROLE_CODE_NORMAL_STAFF, ROLE_CODE_ASSERT_DEVICE_ADMIN
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
 from nmis.hospitals.permissions import IsHospSuperAdmin, SystemManagePermission, HospGlobalReportAssessPermission, \
@@ -65,9 +66,7 @@ class AssertDeviceListView(BaseAPIView):
         if cate:
             if cate not in dict(ASSERT_DEVICE_CATE_CHOICES):
                 return resp.failed('资产设备类型错误')
-        logger.info(storage_place_ids)
         storage_places = HospitalAddress.objects.get_hospital_address_by_ids(storage_place_ids)
-        logger.info(storage_places)
         if len(storage_places) < len(storage_place_ids):
             return resp.failed('请确认是否有不存在的存储地点信息')
 
@@ -234,11 +233,15 @@ class AssertDeviceBatchUploadView(BaseAPIView):
 
         if not is_success:
             return resp.failed(ret)
+        logger.info(ret)
         form = AssertDeviceBatchUploadForm(ret, creator=req.user.get_profile(), cate=cate)
         if not form.is_valid():
+            logger.info(form.errors)
             return resp.failed(form.errors)
         if not form.save():
+            logger.info('导入失败')
             return resp.failed('导入失败')
+        logger.info('导入成功')
         return resp.ok('导入成功')
 
 
@@ -318,7 +321,8 @@ class MaintenancePlanView(BaseAPIView):
 
 class MaintenancePlanListView(BaseAPIView):
 
-    permission_classes = (MaintenancePlanExecutePermission, AssertDeviceAdminPermission, IsHospSuperAdmin)
+    permission_classes = (MaintenancePlanExecutePermission, HospitalStaffPermission,
+                          AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     def get(self, req):
         """
@@ -342,8 +346,18 @@ class MaintenancePlanListView(BaseAPIView):
             period=req.GET.get('period', '').strip()
         )
 
+        for role in req.user.get_roles():
+            if role.codename in (ROLE_CODE_ASSERT_DEVICE_ADMIN, ROLE_CODE_HOSP_SUPER_ADMIN):
+                return self.get_pages(
+                    maintenance_plans, srl_cls_name='MaintenancePlanListSerializer',
+                    results_name='maintenance_plans'
+                )
+
+        maintenance_plans = maintenance_plans.filter(executor=req.user.get_profile())
+
         return self.get_pages(
-            maintenance_plans, srl_cls_name='MaintenancePlanListSerializer', results_name='maintenance_plans'
+            maintenance_plans, srl_cls_name='MaintenancePlanListSerializer',
+            results_name='maintenance_plans'
         )
 
 
@@ -355,8 +369,9 @@ class MaintenancePlanExecuteView(BaseAPIView):
         """
         资产设备维护单执行操作
         """
-        self.check_object_any_permissions(req, req.user.get_profile())
         maintenance_plan = self.get_object_or_404(maintenance_plan_id, MaintenancePlan)
+        self.check_object_any_permissions(req, maintenance_plan)
+
         if maintenance_plan.status == MAINTENANCE_PLAN_STATUS_DONE:
             return resp.failed('维护单已执行')
         result = req.data.get('result', '').strip()
@@ -404,18 +419,18 @@ class RepairOrderView(BaseAPIView):
     )
 
     def get(self, req, order_id):
-        self.check_object_any_permissions(req, None)
 
         repair_order = self.get_object_or_404(order_id, RepairOrder)
+        self.check_object_any_permissions(req, repair_order)
         repair_order_queryset = RepairOrderSerializer.setup_eager_loading(RepairOrder.objects.filter(id=order_id))
 
         return resp.serialize_response(repair_order_queryset.first(), results_name='repair_order',
                                        srl_cls_name='RepairOrderSerializer')
 
     def put(self, req, order_id):
-        self.check_object_any_permissions(req, None)
 
         repair_order = self.get_object_or_404(order_id, RepairOrder)
+        self.check_object_any_permissions(req, repair_order)
         action = req.data.get('action', '').strip()
         if not action or action not in dict(REPAIR_ORDER_OPERATION_CHOICES):
             return resp.failed('请求数据异常')
@@ -510,8 +525,8 @@ class RepairOrderRecordListView(BaseAPIView):
     )
 
     def get(self, req, order_id):
-        self.check_object_any_permissions(req, None)
         order = self.get_object_or_404(order_id, RepairOrder)
+        self.check_object_any_permissions(req, order)
         record_query_set = order.get_repair_order_records().order_by('-created_time')
         return resp.serialize_response(
             record_query_set, results_name='repair_order_records', srl_cls_name='RepairOrderRecordSerializer'

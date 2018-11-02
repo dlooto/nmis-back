@@ -120,6 +120,28 @@ class StaffSerializer(BaseModelSerializer):
         return '' if not obj.dept else obj.dept.name
 
 
+class BriefStaffSerializer(BaseModelSerializer):
+    """
+    获取单一员工serializer（供下拉菜单使用，只返回员工的ID，部门，姓名）
+    """
+    dept_name = serializers.SerializerMethodField('_get_dept_name')
+    staff_name = serializers.CharField(source='name')
+
+    class Meta:
+        model = Staff
+        fields = (
+            'id', 'dept_name', 'staff_name',
+        )
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        queryset = queryset.select_related('dept')
+        return queryset
+
+    def _get_dept_name(self, obj):
+        return '' if not obj.dept else obj.dept.name
+
+
 class UserRoleShipSerializer(BaseModelSerializer):
     role_name = serializers.SerializerMethodField('_get_role_name')
     role_codename = serializers.SerializerMethodField('_get_role_codename')
