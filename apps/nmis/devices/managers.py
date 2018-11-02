@@ -4,6 +4,7 @@
 #
 
 import logging
+import threading
 
 from django.db import transaction
 
@@ -169,9 +170,10 @@ class RepairOrderManager(BaseManager):
         :param creator: 创建人
         :return: 返回(boolean, RepairOrder对象/string)元祖
         """
-
+        lock = threading.RLock()
         try:
             with transaction.atomic():
+                lock.acquire()
                 seq = Sequence.objects.select_for_update().get(seq_code=REPAIR_ORDER_NO_SEQ_CODE)
                 seq.curr_value()
                 next_value = seq.next_value()
@@ -186,6 +188,7 @@ class RepairOrderManager(BaseManager):
                 seq.seq_value = next_value
                 seq.save()
                 seq.cache()
+                lock.release()
                 return True, repair_order
         except Exception as e:
             logger.exception(e)

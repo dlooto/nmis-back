@@ -452,6 +452,7 @@ class RepairOrder(BaseModel):
             ('view_repair_order', 'can view repair order'),  # 查看报修单
             ('dispatch_repair_order', 'can dispatch repair order'),  # 分派报修单
         )
+        ordering = ['id']
 
     VALID_ATTRS = [
         'applicant', 'fault_type', 'desc', 'maintainer', 'expenses', 'result', 'repair_device_list',

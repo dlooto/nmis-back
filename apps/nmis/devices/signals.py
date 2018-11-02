@@ -57,5 +57,3 @@ def gen_operation_record(sender, **kwargs):
             repair_order=repair_order, operation=REPAIR_ORDER_OPERATION_COMMENT,
             operator=operator, msg_content=msg_content
         )
-
-    logger.info(kwargs)

@@ -737,9 +737,9 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
     #     # 创建项目
     #     project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')
     #
-    #     file_obj = open(curr_path + '/data/upload_file_test.xlsx', 'wb+')
+    #     with open(curr_path + '/data/upload_file_test.xlsx', 'wb+') as file_obj:
     #
-    #     response = self.raw_post(api.format(project.id), {'file_key': file_obj})
+    #       response = self.raw_post(api.format(project.id), {'file_key': file_obj})
     #
     #     self.assert_response_success(response)
     #     self.assertIsNotNone(response.get('file_url'))
@@ -780,9 +780,9 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         # 上传文件
         curr_path = os.path.dirname(__file__)
 
-        file_obj = open(curr_path + '/data/upload_file_test.xlsx', 'wb+')
+        with open(curr_path + '/data/upload_file_test.xlsx', 'wb+') as file_obj:
 
-        upload_response = self.raw_post(upload_file_api.format(project.id), {'file_key': file_obj})
+            upload_response = self.raw_post(upload_file_api.format(project.id), {'file_key': file_obj})
 
         self.assert_response_success(upload_response)
         self.assertIsNotNone(upload_response.get('file_url'))
@@ -913,7 +913,10 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                             self.assertTrue(saved_milestone_state.get('is_saved'))
                             saved_file_path = saved_milestone_state.get('cate_documents')[0].get('files')[0].get('path')
                             self.assertEqual(saved_file_path, file_path)
-                            self.assertEqual(saved_milestone_state.get('cate_documents')[0].get('category'), cate_document.get('category'))
+                            self.assertEqual(
+                                saved_milestone_state.get('cate_documents')[0].get('category'),
+                                cate_document.get('category')
+                            )
                         except AssertionError as e:
                             remove(os.path.join(settings.MEDIA_ROOT, file_path))
                             raise e
