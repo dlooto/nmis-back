@@ -15,6 +15,7 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from nmis.devices.models import RepairOrder
+from nmis.devices.permissions import AssertDeviceAdminPermission
 from nmis.hospitals.serializers import StaffSerializer, RoleSerializer, \
     DepartmentStaffsCountSerializer, StaffWithRoleSerializer
 from nmis.projects.models import ProjectPlan
@@ -631,7 +632,7 @@ class RoleListView(BaseAPIView):
 
 class HospitalAddressListView(BaseAPIView):
 
-    permission_classes = (IsHospSuperAdmin, SystemManagePermission)
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission, AssertDeviceAdminPermission)
 
     def get(self, req, hid):
         """

@@ -66,9 +66,7 @@ class AssertDeviceListView(BaseAPIView):
         if cate:
             if cate not in dict(ASSERT_DEVICE_CATE_CHOICES):
                 return resp.failed('资产设备类型错误')
-        logger.info(storage_place_ids)
         storage_places = HospitalAddress.objects.get_hospital_address_by_ids(storage_place_ids)
-        logger.info(storage_places)
         if len(storage_places) < len(storage_place_ids):
             return resp.failed('请确认是否有不存在的存储地点信息')
 
@@ -235,11 +233,15 @@ class AssertDeviceBatchUploadView(BaseAPIView):
 
         if not is_success:
             return resp.failed(ret)
+        logger.info(ret)
         form = AssertDeviceBatchUploadForm(ret, creator=req.user.get_profile(), cate=cate)
         if not form.is_valid():
+            logger.info(form.errors)
             return resp.failed(form.errors)
         if not form.save():
+            logger.info('导入失败')
             return resp.failed('导入失败')
+        logger.info('导入成功')
         return resp.ok('导入成功')
 
 
@@ -417,18 +419,18 @@ class RepairOrderView(BaseAPIView):
     )
 
     def get(self, req, order_id):
-        self.check_object_any_permissions(req, None)
 
         repair_order = self.get_object_or_404(order_id, RepairOrder)
+        self.check_object_any_permissions(req, repair_order)
         repair_order_queryset = RepairOrderSerializer.setup_eager_loading(RepairOrder.objects.filter(id=order_id))
 
         return resp.serialize_response(repair_order_queryset.first(), results_name='repair_order',
                                        srl_cls_name='RepairOrderSerializer')
 
     def put(self, req, order_id):
-        self.check_object_any_permissions(req, None)
 
         repair_order = self.get_object_or_404(order_id, RepairOrder)
+        self.check_object_any_permissions(req, repair_order)
         action = req.data.get('action', '').strip()
         if not action or action not in dict(REPAIR_ORDER_OPERATION_CHOICES):
             return resp.failed('请求数据异常')
@@ -523,8 +525,8 @@ class RepairOrderRecordListView(BaseAPIView):
     )
 
     def get(self, req, order_id):
-        self.check_object_any_permissions(req, None)
         order = self.get_object_or_404(order_id, RepairOrder)
+        self.check_object_any_permissions(req, order)
         record_query_set = order.get_repair_order_records().order_by('-created_time')
         return resp.serialize_response(
             record_query_set, results_name='repair_order_records', srl_cls_name='RepairOrderRecordSerializer'
