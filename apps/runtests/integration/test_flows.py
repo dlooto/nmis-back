@@ -122,6 +122,7 @@ class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.login_with_username(self.user)
         flow = self.create_flow(self.organ)
-
+        flow.default_flow = False
+        flow.save()
         response = self.delete(api.format(flow.id))
         self.assert_response_success(response)
