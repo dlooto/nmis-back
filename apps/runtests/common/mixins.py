@@ -7,7 +7,8 @@
 
 import logging
 
-from nmis.devices.models import MedicalDeviceSix8Cate, AssertDevice, MaintenancePlan
+from nmis.devices.models import MedicalDeviceSix8Cate, AssertDevice, MaintenancePlan, \
+    FaultType, RepairOrder, FaultSolution
 from nmis.hospitals.models import HospitalAddress
 from nmis.projects.consts import PRO_HANDING_TYPE_SELF, PRO_CATE_SOFTWARE
 from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectMilestoneState, \
@@ -280,6 +281,46 @@ STORAGE_PLACE = [
     },
 ]
 
+FAULT_TYPES = [
+
+    {
+        "id": 10010001,
+        "title": "个人电脑类test",
+        "desc": "用于个人电脑类test",
+        "parent_id": None,
+        "parent_path": "",
+        "level": 1,
+        "sort": 1,
+    },
+    {
+        "id": 10010002,
+        "title": "打印机类test",
+        "desc": "用于打印机类test",
+        "parent_id": None,
+        "parent_path": "",
+        "level": 1,
+        "sort": 2,
+    },
+    {
+        "id": 10010003,
+        "title": "鼠标类test",
+        "desc": "用于鼠标类test",
+        "parent_id": 10010001,
+        "parent_path": "",
+        "level": 2,
+        "sort": 1,
+    },
+    {
+        "id": 10010004,
+        "title": "键盘类test",
+        "desc": "用于键盘类test",
+        "parent_id": 10010001,
+        "parent_path": "",
+        "level": 2,
+        "sort": 2,
+    }
+]
+
 
 class ProjectPlanMixin(object):
     """
@@ -468,6 +509,48 @@ class AssertDevicesMixin(object):
         except Exception as e:
             logs.exception(e)
             return None
+
+    def init_fault_types(self, creator, fault_type_jsons=FAULT_TYPES):
+
+        fault_types = list()
+        for item in fault_type_jsons:
+            ft = FaultType.objects.model(
+                id=item.get('id'),
+                title=item.get('title'),
+                desc=item.get('desc'),
+                sort=item.get('sort'),
+                parent_id=item.get('parent_id'),
+                parent_path=item.get('parent_path'),
+                level=item.get('level'),
+                creator=creator,
+
+            )
+            fault_types.append(ft)
+        return FaultType.objects.bulk_create(fault_types)
+
+    def init_repair_orders(self, creator, applicant, fault_types=None):
+        if not fault_types:
+            fault_types = self.init_fault_types(creator)
+        order_one = RepairOrder.objects.create_order(applicant, fault_types[0], 'office无法使用', creator)
+        order_two = RepairOrder.objects.create_order(applicant, fault_types[1], '呼吸机无法使用', creator)
+        return [order_one, order_two]
+
+    def create_repair_order(self, applicant, fault_type, desc, creator, order_no):
+        data = {
+            'applicant': applicant, 'fault_type': fault_type,
+            'order_no': order_no,  'desc': desc, 'creator': creator
+        }
+        RepairOrder.objects.create(**data)
+
+    def create_fault_solution(self, title, fault_type, desc, solution, creator):
+        data = {
+            'title': title,
+            'fault_type': fault_type,
+            'desc': desc,
+            'solution': solution,
+            'creator': creator,
+        }
+        return FaultSolution.objects.create(**data)
 
 
 class HospitalMixin(object):

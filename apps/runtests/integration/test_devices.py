@@ -7,9 +7,11 @@
 
 import logging
 
+import settings
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_SCRAPPED
 from runtests import BaseTestCase
 from runtests.common.mixins import AssertDevicesMixin, HospitalMixin
+from utils.files import remove
 
 logs = logging.getLogger(__name__)
 
@@ -360,13 +362,12 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
 
         import os
         curr_path = os.path.dirname(__file__)
-        file_obj = open(curr_path + '/data/medical_assert_devices.xlsx', 'rb')
-        response = self.raw_post(
-            api, {
-                'file': file_obj,
-                'cate': 'ME'
-            })
-        file_obj.close()
+        with open(curr_path + '/data/medical_assert_devices.xlsx', 'rb') as file_obj:
+            response = self.raw_post(
+                api, {
+                    'file': file_obj,
+                    'cate': 'ME'
+                })
         self.assert_response_success(response)
         self.assertEquals(response.get('code'), 10000)
 
@@ -538,3 +539,230 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         m_plan = response.get('maintenance_plan')
         self.assertIsNotNone(m_plan)
         self.assertEquals(m_plan.get('id'), maintenance_plan.id)
+
+
+class RepairOrderTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
+
+    def test_fault_type_list(self):
+        """测试获取故障类型列表"""
+        api = '/api/v1/devices/fault_types'
+
+        self.login_with_username(self.user)
+        fault_types = self.init_fault_types(self.admin_staff)
+        response = self.get(api.format())
+        self.assert_response_success(response)
+        fault_types_get = response.get('fault_types')
+        self.assertTrue(len(fault_types_get) >= len(fault_types))
+
+    def test_repair_order_create_or_get(self):
+        """
+        测试提交报修单/获取单个报修单
+        :return:
+        """
+        api_post = '/api/v1/devices/repair_orders/create'
+        api_get = '/api/v1/devices/repair_orders/{}'
+
+        self.login_with_username(self.user)
+        fault_types = self.init_fault_types(self.admin_staff)
+
+        new_data = {
+            'applicant_id': self.admin_staff.id,
+            'fault_type_id': fault_types[0].id,
+            'desc': '电脑蓝屏desc'
+        }
+        response = self.post(api_post.format(), data=new_data)
+        self.assert_response_success(response)
+        repair_order = response.get('repair_order')
+        self.assertIsNotNone(repair_order)
+        self.assertIsNotNone(repair_order.get('order_no'))
+        self.assertIsNotNone(repair_order.get('id'))
+        response = self.get(api_get.format(repair_order.get('id')))
+        self.assert_response_success(response)
+        repair_order_get = response.get('repair_order')
+        self.assertEqual(repair_order, repair_order_get)
+
+    def test_dispatch_repair_order(self):
+        api_get_list = '/api/v1/devices/repair_orders?page={}&size={}&action={}'
+        api_put = '/api/v1/devices/repair_orders/{}'
+        api_upload = '/api/v1/documents/upload-file'
+
+        self.login_with_username(self.user)
+        orders = self.init_repair_orders(self.admin_staff, self.admin_staff)
+        # 获取我提交的报修单
+        response = self.get(api_get_list.format(1, 10, 'MRO'), )
+        self.assert_response_success(response)
+        self.assertTrue(len(response.get('repair_orders')) == 2)
+
+        # 获取待我分派的报修单
+        response = self.get(api_get_list.format(1, 10, 'TDO'), )
+        self.assert_response_success(response)
+        repair_orders = response.get('repair_orders')
+        self.assertTrue(len(repair_orders) >= 2)
+        # 测试分派
+        order = repair_orders[0]
+        dispatch_data = {
+            'action': 'DSP',
+            'maintainer_id': self.admin_staff.id,
+            'priority': 'H'
+        }
+        response = self.put(api_put.format(order.get('id')), data=dispatch_data)
+        self.assert_response_success(response)
+        self.assertEqual(dispatch_data.get('priority'), response.get('repair_order').get('priority'))
+        self.assertIsNotNone(response.get('repair_order').get('maintainer_id'))
+        self.assertEqual(response.get('repair_order').get('status'), 'DNG')
+
+        # 获取我维修的报修单
+
+        response = self.get(api_get_list.format(1, 10, 'MMO'), )
+        self.assert_response_success(response)
+        repair_orders = response.get('repair_orders')
+        self.assertTrue(len(repair_orders) == 1)
+        import os
+        curr_path = os.path.dirname(__file__)
+
+        with open(curr_path+'/data/upload_file_test.xlsx', 'rb') as file_obj:
+            response = self.raw_post(api_upload, {'file': file_obj})
+            self.assert_response_success(response)
+            files = response.get('file')
+            try:
+                self.assertIsNotNone(files)
+                self.assertIsNotNone(files[0])
+                self.assertIsNotNone(files[0].get('name'))
+                self.assertIsNotNone(files[0].get('path'))
+            # 测试处理报修单
+                handle_data = {
+                    'action': 'HDL',
+                    'result': "已处理",
+                    'expenses': 1,
+                    # 'files': [
+                    #     {
+                    #         'name': files[0].get('name'),
+                    #         'path': files[0].get('path'),
+                    #         'cate': 'UNKNOWN'
+                    #     }
+                    # ]
+                }
+                response = self.put(api_put.format(order.get('id')), data=handle_data)
+                self.assert_response_success(response)
+                self.assertEqual(response.get('repair_order').get('status'), 'DNE')
+                self.assertEqual(response.get('repair_order').get('result'), handle_data.get('result'))
+                self.assertEqual(response.get('repair_order').get('expenses'), handle_data.get('expenses'))
+            except AssertionError as e:
+                remove(os.path.join(settings.MEDIA_ROOT, files[0].get('path')))
+
+        # 测试评价
+        comment_data = {
+            'action': 'CMT',
+            'comment_grade': 1,
+            'comment_content': '工程师很棒'
+
+        }
+        response = self.put(api_put.format(order.get('id')), data=comment_data)
+        self.assert_response_success(response)
+        self.assertEqual(response.get('repair_order').get('status'), 'CLS')
+        self.assertEqual(response.get('repair_order').get('comment_grade'), comment_data.get('comment_grade'))
+        self.assertEqual(response.get('repair_order').get('comment_content'), comment_data.get('comment_content'))
+
+
+class FaultSolutionsTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
+
+    def test_create_fault_solution(self):
+
+        api_create = '/api/v1/devices/fault_solutions/create'
+
+        # "files": [
+        #     {
+        #         "name": "需求论证2.txt",
+        #         "path": "path",
+        #         "cate": "UNKNOWN"
+        #
+        #     }
+        # ]
+        fault_types = self.init_fault_types(self.admin_staff)
+        fs_data = {
+            "title": "电脑碎屏001",
+            "fault_type_id": fault_types[0].id,
+            "desc": "电脑碎屏test",
+            "solution": "换机"
+        }
+        self.login_with_username(self.user)
+
+        response = self.post(api_create, data=fs_data)
+        self.assert_response_success(response)
+        fault_solution = response.get('fault_solution')
+        self.assertIsNotNone(fault_solution)
+        self.assertIsNotNone(fault_solution.get('id'))
+        self.assertEqual(fault_solution.get('title'), fs_data.get('title'))
+        self.assertEqual(fault_solution.get('fault_type_id'), fs_data.get('fault_type_id'))
+        self.assertEqual(fault_solution.get('desc'), fs_data.get('desc'))
+        self.assertEqual(fault_solution.get('solution'), fs_data.get('solution'))
+
+    def test_fault_solution_list(self):
+
+        api = '/api/v1/devices/fault_solutions'
+        self.login_with_username(self.user)
+        fault_types = self.init_fault_types(self.admin_staff)
+        self.create_fault_solution(
+            '电脑碎屏002', fault_types[0], '电脑碎屏desc', '换机', self.admin_staff
+        )
+        response = self.get(api.format())
+        self.assert_response_success(response)
+        fault_solutions = response.get('fault_solutions')
+        self.assertIsNotNone(fault_solutions)
+        self.assertTrue(len(fault_solutions) >= 1)
+
+    def test_fault_solution_info(self):
+
+        api = '/api/v1/devices/fault_solutions/{}'
+        self.login_with_username(self.user)
+        fault_types = self.init_fault_types(self.admin_staff)
+        fs = self.create_fault_solution(
+            '电脑碎屏002', fault_types[0], '电脑碎屏desc', '换机', self.admin_staff
+        )
+        response = self.get(api.format(fs.id))
+        self.assert_response_success(response)
+        fault_solution = response.get('fault_solution')
+        self.assertIsNotNone(fault_solution)
+        self.assertEqual(fault_solution.get('id'), fs.id)
+        self.assertEqual(fault_solution.get('title'), fs.title)
+        self.assertEqual(fault_solution.get('fault_type_id'), fs.fault_type_id)
+        self.assertEqual(fault_solution.get('desc'), fs.desc)
+        self.assertEqual(fault_solution.get('solution'), fs.solution)
+
+    def test_delete_fault_solution(self):
+        api = '/api/v1/devices/fault_solutions/batch-delete'
+        self.login_with_username(self.user)
+        fault_types = self.init_fault_types(self.admin_staff)
+        fs = self.create_fault_solution(
+            '电脑碎屏002', fault_types[0], '电脑碎屏desc', '换机', self.admin_staff
+        )
+        fs2 = self.create_fault_solution(
+            '电脑碎屏003', fault_types[0], '电脑碎屏desc2', '换机3', self.admin_staff
+        )
+        ids = [fs.id, fs2.id]
+        response = self.post(api, data={'ids': ids})
+        self.assert_response_success(response)
+        self.assertEqual(response.get('code'), 10000)
+
+    def test_import_fault_solution(self):
+
+        api = '/api/v1/devices/fault_solutions/import'
+        self.login_with_username(self.user)
+        fault_types = self.init_fault_types(self.admin_staff)
+
+        import os
+        curr_path = os.path.dirname(__file__)
+        with open(curr_path + '/data/upload_fault_solution_test.xlsx', 'rb') as file:
+            response = self.raw_post(api, {'file': file})
+        self.assert_response_success(response)
+
+
+
+
+
+
+
+
+
+
+

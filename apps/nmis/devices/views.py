@@ -471,7 +471,7 @@ class RepairOrderListView(BaseAPIView):
     )
 
     def get_queryset(self):
-        return RepairOrder.objects.all()
+        return RepairOrder.objects.all().order_by('-created_time')
 
     def get(self, req):
         self.check_objects_any_permissions(req, None)
@@ -597,7 +597,7 @@ class FaultSolutionListView(BaseAPIView):
         self.check_object_any_permissions(req, None)
         search = req.GET.get('search', '').strip()
 
-        queryset = FaultSolution.objects.all()
+        queryset = FaultSolution.objects.all().order_by('id')
 
         if search:
             queryset = queryset.filter(

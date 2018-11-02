@@ -490,7 +490,6 @@ class RepairOrderCommentForm(BaseForm):
 
     def check_comment_grade(self):
         comment_grade = self.data.get('comment_grade')
-        logger.info(comment_grade)
         if not comment_grade:
             self.update_errors('comment_grade', 'comment_grade_error')
             return False
@@ -500,7 +499,6 @@ class RepairOrderCommentForm(BaseForm):
             self.update_errors('comment_grade', 'comment_grade_error')
             return False
         grades = [grade for grade in range(1, 6)]
-        logger.info(grades)
         if comment_grade not in grades:
             self.update_errors('comment_grade1', 'comment_grade_error')
             return False
@@ -575,6 +573,7 @@ class FaultSolutionCreateForm(BaseForm):
     def init_err_codes(self):
         self.ERR_CODES.update({
             'title_error': '标题为空或数据错误',
+            'title_exists': '存在相同标题数据',
             'fault_type_error': '故障类型为空或数据错误',
             'solution_error': '解决方案为空或数据错误',
             'desc_error': '详情描述为空或数据错误',
@@ -588,6 +587,10 @@ class FaultSolutionCreateForm(BaseForm):
     def check_title(self):
         if not self.data.get('title', '').strip():
             self.update_errors('title', 'title_error')
+            return False
+        fs = FaultSolution.objects.filter(title=self.data.get('title', '').strip())
+        if fs.first():
+            self.update_errors('title', 'title_exists')
             return False
         return True
 
@@ -628,7 +631,7 @@ class FaultSolutionCreateForm(BaseForm):
         solution = self.data.get('solution')
         update_data = dict()
         if self.data.get('desc') is not None:
-            update_data['files'] = self.data.get('desc', '').strip()
+            update_data['desc'] = self.data.get('desc', '').strip()
         if self.files:
             files_ids_str = ','.join('%d' % file.id for file in self.files)
             update_data['files'] = files_ids_str
@@ -995,7 +998,6 @@ class FaultSolutionsImportForm(BaseForm):
         pre_data = dict()
         if self.data and self.data[0] and self.data[0][0]:
             titles, fault_type_titles, solutions = [], [], []
-            logger.info(self.data[0][0])
             for row_data in self.data[0]:
                 titles.append(row_data.get('title', '').strip())
                 fault_type_titles.append(row_data.get('fault_type_title', '').strip())
