@@ -772,6 +772,7 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
         sheet = result.worksheets[0]
         max_row = sheet.max_row
         # 校验表头信息是否一致
+
         for cell in list(sheet.rows)[0]:
             if cell.value not in dict(zip(head_dict.values(), head_dict.keys())):
                 return resp.failed('表单的表头数据和指定的标准不一致')
@@ -787,12 +788,21 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
                     value = cell.value
                 row_list.append(value)
             sheet_data_list.append(row_list)
+        logger.info('===========================')
+        logger.info(sheet_data_list)
+
         keys = head_dict.keys()
+        logger.info('============================')
+        logger.info(keys)
+
         # 封装assert_device数据
         assert_device_data_list = []
         for data in sheet_data_list:
             assert_device = dict(zip(keys, data))
             assert_device_data_list.append(assert_device)
+        logger.info('=============================')
+        logger.info(assert_device_data_list)
+
         form = AssertDeviceBatchUploadForm(assert_device_data_list, creator=req.user.get_profile(), cate=cate)
         if not form.is_valid():
             logger.info(form.errors)
@@ -800,5 +810,4 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
         if not form.save():
             logger.info('导入失败')
             return resp.failed('导入失败')
-        logger.info('导入成功')
         return resp.ok('导入成功')
