@@ -773,10 +773,15 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
         sheet = result.worksheets[0]
         max_row = sheet.max_row
         # 校验表头信息是否一致
-
+        dict_keys = []
         for cell in list(sheet.rows)[0]:
-            if cell.value not in dict(zip(head_dict.values(), head_dict.keys())):
-                return resp.failed('表单的表头数据和指定的标准不一致')
+            # if cell.value not in dict(zip(head_dict.values(), head_dict.keys())):
+            #     return resp.failed('表单的表头数据和指定的标准不一致')
+            for key, value in head_dict.items():
+                if cell.value == value:
+                    dict_keys.append(key)
+        logger.info(dict_keys)
+
         import datetime
         # 封装sheet数据
         sheet_data_list = []
@@ -792,16 +797,10 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
         logger.info('===========================')
         logger.info(sheet_data_list)
 
-        keys = []
-        for key, value in head_dict.items():
-            keys.append(key)
-        logger.info('============================')
-        logger.info(keys)
-
         # 封装assert_device数据
         assert_device_data_list = []
         for data in sheet_data_list:
-            assert_device = dict(zip(keys, data))
+            assert_device = dict(zip(dict_keys, data))
             assert_device_data_list.append(assert_device)
         logger.info('=============================')
         logger.info(assert_device_data_list)
