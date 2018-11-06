@@ -435,7 +435,7 @@ class StaffBatchUploadForm(BaseForm):
                 staffs_data.append({
                     'username': row_data.get('username', '').strip(),
                     'staff_name': row_data.get('staff_name', '').strip(),
-                    'contact_phone': row_data.get('contact_phone', '').strip(),
+                    'contact_phone': row_data.get('contact_phone'),
                     'email': row_data.get('email', '').strip(),
                     'dept_name': row_data.get('dept_name').strip(),  # 将username和dept建立字典关系, 以便于批量查询dept
                     'organ': self.organ,

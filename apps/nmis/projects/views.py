@@ -401,7 +401,7 @@ class ProjectPlanPauseView(BaseAPIView):
         项目负责人挂起项目
         """
         project = self.get_object_or_404(project_id, ProjectPlan)
-        self.check_object_any_permissions(req, [project, ])
+        self.check_object_any_permissions(req, project)
 
         operation_record_data = {
             'project': project_id,
