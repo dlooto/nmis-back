@@ -647,12 +647,12 @@ class SimpleStaffView(BaseAPIView):
 
     permission_classes = (HospitalStaffPermission, )
 
-    def get(self, req, hid):
+    def get(self, req, organ_id):
         """
         获取简单员工列表（供下拉菜单使用，只返回员工的ID，部门，姓名),对分配报修单中的员工列表只返回拥有维修工程师角色的列表
         """
 
-        organ = self.get_object_or_404(hid, Hospital)
+        organ = self.get_object_or_404(organ_id, Hospital)
         self.check_object_permissions(req, organ)
 
         staff_list = organ.get_staffs(search_key=req.GET.get('search_key', '').strip())

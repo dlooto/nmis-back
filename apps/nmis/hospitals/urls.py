@@ -68,5 +68,5 @@ urlpatterns = [
     path('<int:hid>/hospital-address', views.HospitalAddressListView.as_view()),
 
     # 获取用户列表（供下拉菜单使用）
-    path('<int:hid>/simple-staffs',    views.SimpleStaffView.as_view(),),
+    path('<int:organ_id>/simple-staffs',    views.SimpleStaffView.as_view(),),
 ]
