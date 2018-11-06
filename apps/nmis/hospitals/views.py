@@ -416,7 +416,6 @@ class DepartmentCreateView(BaseAPIView):
             "organ": 20180606 # 医院ID
         }
         """
-
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_any_permissions(req, hospital)
         form = DepartmentCreateForm(hospital, data=req.data)

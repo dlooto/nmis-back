@@ -539,8 +539,7 @@ class DepartmentCreateForm(BaseForm):
         })
 
     def is_valid(self):
-        if not self.check_contact() or not self.check_name() or \
-                not self.check_desc():
+        if not self.check_contact() or not self.check_name():
             return False
         return True
 
@@ -560,16 +559,12 @@ class DepartmentCreateForm(BaseForm):
             return False
         return True
 
-    def check_desc(self):
-        # desc = self.data.get('desc')
-        return True
-
     def save(self):
 
         dept_data = {
             'name': self.data.get('name', '').strip(),
             'contact': self.data.get('contact', '').strip(),
-            'desc': self.data.get('desc').strip(),
+            'desc': self.data.get('desc', '').strip(),
             'attri': 'OT'
         }
 
