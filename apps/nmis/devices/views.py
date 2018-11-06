@@ -233,15 +233,12 @@ class AssertDeviceBatchUploadView(BaseAPIView):
 
         if not is_success:
             return resp.failed(ret)
-        logger.info(ret)
         form = AssertDeviceBatchUploadForm(ret, creator=req.user.get_profile(), cate=cate)
         if not form.is_valid():
             logger.info(form.errors)
             return resp.failed(form.errors)
         if not form.save():
-            logger.info('导入失败')
             return resp.failed('导入失败')
-        logger.info('导入成功')
         return resp.ok('导入成功')
 
 
@@ -766,7 +763,6 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
             return resp.failed(result)
         if req.data.get('cate') == ASSERT_DEVICE_CATE_MEDICAL:
             head_dict = UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT
-            logger.info(UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT)
         else:
             head_dict = UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT
 
@@ -775,16 +771,14 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
         # 校验表头信息是否一致
         dict_keys = []
         for cell in list(sheet.rows)[0]:
-            # if cell.value not in dict(zip(head_dict.values(), head_dict.keys())):
-            #     return resp.failed('表单的表头数据和指定的标准不一致')
             for key, value in head_dict.items():
                 if cell.value == value:
                     dict_keys.append(key)
-        logger.info(dict_keys)
-
+        if not len(dict_keys) == len(head_dict):
+            return resp.failed('表头数据和指定的标准不一致')
         import datetime
-        # 封装sheet数据
-        sheet_data_list = []
+        # 封装assert_device数据
+        assert_devices = []
         for i in range(1, max_row):
             row_list = []
             for cell in list(sheet.rows)[i]:
@@ -793,23 +787,12 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
                 else:
                     value = cell.value
                 row_list.append(value)
-            sheet_data_list.append(row_list)
-        logger.info('===========================')
-        logger.info(sheet_data_list)
+            assert_device = dict(zip(dict_keys, row_list))
+            assert_devices.append(assert_device)
 
-        # 封装assert_device数据
-        assert_device_data_list = []
-        for data in sheet_data_list:
-            assert_device = dict(zip(dict_keys, data))
-            assert_device_data_list.append(assert_device)
-        logger.info('=============================')
-        logger.info(assert_device_data_list)
-
-        form = AssertDeviceBatchUploadForm(assert_device_data_list, creator=req.user.get_profile(), cate=cate)
+        form = AssertDeviceBatchUploadForm(assert_devices, creator=req.user.get_profile(), cate=cate)
         if not form.is_valid():
-            logger.info(form.errors)
             return resp.failed(form.errors)
         if not form.save():
-            logger.info('导入失败')
             return resp.failed('导入失败')
         return resp.ok('导入成功')
