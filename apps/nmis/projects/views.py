@@ -251,10 +251,8 @@ class ProjectPlanView(BaseAPIView):
         修改项目.
         """
         hospital = self.get_objects_or_404({'organ_id': Hospital})['organ_id']
-
-        self.check_object_any_permissions(req, None)
-
         old_project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_object_any_permissions(req, old_project)
         self.check_objects_any_permissions(req, [req.user.get_profile().organ, old_project])
 
         if not old_project.is_unstarted or old_project.is_paused() or old_project.is_finished():
@@ -1510,6 +1508,7 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
                 success = project.determining_purchase_method(purchase_method)
                 if not success:
                     return resp.failed('保存失败')
+        logger.info(project.purchase_method)
         form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
         if not form.is_valid():
             return resp.form_err(form.errors)

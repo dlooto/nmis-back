@@ -24,7 +24,7 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATU
     MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES, \
     MAINTENANCE_PLAN_STATUS_DONE, UPLOADED_FS_EXCEL_HEAD_DICT, ASSERT_DEVICE_CATE_MEDICAL, \
     UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT, \
-    UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT
+    UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT, MAINTENANCE_PLAN_TYPE_CHOICES
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, \
     RepairOrderCommentForm, \
@@ -333,17 +333,23 @@ class MaintenancePlanListView(BaseAPIView):
             period: 时间段（逾期、今天到期、三日内到期、一周内到期、一年内到期）
         """
         self.check_object_any_permissions(req, req.user.get_profile().organ)
-        if req.GET.get('search_key', '').strip():
-            if not req.GET.get('search_key', '').strip() not in dict(MAINTENANCE_PLAN_STATUS_CHOICES):
+        if req.GET.get('status', '').strip():
+            if req.GET.get('status', '').strip() not in dict(MAINTENANCE_PLAN_STATUS_CHOICES):
                 return resp.failed('资产设备维护计划状态错误')
         if req.GET.get('period', '').strip():
-            if not req.GET.get('period', '').strip() not in dict(MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES):
+            logger.info(dict(MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES))
+            if req.GET.get('period', '').strip() not in dict(MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES):
+                logger.info(req.GET.get('period', '').strip())
                 return resp.failed('截止时间段错误')
+        if req.GET.get('type', '').strip():
+            if req.GET.get('type', '').strip() not in dict(MAINTENANCE_PLAN_TYPE_CHOICES):
+                return resp.failed('维护计划类型错误')
 
         maintenance_plans = MaintenancePlan.objects.get_maintenance_plan_list(
             search_key=req.GET.get('search_key', '').strip(),
             status=req.GET.get('status', '').strip(),
-            period=req.GET.get('period', '').strip()
+            period=req.GET.get('period', '').strip(),
+            type=req.GET.get('type', '').strip()
         )
 
         for role in req.user.get_roles():
