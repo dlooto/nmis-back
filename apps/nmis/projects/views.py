@@ -1456,11 +1456,15 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
                 success = project.determining_purchase_method(purchase_method)
                 if not success:
                     return resp.failed('保存失败')
+        logger.info(project.purchase_method)
         form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
         if not form.is_valid():
             return resp.form_err(form.errors)
         new_doc_list = form.save()
         if not req.data.get('summary') and not new_doc_list:
+            pro_milestone_state.modified_time = times.now()
+            pro_milestone_state.save()
+            pro_milestone_state.cache()
             return resp.serialize_response(
                 pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'
@@ -1523,6 +1527,9 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
         doc_list = form.save()
 
         if not req.data.get('summary') and not doc_list:
+            pro_milestone_state.modified_time = times.now()
+            pro_milestone_state.save()
+            pro_milestone_state.cache()
             return resp.serialize_response(
                 pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'
@@ -1600,6 +1607,9 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         doc_list = doc_form.save()
 
         if not req.data.get('summary') and not doc_list:
+            pro_milestone_state.modified_time = times.now()
+            pro_milestone_state.save()
+            pro_milestone_state.cache()
             return resp.serialize_response(
                 pro_milestone_state, srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer',
                 results_name='project_milestone_state'
@@ -1698,6 +1708,9 @@ class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
         doc_list = doc_form.save()
 
         if not req.data.get('summary') and not doc_list:
+            project_milestone_state.modified_time = times.now()
+            project_milestone_state.save()
+            project_milestone_state.cache()
             return resp.serialize_response(
                 project_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'

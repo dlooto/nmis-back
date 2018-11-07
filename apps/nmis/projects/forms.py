@@ -962,12 +962,11 @@ class ReceiptCreateOrUpdateForm(BaseForm):
         })
 
     def is_valid(self):
-        if not self.check_contact_phone:
+        if not self.check_contact_phone():
             return False
         return True
 
     def check_contact_phone(self):
-
         contact_phone = self.data.get('contact_phone', '').strip()
         if not eggs.is_phone_valid(contact_phone):
             self.update_errors('contact_phone', 'contact_phone_err')
