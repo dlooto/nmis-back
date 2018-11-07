@@ -37,7 +37,7 @@ from .forms import (
 )
 
 from nmis.hospitals.consts import UPLOADED_STAFF_EXCEL_HEADER_DICT, \
-    UPLOADED_DEPT_EXCEL_HEADER_DICT, ARCHIVE
+    UPLOADED_DEPT_EXCEL_HEADER_DICT, ARCHIVE, ROLE_CODE_MAINTAINER
 
 logs = logging.getLogger(__name__)
 
@@ -419,7 +419,6 @@ class DepartmentCreateView(BaseAPIView):
             "organ": 20180606 # 医院ID
         }
         """
-
         hospital = self.get_object_or_404(hid, Hospital)
         self.check_object_any_permissions(req, hospital)
         form = DepartmentCreateForm(hospital, data=req.data)
@@ -653,15 +652,18 @@ class SimpleStaffView(BaseAPIView):
 
     permission_classes = (HospitalStaffPermission, )
 
-    def get(self, req, hid):
+    def get(self, req, organ_id):
         """
-        获取单一员工列表（供下拉菜单使用，只返回员工的ID，部门，姓名）
+        获取简单员工列表（供下拉菜单使用，只返回员工的ID，部门，姓名),对分配报修单中的员工列表只返回拥有维修工程师角色的列表
         """
 
-        organ = self.get_object_or_404(hid, Hospital)
+        organ = self.get_object_or_404(organ_id, Hospital)
         self.check_object_permissions(req, organ)
 
         staff_list = organ.get_staffs(search_key=req.GET.get('search_key', '').strip())
+
+        if req.GET.get('is_repair_man', '').strip() == 'True':
+            staff_list = staff_list.filter(user__role__codename=ROLE_CODE_MAINTAINER)
         staff_list = StaffSerializer.setup_eager_loading(staff_list)
         # 分页查询员工列表
         return self.get_pages(staff_list, results_name='staffs', srl_cls_name='BriefStaffSerializer')

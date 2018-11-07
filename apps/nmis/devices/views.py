@@ -233,15 +233,12 @@ class AssertDeviceBatchUploadView(BaseAPIView):
 
         if not is_success:
             return resp.failed(ret)
-        logger.info(ret)
         form = AssertDeviceBatchUploadForm(ret, creator=req.user.get_profile(), cate=cate)
         if not form.is_valid():
             logger.info(form.errors)
             return resp.failed(form.errors)
         if not form.save():
-            logger.info('导入失败')
             return resp.failed('导入失败')
-        logger.info('导入成功')
         return resp.ok('导入成功')
 
 
@@ -749,3 +746,63 @@ class OperationMaintenanceReportView(BaseAPIView):
             'rp_order_nums_top_dept': list(rp_order_nums_top_dept_queryset),
         }
         return resp.ok('ok', data)
+
+
+class AssertDeviceBatchUploadViewTest(BaseAPIView):
+
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
+
+    @check_params_not_null(['cate'])
+    def post(self, req):
+        """
+        资产设备的批量导入
+        """
+
+        self.check_object_any_permissions(req, req.user.get_profile().organ)
+        file_obj = req.FILES.get('file')
+        cate = req.data.get('cate')
+        if cate not in dict(ASSERT_DEVICE_CATE_CHOICES):
+            return resp.failed('资产医疗设备分类异常')
+        if not file_obj:
+            return resp.failed('请选择上传的Excel表格')
+
+        if not file_obj.content_type == ARCHIVE['.xlsx']:
+            return resp.failed('请上传Excel表格')
+        success, result = ExcelBasedOXL.open_excel(file_obj)
+        if not success:
+            return resp.failed(result)
+        if req.data.get('cate') == ASSERT_DEVICE_CATE_MEDICAL:
+            head_dict = UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT
+        else:
+            head_dict = UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT
+
+        sheet = result.worksheets[0]
+        max_row = sheet.max_row
+        # 校验表头信息是否一致
+        dict_keys = []
+        for cell in list(sheet.rows)[0]:
+            for key, value in head_dict.items():
+                if cell.value == value:
+                    dict_keys.append(key)
+        if not len(dict_keys) == len(head_dict):
+            return resp.failed('表头数据和指定的标准不一致')
+        import datetime
+        # 封装assert_device数据
+        assert_devices = []
+        for i in range(1, max_row):
+            row_list = []
+            for cell in list(sheet.rows)[i]:
+                if isinstance(cell.value, datetime.datetime):
+                    value = cell.value.strftime('%Y-%m-%d')
+                else:
+                    value = cell.value
+                row_list.append(value)
+            assert_device = dict(zip(dict_keys, row_list))
+            assert_devices.append(assert_device)
+
+        form = AssertDeviceBatchUploadForm(assert_devices, creator=req.user.get_profile(), cate=cate)
+        if not form.is_valid():
+            return resp.failed(form.errors)
+        if not form.save():
+            return resp.failed('导入失败')
+        return resp.ok('导入成功')

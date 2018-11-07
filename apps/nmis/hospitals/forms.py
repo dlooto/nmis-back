@@ -435,7 +435,7 @@ class StaffBatchUploadForm(BaseForm):
                 staffs_data.append({
                     'username': row_data.get('username', '').strip(),
                     'staff_name': row_data.get('staff_name', '').strip(),
-                    'contact_phone': row_data.get('contact_phone', '').strip(),
+                    'contact_phone': row_data.get('contact_phone'),
                     'email': row_data.get('email', '').strip(),
                     'dept_name': row_data.get('dept_name').strip(),  # 将username和dept建立字典关系, 以便于批量查询dept
                     'organ': self.organ,
@@ -539,8 +539,7 @@ class DepartmentCreateForm(BaseForm):
         })
 
     def is_valid(self):
-        if not self.check_contact() or not self.check_name() or \
-                not self.check_desc():
+        if not self.check_contact() or not self.check_name():
             return False
         return True
 
@@ -560,16 +559,12 @@ class DepartmentCreateForm(BaseForm):
             return False
         return True
 
-    def check_desc(self):
-        # desc = self.data.get('desc')
-        return True
-
     def save(self):
 
         dept_data = {
             'name': self.data.get('name', '').strip(),
             'contact': self.data.get('contact', '').strip(),
-            'desc': self.data.get('desc').strip(),
+            'desc': self.data.get('desc', '').strip(),
             'attri': 'OT'
         }
 
