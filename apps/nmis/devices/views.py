@@ -395,7 +395,15 @@ class FaultTypeListView(BaseAPIView):
     permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req):
+        search = req.GET.get('search')
         queryset = FaultType.objects.all()
+        try:
+            if search:
+                queryset = queryset.filter(title__contains=search)
+        except Exception as e:
+            logger.exception(e)
+            resp.failed('操作失败')
+
         return resp.serialize_response(queryset, srl_cls_name='FaultTypeSerializer', results_name='fault_types')
 
 
@@ -632,8 +640,16 @@ class FaultSolutionListView(BaseAPIView):
     def get(self, req):
         self.check_object_any_permissions(req, None)
         search = req.GET.get('search', '').strip()
+        try:
+            fault_type_id = int(req.GET.get('fault_type_id', 0))
+        except ValueError as ve:
+            logger.exception(ve)
+            resp.form_err({'fault_type_id': '请求参数异常'})
 
         queryset = FaultSolution.objects.all().order_by('id')
+        if fault_type_id:
+            fault_type = self.get_object_or_404(fault_type_id, FaultType)
+            queryset = queryset.filter(fault_type=fault_type)
 
         if search:
             queryset = queryset.filter(
