@@ -10,7 +10,8 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE
     MAINTENANCE_PLAN_TYPE_CHOICES, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_INFORMATION, \
     ASSERT_DEVICE_CATE_MEDICAL
 from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan, FaultSolution, MedicalDeviceSix8Cate
-from utils.times import now
+from utils import eggs
+from utils.times import now, get_day_begin_time
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 
 from collections import defaultdict
@@ -534,11 +535,16 @@ class MaintenancePlanCreateForm(BaseForm):
         self.ERR_CODES.update(
             {
                 'type_err': '维护类型错误',
+                'date_err': '开始日期大于了结束日期',
+                'expired_date_format_err': '{}: 日期格式错误',
+                'start_date_format_err': '{}: 日期格式错误',
+                'start_date_err': '{}: 小于当前日期',
+                'expired_date_err': '{}: 小于当前日期'
             }
         )
 
     def is_valid(self):
-        if not self.check_type():
+        if not self.check_type() or not self.check_date():
             return False
         return True
 
@@ -549,7 +555,34 @@ class MaintenancePlanCreateForm(BaseForm):
             return False
         return True
 
+    def check_date(self):
+        """
+        校验维护计划的开始日期和结束日期
+        """
+        start_date = self.data.get('start_date', '').strip()
+        expired_date = self.data.get('expired_date', '').strip()
+        if not eggs.check_day(start_date):
+            logger.info(get_day_begin_time(now()))
+            self.update_errors('date_err', 'start_date_format_err', start_date)
+            return False
+        if not eggs.check_day(expired_date):
+            logger.info(expired_date)
+            self.update_errors('date_err', 'expired_date_format_err', expired_date)
+            return False
+        if start_date < now().strftime('%Y-%m-%d'):
+            self.update_errors('date_err', 'start_date_err', start_date)
+            return False
+        if expired_date < now().strftime('%Y-%m-%d'):
+            self.update_errors('date_err', 'expired_date_err', expired_date)
+            return False
+        if start_date > expired_date:
+            self.update_errors('date', 'date_err')
+            return False
+
+        return True
+
     def save(self):
+        logger.info(self.data.get('start_date', '').strip())
         maintenance_plan_data = {
             'title': self.data.get('title', '').strip(),
             'type': self.data.get('type', '').strip(),

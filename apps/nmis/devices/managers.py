@@ -418,7 +418,7 @@ class MaintenancePlanManager(BaseManager):
                 query_set = query_set.filter(expired_date__range=(
                     times.get_day_begin_time(times.now()),
                     times.get_day_end_time(times.before_days(times.get_next_month(), interval=1))))
-        return query_set.order_by('id')
+        return query_set.order_by('-created_time')
 
 
 class FaultSolutionManager(BaseManager):
