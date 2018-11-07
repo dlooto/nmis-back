@@ -108,7 +108,8 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_title', 'milestone_index',
-            'has_children', 'children', 'status', 'created_time', 'finished_time', 'is_saved',
+            'has_children', 'children', 'status', 'created_time',
+            'finished_time', 'is_saved', 'modified_time'
         )
 
     def _get_milestone_title(self, obj):
@@ -165,7 +166,7 @@ class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
         fields = (
             'id', 'milestone_title', 'milestone_index',
             'cate_documents', 'summary', 'purchase_method',
-            'status', 'created_time', 'finished_time', 'is_saved',
+            'status', 'created_time', 'finished_time', 'is_saved', 'modified_time'
         )
 
     def _get_milestone_title(self, obj):
@@ -220,7 +221,7 @@ class ProjectMilestoneStateWithSupplierSelectionPlanSerializer(ProjectMilestoneS
         fields = (
             'id', 'milestone_id',  'milestone_title',
             'milestone_index', 'created_time', 'is_saved',
-            'status', 'summary', 'supplier_selection_plans', 'finished_time',
+            'status', 'summary', 'supplier_selection_plans', 'finished_time', 'modified_time'
         )
 
     def _get_supplier_selection_plans(self, obj):
@@ -239,6 +240,7 @@ class ProjectMilestoneStateWithSupplierSelectionPlanSelectedSerializer(ProjectMi
             'id', 'milestone_id',  'milestone_title',
             'milestone_index', 'created_time', 'cate_documents',
             'status', 'summary', 'supplier_selection_plans', 'finished_time', 'is_saved',
+            'modified_time'
         )
 
     def _get_cate_documents(self, obj):
@@ -279,6 +281,7 @@ class ProjectPlanSerializer(BaseModelSerializer):
     performer_name = serializers.SerializerMethodField("_get_performer_name")
     assistant_name = serializers.SerializerMethodField("_get_assistant_name")
     related_dept_name = serializers.SerializerMethodField("_get_related_dept_name")
+    current_stone_title = serializers.SerializerMethodField("_get_current_stone_title")
 
     startup_time = serializers.SerializerMethodField("str_startup_time")
     expired_time = serializers.SerializerMethodField("str_expired_time")
@@ -297,7 +300,7 @@ class ProjectPlanSerializer(BaseModelSerializer):
             'creator_id', 'creator_name', 'related_dept_id', 'related_dept_name',
             'project_introduce', 'pre_amount', 'purchase_method',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
-            'attached_flow_id', 'current_stone_id',
+            'attached_flow_id', 'current_stone_id', 'current_stone_title',
             'startup_time', 'expired_time', 'created_time',
         )
 
@@ -327,6 +330,11 @@ class ProjectPlanSerializer(BaseModelSerializer):
     def str_expired_time(self, obj):
         return self.str_time_obj(obj.expired_time)
 
+    def _get_current_stone_title(self, obj):
+        if obj.current_stone and obj.current_stone.milestone:
+            return obj.current_stone.milestone.title
+        return ''
+
 
 class ChunkProjectPlanSerializer(BaseModelSerializer):
     """
@@ -351,6 +359,8 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     # project_milestones = serializers.SerializerMethodField('_get_milestone_states')
     # main_project_milestones = serializers.SerializerMethodField('_get_pro_main_milestone_states')
     project_milestone_states = serializers.SerializerMethodField('_get_pro_milestone_states_structured')
+    current_stone_title = serializers.SerializerMethodField("_get_current_stone_title")
+
 
     @staticmethod
     def setup_eager_loading(queryset):
@@ -367,10 +377,9 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         model = ProjectPlan
         fields = (
             'id', 'title', 'purpose', 'status', 'handing_type', 'project_cate',
-            'creator_id', 'creator_name',
-            'related_dept_id', 'related_dept_name',
+            'creator_id', 'creator_name','related_dept_id', 'related_dept_name',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
-            'project_introduce', 'pre_amount', 'purchase_method', 'current_stone_id',
+            'project_introduce', 'pre_amount', 'purchase_method', 'current_stone_id', 'current_stone_title',
             'attached_flow_id', 'project_milestone_states', 'hardware_devices', 'software_devices',
             'startup_time', 'expired_time', 'created_time', 'operation_record',
         )
@@ -435,6 +444,10 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         project_operation_record = ProjectOperationRecord.objects.get_reason(project_id=obj.id, status=obj.status)
         return resp.serialize_data(project_operation_record) if project_operation_record else []
 
+    def _get_current_stone_title(self, obj):
+        if obj.current_stone and obj.current_stone.milestone:
+            return obj.current_stone.milestone.title
+        return ''
 
 class ProjectDocumentSerializer(BaseModelSerializer):
 
@@ -494,6 +507,7 @@ class ProjectMilestoneStateAndPurchaseContractSerializer(ProjectMilestoneStateSe
             'cate_documents', 'summary', 'purchase_method',
             # 'has_children', 'children',
             'status', 'created_time', 'purchase_contract', 'is_saved',
+            'modified_time'
         )
 
     def _get_milestone_title(self, obj):
@@ -581,7 +595,7 @@ class ProjectMilestoneStateAndReceiptSerializer(ProjectMilestoneStateSerializer)
             'id', 'milestone_title', 'milestone_index',
             'cate_documents', 'summary', 'purchase_method',
             # 'has_children', 'children',
-            'status', 'created_time', 'receipt', 'is_saved',
+            'status', 'created_time', 'receipt', 'is_saved', 'modified_time'
         )
 
     def _get_milestone_title(self, obj):

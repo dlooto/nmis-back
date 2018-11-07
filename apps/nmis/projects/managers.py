@@ -466,6 +466,7 @@ class ProjectMilestoneStateManager(BaseManager):
         :param project_milestone_state: 更新的项目里程碑
         """
         try:
+            logger.info(data)
             project_milestone_state.update(data)
             project_milestone_state.cache()
             return project_milestone_state

@@ -55,7 +55,7 @@ class ProjectPlan(BaseModel):
         null=True, blank=True, on_delete=models.SET_NULL
     )
     current_stone = models.ForeignKey(  # 项目当前的里程碑结点
-        'projects.MileStone', verbose_name='项目里程碑结点',
+        'projects.ProjectMilestoneState', verbose_name='项目里程碑节点',
         null=True, blank=True, on_delete=models.SET_NULL
     )
 
@@ -84,6 +84,7 @@ class ProjectPlan(BaseModel):
         '采购方式', max_length=20, choices=PROJECT_PURCHASE_METHOD_CHOICES,
         null=True, blank=True
     )
+    finished_time = models.DateTimeField(u'项目实际完结时间', null=True, blank=True)
 
     objects = ProjectPlanManager()
 
@@ -100,7 +101,8 @@ class ProjectPlan(BaseModel):
         )
 
     VALID_ATTRS = [
-        'title', 'purpose', 'handing_type', 'project_introduce', 'pre_amount', 'status'
+        'title', 'purpose', 'handing_type', 'project_introduce', 'pre_amount', 'status',
+        'finished_time', 'startup_time', 'current_stone'
     ]
 
     def __str__(self):
@@ -289,7 +291,10 @@ class ProjectPlan(BaseModel):
                 self.expired_time = expired_time
                 self.startup_time = times.now()
                 self.status = PRO_STATUS_STARTED
-                self.current_stone = self.attached_flow.get_first_main_milestone()
+                milestone = self.attached_flow.get_first_main_milestone()
+                project_milestone_state = ProjectMilestoneState.objects.\
+                    get_project_milestone_state_by_project_milestone(project=self, milestone=milestone)
+                self.current_stone = project_milestone_state
                 self.add_milestone_state(self.current_stone)
                 self.save()
                 self.cache()
@@ -479,12 +484,12 @@ class ProjectPlan(BaseModel):
                         self.startup_project_milestone_state(next_stone_state)
                     else:
                         self.status = PRO_STATUS_DONE
-                        self.expired_time = times.now()
+                        self.finished_time = times.now()
                         self.save()
                         self.cache()
                 elif curr_stone_state.milestone.is_last_main_milestone():
                     self.status = PRO_STATUS_DONE
-                    self.expired_time = times.now()
+                    self.finished_time = times.now()
                     self.save()
                     self.cache()
                 else:
@@ -509,12 +514,14 @@ class ProjectPlan(BaseModel):
         milestone_state.save()
         milestone_state.cache()
         milestone = milestone_state.milestone
+        self.current_stone = milestone_state
         if milestone.has_children():
             first_child_milestone = milestone.flow.get_first_child(milestone=milestone)
             first_child_stone_state = ProjectMilestoneState.objects.filter(project=self, milestone=first_child_milestone).first()
             first_child_stone_state.status = PRO_MILESTONE_DOING
             first_child_stone_state.save()
             first_child_stone_state.cache()
+            self.current_stone = first_child_stone_state
         self.save()
         self.cache()
 
@@ -894,7 +901,7 @@ class ProjectMilestoneState(BaseModel):
     objects = ProjectMilestoneStateManager()
 
     VALID_ATTRS = [
-        'doc_list', 'summary', 'status', 'finished_time', 'modified_time'
+        'doc_list', 'summary', 'status', 'finished_time', 'modified_time',
     ]
 
     class Meta:

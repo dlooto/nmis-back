@@ -313,6 +313,7 @@ class ProjectPlanDispatchView(BaseAPIView):
         if not success:
             return resp.failed(result)
         if success:
+            result.modified_time = times.now()
             success, result = project.change_project_milestone_state(result)
             if not success:
                 return resp.failed(result)
@@ -1047,10 +1048,16 @@ class DefaultCommonCreateOrUpdateView(RedirectView, BaseAPIView):
         path_data = {'project_id': project_id, 'project_milestone_state_id': project_milestone_state_id}
         req.session['data'] = req.data
         if milestone_state.milestone.title in common_milestone_tiles:
-            response = HttpResponseRedirect(reverse('nmis.projects:default_common_project_milestone_state_data_create_or_update'), args=post_data_json)
+            response = HttpResponseRedirect(
+                reverse('nmis.projects:default_common_project_milestone_state_data_create_or_update'),
+                args=post_data_json
+            )
             return response
         if milestone_state.milestone.title == DEFAULT_MILESTONE_PLAN_GATHERED:
-            response = HttpResponseRedirect(reverse('nmis.projects:project_milestone_state_plan_gathered_create_or_update', kwargs=json.dumps(post_data_json)))
+            response = HttpResponseRedirect(
+                reverse('nmis.projects:project_milestone_state_plan_gathered_create_or_update',
+                        kwargs=json.dumps(post_data_json))
+            )
         return response
 
 
@@ -1076,7 +1083,9 @@ class DefaultCommonProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING),
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
         ]
-        success, msg = check_project_milestone_state(project, milestone_state, common_milestone_tiles, request_method="POST")
+        success, msg = check_project_milestone_state(
+            project, milestone_state, common_milestone_tiles, request_method="POST"
+        )
         if not success:
             return resp.failed(msg)
         new_doc_list = ''
@@ -1099,7 +1108,10 @@ class DefaultCommonProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
             success = project.determining_purchase_method(purchase_method)
             if not success:
                 return resp.failed('操作失败')
-        return resp.serialize_response(new_milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
+        return resp.serialize_response(
+            new_milestone_state, results_name='project_milestone_state',
+            srl_cls_name='ChunkProjectMilestoneStateSerializer'
+        )
 
 
 class DefaultCommonProjectMilestoneStateDataView(BaseAPIView):
@@ -1121,20 +1133,37 @@ class DefaultCommonProjectMilestoneStateDataView(BaseAPIView):
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
         ]
         if milestone_state.milestone.title in common_milestone_tiles:
-            return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
+            return resp.serialize_response(
+                milestone_state, results_name='project_milestone_state',
+                srl_cls_name='ChunkProjectMilestoneStateSerializer'
+            )
         if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_GATHERED):
-            return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
+            return resp.serialize_response(
+                milestone_state, results_name='project_milestone_state',
+                srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer'
+            )
         if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_ARGUMENT):
             supplier_plan_related_milestone_state = ProjectMilestoneState.objects.filter(
                 project=project, milestone=milestone_state.milestone.previous()
             ).first()
-            plans = SupplierSelectionPlan.objects.filter(project_milestone_state=supplier_plan_related_milestone_state)
+            plans = SupplierSelectionPlan.objects.filter(
+                project_milestone_state=supplier_plan_related_milestone_state
+            )
             milestone_state.supplier_selection_plans = plans
-            return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSelectedSerializer')
+            return resp.serialize_response(
+                milestone_state, results_name='project_milestone_state',
+                srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSelectedSerializer'
+            )
         if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONTRACT_MANAGEMENT):
-            return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer')
+            return resp.serialize_response(
+                milestone_state, results_name='project_milestone_state',
+                srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer'
+            )
         if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONFIRM_DELIVERY):
-            return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateAndReceiptSerializer')
+            return resp.serialize_response(
+                milestone_state, results_name='project_milestone_state',
+                srl_cls_name='ProjectMilestoneStateAndReceiptSerializer'
+            )
 
 
 class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
@@ -1156,7 +1185,9 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING),
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
         ]
-        success, msg = check_project_milestone_state(project, milestone_state, common_milestone_tiles, request_method="POST")
+        success, msg = check_project_milestone_state(
+            project, milestone_state, common_milestone_tiles, request_method="POST"
+        )
         if not success:
             return resp.failed(msg)
         if project.performer == req.user.get_profile():
@@ -1170,7 +1201,10 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
                 return resp.form_err(form.errors)
             doc_list = form.save()
             # if not doc_list:
-            #     return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
+            #     return resp.serialize_response(
+            #   milestone_state, results_name='project_milestone_state',
+            #   srl_cls_name='ChunkProjectMilestoneStateSerializer'
+            # )
             if doc_list:
                 doc_ids_str = ','.join('%s' % doc.id for doc in doc_list)
                 if not milestone_state.save_doc_list(doc_ids_str):
@@ -1178,7 +1212,10 @@ class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):
         milestone_state.modified_time = times.now()
         milestone_state.save()
         milestone_state.cache()
-        return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
+        return resp.serialize_response(
+            milestone_state, results_name='project_milestone_state',
+            srl_cls_name='ChunkProjectMilestoneStateSerializer'
+        )
 
 
 class ProjectMilestoneStateResearchInfoView(BaseAPIView):
@@ -1196,7 +1233,10 @@ class ProjectMilestoneStateResearchInfoView(BaseAPIView):
         success, msg = check_project_milestone_state(project, milestone_state, stone_titles, request_method="GET")
         if not success:
             return resp.failed(msg)
-        return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ChunkProjectMilestoneStateSerializer')
+        return resp.serialize_response(
+            milestone_state, results_name='project_milestone_state',
+            srl_cls_name='ChunkProjectMilestoneStateSerializer'
+        )
 
 
 class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
@@ -1228,7 +1268,10 @@ class ProjectMilestoneStatePlanGatheredCreateView(BaseAPIView):
         milestone_state.modified_time = times.now()
         milestone_state.save()
         milestone_state.cache()
-        return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
+        return resp.serialize_response(
+            milestone_state, results_name='project_milestone_state',
+            srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer'
+        )
 
 
 class ProjectMilestoneStatePlanGatheredView(BaseAPIView):
@@ -1245,7 +1288,10 @@ class ProjectMilestoneStatePlanGatheredView(BaseAPIView):
         success, msg = check_project_milestone_state(project, milestone_state, '方案收集', request_method="GET")
         if not success:
             return resp.failed(msg)
-        return resp.serialize_response(milestone_state, results_name='project_milestone_state', srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer')
+        return resp.serialize_response(
+            milestone_state, results_name='project_milestone_state',
+            srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer'
+        )
 
 
 class ProjectMilestoneStatePlanGatheredFileView(BaseAPIView):
@@ -1369,7 +1415,9 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
         selected_plan.selected = True
         selected_plan.save()
         selected_plan.cache()
-        others_plans = SupplierSelectionPlan.objects.filter(project_milestone_state=selected_plan.project_milestone_state).exclude(id=selected_plan.id).all()
+        others_plans = SupplierSelectionPlan.objects.filter(
+            project_milestone_state=selected_plan.project_milestone_state
+        ).exclude(id=selected_plan.id).all()
         if others_plans:
             logger.info(others_plans)
             others_plans.update(selected=False)
@@ -1413,13 +1461,17 @@ class ProjectMilestoneStatePlanArgumentView(BaseAPIView):
         self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
 
         current_milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
-        success, msg = check_project_milestone_state(project, current_milestone_state, '方案论证', request_method="GET")
+        success, msg = check_project_milestone_state(
+            project, current_milestone_state, '方案论证', request_method="GET"
+        )
         if not success:
             return resp.failed(msg)
         supplier_plan_related_milestone_state = ProjectMilestoneState.objects.filter(
             project=project, milestone=current_milestone_state.milestone.previous()
         ).first()
-        plans = SupplierSelectionPlan.objects.filter(project_milestone_state=supplier_plan_related_milestone_state)
+        plans = SupplierSelectionPlan.objects.filter(
+            project_milestone_state=supplier_plan_related_milestone_state
+        )
         current_milestone_state.supplier_selection_plans = plans
 
         return resp.serialize_response(
@@ -1463,6 +1515,9 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
             return resp.form_err(form.errors)
         new_doc_list = form.save()
         if not req.data.get('summary') and not new_doc_list:
+            pro_milestone_state.modified_time = times.now()
+            pro_milestone_state.save()
+            pro_milestone_state.cache()
             return resp.serialize_response(
                 pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'
@@ -1525,6 +1580,9 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
         doc_list = form.save()
 
         if not req.data.get('summary') and not doc_list:
+            pro_milestone_state.modified_time = times.now()
+            pro_milestone_state.save()
+            pro_milestone_state.cache()
             return resp.serialize_response(
                 pro_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'
@@ -1602,6 +1660,9 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
         doc_list = doc_form.save()
 
         if not req.data.get('summary') and not doc_list:
+            pro_milestone_state.modified_time = times.now()
+            pro_milestone_state.save()
+            pro_milestone_state.cache()
             return resp.serialize_response(
                 pro_milestone_state, srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer',
                 results_name='project_milestone_state'
@@ -1700,6 +1761,9 @@ class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
         doc_list = doc_form.save()
 
         if not req.data.get('summary') and not doc_list:
+            project_milestone_state.modified_time = times.now()
+            project_milestone_state.save()
+            project_milestone_state.cache()
             return resp.serialize_response(
                 project_milestone_state, srl_cls_name='ChunkProjectMilestoneStateSerializer',
                 results_name='project_milestone_state'
@@ -1872,6 +1936,29 @@ class ProjectStatisticReport(BaseAPIView):
 
         rp_dept_queryset = self.queryset.filter(**filter_dict)\
             .annotate(dept=F('related_dept__name')).values('dept').annotate(**ann_aggregate_dict)
+
+        # dept_names = Department.objects.all().values_list('name')
+        # rp_dept_list = list()
+        # for dept_name in dept_names:
+        #     if not rp_dept_queryset:
+        #         rp_dept_list.append(
+        #             {
+        #                 'detp': dept_name,
+        #                 'sum_amount': 0,
+        #                 'nums': 0,
+        #              }
+        #         )
+        #     for item in list(rp_dept_queryset):
+        #         if item.get('dept') == dept_name:
+        #             rp_dept_list.append(item)
+        #         else:
+        #             rp_dept_list.append(
+        #                 {
+        #                     'detp': dept_name,
+        #                     'sum_amount': 0,
+        #                     'nums': 0,
+        #                 }
+        #             )
 
         """ 3 按状态统计项目总数 """
         filter_dict = {

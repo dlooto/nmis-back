@@ -2,6 +2,7 @@
 #
 # Created on Jan 8, 2015, by Junn
 #
+import calendar
 import datetime
 import time
 
@@ -228,3 +229,7 @@ def month_range(begin_date, end_date, format='%Y-%m-%d'):
     for month in month_set:
         month_list.append(month)
     return sorted(month_list)
+
+
+if __name__ == '__main__':
+    print(month_range('2018-01-01', '2018-02-03'))

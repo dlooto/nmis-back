@@ -26,8 +26,10 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATU
     UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT, \
     UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
-    RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, RepairOrderCommentForm, \
-    RepairOrderDispatchForm, FaultSolutionCreateForm, FaultSolutionsImportForm, AssertDeviceBatchUploadForm
+    RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, \
+    RepairOrderCommentForm, \
+    RepairOrderDispatchForm, FaultSolutionCreateForm, FaultSolutionsImportForm, \
+    AssertDeviceBatchUploadForm, FaultSolutionUpdateForm
 
 from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
     FaultType, FaultSolution, MaintenancePlan
@@ -219,9 +221,10 @@ class AssertDeviceBatchUploadView(BaseAPIView):
             return resp.failed('资产医疗设备分类异常')
         if not file_obj:
             return resp.failed('请选择上传的Excel表格')
-        logger.info(file_obj.content_type)
-        if not file_obj.content_type == ARCHIVE['.xlsx']:
-            return resp.failed('请上传Excel表格')
+        if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
+            return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
+            return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
         success, result = ExcelBasedOXL.open_excel(file_obj)
         if not success:
             return resp.failed(result)
@@ -566,11 +569,26 @@ class FaultSolutionView(BaseAPIView):
         )
 
     @permission_classes((KnowledgeManagePermission, IsHospSuperAdmin))
-    def put(self, req):
-        self.check_object_any_permissions(req, None)
-        pass
+    def put(self, req, fault_solution_id):
+        fault_solution = self.get_object_or_404(fault_solution_id, FaultSolution)
 
-    def delete(self, req):
+        self.check_object_any_permissions(req, None)
+        file_list = list()
+        if req.data.get('files'):
+            files_data = req.data.get('files')
+            file_form = FileBulkCreateOrUpdateForm(req.user, files_data, dict(FILE_CATE_CHOICES))
+            if not file_form.is_valid():
+                return resp.failed(file_form.errors)
+            file_list = file_form.save()
+        form = FaultSolutionUpdateForm(req.user.get_profile(), fault_solution, req.data, files=file_list)
+        if not form.is_valid():
+            return resp.failed(form.errors)
+        fault_solution = form.save()
+        if not fault_solution:
+            return resp.failed('操作失败')
+        return resp.serialize_response(fault_solution, 'fault_solution', srl_cls_name='FaultSolutionSerializer')
+
+    def delete(self, req, fault_solution_id):
         pass
 
 
@@ -766,8 +784,11 @@ class AssertDeviceBatchUploadViewTest(BaseAPIView):
         if not file_obj:
             return resp.failed('请选择上传的Excel表格')
 
-        if not file_obj.content_type == ARCHIVE['.xlsx']:
-            return resp.failed('请上传Excel表格')
+        if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
+            return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
+            return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
+
         success, result = ExcelBasedOXL.open_excel(file_obj)
         if not success:
             return resp.failed(result)

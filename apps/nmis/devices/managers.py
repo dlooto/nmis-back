@@ -459,4 +459,24 @@ class FaultSolutionManager(BaseManager):
             logger.exception(e)
             return False
 
+    def update_fault_solution(self, fault_solution, modifier, title, fault_type, solution, *args, **kwargs):
+        data = dict(
+            {
+                'title': title,
+                'fault_type': fault_type,
+                'solution': solution,
+                'modified_time': times.now(),
+                'modifier': modifier
+            },
+            **kwargs
+        )
+        try:
+            logger.info(data)
+            fs = fault_solution.update(data)
+            fs.cache()
+            return fs
+        except Exception as e:
+            logger.info(e)
+            return None
+
 
