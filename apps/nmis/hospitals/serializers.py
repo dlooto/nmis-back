@@ -213,6 +213,8 @@ class StaffWithRoleSerializer(StaffSerializer):
         :return:
         """
         user_role_ships = obj.user.user_role_ships.all()
+        if not user_role_ships:
+            return []
         return resp.serialize_data(user_role_ships, srl_cls_name='UserRoleShipSerializer')
 
 

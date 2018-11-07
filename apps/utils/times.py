@@ -166,6 +166,12 @@ TIME_FORMAT_YMD_HMS_HY = '%Y-%m-%d %H:%M:%S'
 
 
 def is_valid_date(timestr, format=None):
+    """
+    校验日期
+    :param timestr: 日期字符串
+    :param format:
+    :return:  True or False
+    """
 
     if not timestr:
         return False
@@ -189,3 +195,36 @@ def is_valid_date(timestr, format=None):
         print(e)
         return False
 
+
+def date_range(begin_date, end_date, format='%Y-%m-%d'):
+    """
+    获取时间段内的日期
+    :param begin_date: 起始日期
+    :param end_date: 截止日期
+    :param format: 日期参数的格式
+    :return: 返回年、月、日字符串元组对象组成的列表[('1900', '01', '31'), ('1900', '02', '01')]
+    """
+    dates = []
+    date = datetime.datetime.strptime(begin_date, format)
+    while date <= datetime.datetime.strptime(end_date, format):
+        date_str = date.strftime(format)
+        dates.append((date_str[:4], date_str[5:7], date_str[8:11]))
+        date = date + datetime.timedelta(1)
+    return dates
+
+
+def month_range(begin_date, end_date, format='%Y-%m-%d'):
+    """
+    获取时间段内的月份
+    :param begin_date: 起始日期
+    :param end_date: 截止日期
+    :param format: 日期参数的格式
+    :return: 返回年、月字符串元组对象组成的列表[('1900', '01'), ('1900', '02')]
+    """
+    month_set = set()
+    for date in date_range(begin_date, end_date, format):
+        month_set.add((date[0], date[1]))
+    month_list = []
+    for month in month_set:
+        month_list.append(month)
+    return sorted(month_list)

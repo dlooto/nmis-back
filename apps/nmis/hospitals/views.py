@@ -344,6 +344,7 @@ class ChunkStaffListView(BaseAPIView):
         staff_list = organ.get_staffs()
         staff_list = StaffWithRoleSerializer.setup_eager_loading(staff_list)
         # 分页查询员工列表
+        logs.info(staff_list)
         return self.get_pages(staff_list, results_name='staffs', srl_cls_name='StaffWithRoleSerializer')
 
 
@@ -374,8 +375,10 @@ class StaffBatchUploadView(BaseAPIView):
         if not file_obj:
             return resp.failed('请选择要上传的文件')
 
-        if not ARCHIVE['.xlsx'] == file_obj.content_type:
-            return resp.failed('导入文件不是Excel文件，请检查')
+        if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
+            return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
+            return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
 
         # 将文件存放到服务器
         # import os
@@ -531,8 +534,10 @@ class DepartmentBatchUploadView(BaseAPIView):
         if not file_obj:
             return resp.failed('请选择要上传的文件')
 
-        if not ARCHIVE['.xlsx'] == file_obj.content_type:
-            return resp.failed('导入文件不是Excel文件，请检查')
+        if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
+            return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
+            return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
 
         # 将文件存放到服务器
         # import os

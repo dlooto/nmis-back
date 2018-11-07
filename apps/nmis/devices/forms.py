@@ -332,7 +332,7 @@ class RepairOrderCreateForm(BaseForm):
     def save(self):
         applicant_id = self.data.get('applicant_id')
         fault_type_id = self.data.get('fault_type_id')
-        desc = self.data.get('desc').strip()
+        desc = self.data.get('desc', '').strip()
         applicant = Staff.objects.get_by_id(applicant_id)
         fault_type = FaultType.objects.get_by_id(fault_type_id)
         return RepairOrder.objects.create_order(applicant, fault_type, desc, self.user_profile)
