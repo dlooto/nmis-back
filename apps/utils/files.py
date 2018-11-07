@@ -301,8 +301,8 @@ class ExcelBasedOXL(object):
 
         header_keys = []  # 表头顺序对应的关键字列表
         # 判断首行数据是否和指定的标准一致，如果一致，按顺序封装表头关键字；否则抛出异常
-        for item in header_dict.items():
-            for hdata in header_data:
+        for hdata in header_data:
+            for item in header_dict.items():
                 if item[1] == hdata:
                     header_keys.append(item[0])
                     break

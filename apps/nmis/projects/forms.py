@@ -778,6 +778,7 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
             'supplier_name_err': '供应商名称为空或数据异常',
             'total_amount_err': '方案总价为空数据异常',
             'remark_err': '备注数据异常',
+            'plan_files_err': '方案附件不能为空',
             'file_name_err': '文档名称为空或数据异常',
             'file_path_err': '文档路径为空或数据异常',
 
@@ -846,6 +847,9 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
         plan_list = self.data.get('plan_list')
         for plan in plan_list:
             plan_files = plan.get('plan_files')
+            if not plan_files:
+                self.update_errors('plan_files', 'plan_files_err')
+                return False
             if plan_files:
                 for file in plan_files:
                     if not file.get('name'):

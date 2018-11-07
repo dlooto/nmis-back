@@ -119,3 +119,6 @@ class UserManager(BaseUserManager, BaseManager):
 
         errors[reset_key_keyname] = u'验证失败'
         return resp.form_err(errors)
+
+    def assign_roles(self, users, roles):
+        pass

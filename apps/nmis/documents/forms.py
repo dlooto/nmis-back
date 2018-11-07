@@ -10,7 +10,7 @@
 import logging
 
 import settings
-from nmis.documents.consts import ARCHIVE
+from nmis.hospitals.consts import ARCHIVE
 from nmis.documents.models import File
 from base.forms import BaseForm
 from utils.files import upload_file, is_file_exist

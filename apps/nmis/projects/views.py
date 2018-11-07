@@ -12,7 +12,6 @@ from django.db.models import Count, Sum, F, DateTimeField, CharField
 from django.db.models.functions import ExtractMonth, ExtractYear, Cast, TruncSecond
 from django.http import HttpResponseRedirect
 from django.views.generic import RedirectView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.reverse import reverse
 
 import settings
@@ -27,7 +26,7 @@ from base.common.decorators import (
 from base.views import BaseAPIView
 
 from nmis.devices.models import OrderedDevice, SoftwareDevice, ContractDevice
-from nmis.hospitals.consts import ROLE_CODE_HOSP_SUPER_ADMIN, ROLE_CODE_PRO_DISPATCHER
+from nmis.hospitals.consts import ROLE_CODE_PRO_DISPATCHER
 from nmis.hospitals.models import Hospital, Staff, Department, Role
 from nmis.hospitals.permissions import (
     HospitalStaffPermission, IsHospSuperAdmin, ProjectDispatcherPermission,
@@ -1821,15 +1820,19 @@ class ProjectStatisticReport(BaseAPIView):
         self.check_object_any_permissions(req, None)
 
         # 校验日期格式
-        if not times.is_valid_date(req.GET.get('start_date', '')) or not times.is_valid_date(req.GET.get('expired_date', '')):
+        if not times.is_valid_date(req.GET.get('start_date', '')) or \
+                not times.is_valid_date(req.GET.get('expired_date', '')):
             return resp.form_err({'start_date or expired_date': '开始日期/截止日期为空或数据错误'})
 
         start_date = '%s %s' % (req.GET.get('start_date', times.now().strftime('%Y-01-01')), '00:00:00.000000')
-        end_date = '%s %s' % (req.GET.get('end_date', times.now().strftime('%Y-12-31')), '23:59:59.999999')
+        expired_date = '%s %s' % (req.GET.get('expired_date', times.now().strftime('%Y-12-31')), '23:59:59.999999')
+        if times.str_to_datetime(start_date, format='%Y-%m-%d %H:%M:%S.%f') \
+                > times.str_to_datetime(expired_date, format='%Y-%m-%d %H:%M:%S.%f'):
+            return resp.form_err({'start_date > expired_date': '开始日期不能大于截止日期, 请检查'})
 
         filter_dict = {
             'status__in': [PRO_STATUS_DONE],
-            'created_time__range': (start_date, end_date)
+            'created_time__range': (start_date, expired_date)
         }
         ann_aggregate_dict = {
             'sum_amount': Sum('pre_amount', distinct=True),
@@ -1843,6 +1846,28 @@ class ProjectStatisticReport(BaseAPIView):
         rp_month_query_set = self.queryset.filter(**filter_dict).annotate(**ann_extra_dict)\
             .values('year', 'month').annotate(**ann_aggregate_dict)
 
+        # 封装 按年月统计项目总数和总金额 数据
+        year_months = times.month_range(start_date, expired_date, format='%Y-%m-%d %H:%M:%S.%f')
+        rp_pro_amount_nums_month = list()
+        for year_month in year_months:
+            if not rp_month_query_set:
+                rp_pro_amount_nums_month.append({
+                    'year': int(year_month[0]),
+                    'month': int(year_month[1]),
+                    'sum_amount': 0,
+                    'nums': 0,
+                })
+            for item in list(rp_month_query_set):
+                if year_month[0] == item.get('year') and year_month[1] == item.get('month'):
+                    rp_pro_amount_nums_month.append(item)
+                else:
+                    rp_pro_amount_nums_month.append({
+                        'year': int(year_month[0]),
+                        'month': int(year_month[1]),
+                        'sum_amount': 0,
+                        'nums': 0,
+                    })
+
         """ 2 按部门统计项目总数和总金额 """
 
         rp_dept_queryset = self.queryset.filter(**filter_dict)\
@@ -1850,7 +1875,7 @@ class ProjectStatisticReport(BaseAPIView):
 
         """ 3 按状态统计项目总数 """
         filter_dict = {
-            'created_time__range': (start_date, end_date)
+            'created_time__range': (start_date, expired_date)
         }
 
         rp_pro_status_queryset = self.queryset.filter(**filter_dict).values('status')\
@@ -1863,14 +1888,14 @@ class ProjectStatisticReport(BaseAPIView):
             creator_name=F('creator__name'), dept_name=F('related_dept__name'),
             amount=F('pre_amount'),  performer_name=F('performer__name')
         ).values(
-            'id', 'title', 'creator_name', 'dept_name', 'performer_name', 'amount', 'status', 'created_date'
+            'id', 'title', 'creator_name', 'dept_name', 'performer_name',
+            'amount', 'status', 'created_date'
         ).order_by('-amount')[:10]
 
         data = {
-            'rp_pro_amount_nums_month': list(rp_month_query_set),
+            'rp_pro_amount_nums_month': rp_pro_amount_nums_month,
             'rp_pro_amount_nums_dept': list(rp_dept_queryset),
             'rp_pro_amount_nums_status': list(rp_pro_status_queryset),
             'rp_pro_amount_top': list(rp_pro_amount_top_queryset),
         }
-        logger.info(rp_pro_amount_top_queryset)
         return resp.ok('ok', data)

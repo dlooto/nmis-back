@@ -122,7 +122,7 @@ class UserLoginForm(BaseForm):
         'user_not_activated': u'账号未激活',
         'user_not_found': u'账号不存在',
         'user_or_passwd_err': u'用户名或密码错误',
-        'no_passwd': u'未设置密码',
+        'no_passwd': u'请输入密码',
         'unknown_auth_key': u'未知的authkey类型'
     }
 

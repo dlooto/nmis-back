@@ -198,6 +198,7 @@ UPLOADED_DEPT_EXCEL_HEADER_DICT = {
 # 文档类型
 ARCHIVE = {
     '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.xlsx-wps': 'application/wps-office.xlsx',
     '.xltx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
     '.xlsm': 'application/vnd.ms-excel.sheet.macroEnabled.12',
     '.xltm': 'application/vnd.ms-excel.template.macroEnabled.12',
@@ -208,6 +209,7 @@ ARCHIVE = {
     '.xlc': 'application/vnd.ms-excel',
     '.xlm': 'application/vnd.ms-excel',
     '.xls': 'application/vnd.ms-excel',
+    '.xls-wps': 'application/wps-office.xls',
     '.xlt': 'application/vnd.ms-excel',
     '.xlw': 'application/vnd.ms-excel',
 

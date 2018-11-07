@@ -56,12 +56,12 @@ class StaffAdmin(admin.ModelAdmin):
 #     list_filter = ('cate', )
 #     # actions = (,)
 
-
-class GroupAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'organ', 'cate', 'is_admin', 'desc')
-    search_fields = ('name', 'organ__organ_name')
-    list_display_links = ('name', )
-    list_filter = ('is_admin', 'cate')
+#
+# class GroupAdmin(admin.ModelAdmin):
+#     list_display = ('id', 'name', 'organ', 'cate', 'is_admin', 'desc')
+#     search_fields = ('name', 'organ__organ_name')
+#     list_display_links = ('name', )
+#     list_filter = ('is_admin', 'cate')
 #     # actions = (,)
 #
 #     inlines = [
@@ -78,24 +78,24 @@ class RoleAdmin(admin.ModelAdmin):
 
 
 class UserRoleShipAdmin(admin.ModelAdmin):
-    list_display = ('user', 'role', )
+    list_display = ('id', 'user', 'role', )
     list_display_links = ('user', 'role',)
 
 
 class HospitalAddressAdmin(admin.ModelAdmin):
-    list_display = ('title', 'type', 'parent', 'level', 'sort', 'disabled', 'dept')
+    list_display = ('id', 'title', 'type', 'parent', 'level', 'sort', 'disabled', 'dept')
     search_fields = ('title', 'type')
     list_display_links = ('dept', )
 
 
 class SequenceAdmin(admin.ModelAdmin):
-    list_display = ('seq_code', 'seq_name', 'seq_value', 'increment', 'remark')
+    list_display = ('id', 'seq_code', 'seq_name', 'seq_value', 'increment', 'remark')
 
 
 admin.site.register(Hospital, HospitalAdmin)
 admin.site.register(Staff, StaffAdmin)
 admin.site.register(Department, DepartmentAdmin)
-admin.site.register(Group, GroupAdmin)
+# admin.site.register(Group, GroupAdmin)
 admin.site.register(Role, RoleAdmin)
 admin.site.register(UserRoleShip, UserRoleShipAdmin)
 admin.site.register(HospitalAddress, HospitalAddressAdmin)

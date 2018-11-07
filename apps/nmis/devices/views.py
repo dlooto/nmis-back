@@ -219,7 +219,7 @@ class AssertDeviceBatchUploadView(BaseAPIView):
             return resp.failed('资产医疗设备分类异常')
         if not file_obj:
             return resp.failed('请选择上传的Excel表格')
-
+        logger.info(file_obj.content_type)
         if not file_obj.content_type == ARCHIVE['.xlsx']:
             return resp.failed('请上传Excel表格')
         success, result = ExcelBasedOXL.open_excel(file_obj)
@@ -314,8 +314,8 @@ class MaintenancePlanView(BaseAPIView):
         :param maintenance_plan_id:
         :return:
         """
-        self.check_object_any_permissions(req, req.user.get_profile().organ)
         maintenance_plan = self.get_object_or_404(maintenance_plan_id, MaintenancePlan)
+        self.check_object_any_permissions(req, maintenance_plan)
         return resp.serialize_response(maintenance_plan, results_name='maintenance_plan')
 
 
@@ -637,9 +637,10 @@ class FaultSolutionsImportView(BaseAPIView):
         file_obj = req.FILES.get('file')
         if not file_obj:
             return resp.failed('请选择要上传的文件')
-
-        if not ARCHIVE['.xlsx'] == file_obj.content_type:
-            return resp.failed('导入文件不是Excel文件，请检查')
+        if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
+            return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
+            return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
 
         # 将文件存放到服务器
         # import os
@@ -710,28 +711,37 @@ class OperationMaintenanceReportView(BaseAPIView):
         self.check_object_any_permissions(req, None)
 
         # 校验日期格式
-        if not times.is_valid_date(req.GET.get('start_date', '')) or not times.is_valid_date(req.GET.get('expired_date', '')):
+        if not times.is_valid_date(req.GET.get('start_date', '')) or\
+                not times.is_valid_date(req.GET.get('expired_date', '')):
             return resp.form_err({'start_date or expired_date': '开始日期/截止日期为空或数据错误'})
-
         start_date = '%s %s' % (req.GET.get('start_date', times.now().strftime('%Y-01-01')), '00:00:00.000000')
-        expired_date = '%s %s' % (req.GET.get('end_date', times.now().strftime('%Y-12-31')), '23:59:59.999999')
+        expired_date = '%s %s' % (req.GET.get('expired_date', times.now().strftime('%Y-12-31')), '23:59:59.999999')
+        date_format = '%Y-%m-%d %H:%M:%S.%f'
+
+        if times.str_to_datetime(start_date, format=date_format) > \
+                times.str_to_datetime(expired_date, format=date_format):
+            return resp.form_err({'start_date > expired_date': '开始日期不能大于截止日期, 请检查'})
 
         # 已处理维修总数、维修申请总数、维修完成率
-        rp_order_nums_status_queryset = self.queryset.filter(created_time__range=(start_date, expired_date)) \
-            .values('status') \
-            .annotate(nums=Count('id', distinct=True))
+        rp_order_nums_status_queryset = self.queryset.filter(
+            created_time__range=(start_date, expired_date)
+        ).values('status').annotate(nums=Count('id', distinct=True))
 
         # 按故障类型统计报修单数量
-        rp_order_nums_fault_type_queryset = self.queryset.filter(created_time__range=(start_date, expired_date)) \
-            .annotate(fault_type_title=F('fault_type__title')) \
-            .values('fault_type_title') \
-            .annotate(nums=Count('id', distinct=True)).order_by('-nums')
+        rp_order_nums_fault_type_queryset = self.queryset.filter(
+            created_time__range=(start_date, expired_date)
+        ).annotate(
+            fault_type_title=F('fault_type__title')
+        ).values(
+            'fault_type_title'
+        ).annotate(nums=Count('id', distinct=True)).order_by('-nums')
 
         # 科室故障申请Top3
-        rp_order_nums_top_dept_queryset = self.queryset.filter(created_time__range=(start_date, expired_date))\
-            .annotate(dept=F('applicant__dept__name'))\
-            .values('dept')\
-            .annotate(nums=Count('id', distinct=True)).order_by('-nums')[0:3]
+        rp_order_nums_top_dept_queryset = self.queryset.filter(
+            created_time__range=(start_date, expired_date)
+        ).annotate(
+            dept=F('applicant__dept__name')
+        ).values('dept').annotate(nums=Count('id', distinct=True)).order_by('-nums')[0:3]
 
         data = {
             'rp_order_nums_status': list(rp_order_nums_status_queryset),
