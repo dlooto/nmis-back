@@ -372,12 +372,13 @@ class MaintenancePlanManager(BaseManager):
         maintenance_plan_no = "%s%s%s" % (prefix, timestamp, seq_str)
         return maintenance_plan_no
 
-    def get_maintenance_plan_list(self, search_key=None, status=None, period=None):
+    def get_maintenance_plan_list(self, search_key=None, status=None, period=None, type=None):
         """
         获取所有设备维护计划列表
         :param search_key: 搜索关键字（设备维护计划编号，设备维护计划名称）
         :param status: 设备状态（NW：未执行，DN：已执行）
         :param period: 时间查询参数（逾期、今天到期、三日内到期、一周内到期、一个月内到期）
+        :param type: 资产设备维护计划类型（巡检、保养、盘点）
         """
         from django.db.models import Q
         query_set = self.all()
@@ -387,7 +388,8 @@ class MaintenancePlanManager(BaseManager):
             ).distinct()
         if status:
             query_set = query_set.filter(status=status)
-
+        if type:
+            query_set = query_set.filter(type=type)
         if period:
             if period == MAINTENANCE_PLAN_EXPIRED_DATE_BE_OVERDUE:
                 query_set = query_set.filter(expired_date__lt=times.get_day_begin_time(times.now()))

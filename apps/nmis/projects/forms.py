@@ -198,18 +198,17 @@ class ProjectPlanUpdateForm(BaseForm):
         return True
 
     def save(self):
-
         pro_data = {}
-        if self.data.get('project_title'):
+        if self.data.get('project_title', '').strip():
             pro_data['title'] = self.data.get('project_title').strip()
 
-        if self.data.get('purpose'):
+        if self.data.get('purpose', '').strip():
             pro_data['purpose'] = self.data.get('purpose').strip()
 
-        if self.data.get('project_introduce'):
+        if self.data.get('project_introduce', '').strip():
             pro_data['project_introduce'] = self.data.get('project_introduce').strip()
 
-        if self.data.get('handing_type'):
+        if self.data.get('handing_type', '').strip():
             pro_data['handing_type'] = self.data.get('handing_type').strip()
 
         if self.data.get('hardware_added_devices'):
@@ -226,9 +225,9 @@ class ProjectPlanUpdateForm(BaseForm):
             pro_data['software_updated_devices'] = self.data.get(
                 'software_updated_devices')
 
-        if self.data.get('handing_type') == PRO_HANDING_TYPE_SELF:
+        if self.data.get('handing_type', '').strip() == PRO_HANDING_TYPE_SELF:
             self.old_project.performer = self.old_project.creator
-        if self.data.get('handing_type') == PRO_HANDING_TYPE_AGENT:
+        if self.data.get('handing_type', '').strip() == PRO_HANDING_TYPE_AGENT:
             self.old_project.performer = None
 
         return ProjectPlan.objects.update_project(self.old_project, **pro_data)
