@@ -62,14 +62,15 @@ class AssertDeviceManager(BaseManager):
             if data.get('medical_device_cate_id'):
                 assert_device.medical_device_cate_id = data.get('medical_device_cate_id')
 
-            if data.get('use_dept_id'):
+            if data.get('use_dept_id') or data.get('use_dept_id') is None:
                 assert_device.use_dept_id = data.get('use_dept_id')
 
-            if data.get('responsible_dept_id'):
+            if data.get('responsible_dept_id') or data.get('responsible_dept_id') is None:
                 assert_device.responsible_dept_id = data.get('responsible_dept_id')
 
-            if data.get('performer_id'):
+            if data.get('performer_id') or data.get('performer_id') is None:
                 assert_device.performer_id = data.get('performer_id')
+
             if data.get('storage_place_id'):
                 assert_device.storage_place_id = data.get('storage_place_id')
             new_assert_device = assert_device.update(data)

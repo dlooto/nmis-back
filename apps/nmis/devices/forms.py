@@ -31,13 +31,13 @@ class AssertDeviceCreateForm(BaseForm):
         self.creator = creator
 
         self.ERR_CODES.update({
-            'service_life_err': '预计使用年限类型错误',
-            'status_err': '资产状态错误',
-            'assert_no_err': '资产编号已存在',
-            'serial_no_err': '资产序列号已存在',
-            'bar_code_err': '设备条形码已存在',
-            'cate_err': '资产设备类型错误',
-            'medical_device_cate_err': '资产设备医疗器械分类不能为空'
+            'service_life_err':                 '预计使用年限类型错误',
+            'status_err':                       '资产状态错误',
+            'assert_no_err':                    '资产编号已存在',
+            'serial_no_err':                    '资产序列号已存在',
+            'bar_code_err':                     '设备条形码已存在',
+            'cate_err':                         '资产设备类型错误',
+            'medical_device_cate_null_err':     '医疗设备分类为空'
         })
 
     def is_valid(self):
@@ -167,15 +167,22 @@ class AssertDeviceUpdateForm(BaseForm):
                 'status_err': '资产状态错误',
                 'assert_no_err': '资产编号已存在',
                 'serial_no_err': '资产序列号已存在',
-                'bar_code_err': '设备条形码已存在',
+                'medical_device_cate_err': '医疗设备分类为空'
             }
         )
 
     def is_valid(self):
         if not self.check_service_life() or not self.check_status()\
                 or not self.check_assert_no() or not self.check_serial_no()\
-                or not self.check_bar_code():
+                or not self.check_medical_device_cate():
             return False
+        return True
+
+    def check_medical_device_cate(self):
+        if self.assert_device.cate == ASSERT_DEVICE_CATE_MEDICAL:
+            if not self.data.get('medical_device_cate_id'):
+                self.update_errors('medical_device_cate', 'medical_device_cate_err')
+                return False
         return True
 
     def check_service_life(self):
@@ -183,6 +190,7 @@ class AssertDeviceUpdateForm(BaseForm):
         校验资产设备预计使用年限数据类型
         """
         service_life = self.data.get('service_life')
+
         if service_life:
             if not isinstance(service_life, int):
                 self.update_errors('service_life', 'service_life_err')
@@ -225,32 +233,17 @@ class AssertDeviceUpdateForm(BaseForm):
                 return False
         return True
 
-    def check_bar_code(self):
-        """
-        存在设备条形码时，校验是否存在相同的设备条形码
-        """
-        bar_code = self.data.get('bar_code', '').strip()
-        if bar_code:
-            if bar_code:
-                assert_device = AssertDevice.objects.get_assert_device_by_bar_code(bar_code)
-                if assert_device and not self.assert_device == assert_device:
-                    self.update_errors('bar_code', 'bar_code_err')
-                    return False
-        return True
-
     def save(self):
         update_data = {
             'modifier': self.modifier,
             'modified_time': now(),
+            'use_dept_id': self.data.get('use_dept_id'),
+            'performer_id': self.data.get('performer_id'),
+            'responsible_dept_id': self.data.get('responsible_dept_id'),
+
         }
-        if self.data.get('bar_code', '').strip():
+        if self.data.get('bar_code') is not None:
             update_data['bar_code'] = self.data.get('bar_code', '').strip()
-        if self.data.get('performer_id'):
-            update_data['performer_id'] = self.data.get('performer_id')
-        if self.data.get('responsible_dept_id'):
-            update_data['responsible_dept_id'] = self.data.get('responsible_dept_id')
-        if self.data.get('use_dept_id'):
-            update_data['use_dept_id'] = self.data.get('use_dept_id')
         if self.data.get('assert_no', '').strip():
             update_data['assert_no'] = self.data.get('assert_no')
         if self.data.get('title', '').strip():
@@ -271,7 +264,8 @@ class AssertDeviceUpdateForm(BaseForm):
             update_data['storage_place_id'] = self.data.get('storage_place_id')
         if self.data.get('purchase_date', '').strip():
             update_data['purchase_date'] = self.data.get('purchase_date', '').strip()
-        if self.data.get('producer', '').strip():
+
+        if self.data.get('producer') is not None:
             update_data['producer'] = self.data.get('producer', '').strip()
 
         return AssertDevice.objects.update_assert_device(self.assert_device, **update_data)
