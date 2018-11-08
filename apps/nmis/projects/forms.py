@@ -39,7 +39,7 @@ class ProjectPlanCreateForm(BaseForm):
             'project_title_error':              '项目名称输入错误',
             'handing_type_error':               '办理方式为空或数据错误',
             'software_name_error':              '软件名称为空或数据错误',
-            'software_purpose_error':           '软件用途为空或数据错误',
+            'software_purpose_error':           '软件用途字符过长，20个字符以内',
             'hardware_devices_error':           '硬件设备为空或格式错误',
             'software_devices_error':           '软件设备为空或格式错误',
             'devices_error':                    '硬件设备和软件设备不可同时为空',
@@ -106,9 +106,11 @@ class ProjectPlanCreateForm(BaseForm):
                     if not item.get('name'):
                         self.update_errors('software_name', 'software_name_error')
                         return False
-                    if not item.get('purpose'):
-                        self.update_errors('software_purpose', 'software_purpose_error')
-                        return False
+                    if item.get('purpose'):
+                        if len(item.get('purpose')) >= 20:
+                            self.update_errors('software_purpose', 'software_purpose_error')
+                            return False
+
                     if not item.get('planned_price'):
                         self.update_errors('planned_price', 'planned_price_null_err')
                         return False
@@ -162,7 +164,7 @@ class ProjectPlanUpdateForm(BaseForm):
             'purpose_error':            '用途不能为空或数据错误',
             'handing_type_error':       '办理方式数据错误',
             'software_name_error':      '软件名称为空或数据错误',
-            'software_purpose_error':   '软件用途为空或数据错误',
+            'software_purpose_error':   '软件用途字符过长，20个字符以内',
             'software_id_error':        '更新设备ID不存在',
             'pre_amount_err':           '项目总价错误',
             'planned_price_null_err':   '软件预估单价为空',
@@ -224,9 +226,10 @@ class ProjectPlanUpdateForm(BaseForm):
                     if not device.get('name'):
                         self.update_errors('software_name', 'software_name_error')
                         return False
-                    if not device.get('purpose'):
-                        self.update_errors('software_purpose', 'software_purpose_error')
-                        return False
+                    if device.get('purpose'):
+                        if len(device.get('purpose')) >= 20:
+                            self.update_errors('software_purpose', 'software_purpose_error')
+                            return False
                     if not device.get('planned_price'):
                         self.update_errors('planned_price', 'planned_price_null_err')
                         return False
@@ -247,9 +250,10 @@ class ProjectPlanUpdateForm(BaseForm):
                     if not device.get('name'):
                         self.update_errors('software_name', 'software_name_error')
                         return False
-                    if not device.get('purpose'):
-                        self.update_errors('software_purpose', 'software_purpose_error')
-                        return False
+                    if device.get('purpose'):
+                        if len(device.get('purpose')) >= 20:
+                            self.update_errors('software_purpose', 'software_purpose_error')
+                            return False
 
                     if not device.get('planned_price'):
                         self.update_errors('planned_price', 'planned_price_null_err')
@@ -309,15 +313,15 @@ def check_hardware_devices_list(baseForm, devices_list):
     :return: True/False
     """
     baseForm.ERR_CODES.update({
-        'devices_empty': '硬件设备列表不能为空或数据错误',
-        'device_name_error': '硬件设备名为空或格式错误',
-        'device_num_error': '硬件设备购买数量为空或格式错误',
-        'device_planned_price_error': '硬件设备预购价格数据类型错误',
-        'device_measure_error': '硬件设备度量单位为空或数据错误',
-        'device_type_spec_error': '硬件设备规格/型号为空或数据错误',
-        'device_purpose_error': '硬件设备用途数据错误',
-        'updated_device_not_exist': '硬件更新的设备不存在',
-        'updated_device_id_error': '硬件更新的设备ID数据错误',
+        'devices_empty':                    '硬件设备列表不能为空或数据错误',
+        'device_name_error':                '硬件设备名为空或格式错误',
+        'device_num_error':                 '硬件设备购买数量为空或格式错误',
+        'device_planned_price_error':       '硬件设备预购价格数据类型错误',
+        'device_measure_error':             '硬件设备度量单位为空或数据错误',
+        'device_type_spec_error':           '硬件设备规格/型号为空或数据错误',
+        'device_purpose_error':             '硬件用途字符串过长，20个字符以内',
+        'updated_device_not_exist':         '硬件更新的设备不存在',
+        'updated_device_id_error':          '硬件更新的设备ID数据错误',
     })
     for device in devices_list:
         device_id = device.get('id')
@@ -359,6 +363,11 @@ def check_hardware_devices_list(baseForm, devices_list):
         except ValueError:
             baseForm.update_errors('planned_price', 'device_planned_price_error')
             return False
+
+        if device.get('purpose', '').strip():
+            if len(device.get('purpose', '').strip()) >= 20:
+                baseForm.update_errors('purpose', 'device_purpose_error')
+                return False
 
         if not device.get('measure', '').strip():
             baseForm.update_errors('measure', 'device_measure_error')
