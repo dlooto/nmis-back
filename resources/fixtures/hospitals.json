@@ -42,5 +42,29 @@
         "group": null,
         "created_time": "2018-6-6 15:00"
       }
-    }
+    },
+    {
+      "pk": 10010001,
+      "model": "hospitals.Sequence",
+      "fields": {
+        "seq_code": "SEQ-RPOR-NO",
+        "seq_name": "报修单自增序列",
+        "seq_value": 0,
+        "increment": 1,
+        "remark": "备注",
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
+      "pk": 10010002,
+      "model": "hospitals.Sequence",
+      "fields": {
+        "seq_code": "SEQ-MNPL-NO",
+        "seq_name": "维护保养计划自增序列",
+        "seq_value": 0,
+        "increment": 1,
+        "remark": "备注",
+        "created_time": "2018-6-6 15:00"
+      }
+    },
 ]

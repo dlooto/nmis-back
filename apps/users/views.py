@@ -310,7 +310,7 @@ class AssignRolesDeptDomains(BaseAPIView):
             return resp.failed('含有不存在的用户')
         if not roles or not len(role_ids) == len(roles):
             return resp.failed('含有不存在的角色')
-        if depts or not len(dept_domain_ids) == len(depts):
+        if depts and not len(dept_domain_ids) == len(depts):
             return resp.failed('含有不存在的部门')
         success, result = User.objects.assign_roles(users, roles, depts)
         if not success:
