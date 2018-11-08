@@ -94,7 +94,7 @@ class SoftwareDevice(Device):
         )
 
     VALID_ATTRS = [
-        'name', 'cate', 'purpose'
+        'name', 'cate', 'purpose', 'planned_price', 'real_price'
     ]
 
     def __str__(self):
