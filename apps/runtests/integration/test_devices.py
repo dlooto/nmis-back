@@ -697,6 +697,51 @@ class FaultSolutionsTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assertEqual(fault_solution.get('desc'), fs_data.get('desc'))
         self.assertEqual(fault_solution.get('solution'), fs_data.get('solution'))
 
+    def test_create_fault_solution(self):
+
+        api_update = '/api/v1/devices/fault_solutions/{}'
+
+        # "files": [
+        #     {
+        #         "name": "需求论证2.txt",
+        #         "path": "path",
+        #         "cate": "UNKNOWN"
+        #
+        #     }
+        # ]
+        fault_types = self.init_fault_types(self.admin_staff)
+        fs_create_data = {
+            "title": "电脑碎屏001",
+            "fault_type": fault_types[2],
+            "desc": "电脑碎屏test",
+            "solution": "换机",
+            'creator': self.admin_staff
+        }
+        fault_solution_create = self.create_fault_solution(
+            fs_create_data.get('title'),
+            fs_create_data.get('fault_type'),
+            fs_create_data.get('desc'),
+            fs_create_data.get('solution'),
+            fs_create_data.get('creator')
+        )
+        fs_update_data = {
+            "title": "电脑碎屏002",
+            "fault_type_id": fault_types[0].id,
+            "desc": "电脑碎屏test002",
+            "solution": "换机002"
+        }
+        self.login_with_username(self.user)
+
+        response = self.put(api_update.format(fault_solution_create.id), data=fs_update_data)
+        self.assert_response_success(response)
+        fault_solution = response.get('fault_solution')
+        self.assertIsNotNone(fault_solution)
+        self.assertIsNotNone(fault_solution.get('id'))
+        self.assertEqual(fault_solution.get('title'), fs_update_data.get('title'))
+        self.assertEqual(fault_solution.get('fault_type'), fs_update_data.get('fault_type'))
+        self.assertEqual(fault_solution.get('desc'), fs_update_data.get('desc'))
+        self.assertEqual(fault_solution.get('solution'), fs_update_data.get('solution'))
+
     def test_fault_solution_list(self):
 
         api = '/api/v1/devices/fault_solutions'

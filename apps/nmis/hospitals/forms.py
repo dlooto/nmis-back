@@ -17,7 +17,7 @@ from nmis.hospitals.models import Hospital, Department, Staff, Group, Role
 from organs.forms import OrganSignupForm
 from base.forms import BaseForm
 from nmis.hospitals.consts import DPT_ATTRI_CHOICES, GROUP_CATE_NORMAL_STAFF, \
-    ROLE_CATE_NORMAL, ROLE_CODE_NORMAL_STAFF
+    ROLE_CATE_NORMAL, ROLE_CODE_NORMAL_STAFF, DPT_ATTRI_OTHER
 
 from users.models import User
 
@@ -604,7 +604,8 @@ class DepartmentBatchUploadForm(BaseForm):
             for i in range(len(sheet_data)):
                 dept_names.append(sheet_data[i].get('dept_name', '').strip())
             for i in range(len(sheet_data)):
-                dept_attris.append(sheet_data[i].get('dept_attri', '').strip())
+                # dept_attris.append(sheet_data[i].get('dept_attri', '').strip())
+                dept_attris.append(DPT_ATTRI_OTHER)
             for i in range(len(sheet_data)):
                 descs.append(sheet_data[i].get('desc', '').strip())
         pre_data['dept_names'] = dept_names

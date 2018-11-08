@@ -190,8 +190,8 @@ UPLOADED_STAFF_EXCEL_HEADER_DICT = {
 # 上传的部门excel模板文件表头字典
 UPLOADED_DEPT_EXCEL_HEADER_DICT = {
     'dept_name':    '科室名称',
-    'dept_attri':   '科室属性',
-    'desc':         '职能描述'
+    # 'dept_attri':   '科室属性',
+    'desc':         '职能描述',
 }
 
 

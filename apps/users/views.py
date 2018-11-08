@@ -26,7 +26,7 @@ from users.forms import UserSignupForm, UserLoginForm, CheckEmailForm
 from users.models import User, ResetRecord
 from utils.eggs import get_email_host_url
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class RefreshAuthtokenView(BaseAPIView):
@@ -232,7 +232,7 @@ class VerifyResetRecordKeyView(BaseAPIView):
 
         # 参数正确
         value, name = value_name
-        logs.info('verify {}: {}'.format(name, value))
+        logger.info('verify {}: {}'.format(name, value))
 
         record = ResetRecord.objects.filter(key=value).first()
         if record:
@@ -298,10 +298,10 @@ class AssignRolesDeptDomains(BaseAPIView):
 
     permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
-    @check_params_not_null(['role_ids', 'dept_domain_ids', 'user_ids'])
+    @check_params_not_null(['role_ids', 'user_ids'])
     def post(self, req):
         role_ids = req.data.get("role_ids")
-        dept_domain_ids = req.data.get("dept_domain_ids")
+        dept_domain_ids = req.data.get("dept_domain_ids", [])
         user_ids = req.data.get("user_ids")
         users = User.objects.filter(id__in=user_ids).all()
         roles = Role.objects.filter(id__in=role_ids).all()
@@ -310,52 +310,11 @@ class AssignRolesDeptDomains(BaseAPIView):
             return resp.failed('含有不存在的用户')
         if not roles or not len(role_ids) == len(roles):
             return resp.failed('含有不存在的角色')
-        if not depts or not len(dept_domain_ids) == len(depts):
+        if depts and not len(dept_domain_ids) == len(depts):
             return resp.failed('含有不存在的部门')
-        # 根据user和role查询数据是否已经存在UserRoleShip记录
-        # 如果全部不存在，创建并保存
-        # 如果全部存在，不做处理
-        # 如果参数数据，比查询结果多，创建多出来的这部分
-        # 如果参数数据，少于查询结果，删除少了的这部分
-
-        old_ships = []
-        ship_args = []
-        same_ships = []
-        for user in users:
-            for role in roles:
-                ship_args.append(UserRoleShip(user=user, role=role))
-
-            old_ship_query = UserRoleShip.objects.filter(user=user).all()
-            if old_ship_query:
-                for query in old_ship_query:
-                    old_ships.append(query)
-
-        for ship_arg in ship_args[:]:
-            for old_ship in old_ships[:]:
-                if ship_arg.user.id == old_ship.user.id and ship_arg.role.id == old_ship.role.id:
-                    ship_args.remove(ship_arg)
-                    same_ships.append(old_ship)
-                    old_ships.remove(old_ship)
-        try:
-            with transaction.atomic():
-
-                if ship_args:
-                    for ship in ship_args:
-                        ship.save()
-                        ship.cache()
-                        ship.dept_domains.set(depts)
-                if old_ships:
-                    for ship in old_ships:
-                        ship.clear_cache()
-                        ship.dept_domains.set(depts)
-                        ship.delete()
-                if same_ships:
-                    for s in same_ships:
-                        s.dept_domains.set(depts)
-                        s.cache
-                return resp.ok("操作成功")
-        except Exception as e:
-            logs.info(e.__cause__)
-            logs.exception(e)
+        success, result = User.objects.assign_roles(users, roles, depts)
+        if not success:
             return resp.failed("操作失败")
+        return resp.ok("操作成功")
+
 
