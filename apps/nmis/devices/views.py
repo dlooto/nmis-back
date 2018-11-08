@@ -5,6 +5,7 @@
 
 import logging
 
+from django.db import transaction
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q, Count, F
@@ -38,6 +39,7 @@ from nmis.devices.permissions import AssertDeviceAdminPermission, RepairOrderCre
     KnowledgeManagePermission
 from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR, DOC_UPLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
+from nmis.documents.models import File
 from nmis.hospitals.consts import ARCHIVE, ROLE_CODE_HOSP_SUPER_ADMIN, \
     ROLE_CODE_NORMAL_STAFF, ROLE_CODE_ASSERT_DEVICE_ADMIN
 from nmis.hospitals.models import Staff, Department, HospitalAddress
@@ -45,7 +47,7 @@ from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSeriali
 from nmis.hospitals.permissions import IsHospSuperAdmin, SystemManagePermission, HospGlobalReportAssessPermission, \
     HospitalStaffPermission
 from utils import times, files
-from utils.files import ExcelBasedOXL, file_read_iterator
+from utils.files import ExcelBasedOXL, file_read_iterator, remove, is_file_exist
 
 logger = logging.getLogger(__name__)
 
@@ -602,14 +604,36 @@ class FaultSolutionView(BaseAPIView):
             return resp.failed('操作失败')
         return resp.serialize_response(fault_solution, 'fault_solution', srl_cls_name='FaultSolutionSerializer')
 
+    @transaction.atomic()
     def delete(self, req, fault_solution_id):
-        pass
+        self.check_object_any_permissions(req, None)
+        fs = self.get_object_or_404(fault_solution_id, FaultSolution)
+        file_ids_str = list()
+        if fs.files and fs.files.split(','):
+            file_ids_str = fs.files.split(',')
+        try:
+            files = File.objects.filter(id__in=[int(id_str) for id_str in file_ids_str])
+            import os
+            file_paths = [os.path.join(settings.MEDIA_ROOT, file.path) for file in files]
+            File.objects.clear_cache(files)
+            files.delete()
+            for path in file_paths:
+                if is_file_exist(path):
+                    if not remove(path):
+                        return resp.failed("操作失败")
+            fs.clear_cache()
+            fs.delete()
+            return resp.ok('操作成功')
+        except Exception as e:
+            logger.exception(e)
+            return resp.failed('操作失败')
 
 
 class FaultSolutionBatchDeleteView(BaseAPIView):
 
     permission_classes = (KnowledgeManagePermission, IsHospSuperAdmin)
 
+    @transaction.atomic()
     def post(self, req):
         self.check_object_any_permissions(req, None)
 
@@ -618,12 +642,25 @@ class FaultSolutionBatchDeleteView(BaseAPIView):
         try:
             for id_str in ids_str:
                 fs_ids.append(int(id_str))
-            queryset = FaultSolution.objects.filter(id__in=fs_ids)
-            count = queryset.count()
+            fs_queryset = FaultSolution.objects.filter(id__in=fs_ids)
+            count = fs_queryset.count()
             if count < len(fs_ids):
                 return resp.form_err({'ids': 'id为空或数据错误'})
-            FaultSolution.objects.clear_cache(queryset)
-            queryset.delete()
+            file_ids_str = list()
+            for fs in fs_queryset:
+                if fs.files and fs.files.split(","):
+                    file_ids_str.extend(fs.files.split(","))
+            files = File.objects.filter(id__in=[int(id_str) for id_str in file_ids_str])
+            import os
+            file_paths = [os.path.join(settings.MEDIA_ROOT, file.path) for file in files]
+            File.objects.clear_cache(files)
+            files.delete()
+            for path in file_paths:
+                if is_file_exist(path):
+                    if not remove(path):
+                        return resp.failed("操作失败")
+            FaultSolution.objects.clear_cache(fs_queryset)
+            fs_queryset.delete()
             return resp.ok('操作成功')
         except ValueError as ve:
             logger.exception(ve)
@@ -656,6 +693,36 @@ class FaultSolutionListView(BaseAPIView):
                 Q(fault_type__title__contains=search) | Q(title__contains=search)
             )
         return self.get_pages(queryset, results_name='fault_solutions', srl_cls_name='FaultSolutionSerializer')
+
+
+class FaultSolutionFileDeleteView(BaseAPIView):
+    permission_classes = (KnowledgeManagePermission, IsHospSuperAdmin)
+
+    @transaction.atomic()
+    def delete(self, req, fault_solution_id, file_id):
+        self.check_object_any_permissions(req, None)
+        fs = self.get_object_or_404(fault_solution_id, FaultSolution)
+        file = self.get_object_or_404(file_id, File)
+        import os
+        try:
+            file_ids_str = fs.files.split(",")
+            file_path = file.path
+            if str(file_id) in file_ids_str:
+                file_ids_str.remove(str(file_id))
+                fs.files = ",".join(file_ids_str)
+                fs.save()
+                fs.cache()
+                file.clear_cache()
+                file.delete()
+            if file_path:
+                path = os.path.join(settings.MEDIA_ROOT, file_path)
+                if is_file_exist(path):
+                    if not remove(path):
+                        return resp.failed("操作失败")
+            return resp.ok("操作成功")
+        except Exception as e:
+            logger.exception(e)
+            return resp.failed("操作失败")
 
 
 class FaultSolutionsImportView(BaseAPIView):

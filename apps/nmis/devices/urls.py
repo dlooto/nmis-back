@@ -66,8 +66,10 @@ urlpatterns = [
     path('fault_solutions/<int:fault_solution_id>', views.FaultSolutionView.as_view(), ),
     # 故障/问题解决方案列表--知识库
     path('fault_solutions', views.FaultSolutionListView.as_view(), ),
-    # 批量删除问题解决方案--知识库
+    # 批量删除故障问题解决方案--知识库
     path('fault_solutions/batch-delete', views.FaultSolutionBatchDeleteView.as_view(), ),
+    # 删除故障问题解决方案下的附件-识库知识库
+    path('fault_solutions/<int:fault_solution_id>/files/<int:file_id>', views.FaultSolutionFileDeleteView.as_view(), ),
 
     # 导入故障/问题解决方案列表-知识库
     path('fault_solutions/import', views.FaultSolutionsImportView.as_view(), ),
