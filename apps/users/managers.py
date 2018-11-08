@@ -5,6 +5,7 @@
 #
 
 import logging
+from copy import deepcopy
 
 from django.contrib.auth.models import BaseUserManager
 from django.db import transaction
@@ -120,5 +121,49 @@ class UserManager(BaseUserManager, BaseManager):
         errors[reset_key_keyname] = u'验证失败'
         return resp.form_err(errors)
 
-    def assign_roles(self, users, roles):
-        pass
+    def assign_roles(self, users, new_roles, depts=None):
+        from nmis.hospitals.models import UserRoleShip
+        from nmis.hospitals.models import Role
+        from nmis.hospitals.consts import ROLE_CODE_PRO_DISPATCHER
+
+        ship_args = []
+        old_ships = []
+        same_ships = []
+        pro_dispatcher_role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_PRO_DISPATCHER)
+        for user in users:
+            for new_role in new_roles:
+                ship_args.append(UserRoleShip(user=user, role=new_role))
+
+            old_ship_query = UserRoleShip.objects.filter(user=user).all()
+            if old_ship_query:
+                for query in old_ship_query:
+                    old_ships.append(query)
+        for ship_arg in ship_args[:]:
+            for old_ship in old_ships[:]:
+                if ship_arg.user.id == old_ship.user.id and ship_arg.role.id == old_ship.role.id:
+                    ship_args.remove(ship_arg)
+                    same_ships.append(old_ship)
+                    old_ships.remove(old_ship)
+        new_ships = deepcopy(ship_args)
+        try:
+            with transaction.atomic():
+
+                if new_ships:
+                    for ship in new_ships:
+                        ship.save()
+                        if depts and ship.role == pro_dispatcher_role:
+                            ship.dept_domains.set(depts)
+                        ship.cache()
+                if old_ships:
+                    for ship in old_ships:
+                        ship.clear_cache()
+                        ship.delete()
+                if same_ships and depts:
+                    for s in same_ships:
+                        if s.role == pro_dispatcher_role:
+                            s.dept_domains.set(depts)
+                            s.cache
+                return True, "操作成功"
+        except Exception as e:
+            logs.exception(e)
+            return False, "操作失败"
