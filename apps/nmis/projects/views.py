@@ -121,7 +121,7 @@ class ProjectPlanCreateView(BaseAPIView):
     permission_classes = (HospitalStaffPermission, )
 
     @check_id_list(["organ_id", "creator_id", "related_dept_id"])
-    @check_params_not_null(['project_title', 'handing_type', 'pro_type'])
+    @check_params_not_null(['project_title', 'handing_type', 'pro_type', 'pre_amount'])
     def post(self, req):
         """
         创建项目申请（device_type:区分此项目属于信息化硬件申请还是信息化软件项目申请）
@@ -168,7 +168,7 @@ class ProjectPlanCreateView(BaseAPIView):
                 {
                     'name': '易冉单点登录系统',
                     'purpose': '一次登录，解决多次重复登录其它应用',
-                    'producer': '软件开发商'
+                    'planned_price': 300000.00
                 }
             ],
             "hardware_devices": [
@@ -244,6 +244,7 @@ class ProjectPlanView(BaseAPIView):
 
     @check_id('organ_id')
     @check_params_not_all_null(['project_title', 'purpose', 'handing_type',
+                                'project_introduce', 'pre_amount',
                                 'software_added_devices', 'software_updated_devices',
                                 'hardware_added_devices', 'hardware_updated_devices'])
     def put(self, req, project_id):

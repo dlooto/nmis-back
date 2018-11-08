@@ -36,17 +36,36 @@ class ProjectPlanCreateForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'project_title_error': '项目名称输入错误',
-            'handing_type_error': '办理方式为空或数据错误',
-            'software_name_error': '软件名称为空或数据错误',
-            'software_purpose_error': '软件用途为空或数据错误',
-            'hardware_devices_error': '硬件设备为空或格式错误',
-            'software_devices_error': '软件设备为空或格式错误',
-            'devices_error': '硬件设备和软件设备不可同时为空'
+            'project_title_error':              '项目名称输入错误',
+            'handing_type_error':               '办理方式为空或数据错误',
+            'software_name_error':              '软件名称为空或数据错误',
+            'software_purpose_error':           '软件用途字符过长，20个字符以内',
+            'hardware_devices_error':           '硬件设备为空或格式错误',
+            'software_devices_error':           '软件设备为空或格式错误',
+            'devices_error':                    '硬件设备和软件设备不可同时为空',
+            'planned_price_null_err':           '软件预估单价为空',
+            'planned_price_format_err':         '软件预估单价数据类型错误',
+            'pre_amount_null_err':              '项目总价为空',
+            'pre_amount_format_err':            '项目总价数据类型错误'
         })
 
     def is_valid(self):
-        return self.check_project_title() and self.check_devices() and self.check_handing_type()
+        return self.check_project_title() and self.check_devices() and\
+               self.check_handing_type() and self.check_pre_amount()
+
+    def check_pre_amount(self):
+
+        if not self.data.get('pre_amount'):
+            self.update_errors('pre_amount', 'pre_amount_null_err')
+            return False
+        try:
+            if not isinstance(float(self.data.get('pre_amount')), float):
+                self.update_errors('pre_amount', 'pre_amount_format_err')
+                return False
+        except ValueError:
+            self.update_errors('pre_amount', 'pre_amount_format_err')
+            return False
+        return True
 
     def check_project_title(self):
         project_title = self.data.get('project_title')
@@ -78,24 +97,34 @@ class ProjectPlanCreateForm(BaseForm):
         else:
             # 信息化项目设备校验
             software_devices = self.data.get('software_devices')        # 信息化项目软件设备
-
-            # 信息化项目存在硬件设备申请需对硬件设备字段进行校验
-            if self.data.get('hardware_devices'):
-                return check_hardware_devices_list(self, self.data.get('hardware_devices'))
-
+            if not software_devices and not self.data.get('hardware_devices'):
+                self.update_errors('devices', 'devices_error')
+                return False
             # 信息化项目存在软件设备申请需对软件设备字段进行校验
             if software_devices:
                 for item in software_devices:
                     if not item.get('name'):
                         self.update_errors('software_name', 'software_name_error')
                         return False
-                    if not item.get('purpose'):
-                        self.update_errors('software_purpose', 'software_purpose_error')
-                        return False
-            if not software_devices and not self.data.get('hardware_devices'):
-                self.update_errors('devices', 'devices_error')
-                return False
+                    if item.get('purpose'):
+                        if len(item.get('purpose')) >= 20:
+                            self.update_errors('software_purpose', 'software_purpose_error')
+                            return False
 
+                    if not item.get('planned_price'):
+                        self.update_errors('planned_price', 'planned_price_null_err')
+                        return False
+
+                    try:
+                        if not isinstance(float(item.get('planned_price')), float):
+                            self.update_errors('planned_price', 'planned_price_format_err')
+                            return False
+                    except ValueError:
+                        self.update_errors('planned_price', 'planned_price_format_err')
+                        return False
+            # 信息化项目存在硬件设备申请需对硬件设备字段进行校验
+            if self.data.get('hardware_devices'):
+                return check_hardware_devices_list(self, self.data.get('hardware_devices'))
         return True
 
     def save(self):
@@ -107,7 +136,7 @@ class ProjectPlanCreateForm(BaseForm):
             'related_dept': self.related_dept,
             'project_cate': self.data.get('pro_type'),
             'project_introduce': self.data.get('project_introduce'),
-            'pre_amount': self.data.get('pre_amount')
+            'pre_amount': float(self.data.get('pre_amount'))
         }
         if data.get('handing_type') == PRO_HANDING_TYPE_SELF:
             data["performer"] = self.creator
@@ -131,18 +160,35 @@ class ProjectPlanUpdateForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'project_title_error': '项目名称输入错误',
-            'purpose_error': '用途不能为空或数据错误',
-            'handing_type_error': '办理方式数据错误',
-            'software_name_error': '软件名称为空或数据错误',
-            'software_purpose_error': '软件用途为空或数据错误',
-            'software_id_error': '更新设备ID不存在'
+            'project_title_error':      '项目名称输入错误',
+            'purpose_error':            '用途不能为空或数据错误',
+            'handing_type_error':       '办理方式数据错误',
+            'software_name_error':      '软件名称为空或数据错误',
+            'software_purpose_error':   '软件用途字符过长，20个字符以内',
+            'software_id_error':        '更新设备ID不存在',
+            'pre_amount_err':           '项目总价错误',
+            'planned_price_null_err':   '软件预估单价为空',
+            'planned_price_format_err': '软件预估单价数据类型错误',
+            'pre_amount_null_err':      '项目总价为空',
+            'pre_amount_format_err':    '项目总价数据类型错误'
         })
 
     def is_valid(self):
-        if self.check_project_title() and self.check_devices() and self.check_handing_type():
+        if self.check_project_title() and self.check_devices()\
+                and self.check_handing_type() and self.check_pre_amount():
             return True
         return False
+
+    def check_pre_amount(self):
+        if self.data.get('pre_amount'):
+            try:
+                if not isinstance(float(self.data.get('pre_amount')), float):
+                    self.update_errors('pre_amount', 'pre_amount_format_err')
+                    return False
+            except ValueError:
+                self.update_errors('pre_amount', 'pre_amount_format_err')
+                return False
+        return True
 
     def check_project_title(self):
         return True
@@ -153,7 +199,7 @@ class ProjectPlanUpdateForm(BaseForm):
             self.update_errors('handing_type', 'handing_type_error')
             return False
 
-        if not (handing_type in dict(PROJECT_HANDING_TYPE_CHOICES).keys()):
+        if handing_type not in dict(PROJECT_HANDING_TYPE_CHOICES):
             self.update_errors('handing_type', 'handing_type_error')
             return False
 
@@ -180,8 +226,20 @@ class ProjectPlanUpdateForm(BaseForm):
                     if not device.get('name'):
                         self.update_errors('software_name', 'software_name_error')
                         return False
-                    if not device.get('purpose'):
-                        self.update_errors('software_purpose', 'software_purpose_error')
+                    if device.get('purpose'):
+                        if len(device.get('purpose')) >= 20:
+                            self.update_errors('software_purpose', 'software_purpose_error')
+                            return False
+                    if not device.get('planned_price'):
+                        self.update_errors('planned_price', 'planned_price_null_err')
+                        return False
+
+                    try:
+                        if not isinstance(float(device.get('planned_price')), float):
+                            self.update_errors('planned_price', 'planned_price_format_err')
+                            return False
+                    except ValueError:
+                        self.update_errors('planned_price', 'planned_price_format_err')
                         return False
             if software_updated_devices:
                 for device in software_updated_devices:
@@ -192,9 +250,23 @@ class ProjectPlanUpdateForm(BaseForm):
                     if not device.get('name'):
                         self.update_errors('software_name', 'software_name_error')
                         return False
-                    if not device.get('purpose'):
-                        self.update_errors('software_purpose', 'software_purpose_error')
+                    if device.get('purpose'):
+                        if len(device.get('purpose')) >= 20:
+                            self.update_errors('software_purpose', 'software_purpose_error')
+                            return False
+
+                    if not device.get('planned_price'):
+                        self.update_errors('planned_price', 'planned_price_null_err')
                         return False
+
+                    try:
+                        if not isinstance(float(device.get('planned_price')), float):
+                            self.update_errors('planned_price', 'planned_price_format_err')
+                            return False
+                    except ValueError:
+                        self.update_errors('planned_price', 'planned_price_format_err')
+                        return False
+
         return True
 
     def save(self):
@@ -222,8 +294,7 @@ class ProjectPlanUpdateForm(BaseForm):
             pro_data['software_added_devices'] = self.data.get('software_added_devices')
 
         if self.data.get('software_updated_devices'):
-            pro_data['software_updated_devices'] = self.data.get(
-                'software_updated_devices')
+            pro_data['software_updated_devices'] = self.data.get('software_updated_devices')
 
         if self.data.get('handing_type', '').strip() == PRO_HANDING_TYPE_SELF:
             self.old_project.performer = self.old_project.creator
@@ -242,15 +313,15 @@ def check_hardware_devices_list(baseForm, devices_list):
     :return: True/False
     """
     baseForm.ERR_CODES.update({
-        'devices_empty': '设备列表不能为空或数据错误',
-        'device_name_error': '设备名为空或格式错误',
-        'device_num_error': '设备购买数量为空或格式错误',
-        'device_planned_price_error': '设备预购价格输入错误',
-        'device_measure_error': '设备度量单位为空或数据错误',
-        'device_type_spec_error': '设备规格/型号为空或数据错误',
-        'device_purpose_error': '设备用途数据错误',
-        'updated_device_not_exist': '更新的设备不存在',
-        'updated_device_id_error': '更新的设备ID数据错误',
+        'devices_empty':                    '硬件设备列表不能为空或数据错误',
+        'device_name_error':                '硬件设备名为空或格式错误',
+        'device_num_error':                 '硬件设备购买数量为空或格式错误',
+        'device_planned_price_error':       '硬件设备预购价格数据类型错误',
+        'device_measure_error':             '硬件设备度量单位为空或数据错误',
+        'device_type_spec_error':           '硬件设备规格/型号为空或数据错误',
+        'device_purpose_error':             '硬件用途字符串过长，20个字符以内',
+        'updated_device_not_exist':         '硬件更新的设备不存在',
+        'updated_device_id_error':          '硬件更新的设备ID数据错误',
     })
     for device in devices_list:
         device_id = device.get('id')
@@ -273,8 +344,12 @@ def check_hardware_devices_list(baseForm, devices_list):
         if not device_num:
             baseForm.update_errors('num', 'device_num_error')
             return False
+
         try:
             int(device_num)
+            if isinstance(device_num, float):
+                baseForm.update_errors('num', 'device_num_error')
+                return False
         except ValueError:
             baseForm.update_errors('num', 'device_num_error')
             return False
@@ -288,6 +363,11 @@ def check_hardware_devices_list(baseForm, devices_list):
         except ValueError:
             baseForm.update_errors('planned_price', 'device_planned_price_error')
             return False
+
+        if device.get('purpose', '').strip():
+            if len(device.get('purpose', '').strip()) >= 20:
+                baseForm.update_errors('purpose', 'device_purpose_error')
+                return False
 
         if not device.get('measure', '').strip():
             baseForm.update_errors('measure', 'device_measure_error')

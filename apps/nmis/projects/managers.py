@@ -242,12 +242,12 @@ class ProjectPlanManager(BaseManager):
                         for i in range(len(software_old_device_list)):
                             software_old_device_list[i].name = software_update_device_list[i].get('name')
                             software_old_device_list[i].purpose = software_update_device_list[i].get('purpose')
+                            software_old_device_list[i].planned_price = software_update_device_list[i].get('planned_price')
                         helper.bulk_update(software_old_device_list)
+                return new_project
         except Exception as e:
             logger.exception(e)
             return None
-
-        return new_project
 
     def get_group_by_status(self, search_key=None, creator=None, performer=None, assistant=None):
         """
