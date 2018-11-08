@@ -1896,15 +1896,15 @@ class ProjectStatisticReport(BaseAPIView):
 
         filter_dict = {
             'status__in': [PRO_STATUS_DONE],
-            'created_time__range': (start_date, expired_date)
+            'finished_time__range': (start_date, expired_date)
         }
         ann_aggregate_dict = {
             'sum_amount': Sum('pre_amount', distinct=True),
             'nums': Count('id', distinct=True)
         }
         ann_extra_dict = {
-            'year': ExtractYear('created_time'),
-            'month': ExtractMonth('created_time')
+            'year': ExtractYear('finished_time'),
+            'month': ExtractMonth('finished_time')
         }
         """ 1 按年月统计项目总数和总金额 """
         rp_month_query_set = self.queryset.filter(**filter_dict).annotate(**ann_extra_dict)\
@@ -1922,7 +1922,7 @@ class ProjectStatisticReport(BaseAPIView):
                     'nums': 0,
                 })
             for item in list(rp_month_query_set):
-                if year_month[0] == item.get('year') and year_month[1] == item.get('month'):
+                if int(year_month[0]) == item.get('year') and int(year_month[1]) == item.get('month'):
                     rp_pro_amount_nums_month.append(item)
                 else:
                     rp_pro_amount_nums_month.append({
@@ -1936,29 +1936,6 @@ class ProjectStatisticReport(BaseAPIView):
 
         rp_dept_queryset = self.queryset.filter(**filter_dict)\
             .annotate(dept=F('related_dept__name')).values('dept').annotate(**ann_aggregate_dict)
-
-        # dept_names = Department.objects.all().values_list('name')
-        # rp_dept_list = list()
-        # for dept_name in dept_names:
-        #     if not rp_dept_queryset:
-        #         rp_dept_list.append(
-        #             {
-        #                 'detp': dept_name,
-        #                 'sum_amount': 0,
-        #                 'nums': 0,
-        #              }
-        #         )
-        #     for item in list(rp_dept_queryset):
-        #         if item.get('dept') == dept_name:
-        #             rp_dept_list.append(item)
-        #         else:
-        #             rp_dept_list.append(
-        #                 {
-        #                     'detp': dept_name,
-        #                     'sum_amount': 0,
-        #                     'nums': 0,
-        #                 }
-        #             )
 
         """ 3 按状态统计项目总数 """
         filter_dict = {
