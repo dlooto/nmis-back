@@ -102,9 +102,12 @@ class AssertDeviceCreateView(BaseAPIView):
         :return:
         """
         self.check_object_any_permissions(req, req.user)
-        self.get_object_or_404(req.data.get('performer_id'), Staff)
-        self.get_object_or_404(req.data.get('responsible_dept_id'), Department)
-        self.get_object_or_404(req.data.get('use_dept_id'), Department)
+        if req.data.get('performer_id'):
+            self.get_object_or_404(req.data.get('performer_id'), Staff)
+        if req.data.get('responsible_dept_id'):
+            self.get_object_or_404(req.data.get('responsible_dept_id'), Department)
+        if req.data.get('use_dept_id'):
+            self.get_object_or_404(req.data.get('use_dept_id'), Department)
         if req.data.get('medical_device_cate_id'):
             self.get_object_or_404(req.data.get('medical_device_cate_id'), MedicalDeviceSix8Cate)
         self.get_object_or_404(req.data.get('storage_place_id'), HospitalAddress)
@@ -138,23 +141,26 @@ class AssertDeviceView(BaseAPIView):
 
     permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
 
+    @check_params_not_null(['assert_no', 'title', 'serial_no',
+                            'type_spec', 'service_life', 'production_date',
+                            'status', 'storage_place_id', 'purchase_date'])
     def put(self, req, device_id):
         """
         修改资产设备
         """
         self.check_object_any_permissions(req, req.user.get_profile().organ)
         assert_device = self.get_object_or_404(device_id, AssertDevice)
-
+        self.get_object_or_404(req.data.get('storage_place_id'), HospitalAddress)
         if req.data.get("performer_id"):
             self.get_object_or_404(req.data.get('performer_id'), Staff)
         if req.data.get("use_dept_id"):
             self.get_object_or_404(req.data.get("use_dept_id"), Department)
         if req.data.get('responsible_dept_id'):
             self.get_object_or_404(req.data.get('responsible_dept_id'), Department)
-        if req.data.get('medical_device_cate_id'):
+        if assert_device.cate == ASSERT_DEVICE_CATE_MEDICAL:
+            if not req.data.get('medical_device_cate_id'):
+                return resp.failed('医疗设备分类不能为空')
             self.get_object_or_404(req.data.get('medical_device_cate_id'), MedicalDeviceSix8Cate)
-        if req.data.get('storage_place_id'):
-            self.get_object_or_404(req.data.get('storage_place_id'), HospitalAddress)
 
         modifier = req.user.get_profile()
         form = AssertDeviceUpdateForm(req.data, modifier, assert_device)

@@ -12,6 +12,7 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_SCRAPPED
 from runtests import BaseTestCase
 from runtests.common.mixins import AssertDevicesMixin, HospitalMixin
 from utils.files import remove
+from utils.times import now
 
 logs = logging.getLogger(__name__)
 
@@ -235,7 +236,16 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
             serial_no="TEST03420353_{}".format(self.get_random_suffix()),
         )
         update_data = {
-            'title': '电脑显示器'
+            'title': '电脑显示器',
+            'assert_no': 'ABSDEFG',
+            'serial_no': 'ASQ123123',
+            'type_spec': 'TYPE123',
+            'service_life': 12,
+            'production_date': '2018-06-01',
+            'status': 'US',
+            'storage_place_id': storage_place.id,
+            'purchase_date': '2018-06-08'
+
         }
         response = self.put(api.format(assert_device.id), data=update_data)
         self.assert_response_success(response)
@@ -408,8 +418,8 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
           "title": "普通设备维护",
           "storage_place_ids": str(storage_place.id),
           "type": "PL",
-          "start_date": "2018-10-31",
-          "expired_date": "2018-11-10",
+          "start_date": now().strftime('%Y-%m-%d'),
+          "expired_date": now().strftime('%Y-%m-%d'),
           "executor_id": self.admin_staff.id,
           "assert_device_ids": ",".join([str(assert_device.id) for assert_device in assert_devices])
         }

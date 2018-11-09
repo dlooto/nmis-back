@@ -103,23 +103,27 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         software_added_devices = [
             {
                 "name": "说好的系统呢",
-                "purpose": "有卵用"
+                "purpose": "有卵用",
+                'planned_price': 234
             },
             {
                 "name": "牛逼的系统",
-                "purpose": "有卵用"
+                "purpose": "有卵用",
+                'planned_price': 234
             }
         ]
         software_updated_devices = [
             {
                 "id": software_project.get_software_devices()[0].id,
                 "name": "修改系统名",
-                "purpose": "修改系统用途"
+                "purpose": "修改系统用途",
+                'planned_price': 123
             },
             {
                 "id": software_project.get_software_devices()[1].id,
                 "name": "修改的系统名",
-                "purpose": "修改的系统用途"
+                "purpose": "修改的系统用途",
+                'planned_price': 123
             }
         ]
 
@@ -231,6 +235,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             "purpose": "牛逼的不能为外人说道的目标",
             "creator_id": self.admin_staff.id,
             "related_dept_id": self.admin_staff.dept.id,
+            'pre_amount': 1212312,
             "hardware_devices": [
                 {
                     "name": "胎心仪",
@@ -252,7 +257,8 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             "software_devices": [
                 {
                     "name": "易冉单点登录",
-                    "purpose": "单点登录"
+                    "purpose": "单点登录",
+                    'planned_price': 1231231
                 }
             ]
         }
