@@ -1921,23 +1921,18 @@ class ProjectStatisticReport(BaseAPIView):
         year_months = times.month_range(start_date, expired_date, format='%Y-%m-%d %H:%M:%S.%f')
         rp_pro_amount_nums_month = list()
         for year_month in year_months:
-            if not rp_month_query_set:
-                rp_pro_amount_nums_month.append({
-                    'year': int(year_month[0]),
-                    'month': int(year_month[1]),
-                    'sum_amount': 0,
-                    'nums': 0,
-                })
-            for item in list(rp_month_query_set):
-                if int(year_month[0]) == item.get('year') and int(year_month[1]) == item.get('month'):
-                    rp_pro_amount_nums_month.append(item)
-                else:
-                    rp_pro_amount_nums_month.append({
-                        'year': int(year_month[0]),
-                        'month': int(year_month[1]),
-                        'sum_amount': 0,
-                        'nums': 0,
-                    })
+            rp_pro_amount_nums_month.append({
+                'year': int(year_month[0]),
+                'month': int(year_month[1]),
+                'sum_amount': 0,
+                'nums': 0
+            })
+
+        for item in rp_month_query_set:
+            for rp in rp_pro_amount_nums_month:
+                if rp.get('year') == item.get('year') and rp.get('month') == item.get('month'):
+                    rp['sum_amount'] = item.get('sum_amount')
+                    rp['nums'] = item.get('nums')
 
         """ 2 按部门统计项目总数和总金额 """
 
