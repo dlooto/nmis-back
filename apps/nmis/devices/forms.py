@@ -1046,6 +1046,7 @@ class FaultSolutionsImportForm(BaseForm):
     def init_err_codes(self):
         self.ERR_CODES.update({
             'title_error': '第{0}行: 标题为空或数据错误',
+            'title_exists': '第{0}行: 已存在相同标题',
             'fault_type_error': '第{0}行: 故障类型为空或数据错误',
             'fault_type_not_exists': '第{0}行: 故障类型不存在，请检查',
             'fault_type_not_in_setting':  '系统尚未设置故障类型，请联系管理员',
@@ -1077,11 +1078,14 @@ class FaultSolutionsImportForm(BaseForm):
         return True
 
     def check_title(self):
-        # 非空校验
         if self.pre_data.get('titles'):
+            query_data = FaultSolution.objects.all().values_list('title')
             for index, title in enumerate(self.pre_data.get('titles')):
                 if not title:
                     self.update_errors('title', 'title_error', index+1)
+                    return False
+                if (title,) in query_data:
+                    self.update_errors('title', 'title_exists', index+1)
                     return False
         return True
 

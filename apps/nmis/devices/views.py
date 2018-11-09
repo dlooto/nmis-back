@@ -604,6 +604,7 @@ class FaultSolutionView(BaseAPIView):
             return resp.failed('操作失败')
         return resp.serialize_response(fault_solution, 'fault_solution', srl_cls_name='FaultSolutionSerializer')
 
+    @permission_classes((KnowledgeManagePermission, IsHospSuperAdmin))
     @transaction.atomic()
     def delete(self, req, fault_solution_id):
         self.check_object_any_permissions(req, None)
@@ -677,6 +678,7 @@ class FaultSolutionListView(BaseAPIView):
     def get(self, req):
         self.check_object_any_permissions(req, None)
         search = req.GET.get('search', '').strip()
+        fault_type_id = 0
         try:
             fault_type_id = int(req.GET.get('fault_type_id', 0))
         except ValueError as ve:

@@ -12,6 +12,7 @@ from django.db.models import Count, Sum, F, DateTimeField, CharField
 from django.db.models.functions import ExtractMonth, ExtractYear, Cast, TruncSecond
 from django.http import HttpResponseRedirect
 from django.views.generic import RedirectView
+from rest_framework.decorators import permission_classes
 from rest_framework.reverse import reverse
 
 import settings
@@ -222,11 +223,10 @@ class ProjectPlanView(BaseAPIView):
     单个项目操作（任何权限都可对项目进行操作，此操作建立在该申请项目未分配负责人）
     """
 
-    permission_classes = (
-        IsHospSuperAdmin, ProjectDispatcherPermission, ProjectCreatorPermission,
-        ProjectPerformerPermission, ProjectAssistantPermission
-    )
-
+    @permission_classes((
+            HospGlobalReportAssessPermission, IsHospSuperAdmin, ProjectDispatcherPermission,
+            ProjectCreatorPermission, ProjectPerformerPermission, ProjectAssistantPermission
+    ))
     @check_id('organ_id')
     def get(self, req, project_id):     # 项目详情
         """
@@ -241,7 +241,10 @@ class ProjectPlanView(BaseAPIView):
         return resp.serialize_response(
             project, results_name="project", srl_cls_name='ChunkProjectPlanSerializer'
         )
-
+    @permission_classes((
+            IsHospSuperAdmin, ProjectDispatcherPermission,
+            ProjectCreatorPermission, ProjectPerformerPermission, ProjectAssistantPermission
+    ))
     @check_id('organ_id')
     @check_params_not_all_null(['project_title', 'purpose', 'handing_type',
                                 'project_introduce', 'pre_amount',
@@ -273,6 +276,10 @@ class ProjectPlanView(BaseAPIView):
             results_name='project'
         )
 
+    @permission_classes((
+            IsHospSuperAdmin, ProjectDispatcherPermission,
+            ProjectCreatorPermission, ProjectPerformerPermission, ProjectAssistantPermission
+    ))
     def delete(self, req, project_id):
         """
         删除项目(已分配负责人的项目不能被删除)
