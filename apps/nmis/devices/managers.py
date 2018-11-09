@@ -98,7 +98,7 @@ class AssertDeviceManager(BaseManager):
             assert_devices = assert_devices.filter(status__in=status)
         if storage_places:
             assert_devices = assert_devices.filter(storage_place__in=storage_places)
-        return assert_devices.order_by('id')
+        return assert_devices.order_by('-created_time')
 
     def get_assert_device_by_assert_no(self, assert_no):
         """

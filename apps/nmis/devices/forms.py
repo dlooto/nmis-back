@@ -167,22 +167,13 @@ class AssertDeviceUpdateForm(BaseForm):
                 'status_err': '资产状态错误',
                 'assert_no_err': '资产编号已存在',
                 'serial_no_err': '资产序列号已存在',
-                'medical_device_cate_err': '医疗设备分类为空'
             }
         )
 
     def is_valid(self):
         if not self.check_service_life() or not self.check_status()\
-                or not self.check_assert_no() or not self.check_serial_no()\
-                or not self.check_medical_device_cate():
+                or not self.check_assert_no() or not self.check_serial_no():
             return False
-        return True
-
-    def check_medical_device_cate(self):
-        if self.assert_device.cate == ASSERT_DEVICE_CATE_MEDICAL:
-            if not self.data.get('medical_device_cate_id'):
-                self.update_errors('medical_device_cate', 'medical_device_cate_err')
-                return False
         return True
 
     def check_service_life(self):
@@ -240,10 +231,9 @@ class AssertDeviceUpdateForm(BaseForm):
             'use_dept_id': self.data.get('use_dept_id'),
             'performer_id': self.data.get('performer_id'),
             'responsible_dept_id': self.data.get('responsible_dept_id'),
+            'bar_code': self.data.get('bar_code', '').strip()
 
         }
-        if self.data.get('bar_code') is not None:
-            update_data['bar_code'] = self.data.get('bar_code', '').strip()
         if self.data.get('assert_no', '').strip():
             update_data['assert_no'] = self.data.get('assert_no')
         if self.data.get('title', '').strip():
