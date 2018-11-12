@@ -57,8 +57,8 @@ ACTIVATE_PATH = os.path.join(ENV_ROOT, 'bin/activate')
 # 初始化数据文件名
 INIT_JSON_DATA = [
     'users.json',
-    'hospitals.json',
     'roles.json',
+    'hospitals.json',
     'project_flows.json',
     'devices.json',
 ]

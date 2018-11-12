@@ -16,6 +16,7 @@ from rest_framework.response import Response
 
 from base import codes, resp
 from base.exceptions import ParamsError, CsrfError, AuthenticationTokenExpired
+from settings import DEBUG
 from .resp import LeanResponse
 
 
@@ -207,8 +208,9 @@ class BaseAPIView(GenericAPIView):
             return Response(codes.get('throttled'), status=exc.status_code, exception=True)
 
         elif isinstance(exc, (Http404, NotFound)):
-            # return Response(codes.get('object_not_found'), status=status.HTTP_404_NOT_FOUND, exception=True)
-            return Response(codes.format('object_not_found', exc.detail), status=status.HTTP_404_NOT_FOUND, exception=True)
+            if DEBUG:
+                return Response(codes.format('object_not_found', exc.detail), status=status.HTTP_404_NOT_FOUND, exception=True)
+            return Response(codes.get('object_not_found'), status=status.HTTP_404_NOT_FOUND, exception=True)
 
         elif isinstance(exc, exceptions.PermissionDenied):
             return Response(codes.get('permission_denied'), status=status.HTTP_403_FORBIDDEN, exception=True)

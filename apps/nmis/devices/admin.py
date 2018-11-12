@@ -100,7 +100,7 @@ class MaintenancePlanAdmin(admin.ModelAdmin):
 
 class FaultSolutionAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'title', 'fault_type', 'fault_type','status'
+        'id', 'title', 'fault_type', 'status', 'modified_time'
     )
     search_fields = ()
     list_display_links = ()
