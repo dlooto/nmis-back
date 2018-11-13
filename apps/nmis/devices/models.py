@@ -142,7 +142,7 @@ class ContractDevice(Device):
     VALID_ATTRS = [
         'name', 'cate', 'supplier',
         "real_price", "num", "real_total_amount",
-        'producer',
+        'producer', 'planned_price'
 
     ]
 

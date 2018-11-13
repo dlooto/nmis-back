@@ -535,6 +535,7 @@ class PurchaseContractManager(BaseManager):
                         contract_device_old_list[index].real_price = contract_device_update_list[index].get('real_price')
                         contract_device_old_list[index].num = contract_device_update_list[index].get('num')
                         contract_device_old_list[index].real_total_amount = contract_device_update_list[index].get('real_total_amount')
+                        contract_device_old_list[index].planned_price = contract_device_update_list[index].get('planned_price')
                     # 批量更新
                     helper.bulk_update(contract_device_old_list)
         except Exception as e:
