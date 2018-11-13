@@ -29,7 +29,14 @@
         "created_time": "2018-6-6 15:00"
       }
     },
-
+      {
+      "model": "hospitals.userRoleShip",
+      "fields": {
+        "user": 10010001,
+        "role": 20010001,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
     {
       "pk": 40040001,
       "model": "hospitals.staff",
@@ -66,5 +73,5 @@
         "remark": "备注",
         "created_time": "2018-6-6 15:00"
       }
-    },
+    }
 ]
