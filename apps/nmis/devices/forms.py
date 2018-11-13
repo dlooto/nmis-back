@@ -737,6 +737,9 @@ class FaultSolutionUpdateForm(BaseForm):
 
 
 class AssertDeviceBatchUploadForm(BaseForm):
+    """
+    批量导入资产设备表单验证
+    """
 
     def __init__(self, data, creator, cate, *args, **kwargs):
         BaseForm.__init__(self, data, creator, cate, *args, **kwargs)
@@ -755,10 +758,10 @@ class AssertDeviceBatchUploadForm(BaseForm):
         self.ERR_CODES.update({
             'assert_no_err':                '{}: 已存在系统中',
             'assert_no_repeat_err':         '表中存在相同项的资产设备编号',
-            'assert_no_null_err':           '资产设别编号不能为空',
+            'assert_no_null_err':           '{}行: 资产设别编号为空',
             'serial_no_err':                '{}: 已存在系统中',
             'serial_no_repeat_err':         '表中存在相同项的资产设备序列号',
-            'serial_no_null_err':           '资产设备序列号不能为空',
+            'serial_no_null_err':           '{}: 资产设备序列号为空',
             'use_dept_err':                 '{}: 系统不存在此使用部门信息',
             'performer_err':                '{}: 系统不存在此负责人信息',
             'resp_dept_err':                '{}: 系统不存在此负责部门信息',
@@ -769,11 +772,11 @@ class AssertDeviceBatchUploadForm(BaseForm):
             'type_spec_null_err':           '资产设备规格型号不能为空',
             'production_date_null_err':     '资产设备出厂日期不能为空',
             'purchase_date_err':            '资产设备购入日期不能为空',
-            'status_err':                   '{}:和定义的资产设备状态不一致',
+            'status_err':                   '{}: 和定义的资产设备状态不一致',
             'status_null_err':              '资产设备状态不能为空',
             'service_life_null_err':        '使用年限不能为空',
             'service_life_data_type_err':   '使用年限数据类型错误',
-            'assert_title_err':             '资产设备名称不能为空'
+            'assert_title_err':             '{}行: 资产设备名称为空'
         })
 
     def is_valid(self):
@@ -790,17 +793,18 @@ class AssertDeviceBatchUploadForm(BaseForm):
     def check_assert_title(self):
 
         for row_data in self.data:
-            if not row_data.get('title'):
-                self.update_errors('assert_title', 'assert_title_err')
+
+            if not row_data.get('title', '').strip():
+                self.update_errors('assert_title', 'assert_title_err', self.data.index(row_data)+2)
                 return False
         return True
 
     def check_assert_no(self):
         assert_no_list = []
         for row_data in self.data:
-            assert_no = row_data.get('assert_no')
+            assert_no = row_data.get('assert_no', '').strip()
             if not assert_no:
-                self.update_errors('assert_no', 'assert_no_null_err')
+                self.update_errors('assert_no', 'assert_no_null_err', self.data.index(row_data)+2)
                 return False
             assert_no_list.append(assert_no)
 
@@ -820,8 +824,8 @@ class AssertDeviceBatchUploadForm(BaseForm):
     def check_serial_no(self):
         serial_no_list = []
         for row_data in self.data:
-            if not row_data.get('serial_no'):
-                self.update_errors('serial_no', 'serial_no_null_err')
+            if not row_data.get('serial_no', '').strip():
+                self.update_errors('serial_no', 'serial_no_null_err', self.data.index(row_data)+2)
                 return False
             serial_no_list.append(row_data.get('serial_no'))
 
@@ -841,7 +845,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
     def check_use_dept(self):
         use_dept_list = []
         for row_data in self.data:
-            use_dept_list.append(row_data.get('use_dept'))
+            use_dept_list.append(row_data.get('use_dept', '').strip())
         use_dept_db_list = Department.objects.filter(name__in=set(use_dept_list))
         use_dept_names = [dept_db.name for dept_db in use_dept_db_list]
 
@@ -856,7 +860,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
     def check_performer(self):
         performer_list = []
         for row_data in self.data:
-            performer_list.append(row_data.get('performer'))
+            performer_list.append(row_data.get('performer', '').strip())
         performer_db_list = Staff.objects.filter(name__in=set(performer_list))
         performer_names = [performer_db.name for performer_db in performer_db_list]
 
@@ -872,7 +876,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
         # 检验数据库是否存在相关负责部门信息
         res_dept_list = []
         for row_data in self.data:
-            res_dept_list.append(row_data.get('responsible_dept'))
+            res_dept_list.append(row_data.get('responsible_dept', '').strip())
         resp_dept_db_list = Department.objects.filter(name__in=set(res_dept_list))
         resp_dept_db_names = [resp_dept_db.name for resp_dept_db in resp_dept_db_list]
 
@@ -890,7 +894,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
             return True
         code_list = []
         for row_data in self.data:
-            code_list.append(row_data.get('code'))
+            code_list.append(row_data.get('code', '').strip())
 
         if not len(code_list) == len(self.data):
             self.update_errors('medical_code', 'medical_code_null_err')
@@ -917,7 +921,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
             return True
         medical_device_cate_list = []
         for row_data in self.data:
-            medical_device_cate_list.append(row_data.get('medical_device_cate'))
+            medical_device_cate_list.append(row_data.get('medical_device_cate', '').strip())
         if not len(medical_device_cate_list) == len(self.data):
             self.update_errors('medical_device_cate', 'medical_device_cate_err')
             return False
@@ -928,7 +932,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
         # 检验数据库中是否存在存储地点相关信息
         storage_place_list = []
         for row_data in self.data:
-            storage_place_list.append(row_data.get('storage_place'))
+            storage_place_list.append(row_data.get('storage_place', '').strip())
         storage_place_db_list = HospitalAddress.objects.exclude(parent=None).filter(title__in=set(storage_place_list))
         storage_place_titles = [storage_place_db.title for storage_place_db in storage_place_db_list]
 
@@ -942,21 +946,21 @@ class AssertDeviceBatchUploadForm(BaseForm):
 
     def check_type_spec(self):
         for row_data in self.data:
-            if not row_data.get('type_spec'):
+            if not row_data.get('type_spec', '').strip():
                 self.update_errors('type_spec', 'type_spec_null_err')
                 return False
         return True
 
     def check_production_date(self):
         for row_data in self.data:
-            if not row_data.get('production_date'):
+            if not row_data.get('production_date', '').strip():
                 self.update_errors('production_date', 'production_date_null_err')
                 return False
         return True
 
     def check_purchase_date(self):
         for row_data in self.data:
-            if not row_data.get('purchase_date'):
+            if not row_data.get('purchase_date', '').strip():
                 self.update_errors('purchase_date', 'purchase_date_err')
                 return False
         return True
@@ -964,7 +968,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
     def check_status(self):
 
         for row_data in self.data:
-            status = row_data.get('status')
+            status = row_data.get('status', '').strip()
             if not status:
                 self.update_errors('status', 'status_null_err')
                 return False
@@ -978,9 +982,9 @@ class AssertDeviceBatchUploadForm(BaseForm):
             if not row_data.get('service_life'):
                 self.update_errors('service_life', 'service_life_null_err')
                 return False
-            if not isinstance(row_data.get('service_life'), int):
-                self.update_errors('service_life', 'service_life_data_type_err')
-                return False
+            # if not isinstance(row_data.get('service_life'), int):
+            #     self.update_errors('service_life', 'service_life_data_type_err')
+            #     return False
         return True
 
     def save(self):
@@ -991,24 +995,24 @@ class AssertDeviceBatchUploadForm(BaseForm):
                     row_data['status'] = key
                     break
             for performer in self.performer_list:
-                if row_data.get('performer') == performer.name:
+                if row_data.get('performer', '').strip() == performer.name:
                     row_data['performer'] = performer
 
             for use_dept in self.use_dept_list:
-                if row_data.get('use_dept') == use_dept.name:
+                if row_data.get('use_dept', '').strip() == use_dept.name:
                     row_data['use_dept'] = use_dept
 
             for resp_dept in self.res_dept_list:
-                if row_data.get('responsible_dept') == resp_dept.name:
+                if row_data.get('responsible_dept', '').strip() == resp_dept.name:
                     row_data['responsible_dept'] = resp_dept
 
             for storage_place in self.storage_place_list:
-                if row_data.get('storage_place') == storage_place.title:
+                if row_data.get('storage_place', '').strip() == storage_place.title:
                     row_data['storage_place'] = storage_place
 
             if self.cate == ASSERT_DEVICE_CATE_MEDICAL:
                 for medical_device_code in self.medical_device_cate_list:
-                    if row_data.get('code') == medical_device_code.code:
+                    if row_data.get('code', '').strip() == medical_device_code.code:
                         row_data['medical_device_cate'] = medical_device_code
                 del row_data['code']
             row_data['creator'] = self.creator

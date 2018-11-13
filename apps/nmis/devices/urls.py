@@ -33,7 +33,7 @@ urlpatterns = [
     path('<int:device_id>/scrap', views.AssertDeviceScrapView.as_view(), ),
 
     # 批量导入资产设备
-    path('assert_devices/batch-upload', views.AssertDeviceBatchUploadViewTest.as_view(), ),
+    path('assert_devices/batch-upload', views.AssertDeviceBatchUploadView.as_view(), ),
     # 资产设备调配操作（单个调配、多个调配）
     path('allocate', views.AssertDeviceAllocateView.as_view(), ),
 
