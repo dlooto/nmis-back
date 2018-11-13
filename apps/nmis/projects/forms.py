@@ -730,9 +730,12 @@ class PurchaseContractCreateForm(BaseForm):
             'seller_tel_err': '乙方电话错误',
             'device_num_err': '设备数量错误',
             'device_name_err': '设备名称错误',
-            'device_producer_err': '设备生产商错误',
-            'device_amount_err': '设备总价错误',
+            'device_producer_err': '{}: 厂商为空',
+            'device_amount_err': '{}: 总价为空',
+            'device_amount_type_err': '{}: 总价类型错误',
             'device_supplier_err': '供应商错误',
+            'device_planned_price_null_err': '{}: 单价为空',
+            'device_planned_price_err': '{}: 单价不能为0'
         })
 
     def is_valid(self):
@@ -760,17 +763,33 @@ class PurchaseContractCreateForm(BaseForm):
             if not device.get('supplier', '').strip():
                 self.update_errors('device_supplier', 'device_supplier_err')
                 return False
+
+            if not device.get('planned_price'):
+                if device.get('planned_price') == 0:
+                    self.update_errors(
+                        'device_planned_price', 'device_planned_price_err',
+                        device.get('name', '').strip())
+                else:
+                    self.update_errors(
+                        'device_planned_price', 'device_planned_price_null_err',
+                        device.get('name', '').strip())
+                return False
+
             if not device.get('real_total_amount'):
-                self.update_errors('device_amount', 'device_amount_err')
+                self.update_errors(
+                    'device_amount', 'device_amount_err',
+                    device.get('name', '').strip())
                 return False
             else:
                 if not isinstance(device.get('real_total_amount'), float)\
                         and not isinstance(device.get('real_total_amount'), int):
-                    self.update_errors('device_amount', 'device_amount_err')
+                    self.update_errors('device_amount', 'device_amount_type_err',
+                                       device.get('', '').strip())
                     return False
-            if not device.get('producer') or (device.get('producer') and not device.get('producer', '').strip()):
-            # if not device.get('producer', '').strip():
-                self.update_errors('device_producer', 'device_producer_err')
+            if not device.get('producer') or not device.get('producer', '').strip():
+                self.update_errors(
+                    'device_producer', 'device_producer_err',
+                    device.get('name', '').strip())
                 return False
         return True
 

@@ -498,10 +498,7 @@ class ProjectPlanAssistedListView(BaseAPIView):
         # 调用serializer预加载
         result_projects = ChunkProjectPlanSerializer.setup_eager_loading(query_set)
 
-        response = self.get_pages(
-            result_projects, srl_cls_name='ChunkProjectPlanSerializer',
-            results_name='projects'
-        )
+        response = self.get_pages(result_projects, results_name='projects')
         # response更新各项目状态条数
         response.data.update(get_project_status_count(**dict(status_count)))
         return response
@@ -540,7 +537,7 @@ class ProjectPlanPerformedListView(BaseAPIView):
         result_projects = ChunkProjectPlanSerializer.setup_eager_loading(performed_projects)
 
         response = self.get_pages(
-            result_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects'
+            result_projects, results_name='projects'
         )
 
         response.data.update(get_project_status_count(**dict(status_count)))
@@ -948,10 +945,7 @@ class ProjectPlanDispatchedListView(BaseAPIView):
 
         result_projects = ChunkProjectPlanSerializer.setup_eager_loading(dispatched_projects)
 
-        return self.get_pages(
-            result_projects, srl_cls_name='ChunkProjectPlanSerializer',
-            results_name='projects'
-        )
+        return self.get_pages(result_projects, results_name='projects')
 
 
 class ProjectPlanUndispatchedListView(BaseAPIView):
@@ -980,7 +974,7 @@ class ProjectPlanUndispatchedListView(BaseAPIView):
         )
         result_projects = ChunkProjectPlanSerializer.setup_eager_loading(undispatched_projects)
 
-        return self.get_pages(result_projects, srl_cls_name='ChunkProjectPlanSerializer', results_name='projects')
+        return self.get_pages(result_projects, results_name='projects')
 
 
 class MilestoneCreateView(BaseAPIView):

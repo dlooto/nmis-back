@@ -213,7 +213,6 @@ class AssertDeviceScrapView(BaseAPIView):
 
 
 class AssertDeviceBatchUploadView(BaseAPIView):
-
     permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
 
     @check_params_not_null(['cate'])
@@ -229,10 +228,12 @@ class AssertDeviceBatchUploadView(BaseAPIView):
             return resp.failed('资产医疗设备分类异常')
         if not file_obj:
             return resp.failed('请选择上传的Excel表格')
+
         if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
             return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
         elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
             return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
+
         success, result = ExcelBasedOXL.open_excel(file_obj)
         if not success:
             return resp.failed(result)
@@ -240,13 +241,38 @@ class AssertDeviceBatchUploadView(BaseAPIView):
             head_dict = UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT
         else:
             head_dict = UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT
-        is_success, ret = ExcelBasedOXL.read_excel(result, head_dict)
+        success, result = ExcelBasedOXL.read_excel(result, head_dict)
+        if not success:
+            return resp.failed(msg=result)
 
-        if not is_success:
-            return resp.failed(ret)
-        form = AssertDeviceBatchUploadForm(ret, creator=req.user.get_profile(), cate=cate)
+        # sheet = result.worksheets[0]
+        # max_row = sheet.max_row
+        # # 校验表头信息是否一致
+        # dict_keys = []
+        # for cell in list(sheet.rows)[0]:
+        #     for key, value in head_dict.items():
+        #         if cell.value == value:
+        #             dict_keys.append(key)
+        #             break
+        # if not len(dict_keys) == len(head_dict):
+        #     return resp.failed('表头数据和指定的标准不一致')
+        # import datetime
+        # # 封装assert_device数据
+        # assert_devices = []
+        # for i in range(1, max_row):
+        #     row_list = []
+        #     for cell in list(sheet.rows)[i]:
+        #         if isinstance(cell.value, datetime.datetime):
+        #             value = cell.value.strftime('%Y-%m-%d')
+        #         else:
+        #             value = cell.value
+        #         row_list.append(value)
+        #     assert_device = dict(zip(dict_keys, row_list))
+        #     assert_devices.append(assert_device)
+
+        form = AssertDeviceBatchUploadForm(result[0], creator=req.user.get_profile(),
+                                           cate=cate)
         if not form.is_valid():
-            logger.info(form.errors)
             return resp.failed(form.errors)
         if not form.save():
             return resp.failed('导入失败')
@@ -691,7 +717,7 @@ class FaultSolutionListView(BaseAPIView):
             logger.exception(ve)
             resp.form_err({'fault_type_id': '请求参数异常'})
 
-        queryset = FaultSolution.objects.all().order_by('id')
+        queryset = FaultSolution.objects.all().order_by('-created_time')
         if fault_type_id:
             fault_type = self.get_object_or_404(fault_type_id, FaultType)
             queryset = queryset.filter(fault_type=fault_type)
@@ -864,65 +890,3 @@ class OperationMaintenanceReportView(BaseAPIView):
         }
         return resp.ok('ok', data)
 
-
-class AssertDeviceBatchUploadViewTest(BaseAPIView):
-
-    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
-
-    @check_params_not_null(['cate'])
-    def post(self, req):
-        """
-        资产设备的批量导入
-        """
-
-        self.check_object_any_permissions(req, req.user.get_profile().organ)
-        file_obj = req.FILES.get('file')
-        cate = req.data.get('cate')
-        if cate not in dict(ASSERT_DEVICE_CATE_CHOICES):
-            return resp.failed('资产医疗设备分类异常')
-        if not file_obj:
-            return resp.failed('请选择上传的Excel表格')
-
-        if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
-            return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
-        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
-            return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
-
-        success, result = ExcelBasedOXL.open_excel(file_obj)
-        if not success:
-            return resp.failed(result)
-        if req.data.get('cate') == ASSERT_DEVICE_CATE_MEDICAL:
-            head_dict = UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT
-        else:
-            head_dict = UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT
-
-        sheet = result.worksheets[0]
-        max_row = sheet.max_row
-        # 校验表头信息是否一致
-        dict_keys = []
-        for cell in list(sheet.rows)[0]:
-            for key, value in head_dict.items():
-                if cell.value == value:
-                    dict_keys.append(key)
-        if not len(dict_keys) == len(head_dict):
-            return resp.failed('表头数据和指定的标准不一致')
-        import datetime
-        # 封装assert_device数据
-        assert_devices = []
-        for i in range(1, max_row):
-            row_list = []
-            for cell in list(sheet.rows)[i]:
-                if isinstance(cell.value, datetime.datetime):
-                    value = cell.value.strftime('%Y-%m-%d')
-                else:
-                    value = cell.value
-                row_list.append(value)
-            assert_device = dict(zip(dict_keys, row_list))
-            assert_devices.append(assert_device)
-
-        form = AssertDeviceBatchUploadForm(assert_devices, creator=req.user.get_profile(), cate=cate)
-        if not form.is_valid():
-            return resp.failed(form.errors)
-        if not form.save():
-            return resp.failed('导入失败')
-        return resp.ok('导入成功')
