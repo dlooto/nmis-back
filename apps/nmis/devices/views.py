@@ -779,8 +779,10 @@ class FaultSolutionsImportView(BaseAPIView):
         logger.info(file_obj.content_type)
         if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
             return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
-        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps'], ARCHIVE['.rar']):
             return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
+
+
 
         # 将文件存放到服务器
         # import os
