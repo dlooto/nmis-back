@@ -316,11 +316,11 @@ class ExcelBasedOXL(object):
             row_data = {}
             for col in range(1, ws_column_len+1):
                 key = header_keys[col-1]
-                if ws.cell(row=row, column=col).is_date:
-                    value = ws.cell(row=row, column=col).value.strftime('%Y-%m-%d')
+                cell = ws.cell(row=row, column=col)
+                if cell.value and cell.is_date:
+                    value = cell.value.strftime('%Y-%m-%d')
                 else:
-                    value = ws.cell(row=row, column=col).value
-
+                    value = cell.value
                 row_data[key] = value if value else ''
             sheet_data.append(row_data)
 

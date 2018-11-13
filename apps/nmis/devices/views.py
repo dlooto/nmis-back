@@ -775,10 +775,14 @@ class FaultSolutionsImportView(BaseAPIView):
         file_obj = req.FILES.get('file')
         if not file_obj:
             return resp.failed('请选择要上传的文件')
+        logger.info('1------------------>2------------------->3')
+        logger.info(file_obj.content_type)
         if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
             return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
-        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps'], ARCHIVE['.rar']):
             return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
+
+
 
         # 将文件存放到服务器
         # import os
@@ -863,7 +867,7 @@ class OperationMaintenanceReportView(BaseAPIView):
         # 已处理维修总数、维修申请总数、维修完成率
         rp_order_nums_status_queryset = self.queryset.filter(
             created_time__range=(start_date, expired_date)
-        ).values('status').annotate(nums=Count('id', distinct=True))
+        ).values('status').annotate(nums=Count('id', distinct=True)).order_by('status')
 
         # 按故障类型统计报修单数量
         rp_order_nums_fault_type_queryset = self.queryset.filter(

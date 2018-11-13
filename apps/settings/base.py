@@ -78,7 +78,6 @@ STATIC_URL = '/static/'
 
 # 用户头像设置
 USER_DEFAULT_AVATAR = 'user_avatar_default1.jpg'
-
 # 用户头像存放目录
 USER_AVATAR_DIR = {
     'original': 'img/avatar/originals',
@@ -102,6 +101,9 @@ STATICFILES_FINDERS = (
 
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = '$^0#lv$kycl5!d-hq0yp*wsx90oytx'
+
+
+USER_DEFAULT_PWD = 'nmis_123456'
 
 
 MIDDLEWARE = [

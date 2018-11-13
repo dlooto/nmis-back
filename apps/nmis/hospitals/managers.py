@@ -11,6 +11,7 @@ from django.db.models import Q
 
 from nmis.hospitals.consts import ROLE_CODE_HOSP_SUPER_ADMIN, ROLES, ROLE_CODE_CHOICES, \
     ROLE_CODE_NORMAL_STAFF
+from settings import USER_DEFAULT_PWD
 from users.models import User
 
 from base.models import BaseManager
@@ -42,7 +43,7 @@ class StaffManager(BaseManager):
         try:
             with transaction.atomic():
                 user = User.objects.create_param_user(
-                    ('username', user_data.get('username')), user_data.get('password'), is_active=True,
+                    ('username', user_data.get('username')), password=USER_DEFAULT_PWD, is_active=True,
                 )
                 from nmis.hospitals.models import Role
                 role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_NORMAL_STAFF)
@@ -61,11 +62,11 @@ class StaffManager(BaseManager):
                 user_list = []
                 for data in staffs_data:
                     user = User(
-                        username=data.get('username'), password='111111',
+                        username=data.get('username'),
                         is_active=True, is_staff=False, is_superuser=False,
                         last_login=times.now(), date_joined=times.now()
                     )
-                    user.set_password('111111')
+                    user.set_password(USER_DEFAULT_PWD)
                     user_list.append(user)
                 none_id_users = User.objects.bulk_create(user_list)
 
