@@ -14,7 +14,8 @@ from rest_framework import serializers
 
 from base import resp
 from base.serializers import BaseModelSerializer
-from nmis.projects.consts import PRO_DOC_CATE_OTHERS, PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN
+from nmis.projects.consts import PRO_DOC_CATE_OTHERS, \
+    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_STATUS_DONE
 from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
     ProjectMilestoneState, ProjectOperationRecord, ProjectDocument, SupplierSelectionPlan, \
     PurchaseContract, Receipt
@@ -332,6 +333,8 @@ class ProjectPlanSerializer(BaseModelSerializer):
 
     def _get_current_stone_title(self, obj):
         if obj.current_stone and obj.current_stone.milestone:
+            if obj.status == PRO_STATUS_DONE:
+                return '已完成'
             return obj.current_stone.milestone.title
         return ''
 

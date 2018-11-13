@@ -735,12 +735,13 @@ class ProjectSoftwareDeviceCreateView(BaseAPIView):
 
 class ProjectDeviceView(BaseAPIView):
 
-    permission_classes = (IsHospSuperAdmin, HospitalStaffPermission)
+    permission_classes = (IsHospSuperAdmin, ProjectCreatorPermission)
 
     def put(self, req, project_id, device_id):
         """ 修改设备信息 """
 
         project = self.get_object_or_404(project_id, ProjectPlan)
+        self.check_object_any_permissions(req, project)
         if not project.is_unstarted():
             return resp.failed('项目已启动或已完成, 无法修改')
 
@@ -761,8 +762,7 @@ class ProjectDeviceView(BaseAPIView):
         :return:
         """
         project = self.get_object_or_404(project_id, ProjectPlan)
-        if not (req.user.get_profile() == project.creator):  # 若不是项目的提交者, 则检查是否为项目管理员
-            self.check_object_any_permissions(req, project.creator.organ)
+        self.check_object_any_permissions(req, project)
 
         if not project.is_unstarted():
             return resp.failed('项目已启动或已完成, 无法修改')
@@ -1853,16 +1853,16 @@ class DeleteFileView(BaseAPIView):
         单个文件的删除（删除project_document的记录，更新project_milestone_states中doc_list记录，从服务器中删除文件）
         :return:
         """
-        self.check_objects_any_permissions(req, None)
         project_document = self.get_object_or_404(doc_id, ProjectDocument)
 
         # 获取项目里程碑state
         project_milestone_state = ProjectMilestoneState.objects.get_pro_milestone_states_by_id(
             req.data.get('project_milestone_state_id')
         )
-
         project = project_milestone_state.project
+
         self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
+
         if project_milestone_state:
             if not project_milestone_state.doc_list:
                 return resp.failed('该项目里程碑中不存在此文件')

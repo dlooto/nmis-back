@@ -768,8 +768,8 @@ class PurchaseContractCreateForm(BaseForm):
                         and not isinstance(device.get('real_total_amount'), int):
                     self.update_errors('device_amount', 'device_amount_err')
                     return False
-
-            if not device.get('producer', '').strip():
+            if not device.get('producer') or (device.get('producer') and not device.get('producer', '').strip()):
+            # if not device.get('producer', '').strip():
                 self.update_errors('device_producer', 'device_producer_err')
                 return False
         return True
