@@ -17,10 +17,9 @@ from nmis.projects.consts import DOCUMENT_DIR
 from utils import eggs
 from base.forms import BaseForm
 from users.models import User
-from utils.eggs import gen_uuid1
 from utils.files import upload_file
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 PASSWORD_COMPILE = re.compile(r'^(?=.*[a-zA-Z])(?=.*[0-9])')
 PASSWORD_ERROR_MSG = u"密码格式不正确"
@@ -171,7 +170,7 @@ class UserLoginForm(BaseForm):
             self.update_errors(authkey, 'user_not_found')
             return False
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             self.update_errors(authkey, 'user_not_found')
             return False
 
@@ -179,7 +178,7 @@ class UserLoginForm(BaseForm):
             self.user_cache = authenticate(**{'authkey': authkey, authkey: auth_value,
                                               u'password': password, })  # 传入authkey以标识验证登录类型
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             self.update_errors('password', 'user_or_passwd_err')
             return False
 

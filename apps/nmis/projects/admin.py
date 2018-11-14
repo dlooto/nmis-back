@@ -8,7 +8,6 @@
 """
 
 import logging
-import settings
 
 from django.contrib import admin
 from nmis.projects.models import ProjectFlow, ProjectMilestoneState, ProjectDocument, \
@@ -16,7 +15,7 @@ from nmis.projects.models import ProjectFlow, ProjectMilestoneState, ProjectDocu
 
 from .models import ProjectPlan, Milestone
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ProjectPlanAdmin(admin.ModelAdmin):

@@ -15,13 +15,13 @@ from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectDocument, \
     PurchaseContract, ProjectMilestoneState, SupplierSelectionPlan, Supplier, Receipt
 from nmis.projects.consts import PROJECT_STATUS_CHOICES, PROJECT_HANDING_TYPE_CHOICES, \
     PRO_HANDING_TYPE_SELF, PRO_HANDING_TYPE_AGENT, PRO_CATE_HARDWARE, PRO_CATE_SOFTWARE, \
-    PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR, PROJECT_PURCHASE_METHOD_CHOICES, PRO_DOC_CATE_OTHERS, \
-    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN, PRO_DOC_CATE_PLAN_ARGUMENT
+    PROJECT_DOCUMENT_CATE_CHOICES, PROJECT_DOCUMENT_DIR, PRO_DOC_CATE_OTHERS, \
+    PRO_DOC_CATE_SUPPLIER_SELECTION_PLAN
 from nmis.hospitals.models import Staff
 from utils import eggs, times
 from utils.files import upload_file, single_upload_file
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ProjectPlanCreateForm(BaseForm):
@@ -909,7 +909,7 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
             try:
                 int(plan.get('id'))
             except ValueError as e:
-                logs.exception(e)
+                logger.exception(e)
                 self.update_errors('id', 'id_err')
                 return False
             if not SupplierSelectionPlan.objects.filter(id=int(plan.get('id'))).first():
@@ -935,7 +935,7 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
             try:
                 float(total_amount)
             except ValueError as e:
-                logs.exception(e)
+                logger.exception(e)
                 self.update_errors('total_amount', 'total_amount_err')
                 return False
         return True
@@ -1014,7 +1014,7 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
                     document_dict['updated'].append(updated_doc)
             return document_dict
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             raise e
 
     def save(self):
@@ -1050,7 +1050,7 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
 
             return self.project_milestone_state
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             raise e
 
 

@@ -13,7 +13,7 @@ from django.urls import path
 
 from . import views
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 app_name = 'nmis.projects'
 # /api/v1/projects/
 urlpatterns = [

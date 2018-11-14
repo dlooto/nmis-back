@@ -14,7 +14,7 @@ from django.contrib import admin
 from nmis.hospitals.models import Role, UserRoleShip, HospitalAddress, Sequence
 from .models import Hospital, Staff, Department, Group
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class HospitalAdmin(admin.ModelAdmin):

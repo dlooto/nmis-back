@@ -426,7 +426,7 @@ class ProjectDocumentManager(BaseManager):
 
 class ProjectMilestoneStateManager(BaseManager):
 
-    def get_project_milestone_state_by_project_milestone(self, project, milestone):
+    def get_pro_milestone_state_by_project_milestone(self, project, milestone):
         """
         根据项目和里程碑获取项目里程碑
         """
@@ -466,7 +466,6 @@ class ProjectMilestoneStateManager(BaseManager):
         :param project_milestone_state: 更新的项目里程碑
         """
         try:
-            logger.info(data)
             project_milestone_state.update(data)
             project_milestone_state.cache()
             return project_milestone_state

@@ -9,7 +9,6 @@ import logging
 
 from collections import OrderedDict
 
-from djcelery.views import JsonResponse
 from rest_framework import serializers
 
 from base import resp
@@ -20,7 +19,7 @@ from nmis.projects.models import ProjectPlan, ProjectFlow, Milestone, \
     ProjectMilestoneState, ProjectOperationRecord, ProjectDocument, SupplierSelectionPlan, \
     PurchaseContract, Receipt
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class MilestoneSerializer(BaseModelSerializer):
@@ -109,7 +108,8 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
         model = ProjectMilestoneState
         fields = (
             'id', 'milestone_title', 'milestone_index',
-            'has_children', 'children', 'status', 'created_time',
+            'has_children', 'children',
+            'status', 'created_time',
             'finished_time', 'is_saved', 'modified_time'
         )
 
@@ -148,7 +148,9 @@ class ProjectMilestoneStateSerializer(BaseModelSerializer):
         :param obj:
         :return:
         """
-        return True if obj.modified_time else False
+        if not hasattr(obj, 'modified_time'):
+            return False
+        return True if obj and obj.modified_time else False
 
 
 class ChunkProjectMilestoneStateSerializer(ProjectMilestoneStateSerializer):
@@ -359,7 +361,6 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
     hardware_devices = serializers.SerializerMethodField('_get_hardware_devices')
     software_devices = serializers.SerializerMethodField('_get_software_devices')
 
-    # project_milestones = serializers.SerializerMethodField('_get_milestone_states')
     # main_project_milestones = serializers.SerializerMethodField('_get_pro_main_milestone_states')
     project_milestone_states = serializers.SerializerMethodField('_get_pro_milestone_states_structured')
     current_stone_title = serializers.SerializerMethodField("_get_current_stone_title")
@@ -383,7 +384,8 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
             'creator_id', 'creator_name','related_dept_id', 'related_dept_name',
             'performer_id', 'performer_name', 'assistant_id', 'assistant_name',
             'project_introduce', 'pre_amount', 'purchase_method', 'current_stone_id', 'current_stone_title',
-            'attached_flow_id', 'project_milestone_states', 'hardware_devices', 'software_devices',
+            'attached_flow_id', 'project_milestone_states',
+            'hardware_devices', 'software_devices',
             'startup_time', 'expired_time', 'created_time', 'operation_record',
         )
 
@@ -424,23 +426,18 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         # return resp.serialize_data(obj.get_software_devices())
         return resp.serialize_data(obj.software_devices.all())
 
-    def _get_pro_main_milestone_states(self, obj):
 
-        states = obj.pro_milestone_states_related.all()
-        main_milestone_states = []
-        for state in states:
-            if state.milestone.parent is None:
-                main_milestone_states.append(state)
-        return resp.serialize_data(main_milestone_states) if states else []
+    # def _get_pro_main_milestone_states(self, obj):
+    #
+    #     states = obj.get_main_milestone_states()
+    #     return resp.serialize_data(states) if states else []
+
 
     def _get_pro_milestone_states_structured(self, obj):
         states = obj.get_project_milestone_states_structured()
-        return resp.serialize_data(states) if states else []
+        # return resp.serialize_data(states, srl_cls_name='ProjectMilestoneStateSerializer') if states else []
+        return states
 
-
-    def _get_milestone_states(self, obj):
-        pro_milestone_states = obj.pro_milestone_states_related.all()
-        return resp.serialize_data(pro_milestone_states) if pro_milestone_states else []
 
     def _get_projects_operation(self, obj):
 
@@ -449,8 +446,11 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
 
     def _get_current_stone_title(self, obj):
         if obj.current_stone and obj.current_stone.milestone:
+            if obj.status == PRO_STATUS_DONE:
+                return '已完成'
             return obj.current_stone.milestone.title
         return ''
+
 
 class ProjectDocumentSerializer(BaseModelSerializer):
 
@@ -486,7 +486,6 @@ class PurchaseContractSerializer(BaseModelSerializer):
         return queryset
 
     def _get_contract_devices(self, obj):
-        # return resp.serialize_data(obj.get_software_devices())
         return resp.serialize_data(obj.contract_devices.all())
 
 

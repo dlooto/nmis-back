@@ -8,14 +8,13 @@
 """
 
 import logging
-import urllib
 
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.permissions import BasePermission
 
 from base.common.permissions import is_login
 from nmis.projects.models import ProjectPlan
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ProjectPerformerPermission(BasePermission):

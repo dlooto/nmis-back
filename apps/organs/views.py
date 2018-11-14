@@ -21,11 +21,11 @@ from utils import eggs
 
 from .forms import OrganSignupForm
 # from .models import Organ, Staff, Permission, Group
-from .permissions import (
-    IsOrganAdmin, OrganStaffPermission, UnloginStaffPermission
-)
+# from .permissions import (
+#     IsOrganAdmin, OrganStaffPermission, UnloginStaffPermission
+# )
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class OrganSignupView(BaseAPIView):

@@ -9,7 +9,7 @@ import logging
 from django.core.cache import cache
 from base.models import BaseManager
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class PermissionManager(BaseManager):

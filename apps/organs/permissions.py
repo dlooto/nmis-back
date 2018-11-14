@@ -14,7 +14,7 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 from base.common.permissions import is_login
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class IsSuperAdmin(BasePermission):

@@ -18,7 +18,7 @@ from users.models import UserSecureRecord
 
 from .managers import OrganManager, PermissionManager, StaffManager
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class BaseOrgan(BaseModel):

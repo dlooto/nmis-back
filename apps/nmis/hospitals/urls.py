@@ -13,7 +13,7 @@ from django.urls import path
 
 from . import views
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 urlpatterns = [

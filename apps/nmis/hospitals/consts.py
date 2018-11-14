@@ -7,7 +7,7 @@
 
 import logging
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 # 医疗机构分类等级
