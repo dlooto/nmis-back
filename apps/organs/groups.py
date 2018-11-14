@@ -7,7 +7,7 @@
 
 import logging
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 # 预定义权限组常量

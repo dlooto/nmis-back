@@ -16,7 +16,7 @@ from users.forms import UserLoginForm
 from users.models import User
 
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 PASSWORD_COMPILE = re.compile(r'^\w{6,18}$')

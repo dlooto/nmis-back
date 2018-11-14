@@ -15,7 +15,7 @@ from base.serializers import BaseModelSerializer
 from nmis.hospitals.models import Department, Hospital, Staff, Group, Role, UserRoleShip, \
     HospitalAddress
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class HospitalSerializer(BaseModelSerializer):

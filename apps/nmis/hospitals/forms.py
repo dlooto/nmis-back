@@ -22,7 +22,7 @@ from nmis.hospitals.consts import DPT_ATTRI_CHOICES, GROUP_CATE_NORMAL_STAFF, \
 from users.models import User
 
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 PASSWORD_COMPILE = re.compile(r'^\w{6,18}$')
@@ -781,6 +781,6 @@ class RoleUpdateForm(BaseForm):
             new_role.cache()
             return new_role
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return None
 

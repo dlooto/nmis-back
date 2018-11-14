@@ -780,7 +780,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         first_main_milestone = default_flow.get_first_main_milestone()
 
         # 获取第一个project_milestone_state
-        first_pro_mil_state = ProjectMilestoneState.objects.get_project_milestone_state_by_project_milestone(
+        first_pro_mil_state = ProjectMilestoneState.objects.get_pro_milestone_state_by_project_milestone(
             project=project, milestone=first_main_milestone)
 
         # 上传文件
@@ -821,7 +821,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             delete_file_api.format(doc_id), data={'project_milestone_state_id': first_pro_mil_state.id})
         self.assert_response_success(delete_file_response)
         self.assertEquals(10000, delete_file_response.get('code'))
-        pro_mil_state = ProjectMilestoneState.objects.get_project_milestone_state_by_project_milestone(
+        pro_mil_state = ProjectMilestoneState.objects.get_pro_milestone_state_by_project_milestone(
             project=project, milestone=first_main_milestone)
         # 断言删除附件后，当前ProjectDocument是否在ProjectMilestoneState中
         self.assertTrue(str(doc_list[0].id) not in pro_mil_state.doc_list)

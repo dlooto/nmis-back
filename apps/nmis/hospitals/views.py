@@ -10,10 +10,8 @@
 import logging
 
 from base.common.decorators import check_params_not_all_null, check_params_not_null
-from base.common.param_utils import get_id_list
 from django.conf import settings
 from django.db import transaction
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from nmis.devices.models import RepairOrder
 from nmis.devices.permissions import AssertDeviceAdminPermission
 from nmis.hospitals.serializers import StaffSerializer, RoleSerializer, \
@@ -28,7 +26,7 @@ from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
     DepartmentBatchUploadForm, RoleCreateForm, RoleUpdateForm
 from nmis.hospitals.permissions import IsHospSuperAdmin, HospitalStaffPermission, \
     ProjectDispatcherPermission, IsSuperAdmin, SystemManagePermission
-from nmis.hospitals.models import Hospital, Department, Staff, Group, Role, HospitalAddress
+from nmis.hospitals.models import Hospital, Department, Staff, Role, HospitalAddress
 from .forms import (
     HospitalSignupForm,
     DepartmentUpdateFrom,
@@ -39,7 +37,7 @@ from .forms import (
 from nmis.hospitals.consts import UPLOADED_STAFF_EXCEL_HEADER_DICT, \
     UPLOADED_DEPT_EXCEL_HEADER_DICT, ARCHIVE, ROLE_CODE_MAINTAINER
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class HospitalSignupView(BaseAPIView):
@@ -61,7 +59,7 @@ class HospitalSignupView(BaseAPIView):
         try:  # DB操作较多
             organ = form.save()
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return resp.failed(u'操作异常')
 
         if not self.LOGIN_AFTER_SIGNUP:  # 返回提示: 注册申请成功, 请等待审核...
@@ -344,7 +342,6 @@ class ChunkStaffListView(BaseAPIView):
         staff_list = organ.get_staffs()
         staff_list = StaffWithRoleSerializer.setup_eager_loading(staff_list)
         # 分页查询员工列表
-        logs.info(staff_list)
         return self.get_pages(staff_list, results_name='staffs', srl_cls_name='StaffWithRoleSerializer')
 
 
@@ -377,7 +374,7 @@ class StaffBatchUploadView(BaseAPIView):
 
         if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
             return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
-        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps'], ARCHIVE['.rar']):
             return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
 
         # 将文件存放到服务器
@@ -536,7 +533,7 @@ class DepartmentBatchUploadView(BaseAPIView):
 
         if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
             return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
-        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps'], ARCHIVE['.rar']):
             return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
 
         # 将文件存放到服务器

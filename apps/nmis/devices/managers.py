@@ -474,7 +474,6 @@ class FaultSolutionManager(BaseManager):
             **kwargs
         )
         try:
-            logger.info(data)
             fs = fault_solution.update(data)
             fs.cache()
             return fs

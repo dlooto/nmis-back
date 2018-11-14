@@ -20,7 +20,7 @@ from .managers import ProjectPlanManager, ProjectFlowManager, \
 from .consts import *
 
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ProjectPlan(BaseModel):
@@ -152,7 +152,7 @@ class ProjectPlan(BaseModel):
                 self.clear_cache()
                 return self
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return None
 
     def deleted(self):
@@ -164,7 +164,7 @@ class ProjectPlan(BaseModel):
             self.delete()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False
 
     def create_device(self, **device_data):
@@ -182,7 +182,7 @@ class ProjectPlan(BaseModel):
                 self.cache()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False
 
     def determining_purchase_method(self, purchase_method):
@@ -195,7 +195,7 @@ class ProjectPlan(BaseModel):
             self.cache()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False
 
     def cancel_pause(self):
@@ -208,7 +208,7 @@ class ProjectPlan(BaseModel):
             self.cache()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False
 
     def dispatch(self, performer, assistant=None):
@@ -233,14 +233,15 @@ class ProjectPlan(BaseModel):
                 # self.add_milestone_state(self.current_stone)
                 self.bulk_add_milestone_states()
                 milestone = self.attached_flow.get_first_main_milestone()
-                project_milestone_state = ProjectMilestoneState.objects.get_project_milestone_state_by_project_milestone(project=self, milestone=milestone)
+                project_milestone_state = ProjectMilestoneState.objects.get_pro_milestone_state_by_project_milestone(
+                    project=self, milestone=milestone)
 
                 self.startup_project_milestone_state(project_milestone_state)
                 self.save()
                 self.cache()
             return True, project_milestone_state
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False, "分配失败"
 
     def dispatched_assistant(self, assistant):
@@ -254,7 +255,7 @@ class ProjectPlan(BaseModel):
             self.cache()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False
 
     def redispatch(self, performer, assistant=None):
@@ -272,7 +273,7 @@ class ProjectPlan(BaseModel):
                 self.cache()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False
 
     def startup(self, flow, expired_time, **data):
@@ -292,15 +293,16 @@ class ProjectPlan(BaseModel):
                 self.startup_time = times.now()
                 self.status = PRO_STATUS_STARTED
                 milestone = self.attached_flow.get_first_main_milestone()
-                project_milestone_state = ProjectMilestoneState.objects.\
-                    get_project_milestone_state_by_project_milestone(project=self, milestone=milestone)
+                project_milestone_state = ProjectMilestoneState.objects. \
+                    get_pro_milestone_state_by_project_milestone(project=self,
+                                                                 milestone=milestone)
                 self.current_stone = project_milestone_state
                 self.add_milestone_state(self.current_stone)
                 self.save()
                 self.cache()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False
 
     def add_milestone_state(self, milestone):
@@ -319,7 +321,7 @@ class ProjectPlan(BaseModel):
             return True, [pro_milestone_state, child_milestone_state]
 
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False, "添加失败"
 
     def bulk_add_milestone_states(self):
@@ -347,7 +349,7 @@ class ProjectPlan(BaseModel):
     #         return True, [record, child_record]
     #
     #     except Exception as e:
-    #         logs.exception(e)
+    #         logger.exception(e)
     #         return False, "添加失败"
 
     def add_or_update_milestone_state(self, milestone):
@@ -368,7 +370,7 @@ class ProjectPlan(BaseModel):
             return True, [pro_milestone_state, child_pro_milestone_state]
 
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False, "添加失败"
 
     def get_main_milestone_states(self):
@@ -379,7 +381,7 @@ class ProjectPlan(BaseModel):
         if not self.attached_flow:
             return []
         milestones = self.attached_flow.get_main_milestones()
-        pro_milestone_states = ProjectMilestoneState.objects.filter(project=self, milestone__in=milestones)
+        pro_milestone_states = ProjectMilestoneState.objects.filter(project=self, milestone__in=milestones).all()
         return pro_milestone_states
 
     def get_project_milestone_states_structured(self):
@@ -389,13 +391,68 @@ class ProjectPlan(BaseModel):
         """
         if not self.attached_flow:
             return []
-        milestones = self.attached_flow.get_main_milestones()
-        pro_milestone_states = ProjectMilestoneState.objects.filter(project=self, milestone__in=milestones)
 
-        main_milestone_states = self.get_main_milestone_states()
+        # main_milestone_states = self.get_main_milestone_states()
+        # for main_stone_state in main_milestone_states:
+        #      main_stone_state.gen_milestone_state_tree()
+        # return main_milestone_states
+        flow_milestones = Milestone.objects.filter(flow=self.attached_flow).values()
+        pro_milestone_states = ProjectMilestoneState.objects.filter(project=self).values()
+
+        main_milestone_states = []
+        parent_milestone_states = []
+        all_milestone_states = []
+        for stone_state in pro_milestone_states:
+            for stone in flow_milestones:
+                if stone_state.get('milestone_id') == stone.get('id'):
+                    stone_state['milestone_title'] = stone.get('title')
+                    stone_state['milestone_index'] = stone.get('index')
+                    stone_state['milestone_parent_id'] = stone.get('parent_id')
+                    stone_state['is_saved'] = False
+                    del stone_state['doc_list']
+                    del stone_state['summary']
+                    if stone_state.get('modified_time'):
+                        stone_state['is_saved'] = True
+                    all_milestone_states.append(stone_state)
+
+                    if not stone.get('parent_id'):
+                        main_milestone_states.append(stone_state)
+                if stone_state.get('milestone_id') == stone.get('parent_id') and stone_state not in parent_milestone_states:
+                        parent_milestone_states.append(stone_state)
+
+        for item in all_milestone_states:
+            if item in parent_milestone_states:
+                item['has_children'] = True
+            else:
+                item['has_children'] = False
+
+        if not main_milestone_states:
+            return []
         for main_stone_state in main_milestone_states:
-            main_stone_state.structure_descendants()
+            self.gen_milestone_state_structured(main_stone_state, all_milestone_states)
         return main_milestone_states
+
+    def gen_milestone_state_structured(self, parent_state, pro_milestone_states):
+
+        if not parent_state.get('has_children'):
+            parent_state['children'] = []
+        else:
+            children = []
+            for item in pro_milestone_states:
+                if item.get('milestone_parent_id') == parent_state.get('milestone_id'):
+                    children.append(item)
+                parent_state['children'] = children
+            for child in children:
+                self.gen_milestone_state_structured(child, pro_milestone_states)
+
+
+
+
+
+
+
+
+
 
     def get_project_milestone_states(self):
         """
@@ -501,7 +558,7 @@ class ProjectPlan(BaseModel):
                     self.startup_project_milestone_state(next_stone_state)
                 return True, "操作成功"
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False, "操作失败，数据异常"
 
     def startup_project_milestone_state(self, milestone_state):
@@ -559,7 +616,7 @@ class ProjectFlow(BaseModel):
 
     def get_main_milestones(self):
         """ 流程内含的祖里程碑列表 """
-        return self.milestones.filter(parent=None).order_by('index')
+        return self.get_milestones().filter(parent=None).order_by('index')
 
     def get_first_main_milestone(self):
         """ 返回流程中的第1个主里程碑项 """
@@ -664,6 +721,16 @@ class Milestone(BaseModel):
     def __str__(self):
         return '%s %s' % (self.id, self.title)
 
+    @property
+    def flow_milestones(self):
+        """获取当前里程碑项所在流程中的所有里程碑项"""
+        return self.flow.get_milestones()
+
+    @property
+    def flow_main_milestones(self):
+        """获取当前里程碑项所在流程中的所有主里程碑项"""
+        return self.flow.get_milestones().filter(parent=None)
+
     def next(self, ):
         """
         返回当前里程碑项在流程中的下一个里程碑项
@@ -672,7 +739,7 @@ class Milestone(BaseModel):
 
         if not self.parent:
             if not self.has_children():
-                it = iter(self.flow.get_main_milestones().order_by('index'))  # 迭代器
+                it = iter(self.flow_main_milestones.order_by('index'))  # 迭代器
                 while True:
                     try:
                         m = next(it)
@@ -685,7 +752,7 @@ class Milestone(BaseModel):
 
         if self.is_last_child():
             parent = self.parent
-            it = iter(parent.flow.get_main_milestones().order_by('index'))
+            it = iter(parent.flow_main_milestones.order_by('index'))
             while True:
                 try:
                     m = next(it)
@@ -714,7 +781,7 @@ class Milestone(BaseModel):
 
         if not self.parent:
             if not self.has_children():
-                it = iter(self.flow.get_main_milestones().order_by('-index'))  # 迭代器
+                it = iter(self.flow_main_milestones.order_by('-index'))  # 迭代器
                 while True:
                     try:
                         m = next(it)
@@ -728,7 +795,7 @@ class Milestone(BaseModel):
         if self.is_first_child():
 
             parent = self.parent
-            it = iter(parent.flow.get_main_milestones().order_by('-index'))
+            it = iter(parent.flow_main_milestones.order_by('-index'))
             while True:
                 try:
                     m = next(it)
@@ -752,23 +819,25 @@ class Milestone(BaseModel):
         返回当前里程碑项在流程中的所有直接子里程碑项
         :return: milestone list
         """
-        milestones = self.flow.get_milestones().filter(parent=self).order_by('index')
+        # milestones = self.flow.get_milestones().filter(parent=self).order_by('index')
+        milestones = self.flow_milestones.filter(parent=self).order_by('index')
         if milestones is None:
             return []
         return milestones
 
     def first_child(self):
         """返回当前里程碑项中index值最大的子里程碑项"""
-        milestones = self.flow.get_milestones().filter(parent=self).order_by('index')
-        if milestones is None:
-            return []
-        return milestones.first()
+        return self.children().first() if self.children() else None
 
     def last_child(self):
         """返回当前里程碑项中index值最大的子里程碑项"""
-        milestones = self.flow.get_milestones().filter(parent=self).order_by('-index')
+        # milestones = self.flow_milestones.filter(parent=self).order_by('-index')
+        # if milestones is None:
+        #     return []
+        # return milestones.first()
+        milestones = self.children().order_by('-index')
         if milestones is None:
-            return []
+            return None
         return milestones.first()
 
     def descendants(self):
@@ -776,7 +845,7 @@ class Milestone(BaseModel):
         返回当前里程碑项在流程中的所有子孙里程碑项
         :return: milestones list
         """
-        milestones = self.flow.get_milestones()
+        milestones = self.flow_milestones
         descendants = []
         for milestone in milestones:
             if self.id in milestone.parent_path.split('-'):
@@ -792,7 +861,7 @@ class Milestone(BaseModel):
             return []
 
         ancestors_ids = self.parent_path.split('-')
-        milestones = self.flow.get_milestones()
+        milestones = self.flow_milestones()
         ancestors = []
         for milestone in milestones:
             if str(milestone.id) in ancestors_ids:
@@ -807,7 +876,7 @@ class Milestone(BaseModel):
         if not self.parent_path:
             return None
         descendant_ids = self.parent_path.split('-')
-        milestones = self.flow.get_milestones()
+        milestones = self.flow_milestones()
         for milestone in milestones:
             if int(descendant_ids[0]) == milestone.id:
                 return milestone
@@ -868,7 +937,7 @@ class Milestone(BaseModel):
         当前里程碑项是否为流程中最后一个主里程碑项
         :return:
         """
-        last = self.flow.get_main_milestones().last()
+        last = self.flow_main_milestones.last()
         if not self == last:
             return False
         return True
@@ -924,19 +993,21 @@ class ProjectMilestoneState(BaseModel):
         if not self.has_children:
             return []
         children = self.milestone.children()
-        milestone_state_children = self.project.pro_milestone_states_related.filter(milestone__in=children)
+        # milestone_state_children = self.project.pro_milestone_states_related.filter(milestone__in=children)
+        milestone_state_children = ProjectMilestoneState.objects.filter(project=self.project, milestone__in=children)
         return milestone_state_children
 
-    def structure_descendants(self):
-        """结构化子孙里程碑"""
+    def gen_milestone_state_tree(self):
+        """生成树形结构的里程碑"""
         if not self.has_children:
             self.children = []
-            return self
-        milestone_state_children = self.children()
-        self.children = milestone_state_children
-        for child_stone_state in milestone_state_children:
-            state_children = child_stone_state.children()
-            child_stone_state.children = state_children
+        else:
+            milestone_state_children = self.children()
+            self.children = milestone_state_children
+            for child_stone_state in milestone_state_children:
+                child_stone_state.gen_milestone_state_tree()
+            # state_children = child_stone_state.children()
+            # child_stone_state.children = state_children
 
     def save_doc_list(self, doc_id_str):
         """
@@ -951,7 +1022,7 @@ class ProjectMilestoneState(BaseModel):
             self.cache()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
         return False
 
     def update_doc_list(self, doc_id_str):
@@ -965,7 +1036,7 @@ class ProjectMilestoneState(BaseModel):
             self.cache()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
         return False
 
     def update_summary(self, summary):
@@ -978,7 +1049,7 @@ class ProjectMilestoneState(BaseModel):
             self.cache()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
         return False
 
     def get_project_purchase_method(self):
@@ -1108,7 +1179,7 @@ class ProjectDocument(BaseModel):
             self.delete()
             return True
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
         return False
 
 

@@ -546,11 +546,9 @@ class MaintenancePlanCreateForm(BaseForm):
         start_date = self.data.get('start_date', '').strip()
         expired_date = self.data.get('expired_date', '').strip()
         if not eggs.check_day(start_date):
-            logger.info(get_day_begin_time(now()))
             self.update_errors('date_err', 'start_date_format_err', start_date)
             return False
         if not eggs.check_day(expired_date):
-            logger.info(expired_date)
             self.update_errors('date_err', 'expired_date_format_err', expired_date)
             return False
         if start_date < now().strftime('%Y-%m-%d'):
@@ -566,7 +564,6 @@ class MaintenancePlanCreateForm(BaseForm):
         return True
 
     def save(self):
-        logger.info(self.data.get('start_date', '').strip())
         maintenance_plan_data = {
             'title': self.data.get('title', '').strip(),
             'type': self.data.get('type', '').strip(),

@@ -621,44 +621,6 @@ class ProjectPlanChangeMilestoneStateView(BaseAPIView):
     """
     permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission,)
 
-    def check_milestone_state_data(self, project, milestone_state):
-        """
-        变更项目里程碑时，未做保存操作，校验必要数据
-        :param project: ProjectPlan对象
-        :param milestone_state: ProjectMilestoneState对象
-        :return: 返回响应数据
-        """
-        if not milestone_state.project == project:
-            return resp.failed('操作失败，请求数据错误')
-        common_milestone_tiles = [
-            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_RESEARCH),
-            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_STARTUP_PURCHASE),
-            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING),
-            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
-        ]
-        if milestone_state.milestone.title in common_milestone_tiles:
-            logger.info(not milestone_state.doc_list)
-            if not milestone_state.doc_list:
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
-        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_GATHERED):
-            if not milestone_state.get_supplier_selection_plans():
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
-        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_ARGUMENT):
-            previous_milestone_state = ProjectMilestoneState.objects.filter(
-                project=project, milestone=milestone_state.milestone.previous()
-            ).first()
-            if not previous_milestone_state.has_selected_supplier_selection_plan():
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
-        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD):
-            if not milestone_state.get_project_purchase_method():
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
-        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONTRACT_MANAGEMENT):
-            if not milestone_state.get_purchase_contract():
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
-        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONFIRM_DELIVERY):
-            if not milestone_state.get_receipt():
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
-
     @check_id('project_milestone_state_id')
     def post(self, req, project_id, ):
         """
@@ -673,7 +635,6 @@ class ProjectPlanChangeMilestoneStateView(BaseAPIView):
         curr_milestone_state = self.get_object_or_404(
             req.data.get('project_milestone_state_id'), ProjectMilestoneState
         )
-
         if not curr_milestone_state.project == project:
             return resp.failed('操作失败，请求数据错误')
         common_milestone_tiles = [
@@ -682,28 +643,28 @@ class ProjectPlanChangeMilestoneStateView(BaseAPIView):
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING),
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
         ]
+        # 校验必要数据
         if curr_milestone_state.milestone.title in common_milestone_tiles:
             if not curr_milestone_state.doc_list:
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+                return resp.failed('操作失败，请至少上传一份文件，请检查')
         if curr_milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_GATHERED):
             if not curr_milestone_state.get_supplier_selection_plans():
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+                return resp.failed('操作失败，尚未保存完整的方案信息，请检查')
         if curr_milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_ARGUMENT):
             previous_milestone_state = ProjectMilestoneState.objects.filter(
                 project=project, milestone=curr_milestone_state.milestone.previous()
             ).first()
             if not previous_milestone_state.has_selected_supplier_selection_plan():
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+                return resp.failed('操作失败，尚未保存的选定方案信息，请检查')
         if curr_milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD):
             if not curr_milestone_state.get_project_purchase_method():
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+                return resp.failed('操作失败，尚未保存采购方式，请检查')
         if curr_milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONTRACT_MANAGEMENT):
             if not curr_milestone_state.get_purchase_contract():
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
+                return resp.failed('操作失败，尚未保存合同信息，请检查')
         if curr_milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONFIRM_DELIVERY):
             if not curr_milestone_state.get_receipt():
-                return resp.failed('操作失败，当前项目里程碑尚未保存数据')
-        # self.check_milestone_state_data(project, curr_milestone_state)
+                return resp.failed('操作失败，尚未保存到货信息，请检查')
         success, msg = project.change_project_milestone_state(curr_milestone_state)
         if not success:
             return resp.failed(msg)
@@ -960,7 +921,7 @@ class ProjectPlanUndispatchedListView(BaseAPIView):
         super_admin = Role.objects.get_super_admin().first()
         departments = None
         if super_admin in req.user.get_roles():
-            departments = departments = Department.objects.all()
+            departments = Department.objects.all()
         else:
             for role in req.user.get_roles():
                 if role.codename == ROLE_CODE_PRO_DISPATCHER:
@@ -1044,7 +1005,6 @@ class DefaultCommonCreateOrUpdateView(RedirectView, BaseAPIView):
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
         ]
         post_data_json = req.data
-        logger.info(post_data_json)
         path_data = {'project_id': project_id, 'project_milestone_state_id': project_milestone_state_id}
         req.session['data'] = req.data
         if milestone_state.milestone.title in common_milestone_tiles:
@@ -1072,7 +1032,6 @@ class DefaultCommonProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
     @check_params_not_all_null(['cate_documents', 'summary'])
     @transaction.atomic
     def post(self, req, project_id, project_milestone_state_id, ):
-        logger.info(req.session.get('cate_documents'))
         project = self.get_object_or_404(project_id, ProjectPlan)
         self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
@@ -1419,7 +1378,6 @@ class ProjectMilestoneStatePlanArgumentCreateView(BaseAPIView):
             project_milestone_state=selected_plan.project_milestone_state
         ).exclude(id=selected_plan.id).all()
         if others_plans:
-            logger.info(others_plans)
             others_plans.update(selected=False)
             SupplierSelectionPlan.objects.clear_cache(others_plans)
 
@@ -1510,7 +1468,6 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
                 success = project.determining_purchase_method(purchase_method)
                 if not success:
                     return resp.failed('保存失败')
-        logger.info(project.purchase_method)
         form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
         if not form.is_valid():
             return resp.form_err(form.errors)

@@ -231,7 +231,7 @@ class AssertDeviceBatchUploadView(BaseAPIView):
 
         if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
             return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
-        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps']):
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps'], ARCHIVE['.rar']):
             return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
 
         success, result = ExcelBasedOXL.open_excel(file_obj)
@@ -371,9 +371,7 @@ class MaintenancePlanListView(BaseAPIView):
             if req.GET.get('status', '').strip() not in dict(MAINTENANCE_PLAN_STATUS_CHOICES):
                 return resp.failed('资产设备维护计划状态错误')
         if req.GET.get('period', '').strip():
-            logger.info(dict(MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES))
             if req.GET.get('period', '').strip() not in dict(MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES):
-                logger.info(req.GET.get('period', '').strip())
                 return resp.failed('截止时间段错误')
         if req.GET.get('type', '').strip():
             if req.GET.get('type', '').strip() not in dict(MAINTENANCE_PLAN_TYPE_CHOICES):
@@ -775,8 +773,6 @@ class FaultSolutionsImportView(BaseAPIView):
         file_obj = req.FILES.get('file')
         if not file_obj:
             return resp.failed('请选择要上传的文件')
-        logger.info('1------------------>2------------------->3')
-        logger.info(file_obj.content_type)
         if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
             return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
         elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps'], ARCHIVE['.rar']):
@@ -851,7 +847,6 @@ class OperationMaintenanceReportView(BaseAPIView):
 
     def get(self, req):
         self.check_object_any_permissions(req, None)
-
         # 校验日期格式
         if not times.is_valid_date(req.GET.get('start_date', '')) or\
                 not times.is_valid_date(req.GET.get('expired_date', '')):
