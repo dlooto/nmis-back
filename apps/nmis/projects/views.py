@@ -241,6 +241,7 @@ class ProjectPlanView(BaseAPIView):
         return resp.serialize_response(
             project, results_name="project", srl_cls_name='ChunkProjectPlanSerializer'
         )
+
     @permission_classes((
             IsHospSuperAdmin, ProjectDispatcherPermission,
             ProjectCreatorPermission, ProjectPerformerPermission, ProjectAssistantPermission
@@ -268,12 +269,11 @@ class ProjectPlanView(BaseAPIView):
         new_project = form.save()
         if not new_project:
             return resp.failed('项目修改失败')
-        new_project_queryset = ChunkProjectPlanSerializer.setup_eager_loading(
+        new_project_queryset = ProjectPlanSerializer.setup_eager_loading(
             ProjectPlan.objects.filter(id=project_id)
         ).first()
         return resp.serialize_response(
-            new_project_queryset, srl_cls_name='ChunkProjectPlanSerializer',
-            results_name='project'
+            new_project_queryset, results_name='project'
         )
 
     @permission_classes((
@@ -496,7 +496,7 @@ class ProjectPlanAssistedListView(BaseAPIView):
             search_key=search_key, assistant=req.user.get_profile())
 
         # 调用serializer预加载
-        result_projects = ChunkProjectPlanSerializer.setup_eager_loading(query_set)
+        result_projects = ProjectPlanSerializer.setup_eager_loading(query_set)
 
         response = self.get_pages(result_projects, results_name='projects')
         # response更新各项目状态条数
@@ -534,7 +534,7 @@ class ProjectPlanPerformedListView(BaseAPIView):
             status=status
         )
 
-        result_projects = ChunkProjectPlanSerializer.setup_eager_loading(performed_projects)
+        result_projects = ProjectPlanSerializer.setup_eager_loading(performed_projects)
 
         response = self.get_pages(
             result_projects, results_name='projects'
@@ -904,7 +904,7 @@ class ProjectPlanDispatchedListView(BaseAPIView):
             dept_id_list, req.user.get_profile().organ
         )
 
-        result_projects = ChunkProjectPlanSerializer.setup_eager_loading(dispatched_projects)
+        result_projects = ProjectPlanSerializer.setup_eager_loading(dispatched_projects)
 
         return self.get_pages(result_projects, results_name='projects')
 
@@ -933,7 +933,7 @@ class ProjectPlanUndispatchedListView(BaseAPIView):
         undispatched_projects = ProjectPlan.objects.get_undispatched_projects(
             dept_id_list, req.user.get_profile().organ
         )
-        result_projects = ChunkProjectPlanSerializer.setup_eager_loading(undispatched_projects)
+        result_projects = ProjectPlanSerializer.setup_eager_loading(undispatched_projects)
 
         return self.get_pages(result_projects, results_name='projects')
 

@@ -130,7 +130,7 @@ class BriefStaffSerializer(BaseModelSerializer):
     class Meta:
         model = Staff
         fields = (
-            'id', 'dept_name', 'staff_name',
+            'id', 'dept_name', 'staff_name', 'contact',
         )
 
     @staticmethod

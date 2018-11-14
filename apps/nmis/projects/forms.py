@@ -5,6 +5,8 @@
 
 #
 import logging
+import re
+import time
 
 from base.forms import BaseForm
 from nmis.devices.models import OrderedDevice, SoftwareDevice
@@ -166,8 +168,8 @@ class ProjectPlanUpdateForm(BaseForm):
             'software_purpose_error':   '软件用途字符过长，20个字符以内',
             'software_id_error':        '更新设备ID不存在',
             'pre_amount_err':           '项目总价错误',
-            'planned_price_null_err':   '软件预估单价为空',
-            'planned_price_format_err': '软件预估单价数据类型错误',
+            'planned_price_null_err':   '{}: 预估单价为空',
+            'planned_price_format_err': '{}: 预估单价数据类型错误',
             'pre_amount_null_err':      '项目总价为空',
             'pre_amount_format_err':    '项目总价数据类型错误'
         })
@@ -180,11 +182,7 @@ class ProjectPlanUpdateForm(BaseForm):
 
     def check_pre_amount(self):
         if self.data.get('pre_amount'):
-            try:
-                if not isinstance(float(self.data.get('pre_amount')), float):
-                    self.update_errors('pre_amount', 'pre_amount_format_err')
-                    return False
-            except ValueError:
+            if not re.match('^[0-9]+(.[0-9]{2})*$', str(self.data.get('pre_amount'))):
                 self.update_errors('pre_amount', 'pre_amount_format_err')
                 return False
         return True
@@ -193,7 +191,7 @@ class ProjectPlanUpdateForm(BaseForm):
         return True
 
     def check_handing_type(self):
-        handing_type = self.data.get('handing_type')
+        handing_type = self.data.get('handing_type', '').strip()
         if not handing_type:
             self.update_errors('handing_type', 'handing_type_error')
             return False
@@ -222,23 +220,23 @@ class ProjectPlanUpdateForm(BaseForm):
 
             if software_added_devices:
                 for device in software_added_devices:
-                    if not device.get('name'):
+                    if not device.get('name', '').strip():
                         self.update_errors('software_name', 'software_name_error')
                         return False
-                    if device.get('purpose'):
+                    if device.get('purpose', '').strip():
                         if len(device.get('purpose')) >= 20:
                             self.update_errors('software_purpose', 'software_purpose_error')
                             return False
                     if not device.get('planned_price'):
-                        self.update_errors('planned_price', 'planned_price_null_err')
+                        self.update_errors(
+                            'planned_price', 'planned_price_null_err', device.get('name', '').strip()
+                        )
                         return False
 
-                    try:
-                        if not isinstance(float(device.get('planned_price')), float):
-                            self.update_errors('planned_price', 'planned_price_format_err')
-                            return False
-                    except ValueError:
-                        self.update_errors('planned_price', 'planned_price_format_err')
+                    if not re.match('^[0-9]+(.[0-9]{2})*$', str(device.get('planned_price'))):
+                        self.update_errors(
+                            'planned_price', 'planned_price_format_err', device.get('name', '').strip()
+                        )
                         return False
             if software_updated_devices:
                 for device in software_updated_devices:
@@ -258,11 +256,7 @@ class ProjectPlanUpdateForm(BaseForm):
                         self.update_errors('planned_price', 'planned_price_null_err')
                         return False
 
-                    try:
-                        if not isinstance(float(device.get('planned_price')), float):
-                            self.update_errors('planned_price', 'planned_price_format_err')
-                            return False
-                    except ValueError:
+                    if not re.match('^[0-9]+(.[0-9]{2})*$', str(device.get('planned_price'))):
                         self.update_errors('planned_price', 'planned_price_format_err')
                         return False
 
@@ -315,7 +309,8 @@ def check_hardware_devices_list(baseForm, devices_list):
         'devices_empty':                    '硬件设备列表不能为空或数据错误',
         'device_name_error':                '硬件设备名为空或格式错误',
         'device_num_error':                 '硬件设备购买数量为空或格式错误',
-        'device_planned_price_error':       '硬件设备预购价格数据类型错误',
+        'device_planned_price_error':       '{}: 预估单价数据类型错误',
+        'device_planned_price_null_error':  '{}: 预估价格为空',
         'device_measure_error':             '硬件设备度量单位为空或数据错误',
         'device_type_spec_error':           '硬件设备规格/型号为空或数据错误',
         'device_purpose_error':             '硬件用途字符串过长，20个字符以内',
@@ -355,12 +350,14 @@ def check_hardware_devices_list(baseForm, devices_list):
 
         device_planned_price = device.get('planned_price')
         if not device_planned_price:
-            baseForm.update_errors('planned_price', 'device_planned_price_error')
+            baseForm.update_errors(
+                'planned_price', 'device_planned_price_null_error',
+                device.get('planned_price', '').strip())
             return False
-        try:
-            float(device_planned_price)
-        except ValueError:
-            baseForm.update_errors('planned_price', 'device_planned_price_error')
+        if not re.match('^[0-9]+(.[0-9]{2})*$', str(device_planned_price)):
+            baseForm.update_errors(
+                'planned_price', 'device_planned_price_error',
+                device.get('name', '').strip())
             return False
 
         if device.get('purpose', '').strip():
@@ -734,7 +731,8 @@ class PurchaseContractCreateForm(BaseForm):
             'device_amount_type_err': '{}: 总价类型错误',
             'device_supplier_err': '供应商错误',
             'device_planned_price_null_err': '{}: 单价为空',
-            'device_planned_price_err': '{}: 单价不能为0'
+            'device_planned_price_err': '{}: 单价不能为0',
+            'device_planned_price_type_err': '{}: 单价数据类型错误'
         })
 
     def is_valid(self):
@@ -773,6 +771,12 @@ class PurchaseContractCreateForm(BaseForm):
                         'device_planned_price', 'device_planned_price_null_err',
                         device.get('name', '').strip())
                 return False
+            import re
+            if not re.match('^[0-9]+(.[0-9]{2})*$', str(device.get('planned_price'))):
+                self.update_errors(
+                    'device_planned_price', 'device_planned_price_type_err',
+                    device.get('name', '').strip())
+                return False
 
             if not device.get('real_total_amount'):
                 self.update_errors(
@@ -780,15 +784,14 @@ class PurchaseContractCreateForm(BaseForm):
                     device.get('name', '').strip())
                 return False
             else:
-                if not isinstance(device.get('real_total_amount'), float)\
-                        and not isinstance(device.get('real_total_amount'), int):
-                    self.update_errors('device_amount', 'device_amount_type_err',
-                                       device.get('', '').strip())
+                if not re.match('^[0-9]+(.[0-9]{2})*$', str(device.get('real_total_amount'))):
+                    self.update_errors(
+                        'device_amount', 'device_amount_type_err',
+                        device.get('name', '').strip())
                     return False
             if not device.get('producer') or not device.get('producer', '').strip():
-                self.update_errors(
-                    'device_producer', 'device_producer_err',
-                    device.get('name', '').strip())
+                self.update_errors('device_producer', 'device_producer_err',
+                                   device.get('name', '').strip())
                 return False
         return True
 
