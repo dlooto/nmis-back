@@ -274,7 +274,7 @@ class AssertDevice(BaseModel):
     ]
 
     def __str__(self):
-        return '%d' % (self.id, )
+        return '%d %s' % (self.id, self.title)
 
     def deleted(self):
 

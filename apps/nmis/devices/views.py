@@ -84,7 +84,7 @@ class AssertDeviceListView(BaseAPIView):
 
         assert_devices = AssertDevice.objects.get_assert_devices(
             cate=cate, search_key=search_key, status=status_list, storage_places=storage_places)
-        self.get_pages(assert_devices, results_name='assert_devices')
+
         return self.get_pages(assert_devices, results_name='assert_devices')
 
 

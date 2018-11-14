@@ -19,7 +19,6 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_USING, MAINTENANCE_PLAN_NO_
     MAINTENANCE_PLAN_EXPIRED_DATE_BE_OVERDUE
 from nmis.hospitals.models import Sequence
 from utils import times
-from utils.times import str_to_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +85,7 @@ class AssertDeviceManager(BaseManager):
         :param cate: 资产设备类型
         :param search_key: 关键字：设备名
         :param status: 资产设备状态
-        :param storage_place: 设备存储地点
+        :param storage_places: 设备存储地点
         """
         assert_devices = self.filter()
 
