@@ -79,7 +79,11 @@ class AssertDeviceSerializer(BaseModelSerializer):
 
     @staticmethod
     def setup_eager_loading(queryset):
-        pass
+
+        return queryset.select_related(
+            'use_dept', 'creator', 'responsible_dept', 'medical_device_cate', 'performer',
+            'storage_place', 'modifier'
+        )
 
     def _get_performer_name(self, obj):
         return obj.performer.name if obj.performer else ''

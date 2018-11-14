@@ -729,7 +729,7 @@ class PurchaseContractCreateForm(BaseForm):
             'device_producer_err': '{}: 厂商为空',
             'device_amount_err': '{}: 总价为空',
             'device_amount_type_err': '{}: 总价类型错误',
-            'device_supplier_err': '供应商错误',
+            'device_supplier_null_err': '{}: 供应商为空',
             'device_planned_price_null_err': '{}: 单价为空',
             'device_planned_price_err': '{}: 单价不能为0',
             'device_planned_price_type_err': '{}: 单价数据类型错误'
@@ -746,6 +746,7 @@ class PurchaseContractCreateForm(BaseForm):
         """
         contract_device_list = self.data.get('contract_devices')
         for device in contract_device_list:
+            logs.info(device)
             if not device.get('num'):
                 self.update_errors('device_num', 'device_num_err')
                 return False
@@ -754,11 +755,15 @@ class PurchaseContractCreateForm(BaseForm):
                     self.update_errors('device_num', 'device_num_err')
                     return False
 
-            if not device.get('name', '').strip():
+            if not device.get('name') or not device.get('name', '').strip():
                 self.update_errors('device_name', 'device_name_err')
                 return False
-            if not device.get('supplier', '').strip():
-                self.update_errors('device_supplier', 'device_supplier_err')
+            # 检查供应商是否为选定的供应商
+            if not device.get('supplier') or not device.get('supplier', '').strip():
+                self.update_errors(
+                    'device_supplier', 'device_supplier_null_err',
+                    device.get('name', ).strip()
+                )
                 return False
 
             if not device.get('planned_price'):

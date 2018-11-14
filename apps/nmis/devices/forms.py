@@ -37,13 +37,15 @@ class AssertDeviceCreateForm(BaseForm):
             'serial_no_err':                    '资产序列号已存在',
             'bar_code_err':                     '设备条形码已存在',
             'cate_err':                         '资产设备类型错误',
-            'medical_device_cate_null_err':     '医疗设备分类为空'
+            'medical_device_cate_null_err':     '医疗设备分类为空',
+            'production_date_err':              '出厂日期{}: 大于当前日期',
         })
 
     def is_valid(self):
         if not self.check_service_life() or not self.check_status()\
                 or not self.check_assert_no() or not self.check_serial_no()\
-                or not self.check_bar_code() or not self.check_medical_device_cate():
+                or not self.check_bar_code() or not self.check_medical_device_cate()\
+                or not self.check_production_date():
             return False
         return True
 
@@ -118,6 +120,13 @@ class AssertDeviceCreateForm(BaseForm):
             if not self.data.get('medical_device_cate_id'):
                 self.update_errors('medical_device_cate', 'medical_device_cate_err')
                 return False
+        return True
+
+    def check_production_date(self):
+        production_date = self.data.get('production_date', '').strip()
+        if production_date > now().strftime('%Y-%m-%d'):
+            self.update_errors('production_date', 'production_date_err', production_date)
+            return False
         return True
 
     def save(self):

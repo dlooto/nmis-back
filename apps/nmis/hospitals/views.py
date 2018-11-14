@@ -9,6 +9,8 @@
 
 import logging
 
+from django.db.models import ProtectedError
+
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from base.common.param_utils import get_id_list
 from django.conf import settings
@@ -19,6 +21,7 @@ from nmis.devices.permissions import AssertDeviceAdminPermission
 from nmis.hospitals.serializers import StaffSerializer, RoleSerializer, \
     DepartmentStaffsCountSerializer, StaffWithRoleSerializer
 from nmis.projects.models import ProjectPlan
+from users.models import User
 
 from utils.files import ExcelBasedOXL
 
@@ -299,6 +302,40 @@ class StaffView(BaseAPIView):
                 staff.delete()
                 user.delete()
                 return resp.ok('删除成功')
+        except Exception as e:
+            logging.exception(e)
+            return resp.failed("删除失败")
+
+
+class StaffBatchDeleteView(BaseAPIView):
+
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission, )
+
+    def delete(self, req, organ_id):
+        """
+        批量删除员工，同时删除员工账号
+        """
+        organ = self.get_object_or_404(organ_id, Hospital)
+        self.check_object_any_permissions(req, organ)
+
+        staff_ids = get_id_list(str(req.data.get('staff_ids', '')).strip())
+
+        staffs = Staff.objects.filter(id__in=staff_ids)
+        if not len(staffs) == len(staff_ids):
+            return resp.failed('请确认是否有不存在员工')
+        if req.user.get_profile() in staffs:
+            return resp.failed('%s: %s' % (req.user.get_profile().name, '为当前登录用户，无法删除'))
+        users = User.objects.filter(staff__in=staffs)
+        try:
+            with transaction.atomic():
+                Staff.objects.clear_cache(staffs)
+                User.objects.clear_cache(users)
+                staffs.delete()
+                users.delete()
+                return resp.ok('删除成功')
+        except ProtectedError as pe:
+            logs.exception(pe)
+            return resp.failed('存在员工有数据关联，无法删除')
         except Exception as e:
             logging.exception(e)
             return resp.failed("删除失败")
