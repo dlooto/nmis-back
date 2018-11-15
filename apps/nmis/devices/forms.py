@@ -681,8 +681,8 @@ class FaultSolutionUpdateForm(BaseForm):
         if not self.data.get('title', '').strip():
             self.update_errors('title', 'title_error')
             return False
-        fs = FaultSolution.objects.filter(title=self.data.get('title', '').strip())
-        if fs.first():
+        fs = FaultSolution.objects.filter(title=self.data.get('title', '').strip()).first()
+        if fs and not fs == self.fault_solution:
             self.update_errors('title', 'title_exists')
             return False
         return True
