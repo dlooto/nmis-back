@@ -43,7 +43,8 @@ from nmis.documents.models import File
 from nmis.hospitals.consts import ARCHIVE, ROLE_CODE_HOSP_SUPER_ADMIN, \
     ROLE_CODE_NORMAL_STAFF, ROLE_CODE_ASSERT_DEVICE_ADMIN
 from nmis.hospitals.models import Staff, Department, HospitalAddress
-from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer
+from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer, \
+    AssertDeviceSerializer
 from nmis.hospitals.permissions import IsHospSuperAdmin, SystemManagePermission, HospGlobalReportAssessPermission, \
     HospitalStaffPermission
 from utils import times, files
@@ -84,7 +85,7 @@ class AssertDeviceListView(BaseAPIView):
 
         assert_devices = AssertDevice.objects.get_assert_devices(
             cate=cate, search_key=search_key, status=status_list, storage_places=storage_places)
-
+        assert_devices = AssertDeviceSerializer.setup_eager_loading(assert_devices)
         return self.get_pages(assert_devices, results_name='assert_devices')
 
 

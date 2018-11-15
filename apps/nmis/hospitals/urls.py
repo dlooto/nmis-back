@@ -37,6 +37,9 @@ urlpatterns = [
     # 单个员工查、删、改
     path("<int:hid>/staffs/<int:staff_id>", views.StaffView.as_view(), ),
 
+    # 批量删除员工
+    path("<int:organ_id>/staffs/delete", views.StaffBatchDeleteView.as_view(), ),
+
     # 添加员工、
     path("<int:hid>/staffs/create",     views.StaffCreateView.as_view(), ),
 
