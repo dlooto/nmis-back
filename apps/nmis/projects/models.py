@@ -502,7 +502,7 @@ class ProjectPlan(BaseModel):
 
         if not self.attached_flow.contains(curr_stone_state.milestone):
             return False, "操作失败，该项目里程碑项不属于该项目流程, 请检查数据是否异常。"
-
+        logger.info(curr_stone_state)
         if curr_stone_state.is_finished():
             return False, '操作失败，当前里程碑已完结。'
 
@@ -724,7 +724,7 @@ class Milestone(BaseModel):
     @property
     def flow_milestones(self):
         """获取当前里程碑项所在流程中的所有里程碑项"""
-        return self.flow.get_milestones()
+        return self.flow.get_milestones().all()
 
     @property
     def flow_main_milestones(self):
@@ -861,7 +861,7 @@ class Milestone(BaseModel):
             return []
 
         ancestors_ids = self.parent_path.split('-')
-        milestones = self.flow_milestones()
+        milestones = self.flow_milestones
         ancestors = []
         for milestone in milestones:
             if str(milestone.id) in ancestors_ids:
@@ -876,7 +876,7 @@ class Milestone(BaseModel):
         if not self.parent_path:
             return None
         descendant_ids = self.parent_path.split('-')
-        milestones = self.flow_milestones()
+        milestones = self.flow_milestones
         for milestone in milestones:
             if int(descendant_ids[0]) == milestone.id:
                 return milestone
@@ -1102,7 +1102,9 @@ class ProjectMilestoneState(BaseModel):
         """
         当前里程碑已完结.
         :return: 返回True/False; 已完结返回True, 否则返回False
+
         """
+        logger.info(self.status)
         return True if self.status == PRO_MILESTONE_DONE else False
 
     def is_unstarted(self):

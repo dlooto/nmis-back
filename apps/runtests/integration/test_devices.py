@@ -14,7 +14,7 @@ from runtests.common.mixins import AssertDevicesMixin, HospitalMixin
 from utils.files import remove
 from utils.times import now
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):

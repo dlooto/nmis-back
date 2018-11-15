@@ -8,7 +8,7 @@
 import logging
 import base64
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 from django.core.signing import TimestampSigner

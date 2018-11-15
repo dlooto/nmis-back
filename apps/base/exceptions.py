@@ -14,7 +14,7 @@ from rest_framework.exceptions import APIException
 
 from . import codes
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class CsrfError(APIException):

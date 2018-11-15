@@ -11,7 +11,7 @@ from django.core.cache import cache
 from django.db.models import Manager
 from django.db.models.query import QuerySet
 
-logs = logging.getLogger('django')
+logger = logging.getLogger('django')
 
 
 class BaseManager(Manager):
@@ -38,7 +38,7 @@ class BaseManager(Manager):
         except self.model.DoesNotExist:
             return None
         except Exception as e:
-            logs.warn(e)
+            logger.warn(e)
             return None
 
     def get_cached(self, obj_id):
@@ -51,10 +51,10 @@ class BaseManager(Manager):
                 obj = self.get(id=int(obj_id))
                 obj.cache()
             except self.model.DoesNotExist:
-                logs.error('Object not found: %s %s' % (self.model.__name__, obj_id))
+                logger.error('Object not found: %s %s' % (self.model.__name__, obj_id))
                 return None
             except Exception as e:
-                logs.exception('get_cached object error: \n %s' % e)
+                logger.exception('get_cached object error: \n %s' % e)
                 return None
 
         return obj
@@ -87,7 +87,7 @@ class BaseManager(Manager):
 
     def make_key(self, obj_id):
         """生成cache key """
-        # logs.debug('make cache key: %s%s%s' % (self.__module__, self.model.__name__, obj_id))
+        # logger.debug('make cache key: %s%s%s' % (self.__module__, self.model.__name__, obj_id))
         return u'%s%s%s' % (self.__module__, self.model.__name__, obj_id)
 
     def clear_cache(self, objs):

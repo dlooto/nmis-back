@@ -46,7 +46,7 @@ class OrganSignupView(BaseAPIView):
         try:  # DB操作较多
             organ = form.save()
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return resp.failed(u'操作异常')
 
         if not self.LOGIN_AFTER_SIGNUP:  # 返回提示: 注册申请成功, 请等待审核...

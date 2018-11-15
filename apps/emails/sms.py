@@ -19,7 +19,7 @@ from django.db import models
 from utils import eggs
 
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 # 阿里大鱼短信接口配置
@@ -66,16 +66,16 @@ ali_sms_tpls = {
 #
 #     try:
 #         resp = req.getResponse()
-#         logs.debug(resp)
+#         logger.debug(resp)
 #         result = resp.get(ali_conf['resp_key'], {}).get('result')
 #         if result.get('success'):
 #             return True, result.get('msg')
 #         return False, result.get('msg')
 #     except TopException as e:
-#         logs.exception('短信接口请求异常(aliyun_send_sms): \n %s' % e)
+#         logger.exception('短信接口请求异常(aliyun_send_sms): \n %s' % e)
 #         return False, u'短信接口异常'
 #     except Exception as e:
-#         logs.exception(e)
+#         logger.exception(e)
 #         return False, u'验证码短信发送异常'
 
 
@@ -93,10 +93,10 @@ class SmsCodeManager(models.Manager):
 
         coderecord = self.get_valid_code(phone, vcode, expiry)
         if not coderecord:
-            logs.info(u'无效的code: phone %s, code %s' % (phone, vcode))
+            logger.info(u'无效的code: phone %s, code %s' % (phone, vcode))
             return False
 
-        logs.debug('%s' % coderecord)
+        logger.debug('%s' % coderecord)
         coderecord.update(is_valid=False)   # 验证成功后, 置为无效
         return True
 
@@ -120,7 +120,7 @@ class SmsCodeManager(models.Manager):
         # 若当天该手机号已请求了MAX_SMS_LIMIT次验证码, 则直接返回并警告
         if k.filter(created_time__year=today.year, created_time__month=today.month,
                     created_time__day=today.day, is_valid=False).count() >= code_max_limit:
-            logs.warn(u'该手机号(%s)一天之内已获取%s次验证码' % (phone, code_max_limit))
+            logger.warn(u'该手机号(%s)一天之内已获取%s次验证码' % (phone, code_max_limit))
             return False, -1  # 请求验证码次数超过限制
 
         if re_gen:  # 若要重新生成验证码, 则将之前生成的验证码置为无效状态

@@ -11,7 +11,7 @@ from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin, MILESTONES
 from utils import times
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):

@@ -9,7 +9,7 @@ import logging
 
 from django.apps import AppConfig
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ProjectsAppConfig(AppConfig):

@@ -746,7 +746,7 @@ class PurchaseContractCreateForm(BaseForm):
         """
         contract_device_list = self.data.get('contract_devices')
         for device in contract_device_list:
-            logs.info(device)
+            logger.info(device)
             if not device.get('num'):
                 self.update_errors('device_num', 'device_num_err')
                 return False

@@ -9,7 +9,7 @@ import logging
 
 from rest_framework.exceptions import NotFound
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def check_objects_exist(request, pkkey_cls_dict):
@@ -27,7 +27,7 @@ def check_objects_exist(request, pkkey_cls_dict):
         pk_value = request.data.get(pk) or request.GET.get(pk)
         obj = model.objects.get_cached(pk_value)
         if not obj:
-            logs.debug('%s object not found: %s' % (model.__name__, pk_value))
+            logger.debug('%s object not found: %s' % (model.__name__, pk_value))
             raise NotFound
         results.update({pk: obj})
 
@@ -43,6 +43,6 @@ def check_object_exist(obj_id, model):
     """
     obj = model.objects.get_cached(obj_id)
     if not obj:
-        logs.debug('%s object not found: %s' % (model.__name__, obj_id))
+        logger.debug('%s object not found: %s' % (model.__name__, obj_id))
         raise NotFound
     return obj

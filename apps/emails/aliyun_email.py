@@ -19,7 +19,7 @@ from hashlib import sha1
 
 import settings
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class AliyunAPIAuth(object):

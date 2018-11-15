@@ -12,7 +12,7 @@ import settings
 
 from utils import des
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def make_password(raw_password, _key=settings.SECRET_KEY):

@@ -7,7 +7,7 @@
 
 import logging, copy
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_id_list(str_ids):
@@ -21,7 +21,7 @@ def get_id_list(str_ids):
     try:
         return list(set([id.strip() for id in str_ids.split(',')]))
     except Exception as e:
-        logs.debug(e)
+        logger.debug(e)
         return []
 
 

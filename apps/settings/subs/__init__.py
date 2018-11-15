@@ -15,6 +15,6 @@ from .log_conf import *
 from .init_data_conf import *
 from .celery_app import *
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 

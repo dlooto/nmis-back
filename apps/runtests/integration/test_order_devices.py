@@ -10,7 +10,7 @@ import logging
 from runtests import BaseTestCase
 from runtests.common.mixins import ProjectPlanMixin
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class OrderDeviceApiTestCase(BaseTestCase, ProjectPlanMixin):

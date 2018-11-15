@@ -10,7 +10,7 @@ import logging
 from nmis.hospitals.models import Staff
 from runtests import BaseTestCase
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class StaffCreateTestCase(BaseTestCase):

@@ -332,7 +332,7 @@ class StaffBatchDeleteView(BaseAPIView):
                 users.delete()
                 return resp.ok('删除成功')
         except ProtectedError as pe:
-            logs.exception(pe)
+            logger.exception(pe)
             return resp.failed('存在员工有数据关联，无法删除')
         except Exception as e:
             logging.exception(e)

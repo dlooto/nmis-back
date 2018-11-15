@@ -16,7 +16,7 @@ from base.exceptions import AuthenticationTokenExpired
 
 from rest_framework.authtoken.models import Token
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class CustomToken(Token):

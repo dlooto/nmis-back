@@ -15,7 +15,7 @@ from base.models import BaseManager
 from base import resp
 from users.forms import is_valid_password, PASSWORD_ERROR_MSG
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 VALID_ATTRS = ('nickname', 'email', 'phone', 'gender', 'avatar')
@@ -65,7 +65,7 @@ class UserManager(BaseUserManager, BaseManager):
         :return: 已注册则返回True, 否则返回False
         """
         if not isinstance(auth_obj, dict) or auth_obj.keys()[0] not in self.model.VALID_AUTH_FIELDS:
-            logs.debug('参数格式错误: auth_obj %s' % auth_obj)
+            logger.debug('参数格式错误: auth_obj %s' % auth_obj)
             return False
 
         try:
@@ -112,7 +112,7 @@ class UserManager(BaseUserManager, BaseManager):
 
             # 处理用户登录
             if login_user and request:
-                logs.info('logging in user {}'.format(user))
+                logger.info('logging in user {}'.format(user))
                 user.handle_login(request)
                 from users.views import append_extra_info
                 response = append_extra_info(user, request, response)
@@ -165,5 +165,5 @@ class UserManager(BaseUserManager, BaseManager):
                             s.cache
                 return True, "操作成功"
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False, "操作失败"

@@ -17,7 +17,7 @@ from rest_framework.response import Response as RestResponse
 from . import codes
 from utils.eggs import make_instance
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 # ###### 注: 以下必须声明为函数(不可声明为常量), 常量值将只在模块import时被赋值 #########
@@ -231,8 +231,8 @@ def serialize_data(items, app_name=None, srl_cls_name=None):
         # module_name = '%s.%s' % ('.'.join(instance.__module__.split('.')[:-1]), SERIALIZABLE_MODULE_NAME)
 
     class_name = '%s%s' % (instance.__class__.__name__, SERIALIZABLE_CLASS_NAME) if not srl_cls_name else srl_cls_name
-    logs.debug('make_instance: module_name=%s class_name=%s items=' % (module_name, class_name))
-    logs.debug(items)
+    logger.debug('make_instance: module_name=%s class_name=%s items=' % (module_name, class_name))
+    logger.debug(items)
 
     return make_instance(module_name, class_name, items, many=many).data
 

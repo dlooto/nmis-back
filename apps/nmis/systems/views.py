@@ -14,7 +14,7 @@ from base import resp
 from base.views import BaseAPIView
 from users.permissions import IsSuperAdmin
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class FlushDataView(BaseAPIView):

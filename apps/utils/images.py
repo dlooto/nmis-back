@@ -16,7 +16,7 @@ from PIL import ImageFile
 from . import files, eggs
 import settings
 
-logs = logging.getLogger('django')
+logger = logging.getLogger('django')
 
 
 def save_image(file, dest_filename, create_thumb=False, thumb_size=settings.DEFAULT_THUMB_SIZE, cate=''):
@@ -92,7 +92,7 @@ class ImageIO(object):
             for chunk in file.chunks():
                 parser.feed(chunk)
         except Exception as e:
-            logs.error('%s' % e)       
+            logger.error('%s' % e)
         finally:
             image = parser.close()
 

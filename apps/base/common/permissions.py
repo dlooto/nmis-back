@@ -9,7 +9,7 @@ import logging
 
 from rest_framework.permissions import BasePermission
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def is_login(request):

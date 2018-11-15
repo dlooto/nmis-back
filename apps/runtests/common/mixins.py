@@ -15,7 +15,7 @@ from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectMilestoneState
     Milestone, PurchaseContract
 from utils import times
 
-logs = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 ORDERED_DEVICES = [
@@ -458,7 +458,7 @@ class AssertDevicesMixin(object):
         try:
             return AssertDevice.objects.create(**assert_device_data)
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return None
 
     def create_medical_device_cate(self, creator):
@@ -483,7 +483,7 @@ class AssertDevicesMixin(object):
         }
         medical_device_cate = MedicalDeviceSix8Cate.objects.create(
             creator=creator, **medical_cate_parent_data)
-        logs.info(medical_device_cate)
+        logger.info(medical_device_cate)
         return MedicalDeviceSix8Cate.objects.create(
             parent=medical_device_cate, creator=creator, **medical_cate_data)
 
@@ -507,7 +507,7 @@ class AssertDevicesMixin(object):
         try:
             return MaintenancePlan.objects.create_maintenance_plan(storage_places, assert_devices, **m_plan_data)
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return None
 
     def init_fault_types(self, creator, fault_type_jsons=FAULT_TYPES):
@@ -578,7 +578,7 @@ class HospitalMixin(object):
             return HospitalAddress.objects.create(
                 dept=dept, parent=parent, title=title, type="RM", level=2, sort=1, disabled=False, created_time=times.now())
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return None
 
     def create_hospital_address(self, title):

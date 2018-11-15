@@ -14,7 +14,7 @@ import settings
 from base.common.param_utils import get_params_after_pop
 from emails import aliyun_email
 
-logs = logging.getLogger('django')
+logger = logging.getLogger('django')
 
 
 class SubMailAPI(object):
@@ -36,18 +36,18 @@ class SubMailAPI(object):
             'html':         email_body.get('message'),
         }
 
-        logs.debug('Email send params: %s' % get_params_after_pop(params, 'html'))  # 不打印邮件内容
+        logger.debug('Email send params: %s' % get_params_after_pop(params, 'html'))  # 不打印邮件内容
         try:
             response = requests.post(cls.API_URL, data=params)
         except Exception as e:
-            logs.exception(e.message)
+            logger.exception(e.message)
             return False        # Email发送失败
 
         return cls._response_success(response)
 
     @classmethod
     def _response_success(cls, response):
-        logs.debug('Email sended result: %s, %s' % (response.status_code, response.json()))
+        logger.debug('Email sended result: %s, %s' % (response.status_code, response.json()))
         return (response.status_code == 200) and (response.json().get('status') == 'success')
 
 
@@ -61,7 +61,7 @@ class AliyunMailAPI(object):
 
     @classmethod
     def send(cls, email_body):
-        logs.debug('Email send params: %s, %s' % (email_body.get('to_email'), email_body.get('subject')))
+        logger.debug('Email send params: %s, %s' % (email_body.get('to_email'), email_body.get('subject')))
         try:
             response = aliyun_email.send_email(
                 email_body.get('to_email'),
@@ -69,14 +69,14 @@ class AliyunMailAPI(object):
                 email_body.get('message'),
             )
         except Exception as e:
-            logs.exception(e)
+            logger.exception(e)
             return False        # Email发送失败
 
         return cls._response_success(response)
 
     @classmethod
     def _response_success(cls, response):
-        logs.debug('Email send result: %s, %s' % (response.status_code, response.json()))
+        logger.debug('Email send result: %s, %s' % (response.status_code, response.json()))
         return response.status_code in cls.success_code
 
 

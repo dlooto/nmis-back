@@ -8,7 +8,7 @@ from django.middleware.csrf import get_token
 from utils import eggs
 
 
-logs = logging.getLogger('django')
+logger = logging.getLogger('django')
 
 
 class PrintSqlMiddleware(object):
@@ -17,9 +17,9 @@ class PrintSqlMiddleware(object):
         self.get_response = get_response
 
     def __call__(self, request):
-        logs.info('Agent: %s' % request.META.get('HTTP_USER_AGENT'))
+        logger.info('Agent: %s' % request.META.get('HTTP_USER_AGENT'))
         for sql in connection.queries:
-            logs.debug('[DEBUG-SQL]%s;   time: %s' % (sql['sql'], sql['time']))
+            logger.debug('[DEBUG-SQL]%s;   time: %s' % (sql['sql'], sql['time']))
         response = self.get_response(request)
         return response
 
@@ -52,20 +52,20 @@ class PrintRequestParamsMiddleware(object):
      Add this middleware for printing request params when api requesting
     """
     def process_request(self, request):
-        logs.debug('')
-        logs.debug('------------------ Request Params pre-view ------------------ begin')
-        logs.debug('%s %s' % (request.method, request.path))
-        logs.debug('Params: %s' % request.REQUEST)
-        logs.debug('Http User Agent: %s' % request.META.get('HTTP_USER_AGENT', None))
+        logger.debug('')
+        logger.debug('------------------ Request Params pre-view ------------------ begin')
+        logger.debug('%s %s' % (request.method, request.path))
+        logger.debug('Params: %s' % request.REQUEST)
+        logger.debug('Http User Agent: %s' % request.META.get('HTTP_USER_AGENT', None))
         
         # only for testing, remove when online
         # client = get_authedapp(app_key=request.REQUEST.get('app_key', ''))
         # if not client:
         #    return
-        # logs.info('sig: %s' % eggs.make_sig(request.get_full_path(), client.secret_key))
+        # logger.info('sig: %s' % eggs.make_sig(request.get_full_path(), client.secret_key))
         #
-        # logs.info('FILES: %s' % request.FILES)
-        logs.debug('------------------ Request Params pre-view  ----------------- end')
-        logs.debug('')
+        # logger.info('FILES: %s' % request.FILES)
+        logger.debug('------------------ Request Params pre-view  ----------------- end')
+        logger.debug('')
         
         return None
