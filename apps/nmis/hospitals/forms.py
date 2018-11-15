@@ -84,13 +84,16 @@ class StaffSignupForm(BaseForm):
     """
     ERR_CODES = {
         'err_username':             '用户名为空或格式错误',
-        'err_username_existed':     '用户名已存在',
+        'username_existed':         '用户名已存在',
+        'username_out_of_bounds':   '用户名长度不能大于30个字符',
         'err_password':             '密码为空或格式错误',
+        'staff_name_out_of_bounds': '员工姓名长度不能大于30个字符',
         'err_staff_name':           '员工姓名错误',
         'err_contact_phone':        '联系电话格式错误',
         'err_email':                '无效邮箱',
-        'err_staff_title':          '职位名为空或格式错误',
-        'err_role_not_exist':       '系统未设置角色,请联系管理员',
+        'err_staff_title':          '职位名称为空或格式错误',
+        'staff_title_out_of_bounds': '职位名称长度不能大于30个字符',
+        'role_not_exists':           '系统尚未设置角色, 请先维护',
     }
 
     def __init__(self, organ, dept, data, *args, **kwargs):
@@ -117,96 +120,110 @@ class StaffSignupForm(BaseForm):
     def check_username(self):
         """校验用户名/账号
         """
-        username = self.data.get('username', '').strip()
-        if not username:
-            self.update_errors('username', 'err_username')
-            return False
-
-        if User.objects.filter(username=username):
-            self.update_errors('username', 'err_username_existed')
-            return False
-
-        return True
+        if self.data.get('username'):
+            if not isinstance(self.data.get('username'), str):
+                self.update_errors('username', 'err_username')
+                return False
+            username = self.data.get('username').strip()
+            if not username:
+                self.update_errors('username', 'err_username')
+                return False
+            if len(username) > 30:
+                self.update_errors('username', 'username_out_of_bounds')
+                return False
+            if User.objects.filter(username=username):
+                self.update_errors('username', 'username_existed')
+                return False
+            return True
 
     def check_password(self):
         """校验密码"""
-        password = self.data.get('password', '').strip()
-        if not password:
-            self.update_errors('password', 'err_password')
-            return False
-        return True
+        if self.data.get('password'):
+            if not isinstance(self.data.get('password'), str):
+                self.update_errors('password', 'err_password')
+                return False
+            password = self.data.get('password').strip()
+            if not password:
+                self.update_errors('password', 'err_password')
+                return False
+            return True
 
     def check_staff_name(self):
         """校验员工名称
         """
-        staff_name = self.data.get('staff_name', '').strip()
-        if not staff_name:
-            self.update_errors('staff_name', 'err_staff_name')
-            return False
-        return True
+        if self.data.get('staff_name'):
+            if not isinstance(self.data.get('staff_name'), str):
+                self.update_errors('staff_name', 'err_staff_name')
+                return False
+            staff_name = self.data.get('staff_name', '').strip()
+            if not staff_name:
+                self.update_errors('staff_name', 'err_staff_name')
+                return False
+            if len(staff_name) > 30:
+                self.update_errors('staff_name', 'staff_name_out_of_bounds')
+                return False
+            return True
 
     def check_email(self):
         """校验邮箱
         """
-        email = self.data.get('email', '').strip()
-        if not eggs.is_email_valid(email):
-            self.update_errors('email', 'err_email')
-            return False
-        return True
+        if self.data.get('email'):
+            if not isinstance(self.data.get('email'), str):
+                self.update_errors('email', 'err_email')
+                return False
+            email = self.data.get('email').strip()
+            if not eggs.is_email_valid(email):
+                self.update_errors('email', 'err_email')
+                return False
+            return True
 
     def check_contact_phone(self):
         """校验手机号
         """
-        contact_phone = self.data.get('contact_phone', '').strip()
-        if not eggs.is_phone_valid(contact_phone):
-            self.update_errors('contact_phone', 'err_contact_phone')
-            return False
-        return True
+        if self.data.get('contact_phone'):
+            if not isinstance(self.data.get('contact_phone'), str):
+                self.update_errors('contact_phone', 'err_contact_phone')
+                return False
+            contact_phone = self.data.get('contact_phone').strip()
+            if not eggs.is_phone_valid(contact_phone):
+                self.update_errors('contact_phone', 'err_contact_phone')
+                return False
+            return True
 
     def check_staff_title(self):
         """校验职位名称"""
-        staff_title = self.data.get('staff_title', '').strip()
-        if not staff_title:
-            self.update_errors('staff_title', 'err_staff_title')
-            return False
-
-        return True
+        if self.data.get('staff_title'):
+            if not isinstance(self.data.get('staff_title'), str):
+                self.update_errors('staff_title', 'err_staff_title')
+                return False
+            staff_title = self.data.get('staff_title').strip()
+            if not staff_title:
+                self.update_errors('staff_title', 'err_staff_title')
+                return False
+            if len(staff_title) > 30:
+                self.update_errors('staff_title', 'staff_title_out_of_bounds')
+                return False
+            return True
 
     def check_role_exists(self):
         from nmis.hospitals.models import Role
         role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_NORMAL_STAFF)
         if not role:
-            self.update_errors('role', 'err_group_not_exist')
+            self.update_errors('role', 'role_not_exists')
             return False
         return True
 
-    # def check_group(self):
-    #     group_id = self.data.get('group_id')
-    #     group = None
-    #     if not group_id:
-    #         group = Group.objects.filter(cate=GROUP_CATE_NORMAL_STAFF, is_admin=0).first()
-    #         if not group:
-    #             self.update_errors('group_id', 'err_group_not_exist')
-    #         self.data.update({'group': group})
-    #         return True
-    #     group = Group.objects.get_by_id(group_id)
-    #     if not group:
-    #         self.update_errors('group_id', 'err_group_not_exist')
-    #         return False
-    #     self.data.update({'group': group})
-    #     return True
-
     def save(self):
         data = {
-            'name': self.data.get('staff_name', '').strip(),
-            'title': self.data.get('staff_title', '').strip(),
-            'contact': self.data.get('contact_phone', '').strip(),
-            'email': self.data.get('email', '').strip(),
+            'name': self.data.get('staff_name').strip(),
+            'title': self.data.get('staff_title').strip(),
+            'contact': self.data.get('contact_phone').strip(),
+            'email': self.data.get('email').strip(),
         }
 
         user_data = {
-            "username": self.data.get('username', '').strip(),
-            "password": self.data.get('password', '').strip()
+            "username": self.data.get('username').strip(),
+            "password": self.data.get('password').strip()
         }
 
         return Staff.objects.create_staff(self.organ, self.dept, user_data, **data)
@@ -216,23 +233,17 @@ class StaffUpdateForm(BaseForm):
 
     ERR_CODES = {
         'err_staff_name':           '员工姓名错误',
+        'staff_name_out_of_bounds': '员工姓名长度不能大于30个字符',
         'err_contact_phone':        '联系电话格式错误',
         'err_email':                '无效邮箱',
         'err_dept':                 '科室信息错误',
-        'err_staff_title':          '职位名为空或格式错误'
+        'err_staff_title':          '职位名称为空或格式错误',
+        'staff_title_out_of_bounds': '职位名称长度不能大于30个字符',
     }
 
     def __init__(self, staff, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, ** kwargs)
         self.staff = staff
-        if data.get('staff_name'):
-            self.data.update({'name': data.get('staff_name', '').strip()})
-        if data.get('staff_title'):
-            self.data.update({'title': data.get('staff_title', '').strip()})
-        if data.get('contact_phone'):
-            self.data.update({'contact': data.get('contact_phone', '').strip()})
-        if data.get('email'):
-            self.data.update({'email': data.get('email', '').strip()})
 
     def is_valid(self):
         is_valid = True
@@ -248,57 +259,88 @@ class StaffUpdateForm(BaseForm):
     def check_staff_name(self):
         """校验员工名称
         """
-        staff_name = self.data.get('staff_name', '').strip()
-        if not staff_name:
-            self.update_errors('staff_name', 'err_staff_name')
-            return False
-        return True
+        if self.data.get('staff_name'):
+            if not isinstance(self.data.get('staff_name'), str):
+                self.update_errors('staff_name', 'err_staff_name')
+                return False
+            staff_name = self.data.get('staff_name').strip()
+            if not staff_name:
+                self.update_errors('staff_name', 'err_staff_name')
+                return False
+            if len(staff_name) > 30:
+                self.update_errors('staff_name', 'staff_name_out_of_bounds')
+                return False
+            return True
 
     def check_email(self):
         """校验邮箱
         """
-        email = self.data.get('email', '').strip()
-        if not eggs.is_email_valid(email):
-            self.update_errors('email', 'err_email')
-            return False
-        return True
+        if self.data.get('email'):
+            if not isinstance(self.data.get('email'), str):
+                self.update_errors('email', 'err_email')
+                return False
+            email = self.data.get('email').strip()
+            if not eggs.is_email_valid(email):
+                self.update_errors('email', 'err_email')
+                return False
+            return True
 
     def check_contact_phone(self):
         """校验手机号
         """
-        contact_phone = self.data.get('contact_phone', '').strip()
-        if not eggs.is_phone_valid(contact_phone):
-            self.update_errors('contact_phone', 'err_contact_phone')
-            return False
-        return True
+        contact_phone = self.data.get('contact_phone')
+        if contact_phone:
+            if not isinstance(contact_phone, str):
+                self.update_errors('contact_phone', 'err_contact_phone')
+                return False
+            if not eggs.is_phone_valid(contact_phone.strip()):
+                self.update_errors('contact_phone', 'err_contact_phone')
+                return False
+            return True
 
     def check_staff_title(self):
         """校验职位名称"""
-        staff_title = self.data.get('staff_title', '').strip()
-        if not staff_title:
-            self.update_errors('staff_title', 'err_staff_title')
-            return False
-
+        staff_title = self.data.get('staff_title')
+        if staff_title:
+            if not isinstance(staff_title, str):
+                self.update_errors('staff_title', 'err_staff_title')
+                return False
+            if not staff_title.strip():
+                self.update_errors('staff_title', 'err_staff_title')
+                return False
+            if len(staff_title.strip()) > 30:
+                self.update_errors('staff_title', 'staff_title_out_of_bounds')
+                return False
         return True
 
     def save(self):
-        update_staff = self.staff.update(self.data)
-        update_staff.cache()
+        update_data = {
+            'name': self.data.get('staff_name').strip(),
+            'title': self.data.get('staff_title').strip(),
+            'contact_phone': self.data.get('contact_phone').strip(),
+            'email': self.data.get('email').strip(),
+            'dept': self.data.get('dept')
+        }
+        update_staff = self.staff.update(update_data)
+        update_staff.clear_cache()
         return update_staff
 
 
 class StaffBatchUploadForm(BaseForm):
 
     ERR_CODES = {
-        'null_username':                '第{0}行用户名不能为空',
+        'empty_username':               '第{0}行用户名不能为空或数据错误',
         'duplicate_username':           '第{0}行和第{1}行用户名重复，请检查',
-        'username_exists':              '用户名{}已存在',
-        'null_staff_name':              '第{0}行员工姓名不能为空',
+        'username_exists':              '第{0}行用户名{1}已存在',
+        'empty_staff_name':             '第{0}行员工姓名不能为空或数据错误',
         'err_contact_phone':            '第{0}联系电话格式错误',
+        'empty_contact_phone':          '第{0}联系电话不能为空或数据错误',
         'err_email':                    '第{0}无效邮箱',
-        'empty_dept_data':              '没有科室数据',
-        'err_dept':                     '含有不存在的科室信息',
-        'err_group_not_exist':          '系统不存在普通员工权限，请先维护'
+        'empty_email':                  '第{0}行邮箱不能为空或数据错误',
+        'duplicate_email':              '第{0}行和第{1}行邮箱重复，请检查',
+        'empty_dept_name':              '第{0}行科室信息不能为空或数据错误',
+        'dept_not_exists':              '含有不存在的科室信息',
+        'role_not_exists':              '系统尚未设置角色信息，请先维护'
     }
 
     def __init__(self, organ, data, *args, **kwargs):
@@ -316,26 +358,22 @@ class StaffBatchUploadForm(BaseForm):
         if self.data and self.data[0] and self.data[0][0]:
             sheet_data = self.data[0]
             usernames, staff_names, dept_names, emails, contact_phones = [], [], [], [], []
-            for i in range(len(sheet_data)):
-                usernames.append(sheet_data[i].get('username', '').strip())
-            for i in range(len(sheet_data)):
-                staff_names.append(sheet_data[i].get('staff_name', '').strip())
-            for i in range(len(sheet_data)):
-                dept_names.append(sheet_data[i].get('dept_name', '').strip())
-            for i in range(len(sheet_data)):
-                emails.append(sheet_data[i].get('email', '').strip())
-            for i in range(len(sheet_data)):
-                contact_phones.append(str(sheet_data[i].get('contact_phone', '')).strip())
-                pre_data['usernames'] = usernames
-                pre_data['staff_names'] = staff_names
-                pre_data['dept_names'] = dept_names
-                pre_data['emails'] = emails
-                pre_data['contact_phones'] = contact_phones
+            for item in sheet_data:
+                usernames.append(item.get('username'))
+                staff_names.append(item.get('staff_name'))
+                dept_names.append(item.get('dept_name'))
+                emails.append(item.get('email'))
+                contact_phones.append(item.get('contact_phone'))
+            pre_data['usernames'] = usernames
+            pre_data['staff_names'] = staff_names
+            pre_data['dept_names'] = dept_names
+            pre_data['emails'] = emails
+            pre_data['contact_phones'] = contact_phones
         return pre_data
 
     def is_valid(self):
         if self.check_username() and self.check_staff_name() and self.check_dept() \
-                and self.check_email() and self.check_contact_phone() and self.check_group():
+                and self.check_email() and self.check_contact_phone() and self.check_role_exists():
             return True
         return False
 
@@ -347,21 +385,29 @@ class StaffBatchUploadForm(BaseForm):
         用户名已存在校验
         """
         usernames = self.pre_data.get('usernames')
-        for i in range(len(usernames)):
-            if not usernames[i]:
-                self.update_errors('username', 'null_username', str(i + 2))
+        if not usernames:
+            self.update_errors('username', 'empty_username', str(2))
+            return False
+        for i, username in enumerate(usernames):
+            if not username:
+                self.update_errors('username', 'empty_username', str(i + 2))
                 return False
-
-        for i in range(len(usernames)):
-            usernames_tmp = usernames.copy()
+            if not isinstance(username, str):
+                self.update_errors('username', 'empty_username', str(i + 2))
+                return False
+            if not username.strip():
+                self.update_errors('username', 'empty_username', str(i + 2))
+                return False
+        usernames_tmp = usernames.copy()
+        for i, username in enumerate(usernames):
             for j in range(i + 1, len(usernames_tmp)):
-                if usernames[i] == usernames_tmp[j]:
+                if username == usernames_tmp[j]:
                     self.update_errors('username', 'duplicate_username', str(i + 2), str(j + 2))
                     return False
 
         users = User.objects.filter(username__in=usernames)
         if users:
-            self.update_errors('username', 'username_exists', users[0].username)
+            self.update_errors('username', 'username_exists', str(i + 2), users[0].username)
             return False
 
         return True
@@ -371,58 +417,92 @@ class StaffBatchUploadForm(BaseForm):
         校验员工名称
         """
         staff_names = self.pre_data.get('staff_names')
-        for i in range(len(staff_names)):
-            if not staff_names[i]:
-                self.update_errors('staff_name', 'null_staff_name', str(i+2))
+        if not staff_names:
+            self.update_errors('staff_name', 'empty_staff_name', str(2))
+            return False
+        for i, item in enumerate(staff_names):
+            if not item:
+                self.update_errors('staff_name', 'empty_staff_name', str(i+2))
                 return False
-
+            if not isinstance(item, str):
+                self.update_errors('staff_name', 'empty_staff_name', str(i+2))
+                return False
+            if not item.strip():
+                self.update_errors('staff_name', 'empty_staff_name', str(i+2))
+                return False
         return True
 
     def check_email(self):
         """
-        校验邮箱
+        校验邮箱 非必输项
         """
         emails = self.pre_data.get('emails')
-        for i in range(len(emails)):
-            if emails[i]:
-                if not eggs.is_email_valid(emails[i]):
-                    self.update_errors('email', 'err_email', str(i+2))
-                    return False
-        return True
+        if emails:
+            emails_tmp = emails.copy()
+            for i, item in enumerate(emails):
+                if item:
+                    if not isinstance(item, str):
+                        self.update_errors('email', 'err_email', str(i+2))
+                        return False
+                    if not eggs.is_email_valid(item.strip()):
+                        self.update_errors('email', 'err_email', str(i+2))
+                        return False
+                for j in range(i + 1, len(emails_tmp)):
+                    if item and item == emails_tmp[j]:
+                        self.update_errors('email', 'duplicate_email', str(i + 2), str(j + 2))
+                        return False
+            return True
 
     def check_contact_phone(self):
         """
         校验手机号
         """
         contact_phones = self.pre_data.get('contact_phones')
-        for i in range(len(contact_phones)):
-            if contact_phones[i]:
-                if not eggs.is_phone_valid(str(contact_phones[i])):
-                    self.update_errors('contact_phone', 'err_contact_phone', str(i+2))
-                    return False
-
+        if not contact_phones:
+            self.update_errors('contact_phone', 'empty_contact_phone', str(2))
+        for i, item in enumerate(contact_phones):
+            if not item:
+                self.update_errors('contact_phone', 'empty_contact_phone', str(i + 2))
+                return False
+            try:
+                str(item)
+            except Exception as e:
+                self.update_errors('username', 'empty_username', str(i + 2))
+                return False
+            if not eggs.is_phone_valid(str(item)):
+                self.update_errors('contact_phone', 'err_contact_phone', str(i+2))
+                return False
         return True
 
     def check_dept(self):
         """校验职位名称"""
         dept_names = self.pre_data.get('dept_names')
         if not dept_names:
-            self.update_errors('dept', 'empty_dept_data')
+            self.update_errors('dept', 'empty_dept_name', str(2))
             return False
+        db_dept_names = Department.objects.values_list('name')
 
-        distincted_dept_names = set(dept_names)
-        dept_query_set = Department.objects.filter(name__in=distincted_dept_names)
-        if not dept_query_set or len(dept_query_set) < len(distincted_dept_names):
-            self.update_errors('dept', 'err_dept')
-            return False
-
+        for i, item in enumerate(dept_names):
+            if not item:
+                self.update_errors('dept', 'empty_dept_name', str(i + 2))
+                return False
+            if not isinstance(item, str):
+                self.update_errors('dept', 'empty_dept_name', str(i + 2))
+                return False
+            if not item.strip():
+                self.update_errors('dept', 'empty_dept_name', str(i + 2))
+                return False
+            if (item.strip(), ) not in db_dept_names:
+                self.update_errors('dept', 'dept_not_exists', str(i + 2))
+                return False
         return True
 
-    def check_group(self):
-        group = Group.objects.filter(cate=GROUP_CATE_NORMAL_STAFF, is_admin=0).first()
-        if not group:
-            self.update_errors('group_id', 'err_group_not_exist')
-        self.group = group
+    def check_role_exists(self):
+        from nmis.hospitals.models import Role
+        role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_NORMAL_STAFF)
+        if not role:
+            self.update_errors('role', 'role_not_exists')
+            return False
         return True
 
     def save(self):
@@ -433,19 +513,18 @@ class StaffBatchUploadForm(BaseForm):
 
             for row_data in sheet_data:
                 staffs_data.append({
-                    'username': row_data.get('username', '').strip(),
-                    'staff_name': row_data.get('staff_name', '').strip(),
-                    'contact_phone': row_data.get('contact_phone'),
-                    'email': row_data.get('email', '').strip(),
+                    'username': row_data.get('username').strip(),
+                    'staff_name': row_data.get('staff_name').strip(),
+                    'contact_phone': str(row_data.get('contact_phone')).strip(),
+                    'email': row_data.get('email').strip(),
                     'dept_name': row_data.get('dept_name').strip(),  # 将username和dept建立字典关系, 以便于批量查询dept
                     'organ': self.organ,
-                    'group': self.group
                 })
 
             # 建立字典结构, 以便通过dept_name快速定位dept对象: key/value: dept_name/dept
             dept_dict = {}
-            dept_names = set(self.pre_data['dept_names'])
-            depts = Department.objects.filter(name__in=dept_names)
+            dept_name_set = set([dept_name.strip() for dept_name in self.pre_data['dept_names']])
+            depts = Department.objects.filter(name__in=dept_name_set)
             for dept in depts:
                 dept_dict[dept.name] = dept
 
@@ -465,10 +544,16 @@ class DepartmentUpdateFrom(BaseForm):
         self.dept = dept
 
         self.ERR_CODES.update({
+            'empty_dept_name':      '科室名称为空或数据错误',
             'dept_name_err':        '科室名字不符合要求',
             'dept_contact_err':     '科室电话号码格式错误',
             'dept_attri_err':       '科室属性错误',
             'dept_desc_err':        '科室描述存在敏感字符',
+            'dept_name_out_of_bounds': '科室名称不能大有30个字符',
+            'dept_exists':          '同名科室已存在',
+            'err_dept_contact':     '科室电话号码格式错误',
+            'empty_desc':           '科室描述为空或数据错误',
+            'desc_out_of_bounds':   '科室描述能大有100个字符',
         })
 
     def is_valid(self):
@@ -531,15 +616,18 @@ class DepartmentCreateForm(BaseForm):
         self.hospital = hospital
 
         self.ERR_CODES.update({
-            'err_dept_name': '科室名字不符合要求',
-            'dept_exist':     '同名科室已存在',
+            'empty_dept_name': '科室名称为空或数据错误',
+            'dept_name_out_of_bounds': '科室名称不能大有30个字符',
+            'dept_exists':     '同名科室已存在',
             'err_dept_contact': '科室电话号码格式错误',
             'err_dept_attri': '科室属性错误',
             'err_dept_desc': '科室描述存在敏感字符',
+            'empty_desc': '科室描述为空或数据错误',
+            'desc_out_of_bounds': '科室描述能大有100个字符',
         })
 
     def is_valid(self):
-        if not self.check_contact() or not self.check_name():
+        if not self.check_contact() or not self.check_name() or not self.check_desc():
             return False
         return True
 
@@ -547,24 +635,51 @@ class DepartmentCreateForm(BaseForm):
         contact = self.data.get('contact')
         if not contact:
             return True
-        if not eggs.is_phone_valid(contact):
+        if not eggs.is_phone_valid(str(contact).strip()):
             self.update_errors('dept_contact', 'err_dept_contact')
             return False
         return True
 
     def check_name(self):
-        dept = Department.objects.filter(name=self.data.get('name'))
+        name = self.data.get('name')
+        if not name:
+            self.update_errors('dept_name', 'empty_dept_name')
+            return False
+        if not isinstance(name, str):
+            self.update_errors('dept_name', 'empty_dept_name')
+            return False
+        if not name.strip():
+            self.update_errors('dept_name', 'empty_dept_name')
+            return False
+        if len(name.strip()) > 30:
+            self.update_errors('dept_name', 'dept_name_out_of_bounds')
+            return False
+        dept = Department.objects.filter(name=name.strip())
         if dept:
-            self.update_errors('dept_name', 'dept_exist')
+            self.update_errors('dept_name', 'dept_exists')
+            return False
+        return True
+
+    def check_desc(self):
+        desc = self.data.get('desc')
+        if not desc:
+            return True
+        if not isinstance(desc, str):
+            self.update_errors('desc', 'empty_desc')
+            return False
+        if not desc.strip():
+            return True
+        if len(desc.strip()) > 100:
+            self.update_errors('desc', 'desc_out_of_bounds')
             return False
         return True
 
     def save(self):
 
         dept_data = {
-            'name': self.data.get('name', '').strip(),
-            'contact': self.data.get('contact', '').strip(),
-            'desc': self.data.get('desc', '').strip(),
+            'name': self.data.get('name').strip(),
+            'contact': self.data.get('contact').strip(),
+            'desc': self.data.get('desc').strip(),
             'attri': 'OT'
         }
 

@@ -226,7 +226,7 @@ class Department(BaseDepartment):
     """
 
     organ = models.ForeignKey(Hospital, verbose_name=u'所属医疗机构', on_delete=models.CASCADE, related_name='organ')  # 重写父类
-    attri = models.CharField('科室/部门属性', choices=DPT_ATTRI_CHOICES, max_length=2, null=True, blank=True)
+    attri = models.CharField('科室/部门属性', choices=DPT_ATTRI_CHOICES, max_length=10, null=True, blank=True)
 
     class Meta:
         verbose_name = u'B 科室/部门'
@@ -288,7 +288,7 @@ class Doctor(Staff):
     """
     医生数据模型. 子类和父类都产生表结构, 而子表仅存储额外的属性字段
     """
-    medical_title = models.CharField('医生职称', choices=DOCTOR_TITLE_CHOICES, max_length=3, null=True, blank=True)
+    medical_title = models.CharField('医生职称', choices=DOCTOR_TITLE_CHOICES, max_length=10, null=True, blank=True)
 
     class Meta:
         verbose_name = 'D 医生'
@@ -306,7 +306,7 @@ class Group(BaseGroup):
     group_cate_choices = GROUP_CATE_CHOICES
 
     organ = models.ForeignKey(Hospital, verbose_name=u'所属医院', on_delete=models.CASCADE, null=True, blank=True)
-    cate = models.CharField(u'权限组类别', max_length=4, choices=GROUP_CATE_CHOICES,
+    cate = models.CharField(u'权限组类别', max_length=10, choices=GROUP_CATE_CHOICES,
                             null=True, blank=True)
     objects = GroupManager()
 
@@ -320,9 +320,9 @@ class Role(BaseModel):
     """
     角色数据模型
     """
-    name = models.CharField('角色名称', max_length=40, unique=True)
+    name = models.CharField('角色名称', max_length=30, unique=True)
     codename = models.CharField('角色代码', max_length=100, unique=True)
-    cate = models.CharField('类别', max_length=4, choices=ROLE_CATE_CHOICES, default=ROLE_CATE_NORMAL)
+    cate = models.CharField('类别', max_length=10, choices=ROLE_CATE_CHOICES, default=ROLE_CATE_NORMAL)
     permissions = models.ManyToManyField(
         Permission, verbose_name='权限集',
         related_name="roles", related_query_name='role',
@@ -418,7 +418,7 @@ class HospitalAddress(BaseModel):
     医院内部地址
     """
     title = models.CharField('名称', max_length=128)
-    type = models.CharField('类型', choices=HOSPITAL_AREA_TYPE_CHOICES, max_length=3)
+    type = models.CharField('类型', choices=HOSPITAL_AREA_TYPE_CHOICES, max_length=10)
     parent = models.ForeignKey('self', verbose_name='父级地址', on_delete=models.PROTECT, null=True, blank=True)
     # 祖节点到当节点的父节点最短路径, 由各节点id的字符串组成，每个id,之间用‘-’进行分隔
     parent_path = models.CharField('父地址路径', max_length=1024, default='', null=False, blank=False)

@@ -21,10 +21,14 @@ class FileManager(BaseManager):
         :param files: {'id: 1, 'name': '', 'path': '', 'cate': ''}
         :return:
         """
-        result_list = list()
-        for file in files:
-            file_obj, created = self.update_or_create(path=file.pop('path'), defaults=file)
-            result_list.append(file_obj)
-        return result_list
+        result_list = []
+        try:
+            for file in files:
+                file_obj, created = self.update_or_create(path=file.pop('path'), defaults=file)
+                result_list.append(file_obj)
+            return result_list
+        except Exception as e:
+            logger.exception(e)
+            return None
 
 

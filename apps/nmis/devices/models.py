@@ -50,10 +50,10 @@ class OrderedDevice(Device):
     )
     planned_price = models.FloatField('预算单价', default=0.00)
     real_price = models.FloatField('实际单价', default=0.00, null=True, blank=True)
-    num = models.IntegerField('预购数量', default=1)
-    measure = models.CharField('度量/单位', max_length=5, null=True, blank=True)
-    type_spec = models.CharField('规格/型号', max_length=20, null=True, blank=True)
-    purpose = models.CharField('用途', max_length=20, null=True, blank=True, default='')
+    num = models.IntegerField('预购数量', default=0)
+    measure = models.CharField('度量/单位', max_length=10, null=True, blank=True)
+    type_spec = models.CharField('规格/型号', max_length=30, null=True, blank=True)
+    purpose = models.CharField('用途', max_length=50, null=True, blank=True, default='')
 
     class Meta:
         verbose_name = u'申购的硬件设备'
@@ -80,7 +80,7 @@ class SoftwareDevice(Device):
         'projects.ProjectPlan', verbose_name='所属项目', related_name='software_devices',
         on_delete=models.CASCADE, null=True, blank=True
     )
-    purpose = models.CharField('用途', max_length=20, null=True, blank=True, default='')
+    purpose = models.CharField('用途', max_length=50, null=True, blank=True, default='')
 
     real_price = models.FloatField('实际单价', default=0.00, null=True, blank=True)
     planned_price = models.FloatField('预算单价', default=0.00)
@@ -125,11 +125,11 @@ class ContractDevice(Device):
     supplier = models.CharField('供应商', max_length=100, null=True, blank=True)
     planned_price = models.FloatField('预算单价', default=0.00)
     real_price = models.FloatField('实际单价', default=0.00, null=True, blank=True)
-    num = models.IntegerField('预购数量', default=1)
+    num = models.IntegerField('预购数量', default=0)
     real_total_amount = models.FloatField('总价', default=0.00, null=True, blank=True)
-    measure = models.CharField('度量/单位', max_length=5, null=True, blank=True)
-    type_spec = models.CharField('规格/型号', max_length=20, null=True, blank=True)
-    purpose = models.CharField('用途', max_length=20, null=True, blank=True, default='')
+    measure = models.CharField('度量/单位', max_length=10, null=True, blank=True)
+    type_spec = models.CharField('规格/型号', max_length=30, null=True, blank=True)
+    purpose = models.CharField('用途', max_length=50, null=True, blank=True, default='')
 
     class Meta:
         verbose_name = '采购合同产品明细'
@@ -217,14 +217,14 @@ class AssertDevice(BaseModel):
 
     assert_no = models.CharField('资产编号', max_length=64, unique=True)
     title = models.CharField('资产名称', max_length=128, )
-    cate = models.CharField('资产设备类型', choices=ASSERT_DEVICE_CATE_CHOICES, max_length=2, default=ASSERT_DEVICE_CATE_MEDICAL, )
+    cate = models.CharField('资产设备类型', choices=ASSERT_DEVICE_CATE_CHOICES, max_length=10, default=ASSERT_DEVICE_CATE_MEDICAL, )
     medical_device_cate = models.ForeignKey(
         'devices.MedicalDeviceSix8Cate', related_name='related_assert_device', verbose_name='医疗器械分类',
         on_delete=models.PROTECT, null=True
     )
     serial_no = models.CharField('资产序列号', max_length=64, unique=True)
     type_spec = models.CharField('规格型号', max_length=32, )
-    service_life = models.SmallIntegerField('预计使用年限', )
+    service_life = models.PositiveSmallIntegerField('预计使用年限', default=0)
     performer = models.ForeignKey(
         'hospitals.Staff', related_name='performed_assert_device', verbose_name='资产负责人',
         on_delete=models.PROTECT, null=True, blank=True
@@ -242,8 +242,8 @@ class AssertDevice(BaseModel):
     producer = models.CharField('厂家', max_length=128, null=True, blank=True)
     storage_place = models.ForeignKey('hospitals.HospitalAddress', '存放地点', null=True, blank=True)
     purchase_date = models.DateField('购入日期')
-    status = models.CharField('资产状态', max_length=3, choices=ASSERT_DEVICE_STATUS_CHOICES, default=ASSERT_DEVICE_STATUS_FREE)
-    state = models.CharField('数据状态', max_length=3, choices=ASSERT_DEVICE_STATE_CHOICES, default=ASSERT_DEVICE_STATE_NEW)
+    status = models.CharField('资产状态', max_length=10, choices=ASSERT_DEVICE_STATUS_CHOICES, default=ASSERT_DEVICE_STATUS_FREE)
+    state = models.CharField('数据状态', max_length=10, choices=ASSERT_DEVICE_STATE_CHOICES, default=ASSERT_DEVICE_STATE_NEW)
     creator = models.ForeignKey(
         'hospitals.Staff', related_name='created_assert_device', verbose_name='创建人',
         on_delete=models.PROTECT
@@ -342,7 +342,7 @@ class AssertDeviceRecord(BaseModel):
     assert_device = models.ForeignKey(
         'devices.AssertDevice', verbose_name='资产设备', on_delete=models.PROTECT
     )
-    operation = models.CharField('操作', choices=ASSERT_DEVICE_OPERATION_CHOICES, max_length=3, default=ASSERT_DEVICE_OPERATION_SUBMIT)
+    operation = models.CharField('操作', choices=ASSERT_DEVICE_OPERATION_CHOICES, max_length=10, default=ASSERT_DEVICE_OPERATION_SUBMIT)
     reason = models.CharField('执行当前操作的原因', max_length=128, null=True, blank=True, default='')
     operator = models.ForeignKey(
         'hospitals.Staff', related_name='operate_assert_device_record', verbose_name='操作人', on_delete=models.PROTECT
@@ -424,14 +424,14 @@ class RepairOrder(BaseModel):
     # 存放id，id之间用分隔符分隔
     files = models.CharField('附件列表', max_length=16, null=True, blank=True)
     priority = models.CharField(
-        '优先级', max_length=2, choices=PRIORITY_CHOICES, default='',
+        '优先级', max_length=10, choices=PRIORITY_CHOICES, default='',
         null=True, blank=True
     )
     repair_devices = models.ManyToManyField(
         'devices.AssertDevice', verbose_name='报修设备清单',
         related_name="repair_device_list", blank=True
     )
-    status = models.CharField('状态', max_length=3, choices=REPAIR_ORDER_STATUS_CHOICES, default=REPAIR_ORDER_STATUS_SUBMITTED)
+    status = models.CharField('状态', max_length=10, choices=REPAIR_ORDER_STATUS_CHOICES, default=REPAIR_ORDER_STATUS_SUBMITTED)
     comment_grade = models.SmallIntegerField('评价等级', null=True, blank=True)
     comment_content = models.CharField('评价内容', max_length=128, null=True, blank=True)
     comment_time = models.DateTimeField('评价时间', null=True, blank=True)
@@ -503,7 +503,7 @@ class RepairOrderRecord(BaseModel):
         'devices.RepairOrder', verbose_name='报修单/维修单', on_delete=models.PROTECT
     )
     operation = models.CharField(
-        '操作', choices=REPAIR_ORDER_OPERATION_CHOICES, max_length=3, default=REPAIR_ORDER_OPERATION_SUBMIT
+        '操作', choices=REPAIR_ORDER_OPERATION_CHOICES, max_length=10, default=REPAIR_ORDER_OPERATION_SUBMIT
     )
     # 退回或关闭原因
     reason = models.CharField('执行当前操作的原因', max_length=128, null=True, blank=True, default='')
@@ -544,12 +544,12 @@ class MaintenancePlan(BaseModel):
         related_name="plan_place_ships", blank=True
     )
     type = models.CharField(
-        '维保计划类型', choices=MAINTENANCE_PLAN_TYPE_CHOICES, default=MAINTENANCE_PLAN_TYPE_POLLING, max_length=3
+        '维保计划类型', choices=MAINTENANCE_PLAN_TYPE_CHOICES, default=MAINTENANCE_PLAN_TYPE_POLLING, max_length=10
     )
     start_date = models.DateTimeField('开始日期')
     period_measure = models.CharField(
         '执行周期计量单位', choices=MAINTENANCE_PLAN_PERIOD_MEASURE_CHOICES, default=MAINTENANCE_PLAN_PERIOD_MEASURE_DAY,
-        max_length=2, null=True, blank=True
+        max_length=10, null=True, blank=True
     )
     period_num = models.IntegerField('执行周期数', null=True, blank=True)
     expired_date = models.DateTimeField('截止日期')
@@ -563,7 +563,7 @@ class MaintenancePlan(BaseModel):
         related_name="plan_device_list", blank=True
     )
     status = models.CharField(
-        '状态', choices=MAINTENANCE_PLAN_STATUS_CHOICES, default=MAINTENANCE_PLAN_STATUS_NEW, max_length=3
+        '状态', choices=MAINTENANCE_PLAN_STATUS_CHOICES, default=MAINTENANCE_PLAN_STATUS_NEW, max_length=10
     )
     creator = models.ForeignKey(
         'hospitals.Staff',  related_name='created_maintenance_plan', verbose_name='创建人', on_delete=models.PROTECT
@@ -622,7 +622,7 @@ class FaultSolution(BaseModel):
     solution = models.TextField('解决方案', max_length=2048)
     # 存放id，id之间用分隔符分隔
     files = models.CharField('附件列表', max_length=16, null=True, blank=True)
-    status = models.CharField('状态', max_length=3, choices=FAULT_SOLUTION_STATUS_CHOICES, default=FAULT_SOLUTION_STATUS_NEW)
+    status = models.CharField('状态', max_length=10, choices=FAULT_SOLUTION_STATUS_CHOICES, default=FAULT_SOLUTION_STATUS_NEW)
     page_views = models.IntegerField('浏览次数', null=True, blank=True)
     likes = models.IntegerField('点赞数', null=True, blank=True)
     creator = models.ForeignKey(

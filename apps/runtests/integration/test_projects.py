@@ -889,8 +889,10 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         import os
         curr_path = os.path.dirname(__file__)
         with open(curr_path + '/data/upload_file_test.xlsx', 'wb+') as file_io:
-            try:
-                for index, item in enumerate(milestone_states):
+            length = len(milestone_states)
+            for index, item in enumerate(milestone_states):
+                file_path = ''
+                try:
                     if item.milestone.title in ['调研', '实施调试', '项目验收']:
                         item.status = "DOING"
                         item.save()
@@ -911,23 +913,20 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                             'cate_documents': cate_documents
                         }
                         response = self.post(api.format(project.id, item.id), data=data_dict)
-                        saved_file_path = None
-                        try:
-                            self.assert_response_success(response)
-                            saved_milestone_state = response.get('project_milestone_state')
-                            self.assertIsNone(saved_milestone_state)
-                            self.assertTrue(saved_milestone_state.get('is_saved'))
-                            saved_file_path = saved_milestone_state.get('cate_documents')[0].get('files')[0].get('path')
-                            self.assertEqual(saved_file_path, file_path)
-                            self.assertEqual(
-                                saved_milestone_state.get('cate_documents')[0].get('category'),
-                                cate_document.get('category')
-                            )
-                        except AssertionError as e:
-                            remove(os.path.join(settings.MEDIA_ROOT, file_path))
-                            raise e
-            except AssertionError as e:
-                os.rmdir(os.path.join(settings.MEDIA_ROOT, PROJECT_DOCUMENT_DIR, str(project.id)))
+                        self.assert_response_success(response)
+                        saved_milestone_state = response.get('project_milestone_state')
+                        self.assertIsNotNone(saved_milestone_state)
+                        self.assertTrue(saved_milestone_state.get('is_saved'))
+                        saved_file_path = saved_milestone_state.get('cate_documents')[0].get('files')[0].get('path')
+                        self.assertEqual(saved_file_path, file_path)
+                        self.assertEqual(
+                            saved_milestone_state.get('cate_documents')[0].get('category'),
+                            cate_document.get('category'))
+                finally:
+                    remove(os.path.join(settings.MEDIA_ROOT, file_path))
+                    if index == length-1:
+                        os.rmdir(os.path.join(settings.MEDIA_ROOT, PROJECT_DOCUMENT_DIR, str(project.id)))
+
 
     def test_save_project_milestone_state_plan_gathered_info(self):
         """测试方案保存/修改"""

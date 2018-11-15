@@ -7,11 +7,14 @@
 
 import logging
 
+from django.core.files.uploadedfile import UploadedFile
+
 import settings
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_SCRAPPED
+from nmis.documents.consts import DOC_UPLOAD_BASE_DIR
 from runtests import BaseTestCase
 from runtests.common.mixins import AssertDevicesMixin, HospitalMixin
-from utils.files import remove
+from utils.files import remove, upload_file
 from utils.times import now
 
 logger = logging.getLogger(__name__)
@@ -657,8 +660,9 @@ class RepairOrderTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
                 self.assertEqual(response.get('repair_order').get('status'), 'DNE')
                 self.assertEqual(response.get('repair_order').get('result'), handle_data.get('result'))
                 self.assertEqual(response.get('repair_order').get('expenses'), handle_data.get('expenses'))
-            except AssertionError as e:
+            finally:
                 remove(os.path.join(settings.MEDIA_ROOT, files[0].get('path')))
+
 
         # 测试评价
         comment_data = {
@@ -680,45 +684,41 @@ class FaultSolutionsTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
 
         api_create = '/api/v1/devices/fault_solutions/create'
 
-        # "files": [
-        #     {
-        #         "name": "需求论证2.txt",
-        #         "path": "path",
-        #         "cate": "UNKNOWN"
-        #
-        #     }
-        # ]
+        import os
+        curr_path = os.path.dirname(__file__)
         fault_types = self.init_fault_types(self.admin_staff)
-        fs_data = {
-            "title": "电脑碎屏001",
-            "fault_type_id": fault_types[0].id,
-            "desc": "电脑碎屏test",
-            "solution": "换机"
-        }
         self.login_with_username(self.user)
 
-        response = self.post(api_create, data=fs_data)
-        self.assert_response_success(response)
-        fault_solution = response.get('fault_solution')
-        self.assertIsNotNone(fault_solution)
-        self.assertIsNotNone(fault_solution.get('id'))
-        self.assertEqual(fault_solution.get('title'), fs_data.get('title'))
-        self.assertEqual(fault_solution.get('fault_type_id'), fs_data.get('fault_type_id'))
-        self.assertEqual(fault_solution.get('desc'), fs_data.get('desc'))
-        self.assertEqual(fault_solution.get('solution'), fs_data.get('solution'))
+        with open(curr_path + '/data/upload_file_test.xlsx', 'wb+') as file_io:
+            try:
+                upload_result = upload_file(UploadedFile(file_io), DOC_UPLOAD_BASE_DIR)
+                file_name = upload_result.get('name')
+                file_path = upload_result.get('path')
+                file = {'name': file_name, 'path': file_path, 'cate': "UNKNOWN"}
+                fs_data = {
+                    "title": "电脑碎屏001",
+                    "fault_type_id": fault_types[0].id,
+                    "desc": "电脑碎屏test",
+                    "solution": "换机",
+                    'files': [file]
+                }
+                response = self.post(api_create, data=fs_data)
+                self.assert_response_success(response)
+                fault_solution = response.get('fault_solution')
+                self.assertIsNotNone(fault_solution)
+                self.assertIsNotNone(fault_solution.get('id'))
+                self.assertEqual(fault_solution.get('title'), fs_data.get('title'))
+                self.assertEqual(fault_solution.get('fault_type_id'),
+                                 fs_data.get('fault_type_id'))
+                self.assertEqual(fault_solution.get('desc'), fs_data.get('desc'))
+                self.assertEqual(fault_solution.get('solution'), fs_data.get('solution'))
+            finally:
+                remove(os.path.join(settings.MEDIA_ROOT, file_path))
 
-    def test_create_fault_solution(self):
+    def test_update_fault_solution(self):
 
         api_update = '/api/v1/devices/fault_solutions/{}'
 
-        # "files": [
-        #     {
-        #         "name": "需求论证2.txt",
-        #         "path": "path",
-        #         "cate": "UNKNOWN"
-        #
-        #     }
-        # ]
         fault_types = self.init_fault_types(self.admin_staff)
         fs_create_data = {
             "title": "电脑碎屏001",

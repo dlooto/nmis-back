@@ -28,7 +28,7 @@ class ProjectPlan(BaseModel):
     采购申请(一次申请即开始一个项目)
     """
     title = models.CharField('项目名称', max_length=30)
-    handing_type = models.CharField('办理方式', max_length=2,
+    handing_type = models.CharField('办理方式', max_length=10,
                                     choices=PROJECT_HANDING_TYPE_CHOICES,
                                     default=PRO_HANDING_TYPE_SELF)
     purpose = models.CharField('申请原因', max_length=100, null=True, default='')
@@ -73,10 +73,10 @@ class ProjectPlan(BaseModel):
     #     related_name="projects", related_query_name="project", blank=True
     # )
 
-    status = models.CharField('项目状态', max_length=2, choices=PROJECT_STATUS_CHOICES, default=PRO_STATUS_PENDING)
+    status = models.CharField('项目状态', max_length=10, choices=PROJECT_STATUS_CHOICES, default=PRO_STATUS_PENDING)
     startup_time = models.DateTimeField(u'项目启动时间', null=True, blank=True)  # 项目分配负责人的时刻即为启动时间
     expired_time = models.DateTimeField(u'项目截止时间', null=True, blank=True)
-    project_cate = models.CharField('项目类型', max_length=2, choices=PROJECT_CATE_CHOICES, default=PRO_CATE_HARDWARE)
+    project_cate = models.CharField('项目类型', max_length=10, choices=PROJECT_CATE_CHOICES, default=PRO_CATE_HARDWARE)
 
     project_introduce = models.CharField('项目介绍/项目描述', max_length=200, null=True, blank=True)
     pre_amount = models.FloatField('项目预估总价', null=True, blank=True)
@@ -445,15 +445,6 @@ class ProjectPlan(BaseModel):
             for child in children:
                 self.gen_milestone_state_structured(child, pro_milestone_states)
 
-
-
-
-
-
-
-
-
-
     def get_project_milestone_states(self):
         """
         返回当前项目所有项目里程碑项
@@ -589,7 +580,7 @@ class ProjectFlow(BaseModel):
     """
     organ = models.ForeignKey('hospitals.Hospital', verbose_name='所属医院', on_delete=models.CASCADE)
     title = models.CharField('流程名称', max_length=30, default='默认')
-    type = models.CharField('流程类型', max_length=3, null=True, blank=True, default='')
+    type = models.CharField('流程类型', max_length=10, null=True, blank=True, default='')
     pre_defined = models.BooleanField('是否预定义', default=False) # 机构初始创建时, 为机构默认生成预定义的流程
     default_flow = models.BooleanField('是否为默认流程', default=False)
 
@@ -701,7 +692,7 @@ class Milestone(BaseModel):
 
     # 用于决定里程碑项在流程中的顺序. index值小的排在前面
     index = models.SmallIntegerField('索引顺序', default=1)
-    desc = models.CharField('描述', max_length=20, default='')
+    desc = models.CharField('描述', max_length=30, default='')
 
     parent = models.ForeignKey('self', verbose_name='父里程碑', null=True, on_delete=models.CASCADE)
     # 祖里程碑到当前里程碑的父节点最短路径, 由各里程碑项id的字符串组成，每个id,之间用‘-’进行分隔
@@ -961,7 +952,7 @@ class ProjectMilestoneState(BaseModel):
     doc_list = models.CharField('文档列表', max_length=100, null=True, blank=True)
 
     # 记录各里程碑下的一个总结性说明概述
-    summary = models.TextField('总结说明', max_length=200, null=True, blank=True)
+    summary = models.TextField('总结说明', max_length=1024, null=True, blank=True)
 
     status = models.CharField('项目里程碑状态', max_length=10, choices=PROJECT_MILESTONE_STATUS, default=PRO_MILESTONE_TODO)
     finished_time = models.DateTimeField('项目里程碑完结时间', default=None, null=True, blank=True)
@@ -1150,13 +1141,12 @@ class ProjectDocument(BaseModel):
     """
     项目文档数据模型
     """
-    name = models.CharField('文档名称', max_length=80, null=False, blank=False)
+    name = models.CharField('文档名称', max_length=100, null=False, blank=False)
     category = models.CharField(
         '文档类别', max_length=30, choices=PROJECT_DOCUMENT_CATE_CHOICES,
         null=False, blank=False
     )
-    path = models.CharField('存放路径', max_length=255, null=False, blank=False)
-
+    path = models.CharField('存放路径', max_length=254, null=False, blank=False)
     objects = ProjectDocumentManager()
 
     class Meta:
@@ -1191,7 +1181,7 @@ class Supplier(BaseModel):
     """
     name = models.CharField('供应商名称', max_length=100, null=False, blank=False)
     contact = models.CharField('联系人', max_length=50, null=True, blank=True)
-    contact_tel = models.CharField('联系电话', max_length=12, null=True, blank=True)
+    contact_tel = models.CharField('联系电话', max_length=20, null=True, blank=True)
 
     class Meta:
         verbose_name = '供应商'
@@ -1222,7 +1212,7 @@ class SupplierSelectionPlan(BaseModel):
         null=False, blank=False
     )
     total_amount = models.FloatField('方案总价', default=0.00, null=False, blank=False)
-    remark = models.CharField('备注', max_length=255, null=True, blank=True)
+    remark = models.CharField('备注', max_length=254, null=True, blank=True)
     # ProjectDocument对象ID集，每个id之间用'|'字符进行分割(目前包含方案资料和其他资料)
     doc_list = models.CharField('方案文档列表', max_length=32, null=True, blank=True)
     selected = models.BooleanField('是否为最终选定方案', default=False, null=False, blank=True)
@@ -1261,10 +1251,10 @@ class PurchaseContract(BaseModel):
     signed_date = models.DateField('签订时间', null=False, blank=False)
     buyer = models.CharField('买方/甲方单位', max_length=128, null=False, blank=False)
     buyer_contact = models.CharField('买方/甲方联系人', max_length=50, null=False, blank=False)
-    buyer_tel = models.CharField('买方/甲方联系电话', max_length=11, null=False, blank=False)
+    buyer_tel = models.CharField('买方/甲方联系电话', max_length=20, null=False, blank=False)
     seller = models.CharField('卖方/乙方单位', max_length=128, null=False, blank=False)
     seller_contact = models.CharField('卖方/乙方联系人', max_length=50, null=False, blank=False)
-    seller_tel = models.CharField('卖方/乙方联系电话', max_length=11, null=False, blank=False)
+    seller_tel = models.CharField('卖方/乙方联系电话', max_length=20, null=False, blank=False)
     total_amount = models.FloatField('合同总价', default=0.00, null=False, blank=False)
     delivery_date = models.DateField('交货时间', null=False, blank=False)
     # 合同文档附件-ProjectDocument对象ID集，每个id之间用','字符进行分割
@@ -1301,7 +1291,7 @@ class Receipt(BaseModel):
     )
     served_date = models.DateField('到货时间', null=False, blank=False)
     delivery_man = models.CharField('送货人', max_length=50, null=False, blank=False)
-    contact_phone = models.CharField('联系电话', max_length=11, null=True, blank=True)
+    contact_phone = models.CharField('联系电话', max_length=20, null=True, blank=True)
     # 送货单附件-ProjectDocument对象ID集，每个id之间用'|'字符进行分割
     doc_list = models.CharField('送货单附件', max_length=10, null=True, blank=True)
 

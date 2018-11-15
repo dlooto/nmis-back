@@ -96,7 +96,11 @@ class FileBulkCreateOrUpdateForm(BaseForm):
             'file_cate_err': '文档类为空或数据错误',
             'files_blank': '文件列表为空或数据错误',
             'file_name_error': '文件名称为空或数据错误',
+            'file_name_out_of_bounds': '文件名称长度不能超过100个字符',
+
             'file_path_error': '文件路径为空或数据错误',
+            'file_path_out_of_bounds': '文件路径长度不能超过1000个字符',
+
             'file_not_exists': '文件不存在',
         })
 
@@ -134,6 +138,12 @@ class FileBulkCreateOrUpdateForm(BaseForm):
                 if not file.get('name'):
                     self.update_errors('name', 'file_name_error')
                     return False
+                if not file.get('name').strip():
+                    self.update_errors('name', 'file_name_error')
+                    return False
+                if len((file.get('name').strip())) > 100:
+                    self.update_errors('name', 'file_name_out_of_bounds')
+                    return False
         return True
 
     def check_file_path(self):
@@ -141,6 +151,12 @@ class FileBulkCreateOrUpdateForm(BaseForm):
             for file in self.files:
                 if not file.get('path'):
                     self.update_errors('path', 'file_path_error')
+                    return False
+                if not file.get('path').strip():
+                    self.update_errors('path', 'file_name_error')
+                    return False
+                if len((file.get('path').strip())) > 1000:
+                    self.update_errors('path', 'file_path_out_of_bounds')
                     return False
         return True
 

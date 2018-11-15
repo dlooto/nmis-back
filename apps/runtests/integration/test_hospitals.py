@@ -181,7 +181,6 @@ class StaffAPITestCase(BaseTestCase):
             'contact_phone': '13822012220',
             'email': 'zhangshang@test.com',
             'dept_id': self.dept.id,
-            'group_id': '',
         }
 
         response = self.post(
