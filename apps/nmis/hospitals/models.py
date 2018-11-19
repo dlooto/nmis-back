@@ -13,13 +13,13 @@ from django.contrib.auth.models import Permission
 from django.db import models, transaction
 
 from base.models import BaseModel
-from nmis.hospitals.consts import HOSP_GRADE_CHOICES, GROUP_CATE_DICT, GROUPS, DPT_ATTRI_MEDICAL, DPT_ATTRI_CHOICES, \
-    DOCTOR_TITLE_CHOICES, GROUP_CATE_CHOICES, ROLE_CATE_CHOICES, ROLE_CATE_NORMAL, \
+from nmis.hospitals.consts import HOSP_GRADE_CHOICES, DPT_ATTRI_MEDICAL, DPT_ATTRI_CHOICES, \
+    DOCTOR_TITLE_CHOICES, ROLE_CATE_CHOICES, ROLE_CATE_NORMAL, \
     HOSPITAL_AREA_TYPE_CHOICES, ROLE_CODE_HOSP_SUPER_ADMIN
-from nmis.hospitals.managers import GroupManager, RoleManager, SequenceManager, \
+from nmis.hospitals.managers import RoleManager, SequenceManager, \
     HospitalAddressManager
 
-from organs.models import BaseOrgan, BaseStaff, BaseDepartment, BaseGroup
+from organs.models import BaseOrgan, BaseStaff, BaseDepartment
 from users.models import User
 from .managers import StaffManager, HospitalManager
 
@@ -112,49 +112,6 @@ class Hospital(BaseOrgan):
         if search_key:
             staffs_queryset = staffs_queryset.filter(name__contains=search_key)
         return staffs_queryset.filter(dept=dept) if dept else staffs_queryset
-
-    ################################################
-    #                  权限组操作
-    ################################################
-
-    def get_all_groups(self):
-        """返回企业的所有权限组"""
-        return Group.objects.filter(organ=self)
-
-    def create_group(self, **kwargs):
-        """
-        创建权限组
-        :param kwargs: 输入参数
-        :return:
-        """
-        return Group.objects.create_group(self, **kwargs)
-
-    def init_default_groups(self):
-        """
-        机构初建时初始化默认权限组
-        :return:
-        """
-
-        group_list = []
-        for k in GROUP_CATE_DICT.keys():
-            group_data = {'is_admin': False, 'commit': False}
-            group_data.update(GROUPS.get(k))
-            group_list.append(
-                self.create_group(**group_data)
-            )
-        with transaction.atomic():
-            self.create_admin_group()
-            Group.objects.bulk_create(group_list)
-
-    def create_admin_group(self):
-        """创建管理员组"""
-        if self.get_admin_group():
-            logger.warn('Create Error: admin group existed for organ: %s' % self.id)
-            return
-
-        group_data = {'is_admin': True}
-        group_data.update(GROUPS.get('admin'))
-        return self.create_group(**group_data)
 
     def assign_roles_dept_domains(self, users, roles, depts):
         old_ships = []
@@ -252,7 +209,9 @@ class Staff(BaseStaff):
     # 一个员工仅属于一个企业
     organ = models.ForeignKey(Hospital, verbose_name=u'所属医院', on_delete=models.CASCADE, null=True, blank=True)
     dept = models.ForeignKey(Department, verbose_name=u'所属科室/部门', on_delete=models.CASCADE, null=True, blank=True)
-    group = models.ForeignKey('hospitals.Group', verbose_name=u'权限组', null=True, blank=True, on_delete=models.SET_NULL)
+    # group = models.ForeignKey('hospitals.Group', verbose_name=u'权限组', null=True, blank=True, on_delete=models.SET_NULL)
+    #  设置is_deleted为True时，须设置user.is_active属性值为False
+    is_deleted = models.BooleanField('是否已删除', default=False)
 
     objects = StaffManager()
 
@@ -298,22 +257,22 @@ class Doctor(Staff):
             ('view_doctor', 'can view doctor'),   # 查看医生
         )
 
-
-class Group(BaseGroup):
-    """
-    机构权限组数据模型. 每个权限组有一个归属的企业
-    """
-    group_cate_choices = GROUP_CATE_CHOICES
-
-    organ = models.ForeignKey(Hospital, verbose_name=u'所属医院', on_delete=models.CASCADE, null=True, blank=True)
-    cate = models.CharField(u'权限组类别', max_length=10, choices=GROUP_CATE_CHOICES,
-                            null=True, blank=True)
-    objects = GroupManager()
-
-    class Meta:
-        verbose_name = '权限组'
-        verbose_name_plural = '权限组'
-        db_table = 'perm_group'
+#
+# class Group(BaseGroup):
+#     """
+#     机构权限组数据模型. 每个权限组有一个归属的企业
+#     """
+#     group_cate_choices = GROUP_CATE_CHOICES
+#
+#     organ = models.ForeignKey(Hospital, verbose_name=u'所属医院', on_delete=models.CASCADE, null=True, blank=True)
+#     cate = models.CharField(u'权限组类别', max_length=10, choices=GROUP_CATE_CHOICES,
+#                             null=True, blank=True)
+#     objects = GroupManager()
+#
+#     class Meta:
+#         verbose_name = '权限组'
+#         verbose_name_plural = '权限组'
+#         db_table = 'perm_group'
 
 
 class Role(BaseModel):
@@ -347,7 +306,7 @@ class Role(BaseModel):
         )
 
     def __str__(self):
-        return u'%s' % self.name
+        return u'%d %s' % (self.id, self.name) if (self and self.id and self.name) else ''
 
     def set_permissions(self, perms):
         """
@@ -421,7 +380,7 @@ class HospitalAddress(BaseModel):
     type = models.CharField('类型', choices=HOSPITAL_AREA_TYPE_CHOICES, max_length=10)
     parent = models.ForeignKey('self', verbose_name='父级地址', on_delete=models.PROTECT, null=True, blank=True)
     # 祖节点到当节点的父节点最短路径, 由各节点id的字符串组成，每个id,之间用‘-’进行分隔
-    parent_path = models.CharField('父地址路径', max_length=1024, default='', null=False, blank=False)
+    parent_path = models.CharField('父地址路径', max_length=255, default='', null=False, blank=False)
     level = models.SmallIntegerField('层级')
     sort = models.SmallIntegerField('排序')
     disabled = models.BooleanField('是否禁用', default=False,)
@@ -430,7 +389,7 @@ class HospitalAddress(BaseModel):
         null=True, blank=True
     )
 
-    desc = models.CharField('描述', max_length=256, null=True, blank=True)
+    desc = models.CharField('描述', max_length=255, null=True, blank=True)
 
     objects = HospitalAddressManager()
 
@@ -455,7 +414,7 @@ class Sequence(BaseModel):
     序列数据模型
     可用于各业务编码或表ID
     """
-    seq_code = models.CharField('sequence编码', max_length=16, unique=True, default='2')
+    seq_code = models.CharField('sequence编码', max_length=20, unique=True)
     seq_name = models.CharField('sequence编码名称', max_length=64)
     seq_value = models.IntegerField('sequence值', default=0)
     increment = models.IntegerField('步进', default=1)

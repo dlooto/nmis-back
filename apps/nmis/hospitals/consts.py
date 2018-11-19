@@ -64,49 +64,6 @@ DOCTOR_TITLE_CHOICES = (
     (DOCTOR_RESIDENT,   '住院医生'),
 )
 
-
-# 权限组: 医疗机构权限组分类标识(即权限组key)
-GROUP_CATE_PROJECT_APPROVER = 'GPA'  # 项目分配者权限组key
-GROUP_CATE_NORMAL_STAFF = 'GNS'      # 普通员工权限组key
-GROUP_CATE_ROLE = 'GCR'     # 角色类key
-GROUP_CATE_USER = 'GCU'     # 用户类key
-
-GROUP_CATE_CHOICES = (
-    (GROUP_CATE_PROJECT_APPROVER, '项目分配人'),
-    (GROUP_CATE_NORMAL_STAFF,     '普通员工'),
-    (GROUP_CATE_ROLE, '角色类'),
-    (GROUP_CATE_USER, '用户类')
-)
-GROUP_CATE_DICT = dict(GROUP_CATE_CHOICES)
-
-GROUPS = {
-    'admin': {
-        'name': u'管理员',
-        'cate': '',
-        'desc': '* 管理系统所有功能及信息'
-    },
-    GROUP_CATE_PROJECT_APPROVER:   {
-        'name': u'项目分配人',
-        'cate': GROUP_CATE_PROJECT_APPROVER,
-        'desc': u'为申请的项目指定责任人'
-    },
-    GROUP_CATE_NORMAL_STAFF: {
-        'name': u'普通员工',
-        'cate': GROUP_CATE_NORMAL_STAFF,
-        'desc': u'机构普通员工'
-    },
-    GROUP_CATE_ROLE: {
-        'name': u'角色类',
-        'cate': GROUP_CATE_ROLE,
-        'desc': u'角色类分组'
-    },
-    GROUP_CATE_USER: {
-        'name': u'用户类',
-        'cate': GROUP_CATE_USER,
-        'desc': u'用户类分组'
-    },
-}
-
 ROLE_CATE_NORMAL = 'CNM'
 
 ROLE_CATE_CHOICES = (
@@ -132,7 +89,7 @@ ROLE_CODE_CHOICES = (
     (ROLE_CODE_REPAIR_ORDER_DISPATCHER, '维修任务分配者'),
     (ROLE_CODE_MAINTAINER, '维修工程师'),
     (ROLE_CODE_HOSP_REPORT_ASSESS, '统计信息查看者'),
-    (ROLE_CODE_PRO_DISPATCHER, '项目分配者'),
+    (ROLE_CODE_PRO_DISPATCHER, '项目分配者')
 )
 
 ROLES = {
@@ -162,12 +119,12 @@ ROLES = {
         'cate': ROLE_CATE_NORMAL
     },
     ROLE_CODE_MAINTAINER: {
-        'name': '统计信息查看者',
+        'name': '维修工程师',
         'codename': ROLE_CODE_MAINTAINER,
         'cate': ROLE_CATE_NORMAL
     },
     ROLE_CODE_HOSP_REPORT_ASSESS: {
-        'name': '普通员工',
+        'name': '统计信息查看者',
         'codename': ROLE_CODE_HOSP_REPORT_ASSESS,
         'cate': ROLE_CATE_NORMAL
     },
@@ -175,7 +132,32 @@ ROLES = {
         'name': '项目分配者',
         'codename': ROLE_CODE_PRO_DISPATCHER,
         'cate': ROLE_CATE_NORMAL
+    }
+}
+
+SEQ_REPAIR_ORDER_NO = 'SEQ_REP_ORD_NO'
+SEQ_MAINTAIN_PLAN_NO = 'SEQ_MAI_PLA_NO'
+
+SEQ_CODE_CHOICES = (
+    (SEQ_REPAIR_ORDER_NO, '报修单自增序列'),
+    (SEQ_MAINTAIN_PLAN_NO, '维护保养计划自增序列'),
+)
+
+SEQUENCES = {
+    SEQ_REPAIR_ORDER_NO: {
+        "seq_code": SEQ_REPAIR_ORDER_NO,
+        "seq_name": "报修单自增序列",
+        "seq_value": 0,
+        "increment": 1,
+        "remark": "用于报修单序列"
     },
+    SEQ_MAINTAIN_PLAN_NO: {
+        "seq_code": SEQ_MAINTAIN_PLAN_NO,
+        "seq_name": "维护保养计划自增序列",
+        "seq_value": 0,
+        "increment": 1,
+        "remark": "用于维护保养计划序列"
+    }
 }
 
 # 上传的员工excel模板文件表头字典

@@ -201,7 +201,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     #     """
     #     :param perm: 权限codename字符串
     #     """
-    #     return True if perm in self.get_group_permissions() else False
+    #     return True if perm in self.get_role_permissions() else False
     #
     # def has_perms(self, perm_list, obj=None):
     #     """
@@ -211,24 +211,19 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     #             return False
     #     return True
 
-    # def has_group_perm(self, group):
+    # def has_role_perm(self, role):
     #     """
     #     员工是否拥有所属企业指定某权限组的权限
     #     :return:
     #     """
-    #     if not group.organ == self.organ:
-    #         return False
+
     #
-    #     return self.is_organ_admin() or group == self.group
+    #     return self.is_organ_admin() or role == self.roles
     #
-    # def get_group_permissions(self, obj=None):  # TODO: 权限组及权限可以考虑从cache中读取
+    # def get_role_permissions(self, obj=None):
     #     """
     #     返回权限码列表. 若传入obj, 则仅返回与obj匹配的权限码列表
     #     """
-    #     if self.is_organ_admin():
-    #         return Permission.objects.values_list(['codename'])
-    #
-    #     return Permission.objects.filter(group__in=self.groups).values('codename')
 
 
 class UserSecureRecord(BaseModel):

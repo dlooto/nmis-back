@@ -19,10 +19,10 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
 
     def setUp(self):
         super(ProjectTestCase, self).setUp()
+        self.create_default_flow(self.organ)
         self.project = self.create_project(self.admin_staff, self.dept)
         self.performer = self.create_completed_staff(self.organ, self.dept, name="项目负责人x")
-
-        #self.flow = self.create_flow(self.organ)
+        # self.flow = self.create_flow(self.organ)
 
     def test_project_dispatch(self):
         """
@@ -30,7 +30,7 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         """
         self.assertTrue(self.project.is_unstarted())
 
-        success = self.project.dispatch(self.performer)
+        success, result = self.project.dispatch(self.performer)
         self.assertTrue(success)
         self.assertFalse(self.project.is_unstarted())  # 分配后项目后状态发生改变(变成已启动状态)
         self.assertIsNotNone(self.project.performer)
@@ -41,7 +41,7 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         """
         self.assertTrue(self.project.is_unstarted())
         # 先分配项目负责人
-        dispatch_success = self.project.dispatch(self.performer)
+        dispatch_success, result = self.project.dispatch(self.performer)
         self.assertTrue(dispatch_success)
         self.assertFalse(self.project.is_unstarted())
         self.assertIsNotNone(self.project.performer)

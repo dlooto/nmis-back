@@ -175,6 +175,9 @@ class RepairOrderManager(BaseManager):
             with transaction.atomic():
                 lock.acquire()
                 seq = Sequence.objects.select_for_update().get(seq_code=REPAIR_ORDER_NO_SEQ_CODE)
+                if not seq:
+                    logger.warn('The sequence not exists')
+                    return False, '序列未设置，请联系管理员'
                 seq.curr_value()
                 next_value = seq.next_value()
                 timestamp = times.datetime_to_str(times.now(), format='%Y%m%d')
@@ -327,6 +330,9 @@ class MaintenancePlanManager(BaseManager):
         try:
             with transaction.atomic():
                 seq = Sequence.objects.select_for_update().get(seq_code=MAINTENANCE_PLAN_NO_SEQ_CODE)
+                if not seq:
+                    logger.warn('The sequence not exists')
+                    return None
                 seq.curr_value()
                 next_value = seq.next_value()
                 timestamp = times.datetime_to_str(times.now(), format='%Y%m%d')

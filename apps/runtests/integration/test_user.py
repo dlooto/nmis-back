@@ -7,14 +7,10 @@ from collections import defaultdict
 from copy import deepcopy
 
 from django.contrib.auth.models import Permission
-from django.urls import reverse
 
-from nmis.hospitals.models import Role, Group
-from users.forms import is_valid_password
+from nmis.hospitals.models import Role
 
 from runtests import BaseTestCase
-from base.authtoken import CustomToken
-import datetime
 
 
 class UserTestCase(BaseTestCase):

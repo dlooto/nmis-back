@@ -27,11 +27,11 @@ class ProjectPlan(BaseModel):
     """
     采购申请(一次申请即开始一个项目)
     """
-    title = models.CharField('项目名称', max_length=30)
+    title = models.CharField('项目名称', max_length=50)
     handing_type = models.CharField('办理方式', max_length=10,
                                     choices=PROJECT_HANDING_TYPE_CHOICES,
                                     default=PRO_HANDING_TYPE_SELF)
-    purpose = models.CharField('申请原因', max_length=100, null=True, default='')
+    purpose = models.CharField('申请原因', max_length=255, null=True, default='')
     creator = models.ForeignKey(
         'hospitals.Staff', related_name='created_projects', verbose_name='项目申请人/提出者',
         on_delete=models.SET_NULL, null=True, blank=True
@@ -85,6 +85,10 @@ class ProjectPlan(BaseModel):
         null=True, blank=True
     )
     finished_time = models.DateTimeField(u'项目实际完结时间', null=True, blank=True)
+    modifier = models.ForeignKey(
+        'hospitals.Staff', verbose_name='修改人', related_name='modified_projects',
+        on_delete=models.PROTECT, null=True, blank=True)
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     objects = ProjectPlanManager()
 
@@ -224,6 +228,7 @@ class ProjectPlan(BaseModel):
                     self.assistant = assistant
                 default_flow = ProjectFlow.objects.get_default_flow()
                 if not default_flow:
+                    logger.warn('default flow not been set')
                     return False, "系统尚未设置默认流程，请联系管理员"
                 self.attached_flow = default_flow
 
@@ -581,8 +586,12 @@ class ProjectFlow(BaseModel):
     organ = models.ForeignKey('hospitals.Hospital', verbose_name='所属医院', on_delete=models.CASCADE)
     title = models.CharField('流程名称', max_length=30, default='默认')
     type = models.CharField('流程类型', max_length=10, null=True, blank=True, default='')
-    pre_defined = models.BooleanField('是否预定义', default=False) # 机构初始创建时, 为机构默认生成预定义的流程
+    pre_defined = models.BooleanField('是否预定义', default=False)  # 机构初始创建时, 为机构默认生成预定义的流程
     default_flow = models.BooleanField('是否为默认流程', default=False)
+    modifier = models.ForeignKey(
+        'hospitals.Staff', verbose_name='修改人', related_name='modified_flows',
+        on_delete=models.PROTECT, null=True, blank=True)
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     objects = ProjectFlowManager()
 
@@ -688,7 +697,7 @@ class Milestone(BaseModel):
         'projects.ProjectFlow', verbose_name='归属流程', null=False,
         related_name='milestones', on_delete=models.CASCADE
     )
-    title = models.CharField('里程碑标题', max_length=10, )
+    title = models.CharField('里程碑标题', max_length=30, )
 
     # 用于决定里程碑项在流程中的顺序. index值小的排在前面
     index = models.SmallIntegerField('索引顺序', default=1)
@@ -696,7 +705,11 @@ class Milestone(BaseModel):
 
     parent = models.ForeignKey('self', verbose_name='父里程碑', null=True, on_delete=models.CASCADE)
     # 祖里程碑到当前里程碑的父节点最短路径, 由各里程碑项id的字符串组成，每个id,之间用‘-’进行分隔
-    parent_path = models.CharField('父里程碑路径', max_length=1024, default='', null=False, blank=False)
+    parent_path = models.CharField('父里程碑路径', max_length=255, default='', null=False, blank=False)
+    modifier = models.ForeignKey(
+        'hospitals.Staff', verbose_name='修改人', related_name='modified_milestones',
+        on_delete=models.PROTECT, null=True, blank=True)
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     objects = MilestoneManager()
 
@@ -1141,12 +1154,11 @@ class ProjectDocument(BaseModel):
     """
     项目文档数据模型
     """
-    name = models.CharField('文档名称', max_length=100, null=False, blank=False)
+    name = models.CharField('文档名称', max_length=100)
     category = models.CharField(
         '文档类别', max_length=30, choices=PROJECT_DOCUMENT_CATE_CHOICES,
-        null=False, blank=False
     )
-    path = models.CharField('存放路径', max_length=254, null=False, blank=False)
+    path = models.CharField('存放路径', max_length=255)
     objects = ProjectDocumentManager()
 
     class Meta:
@@ -1209,13 +1221,14 @@ class SupplierSelectionPlan(BaseModel):
     )
     supplier = models.ForeignKey(
         Supplier, verbose_name='供应商', on_delete=models.CASCADE,
-        null=False, blank=False
     )
-    total_amount = models.FloatField('方案总价', default=0.00, null=False, blank=False)
+    total_amount = models.FloatField('方案总价', default=0.00)
     remark = models.CharField('备注', max_length=254, null=True, blank=True)
     # ProjectDocument对象ID集，每个id之间用'|'字符进行分割(目前包含方案资料和其他资料)
     doc_list = models.CharField('方案文档列表', max_length=32, null=True, blank=True)
-    selected = models.BooleanField('是否为最终选定方案', default=False, null=False, blank=True)
+    selected = models.BooleanField('是否为最终选定方案', default=False)
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
+
 
     objects = SupplierSelectionPlanManager()
 
@@ -1246,19 +1259,20 @@ class PurchaseContract(BaseModel):
         'projects.ProjectMilestoneState', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
         null=True, blank=True
     )
-    contract_no = models.CharField('合同编号', max_length=30, null=False, blank=False)
-    title = models.CharField('合同名称', max_length=100, null=False, blank=False)
-    signed_date = models.DateField('签订时间', null=False, blank=False)
-    buyer = models.CharField('买方/甲方单位', max_length=128, null=False, blank=False)
-    buyer_contact = models.CharField('买方/甲方联系人', max_length=50, null=False, blank=False)
-    buyer_tel = models.CharField('买方/甲方联系电话', max_length=20, null=False, blank=False)
-    seller = models.CharField('卖方/乙方单位', max_length=128, null=False, blank=False)
-    seller_contact = models.CharField('卖方/乙方联系人', max_length=50, null=False, blank=False)
-    seller_tel = models.CharField('卖方/乙方联系电话', max_length=20, null=False, blank=False)
-    total_amount = models.FloatField('合同总价', default=0.00, null=False, blank=False)
-    delivery_date = models.DateField('交货时间', null=False, blank=False)
+    contract_no = models.CharField('合同编号', max_length=30)
+    title = models.CharField('合同名称', max_length=100)
+    signed_date = models.DateField('签订时间')
+    buyer = models.CharField('买方/甲方单位', max_length=128)
+    buyer_contact = models.CharField('买方/甲方联系人', max_length=50)
+    buyer_tel = models.CharField('买方/甲方联系电话', max_length=20)
+    seller = models.CharField('卖方/乙方单位', max_length=128)
+    seller_contact = models.CharField('卖方/乙方联系人', max_length=50)
+    seller_tel = models.CharField('卖方/乙方联系电话', max_length=20)
+    total_amount = models.FloatField('合同总价', default=0.00)
+    delivery_date = models.DateField('交货时间')
     # 合同文档附件-ProjectDocument对象ID集，每个id之间用','字符进行分割
-    doc_list = models.CharField('合同文档列表', max_length=20, null=True, blank=True)
+    doc_list = models.CharField('合同文档列表', max_length=255)
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     objects = PurchaseContractManager()
 
@@ -1289,11 +1303,13 @@ class Receipt(BaseModel):
         'projects.ProjectMilestoneState', verbose_name='所属项目里程碑子节点', on_delete=models.CASCADE,
         null=True, blank=True
     )
-    served_date = models.DateField('到货时间', null=False, blank=False)
-    delivery_man = models.CharField('送货人', max_length=50, null=False, blank=False)
+    served_date = models.DateField('到货时间', null=True, blank=True)
+    delivery_man = models.CharField('送货人', max_length=50, null=True, blank=True)
     contact_phone = models.CharField('联系电话', max_length=20, null=True, blank=True)
     # 送货单附件-ProjectDocument对象ID集，每个id之间用'|'字符进行分割
     doc_list = models.CharField('送货单附件', max_length=10, null=True, blank=True)
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
+
 
     objects = ReceiptManager()
 

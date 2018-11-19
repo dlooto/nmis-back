@@ -323,7 +323,7 @@ class StaffAPITestCase(BaseTestCase):
             response = self.raw_post(api.format(self.organ.id), {'staff_excel_file': file})
             self.assert_response_form_errors(response)
 
-            # self.create_department(self.organ, dept_name='信息科')
+            self.create_department(self.organ, dept_name='信息科')
             self.create_department(self.organ, dept_name='测试部门')
         with open(curr_path + '/data/staff-normal-test.xlsx', 'rb') as file:
             response = self.raw_post(api.format(self.organ.id), {'staff_excel_file': file})

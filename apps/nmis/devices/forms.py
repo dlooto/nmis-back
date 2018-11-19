@@ -595,11 +595,15 @@ class FaultSolutionCreateForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'title_error': '标题为空或数据错误',
-            'title_exists': '已存在相同标题数据',
-            'fault_type_error': '故障类型为空或数据错误',
-            'solution_error': '解决方案为空或数据错误',
-            'desc_error': '详情描述为空或数据错误',
+            'title_error':                  '标题为空或数据错误',
+            'title_exists':                 '已存在相同标题数据',
+            'title_out_of_bounds':          '标题不能大于30个字符',
+            'fault_type_error':             '故障类型为空或数据错误',
+            'solution_error':               '解决方案为空或数据错误',
+            'solution_out_of_bounds':       '解决方案不能大于1000个字符',
+            'desc_error':                   '详情描述为空或数据错误',
+            'desc_out_of_bounds':           '详情描述解决方案不能大于1000个字符',
+
         })
 
     def is_valid(self):
@@ -608,19 +612,39 @@ class FaultSolutionCreateForm(BaseForm):
         return True
 
     def check_title(self):
-        if not self.data.get('title', '').strip():
+        title = self.data.get('title')
+        if not title:
             self.update_errors('title', 'title_error')
             return False
-        fs = FaultSolution.objects.filter(title=self.data.get('title', '').strip())
+        if not isinstance(title, str):
+            self.update_errors('title', 'title_error')
+            return False
+        if not title.strip():
+            self.update_errors('title', 'title_error')
+            return False
+        if len(title.strip()) > 30:
+            self.update_errors('title', 'title_out_of_bounds')
+            return False
+        fs = FaultSolution.objects.filter(title=title.strip())
         if fs.first():
             self.update_errors('title', 'title_exists')
             return False
         return True
 
     def check_desc(self):
-        if not self.data.get('desc', '').strip():
+
+        desc = self.data.get('desc')
+        if not desc:
             self.update_errors('desc', 'desc_error')
             return False
+        if not isinstance(desc, str):
+            self.update_errors('desc', 'desc_error')
+            return False
+        if not desc.strip():
+            self.update_errors('desc', 'desc_error')
+            return False
+        if len(desc.strip()) > 1000:
+            self.update_errors('desc', 'desc_out_of_bounds')
         return True
 
     def check_fault_type(self):
@@ -642,16 +666,25 @@ class FaultSolutionCreateForm(BaseForm):
         return True
 
     def check_solution(self):
-        if not self.data.get('solution', '').strip():
+        solution = self.data.get('solution')
+        if not solution:
             self.update_errors('solution', 'solution_error')
             return False
+        if not isinstance(solution, str):
+            self.update_errors('solution', 'solution_error')
+            return False
+        if not solution.strip():
+            self.update_errors('solution', 'solution_error')
+            return False
+        if len(solution.strip()) > 1000:
+            self.update_errors('solution', 'solution_out_of_bounds')
         return True
 
     def save(self):
         title = self.data.get('title', '').strip()
         fault_type_id = self.data.get('fault_type_id')
         fault_type = FaultType.objects.get_cached(fault_type_id)
-        solution = self.data.get('solution')
+        solution = self.data.get('solution', '').strip()
         update_data = dict()
         if self.data.get('desc') is not None:
             update_data['desc'] = self.data.get('desc', '').strip()
@@ -674,11 +707,14 @@ class FaultSolutionUpdateForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'title_error': '标题为空或数据错误',
-            'title_exists': '已存在相同标题数据',
-            'fault_type_error': '故障类型为空或数据错误',
-            'solution_error': '解决方案为空或数据错误',
-            'desc_error': '详情描述为空或数据错误',
+            'title_error':                  '标题为空或数据错误',
+            'title_exists':                 '已存在相同标题数据',
+            'fault_type_error':             '故障类型为空或数据错误',
+            'solution_error':               '解决方案为空或数据错误',
+            'desc_error':                   '详情描述为空或数据错误',
+            'title_out_of_bounds':          '标题不能大于30个字符',
+            'solution_out_of_bounds':       '解决方案不能大于1000个字符',
+            'desc_out_of_bounds':           '详情描述解决方案不能大于1000个字符',
         })
 
     def is_valid(self):
@@ -687,18 +723,38 @@ class FaultSolutionUpdateForm(BaseForm):
         return True
 
     def check_title(self):
-        if not self.data.get('title', '').strip():
+        title = self.data.get('title')
+        if not title:
             self.update_errors('title', 'title_error')
             return False
-        fs = FaultSolution.objects.filter(title=self.data.get('title', '').strip()).first()
-        if fs and not fs == self.fault_solution:
+        if not isinstance(title, str):
+            self.update_errors('title', 'title_error')
+            return False
+        if not title.strip():
+            self.update_errors('title', 'title_error')
+            return False
+        if len(title.strip()) > 30:
+            self.update_errors('title', 'title_out_of_bounds')
+            return False
+        fs = FaultSolution.objects.filter(title=title.strip()).first()
+        if fs and not title.strip() == self.fault_solution.title and title.strip() == fs.title:
             self.update_errors('title', 'title_exists')
             return False
         return True
 
     def check_desc(self):
-        if not self.data.get('desc', '').strip():
+        desc = self.data.get('desc')
+        if not desc:
             self.update_errors('desc', 'desc_error')
+            return False
+        if not isinstance(desc, str):
+            self.update_errors('desc', 'desc_error')
+            return False
+        if not desc.strip():
+            self.update_errors('desc', 'desc_error')
+            return False
+        if len(desc.strip()) > 1000:
+            self.update_errors('desc', 'desc_out_of_bounds')
             return False
         return True
 
@@ -721,8 +777,18 @@ class FaultSolutionUpdateForm(BaseForm):
         return True
 
     def check_solution(self):
-        if not self.data.get('solution', '').strip():
+        solution = self.data.get('solution')
+        if not solution:
             self.update_errors('solution', 'solution_error')
+            return False
+        if not isinstance(solution, str):
+            self.update_errors('solution', 'solution_error')
+            return False
+        if not solution.strip():
+            self.update_errors('solution', 'solution_error')
+            return False
+        if len(solution.strip()) > 1000:
+            self.update_errors('solution', 'solution_out_of_bounds')
             return False
         return True
 
@@ -730,7 +796,7 @@ class FaultSolutionUpdateForm(BaseForm):
         title = self.data.get('title', '').strip()
         fault_type_id = self.data.get('fault_type_id')
         fault_type = FaultType.objects.get_cached(fault_type_id)
-        solution = self.data.get('solution')
+        solution = self.data.get('solution', '').strip()
         update_data = dict()
         if self.data.get('desc') is not None:
             update_data['desc'] = self.data.get('desc', '').strip()
@@ -1045,7 +1111,9 @@ class FaultSolutionsImportForm(BaseForm):
             'fault_type_not_exists': '第{0}行: 故障类型不存在，请检查',
             'fault_type_not_in_setting':  '系统尚未设置故障类型，请联系管理员',
             'solution_error': '第{0}行: 解决方案为空或数据错误',
-            'title_fault_type_exists': '第{0}行: 已存在相同故障类型的标题'
+            'title_fault_type_exists': '第{0}行: 已存在相同故障类型的标题',
+            'title_out_of_bounds': '第{0}行:标题不能大于30个字符',
+            'solution_out_of_bounds': '第{0}行:解决方案不能大于1000个字符',
         })
 
     def init_check_data(self):

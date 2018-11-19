@@ -82,8 +82,8 @@ class TestCaseDataUtils(object):
             email='test_{}'.format(self.get_random_suffix())
         )
         organ = self.create_organ(user)
-        organ.init_default_groups()
         roles = self.init_roles()
+        self.init_sequence()
         dept = self.create_department(
             organ, dept_name="测试科室_{}".format(self.get_random_suffix())
         )
@@ -110,6 +110,12 @@ class TestCaseDataUtils(object):
         if not roles:
             roles = Role.objects.init_default_roles()
         return roles
+
+    def init_sequence(self):
+        from nmis.hospitals.models import Sequence
+        if not Sequence.objects.all():
+            sequences = Sequence.objects.init_default_sequences()
+        return sequences
 
 
 class BaseTestCase(TestCase, TestCaseDataUtils):

@@ -53,7 +53,12 @@ class OrderedDevice(Device):
     num = models.IntegerField('预购数量', default=0)
     measure = models.CharField('度量/单位', max_length=10, null=True, blank=True)
     type_spec = models.CharField('规格/型号', max_length=30, null=True, blank=True)
-    purpose = models.CharField('用途', max_length=50, null=True, blank=True, default='')
+    purpose = models.CharField('用途', max_length=100, null=True, blank=True, default='')
+    modifier = models.ForeignKey(
+        'hospitals.Staff', related_name='modified_ordered_devices', verbose_name='修改人',
+        on_delete=models.PROTECT, null=True, blank=True
+    )
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     class Meta:
         verbose_name = u'申购的硬件设备'
@@ -80,10 +85,15 @@ class SoftwareDevice(Device):
         'projects.ProjectPlan', verbose_name='所属项目', related_name='software_devices',
         on_delete=models.CASCADE, null=True, blank=True
     )
-    purpose = models.CharField('用途', max_length=50, null=True, blank=True, default='')
+    purpose = models.CharField('用途', max_length=100, null=True, blank=True, default='')
 
     real_price = models.FloatField('实际单价', default=0.00, null=True, blank=True)
     planned_price = models.FloatField('预算单价', default=0.00)
+    modifier = models.ForeignKey(
+        'hospitals.Staff', related_name='modified_software_devices', verbose_name='修改人',
+        on_delete=models.PROTECT, null=True, blank=True
+    )
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     class Meta:
         verbose_name = '申购的软件设备'
@@ -129,7 +139,12 @@ class ContractDevice(Device):
     real_total_amount = models.FloatField('总价', default=0.00, null=True, blank=True)
     measure = models.CharField('度量/单位', max_length=10, null=True, blank=True)
     type_spec = models.CharField('规格/型号', max_length=30, null=True, blank=True)
-    purpose = models.CharField('用途', max_length=50, null=True, blank=True, default='')
+    purpose = models.CharField('用途', max_length=100, null=True, blank=True, default='')
+    modifier = models.ForeignKey(
+        'hospitals.Staff', related_name='modified_contract_devices', verbose_name='修改人',
+        on_delete=models.PROTECT, null=True, blank=True
+    )
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     class Meta:
         verbose_name = '采购合同产品明细'
@@ -183,6 +198,12 @@ class MedicalDeviceSix8Cate(BaseModel):
     creator = models.ForeignKey(
         'hospitals.Staff', related_name='created_medical_device_cate', verbose_name='创建人', on_delete=models.PROTECT
     )
+    modifier = models.ForeignKey(
+        'hospitals.Staff', related_name='modified_six8_cates', verbose_name='修改人',
+        on_delete=models.PROTECT, null=True, blank=True
+    )
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
+
 
     objects = MedicalDeviceSix8CateManager()
 
@@ -249,10 +270,10 @@ class AssertDevice(BaseModel):
         on_delete=models.PROTECT
     )
     modifier = models.ForeignKey(
-        'hospitals.Staff', related_name='modified_assert_device', verbose_name='修改人',
+        'hospitals.Staff', related_name='modified_assert_devices', verbose_name='修改人',
         on_delete=models.PROTECT, null=True, blank=True
     )
-    modified_time = models.DateTimeField('修改时间', null=True, blank=True)
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     objects = AssertDeviceManager()
 
@@ -377,13 +398,18 @@ class FaultType(BaseModel):
     desc = models.CharField('故障类型描述', max_length=255, null=True, blank=True)
     parent = models.ForeignKey('self', verbose_name='父类故障类型', on_delete=models.PROTECT, null=True, blank=True)
     # 祖节点到当节点的父节点最短路径, 由各节点id的字符串组成，每个id,之间用‘-’进行分隔
-    parent_path = models.CharField('父类型路径', max_length=1024, default='', null=False, blank=False)
+    parent_path = models.CharField('父类型路径', max_length=255, default='', null=False, blank=False)
     level = models.SmallIntegerField('所属层级', default=1)
     sort = models.SmallIntegerField('排序码', default=1)
     creator = models.ForeignKey(
         'hospitals.Staff', related_name='created_fault_type', verbose_name='创建人',
         on_delete=models.PROTECT
     )
+    modifier = models.ForeignKey(
+        'hospitals.Staff', related_name='modified_fault_types', verbose_name='修改人',
+        on_delete=models.PROTECT, null=True, blank=True
+    )
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     objects = FaultTypeManager()
 
@@ -413,7 +439,7 @@ class RepairOrder(BaseModel):
         on_delete=models.PROTECT
     )
     fault_type = models.ForeignKey('devices.FaultType', verbose_name='故障分类', on_delete=models.PROTECT)
-    desc = models.CharField('故障描述', max_length=1024, null=True, blank=True)
+    desc = models.TextField('故障描述', max_length=1024, null=True, blank=True)
     maintainer = models.ForeignKey(
         'hospitals.Staff', verbose_name='维修工程师', on_delete=models.PROTECT,
         null=True, blank=True
@@ -437,10 +463,10 @@ class RepairOrder(BaseModel):
     comment_time = models.DateTimeField('评价时间', null=True, blank=True)
     creator = models.ForeignKey('hospitals.Staff', related_name='created_repair_order', verbose_name='创建人', on_delete=models.PROTECT)
     modifier = models.ForeignKey(
-        'hospitals.Staff', related_name='modified_repair_order', verbose_name='修改人',
+        'hospitals.Staff', related_name='modified_repair_orders', verbose_name='修改人',
         on_delete=models.PROTECT, null=True, blank=True
     )
-    modified_time = models.DateTimeField('修改时间', null=True, blank=True)
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     objects = RepairOrderManager()
 
@@ -569,11 +595,10 @@ class MaintenancePlan(BaseModel):
         'hospitals.Staff',  related_name='created_maintenance_plan', verbose_name='创建人', on_delete=models.PROTECT
     )
     modifier = models.ForeignKey(
-        'hospitals.Staff',  related_name='modified_maintenance_plan', verbose_name='修改人', on_delete=models.PROTECT,
+        'hospitals.Staff',  related_name='modified_maintenance_plans', verbose_name='修改人', on_delete=models.PROTECT,
         null=True, blank=True
     )
-    modified_time = models.DateTimeField('修改时间', null=True, blank=True)
-
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
     objects = MaintenancePlanManager()
 
     class Meta:
@@ -614,7 +639,7 @@ class FaultSolution(BaseModel):
     """
 
     title = models.CharField('标题', max_length=128)
-    desc = models.CharField('故障/问题描述', max_length=1024)
+    desc = models.TextField('故障/问题描述', max_length=1024)
     fault_type = models.ForeignKey(
         'devices.FaultType', verbose_name='故障/问题分类',
         related_name='related_problem_solution', on_delete=models.PROTECT
@@ -626,15 +651,15 @@ class FaultSolution(BaseModel):
     page_views = models.IntegerField('浏览次数', null=True, blank=True)
     likes = models.IntegerField('点赞数', null=True, blank=True)
     creator = models.ForeignKey(
-        'hospitals.Staff', verbose_name='创建人', related_name='created_problem_solution',
+        'hospitals.Staff', verbose_name='创建人', related_name='created_problem_solutions',
         on_delete=models.PROTECT
     )
     modifier = models.ForeignKey(
-        'hospitals.Staff', verbose_name='修改人', related_name='modified_problem_solution',
+        'hospitals.Staff', verbose_name='修改人', related_name='modified_problem_solutions',
         on_delete=models.PROTECT, null=True, blank=True)
-    modified_time = models.DateTimeField('修改时间', null=True, blank=True)
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
     auditor = models.ForeignKey(
-        'hospitals.Staff', verbose_name='审核人', related_name='audited_problem_solution',
+        'hospitals.Staff', verbose_name='审核人', related_name='audited_problem_solutions',
         on_delete=models.PROTECT, null=True, blank=True
     )
     audited_time = models.DateTimeField('审核时间', null=True, blank=True)

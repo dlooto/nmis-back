@@ -23,7 +23,7 @@ class File(BaseModel):
     文件存储信息
     """
     name = models.CharField('文件名称', max_length=128)
-    path = models.CharField('文件存放路径', max_length=1024)
+    path = models.CharField('文件存放路径', max_length=255)
     cate = models.CharField(
         '文件类别', max_length=32, default=FILE_CATE_UNKNOWN,
     )

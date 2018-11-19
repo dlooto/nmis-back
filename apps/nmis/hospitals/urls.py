@@ -55,9 +55,6 @@ urlpatterns = [
     # 批量导入员工信息（以上传excel文件的形式）
     path("<int:hid>/staffs/batch-upload", views.StaffBatchUploadView.as_view(), ),
 
-    # # 权限组API列表接口
-    # path("<int:hid>/groups",             views.GroupListView.as_view(), ),
-
     # 创建角色
     path("roles/create", views.RoleCreateView.as_view(), ),
 

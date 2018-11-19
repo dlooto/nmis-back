@@ -7,6 +7,8 @@
 
 import logging
 
+from nmis.hospitals.consts import SEQ_REPAIR_ORDER_NO, SEQ_MAINTAIN_PLAN_NO
+
 logger = logging.getLogger(__name__)
 
 # 医疗器械分类管理类型
@@ -160,15 +162,15 @@ FAULT_SOLUTION_STATUS_CHOICES = (
     (FAULT_SOLUTION_STATUS_NORMAL, '正常'),
 )
 # 报修单自增序列编码
-REPAIR_ORDER_NO_SEQ_CODE = 'SEQ-RPOR-NO'
+REPAIR_ORDER_NO_SEQ_CODE = SEQ_REPAIR_ORDER_NO
 # 报修单自增序列标识支持的最大位数
 REPAIR_ORDER_NO_SEQ_DIGITS = 3
-# 报修单编号浅醉
+# 报修单编号前缀
 REPAIR_ORDER_NO_PREFIX = 'NB'
 MAINTENANCE_PLAN_NO_PREFIX = 'HP'
 
 # 维护保养计划自增序列编码
-MAINTENANCE_PLAN_NO_SEQ_CODE = 'SEQ-MNPL-NO'
+MAINTENANCE_PLAN_NO_SEQ_CODE = SEQ_MAINTAIN_PLAN_NO
 # 维护单自增序列标识支持的最大位数
 MAINTENANCE_PLAN_NO_SEQ_DIGITS = 3
 

@@ -179,7 +179,7 @@ class StaffCreateView(BaseAPIView):
     """
     permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
-    @check_params_not_null(['username', 'password', 'staff_name', 'dept_id'])
+    @check_params_not_null(['username', 'staff_name', 'dept_id'])
     def post(self, req, hid):
         """
         添加员工步骤:
@@ -206,39 +206,6 @@ class StaffCreateView(BaseAPIView):
         staff_queryset = Staff.objects.filter(id=staff.id)
         staff_queryset = StaffSerializer.setup_eager_loading(staff_queryset)
         return resp.serialize_response(staff_queryset.first(), results_name='staff', srl_cls_name='StaffSerializer')
-
-
-# class StaffsPermChangeView(BaseAPIView):
-#     """
-#     同时修改多个职员的权限为新的一种权限
-#     """
-#     permission_classes = (IsAuthenticated, IsHospSuperAdmin,)
-#
-#     @check_params_not_null(['perm_group_id', 'staffs'])
-#     def put(self, req, hid):
-#         """
-#
-#         the request param Example:
-#         {
-#             "perm_group_id": 1001,
-#             "staffs": "2001,2002,2003"
-#         }
-#
-#         """
-#         hospital = self.get_object_or_404(hid, Hospital)
-#         self.check_object_permissions(req, hospital)
-#         perm_group = self.get_objects_or_404({'perm_group_id': Group}).get('perm_group_id')
-#
-#         staff_id_list = get_id_list(req.data.get('staffs'))
-#         if req.user.get_profile().id in staff_id_list:
-#             return resp.failed('无权修改自身权限')
-#         if Staff.objects.filter(id__in=staff_id_list).count() < len(staff_id_list):
-#             return resp.failed('请确认是否有不存在的员工信息')
-#         staffs = Staff.objects.filter(id__in=staff_id_list)
-#         staffs.update(group=perm_group)
-#         for staff in staffs:
-#              staff.cache()
-#         return resp.ok('员工权限已修改')
 
 
 class StaffView(BaseAPIView):
@@ -291,7 +258,7 @@ class StaffView(BaseAPIView):
 
         staff = self.get_object_or_404(staff_id, Staff)
         if req.user.get_profile().id == staff_id:
-            return resp.failed("无权删除本人信息")
+            return resp.failed("无权删除当前登录用户")
         user = staff.user
         staff.clear_cache()
         user.clear_cache()
@@ -316,7 +283,7 @@ class StaffBatchDeleteView(BaseAPIView):
         organ = self.get_object_or_404(organ_id, Hospital)
         self.check_object_any_permissions(req, organ)
 
-        staff_ids = get_id_list(str(req.data.get('staff_ids', '')).strip())
+        staff_ids = self.get_id_list(str(req.data.get('staff_ids', '')).strip())
 
         staffs = Staff.objects.filter(id__in=staff_ids)
         if not len(staffs) == len(staff_ids):
@@ -500,7 +467,7 @@ class DepartmentView(BaseAPIView):
 
         return resp.serialize_response(dept, results_name='dept')
 
-    @check_params_not_all_null(['name', 'contact', 'attri', 'desc'])
+    @check_params_not_null(['name'])
     def put(self, req, hid, dept_id,):
         """
         修改单个科室详细信息
@@ -595,24 +562,11 @@ class DepartmentBatchUploadView(BaseAPIView):
         return resp.ok('导入成功') if form.save() else resp.failed('导入失败')
 
 
-# class GroupListView(BaseAPIView):
-#
-#     permission_classes = (IsAuthenticated, IsHospSuperAdmin,)
-#
-#     def get(self, req, hid):
-#         """
-#         获取权限组集合
-#         """
-#         hospital = self.get_object_or_404(hid, Hospital)
-#         self.check_object_permissions(req, hospital)
-#         groups_list = hospital.get_all_groups()
-#         return resp.serialize_response(groups_list, results_name='group')
-
-
 class RoleCreateView(BaseAPIView):
 
     permission_classes = (IsHospSuperAdmin, SystemManagePermission)
 
+    @check_params_not_null(['name', 'permissions'])
     def post(self, req):
         self.check_object_any_permissions(req, None)
 
@@ -636,6 +590,7 @@ class RoleView(BaseAPIView):
         role_queryset = RoleSerializer.setup_eager_loading(Role.objects.filter(id=role_id)).first()
         return resp.serialize_response(role_queryset, srl_cls_name='RoleSerializer', results_name='role')
 
+    @check_params_not_null(['name', 'permissions'])
     def put(self, req, role_id):
         self.check_object_any_permissions(req, None)
 

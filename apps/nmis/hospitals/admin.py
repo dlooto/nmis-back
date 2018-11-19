@@ -12,7 +12,7 @@ import logging
 from django.contrib import admin
 
 from nmis.hospitals.models import Role, UserRoleShip, HospitalAddress, Sequence
-from .models import Hospital, Staff, Department, Group
+from .models import Hospital, Staff, Department
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,6 @@ class HospitalAdmin(admin.ModelAdmin):
         'id', 'organ_name', 'industry', 'address', 'contact', 'auth_status', 'creator',
         'created_time', 'parent', 'grade'
     )
-    # fields = ('creator', 'organ_name', 'desc', 'get_all_groups')
     list_display_links = ('id', 'organ_name', 'creator')
     search_fields = ('id', 'organ_name', 'contact')
 
@@ -35,7 +34,7 @@ class DepartmentAdmin(admin.ModelAdmin):
 
 
 class StaffAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'email', 'organ', 'dept', 'title', 'contact', 'group')
+    list_display = ('id', 'name', 'email', 'organ', 'dept', 'title', 'contact')
     search_fields = ('id', 'name', 'contact', 'title', 'email', 'organ__organ_name')
     list_display_links = ('name', 'email', )
     # list_filter = ('',)
@@ -44,31 +43,6 @@ class StaffAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         super(StaffAdmin, self).save_model(request, obj, form, change)
         obj.clear_cache()
-
-
-# class PermissionInline(admin.TabularInline):
-#     model = Group.permissions.through
-#
-# class PermissionAdmin(admin.ModelAdmin):
-#     list_display = ('codename', 'name', 'cate', 'pre_defined')
-#     search_fields = ('codename', 'name', )
-#     list_display_links = ('codename', )
-#     list_filter = ('cate', )
-#     # actions = (,)
-
-#
-# class GroupAdmin(admin.ModelAdmin):
-#     list_display = ('id', 'name', 'organ', 'cate', 'is_admin', 'desc')
-#     search_fields = ('name', 'organ__organ_name')
-#     list_display_links = ('name', )
-#     list_filter = ('is_admin', 'cate')
-#     # actions = (,)
-#
-#     inlines = [
-#         PermissionInline,
-#     ]
-#
-#     exclude = ('permissions',)
 
 
 class RoleAdmin(admin.ModelAdmin):
@@ -95,7 +69,6 @@ class SequenceAdmin(admin.ModelAdmin):
 admin.site.register(Hospital, HospitalAdmin)
 admin.site.register(Staff, StaffAdmin)
 admin.site.register(Department, DepartmentAdmin)
-# admin.site.register(Group, GroupAdmin)
 admin.site.register(Role, RoleAdmin)
 admin.site.register(UserRoleShip, UserRoleShipAdmin)
 admin.site.register(HospitalAddress, HospitalAddressAdmin)

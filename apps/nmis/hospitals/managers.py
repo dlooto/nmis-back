@@ -10,7 +10,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from nmis.hospitals.consts import ROLE_CODE_HOSP_SUPER_ADMIN, ROLES, ROLE_CODE_CHOICES, \
-    ROLE_CODE_NORMAL_STAFF
+    ROLE_CODE_NORMAL_STAFF, SEQ_CODE_CHOICES, SEQUENCES
 from settings import USER_DEFAULT_PWD
 from users.models import User
 
@@ -124,18 +124,6 @@ class StaffManager(BaseManager):
         return self.filter(organ=organ, dept=dept).count()
 
 
-class GroupManager(BaseManager):
-
-    def get_by_key(self, group_key, organ):
-        return self.get(cate=group_key, organ=organ).first()
-
-    def create_group(self, organ, commit=True, **kwargs):
-        group = self.model(organ=organ, **kwargs)
-        if commit:
-            group.save()
-        return group
-
-
 class RoleManager(BaseManager):
 
     def create_role_with_permissions(self, data, commit=True, **kwargs):
@@ -175,7 +163,7 @@ class RoleManager(BaseManager):
             logger.warn('Create Error: role existed')
             return None
         try:
-            return self.create(self, **kwargs)
+            return self.create(**kwargs)
         except Exception as e:
             logger.exception(e)
             return None
@@ -201,13 +189,14 @@ class RoleManager(BaseManager):
         """
 
         role_list = []
-        for k in dict(ROLE_CODE_CHOICES).keys():
-            role_list.append(
-                self.create_role(**ROLES.get(k))
-            )
         try:
-            with transaction.atomic():
-                self.bulk_create(role_list)
+            for k in dict(ROLE_CODE_CHOICES).keys():
+
+                role = self.create_role(**ROLES.get(k))
+                if role:
+                    role_list.append(role)
+
+            return role_list
         except Exception as e:
             logger.exception(e)
             return None
@@ -281,6 +270,21 @@ class HospitalAddressManager(BaseManager):
 
             return self.bulk_create(storage_place_list)
 
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+
+class SequenceManager(BaseManager):
+
+    def init_default_sequences(self):
+        seq_list = []
+        try:
+            for k in dict(SEQ_CODE_CHOICES).keys():
+                seq = self.create(**SEQUENCES.get(k))
+                if seq:
+                    seq_list.append(seq)
+            return seq_list
         except Exception as e:
             logger.exception(e)
             return None

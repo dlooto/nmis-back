@@ -118,7 +118,7 @@ class UserLoginForm(BaseForm):
 
     ERR_CODES = {
         'params_lack': u'参数缺乏或参数为空',
-        'user_not_activated': u'账号未激活',
+        'user_not_activated': u'账号未激活或已禁用',
         'user_not_found': u'账号不存在',
         'user_or_passwd_err': u'用户名或密码错误',
         'no_passwd': u'请输入密码',
@@ -159,7 +159,6 @@ class UserLoginForm(BaseForm):
                 user = query_set[0]
             else:
                 user = user_model.objects.get(**{authkey: auth_value})
-
             if not user.is_active:
                 self.update_errors(authkey, 'user_not_activated')
                 return False

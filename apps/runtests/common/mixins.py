@@ -369,13 +369,13 @@ class ProjectPlanMixin(object):
         :return:
         """
         flow_data = {
-            "title": "默认测试流程", "organ": organ, "default_flow": True
+            "title": "默认测试流程", "organ": organ, "default_flow": True, "pre_defined": True
         }
         return ProjectFlow.objects.create_flow(milestones, **flow_data)
 
     def create_default_flow(self, organ, milestones=DEFAULT_MILESTONES):
         flow_data = {
-            "title": "项目默认流程", "organ": organ, 'default_flow': True
+            "title": "项目默认流程", "organ": organ, 'default_flow': True, "pre_defined": True
         }
         return ProjectFlow.objects.create_flow(milestones, **flow_data)
 

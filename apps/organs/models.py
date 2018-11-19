@@ -214,8 +214,8 @@ class BaseStaff(BaseModel):
     contact = models.CharField(u'联系电话', max_length=20, null=True, blank=True, default='')
     email = models.EmailField(u'Email', null=True, blank=True, default='')  # 非账号email
 
-    # 一个staff仅可以加入一个权限group
-    group = models.ForeignKey('organs.Group', verbose_name=u'权限组', null=True, blank=True, on_delete=models.SET_NULL)
+    # # 一个staff仅可以加入一个权限group
+    # group = models.ForeignKey('organs.Group', verbose_name=u'权限组', null=True, blank=True, on_delete=models.SET_NULL)
 
     status = models.CharField(u'员工状态', max_length=1, default=NORMAL_STATUS)
 
@@ -313,6 +313,7 @@ class BaseStaff(BaseModel):
 class StaffSecureRecord(UserSecureRecord):
     """非登录企业员工key相关信息"""
     pass
+
 
 class Permission(BaseModel):
     """
