@@ -81,14 +81,14 @@ class StaffSignupForm(BaseForm):
     ERR_CODES = {
         'err_username':             '用户名为空或格式错误',
         'username_existed':         '用户名已存在',
-        'username_out_of_bounds':   '用户名长度不能大于30个字符',
+        'username_limit_size':   '用户名长度不能大于30个字符',
         'err_password':             '密码为空或格式错误',
-        'staff_name_out_of_bounds': '员工姓名长度不能大于30个字符',
+        'staff_name_limit_size': '员工姓名长度不能大于30个字符',
         'err_staff_name':           '员工姓名为空或数据错误',
         'err_contact_phone':        '联系电话格式错误',
         'err_email':                '无效邮箱',
         'err_staff_title':          '职位名称为空或格式错误',
-        'staff_title_out_of_bounds': '职位名称长度不能大于30个字符',
+        'staff_title_limit_size': '职位名称长度不能大于30个字符',
         'role_not_exists':           '系统尚未设置角色, 请先维护',
     }
 
@@ -128,7 +128,7 @@ class StaffSignupForm(BaseForm):
                 self.update_errors('username', 'err_username')
                 return False
             if len(username) > 30:
-                self.update_errors('username', 'username_out_of_bounds')
+                self.update_errors('username', 'username_limit_size')
                 return False
             if User.objects.filter(username=username):
                 self.update_errors('username', 'username_existed')
@@ -159,7 +159,7 @@ class StaffSignupForm(BaseForm):
                 self.update_errors('staff_name', 'err_staff_name')
                 return False
             if len(staff_name) > 30:
-                self.update_errors('staff_name', 'staff_name_out_of_bounds')
+                self.update_errors('staff_name', 'staff_name_limit_size')
                 return False
             return True
 
@@ -200,7 +200,7 @@ class StaffSignupForm(BaseForm):
                 self.update_errors('staff_title', 'err_staff_title')
                 return False
             if len(staff_title) > 30:
-                self.update_errors('staff_title', 'staff_title_out_of_bounds')
+                self.update_errors('staff_title', 'staff_title_limit_size')
                 return False
             return True
 
@@ -232,12 +232,12 @@ class StaffUpdateForm(BaseForm):
 
     ERR_CODES = {
         'err_staff_name':           '员工姓名为空或数据错误',
-        'staff_name_out_of_bounds': '员工姓名长度不能大于30个字符',
+        'staff_name_limit_size': '员工姓名长度不能大于30个字符',
         'err_contact_phone':        '联系电话格式错误',
         'err_email':                '无效邮箱',
         'err_dept':                 '科室信息错误',
         'err_staff_title':          '职位名称为空或格式错误',
-        'staff_title_out_of_bounds': '职位名称长度不能大于30个字符',
+        'staff_title_limit_size': '职位名称长度不能大于30个字符',
     }
 
     def __init__(self, staff, data, *args, **kwargs):
@@ -269,7 +269,7 @@ class StaffUpdateForm(BaseForm):
                 self.update_errors('staff_name', 'err_staff_name')
                 return False
             if len(staff_name) > 30:
-                self.update_errors('staff_name', 'staff_name_out_of_bounds')
+                self.update_errors('staff_name', 'staff_name_limit_size')
                 return False
             return True
 
@@ -307,7 +307,7 @@ class StaffUpdateForm(BaseForm):
                 self.update_errors('staff_title', 'err_staff_title')
                 return False
             if len(staff_title.strip()) > 30:
-                self.update_errors('staff_title', 'staff_title_out_of_bounds')
+                self.update_errors('staff_title', 'staff_title_limit_size')
                 return False
         return True
 
@@ -541,11 +541,11 @@ class DepartmentUpdateFrom(BaseForm):
             'dept_contact_err':     '科室电话号码格式错误',
             'dept_attri_err':       '科室属性错误',
             'dept_desc_err':        '科室描述存在敏感字符',
-            'dept_name_out_of_bounds': '科室名称不能大于30个字符',
+            'dept_name_limit_size': '科室名称不能大于30个字符',
             'dept_exists':          '同名科室已存在',
             'err_dept_contact':     '科室电话号码格式错误',
             'empty_desc':           '科室描述为空或数据错误',
-            'desc_out_of_bounds':   '科室描述不能大于100个字符',
+            'desc_limit_size':   '科室描述不能大于100个字符',
         })
 
     def is_valid(self):
@@ -574,7 +574,7 @@ class DepartmentUpdateFrom(BaseForm):
             self.update_errors('dept_name', 'empty_dept_name')
             return False
         if len(name.strip()) > 30:
-            self.update_errors('dept_name', 'dept_name_out_of_bounds')
+            self.update_errors('dept_name', 'dept_name_limit_size')
             return False
         db_dept = Department.objects.filter(name=name.strip()).first()
         if db_dept and not name == self.dept.name and name == db_dept.name:
@@ -604,7 +604,7 @@ class DepartmentUpdateFrom(BaseForm):
         if not desc.strip():
             return True
         if len(desc.strip()) > 100:
-            self.update_errors('desc', 'desc_out_of_bounds')
+            self.update_errors('desc', 'desc_limit_size')
             return False
         return True
 
@@ -637,13 +637,13 @@ class DepartmentCreateForm(BaseForm):
 
         self.ERR_CODES.update({
             'empty_dept_name': '科室名称为空或数据错误',
-            'dept_name_out_of_bounds': '科室名称不能大于30个字符',
+            'dept_name_limit_size': '科室名称不能大于30个字符',
             'dept_exists':     '同名科室已存在',
             'err_dept_contact': '科室电话号码格式错误',
             'err_dept_attri': '科室属性错误',
             'err_dept_desc': '科室描述存在敏感字符',
             'empty_desc': '科室描述为空或数据错误',
-            'desc_out_of_bounds': '科室描述不能大于100个字符',
+            'desc_limit_size': '科室描述不能大于100个字符',
         })
 
     def is_valid(self):
@@ -672,7 +672,7 @@ class DepartmentCreateForm(BaseForm):
             self.update_errors('dept_name', 'empty_dept_name')
             return False
         if len(name.strip()) > 30:
-            self.update_errors('dept_name', 'dept_name_out_of_bounds')
+            self.update_errors('dept_name', 'dept_name_limit_size')
             return False
         dept = Department.objects.filter(name=name.strip())
         if dept:
@@ -690,7 +690,7 @@ class DepartmentCreateForm(BaseForm):
         if not desc.strip():
             return True
         if len(desc.strip()) > 100:
-            self.update_errors('desc', 'desc_out_of_bounds')
+            self.update_errors('desc', 'desc_limit_size')
             return False
         return True
 
@@ -719,9 +719,9 @@ class DepartmentBatchUploadForm(BaseForm):
         'dept_name_duplicate': '第{0}行和第{1}行科室名称重复，请检查',
         'dept_name_exists': '科室{}已存在',
         'dept_name_empty': '第{0}行科室名称为空或数据错误',
-        'dept_name_out_of_bounds': '第{0}科室名称不能大于30个字符',
+        'dept_name_limit_size': '第{0}科室名称不能大于30个字符',
         'desc_empty': '第{0}行职能描述为空数据错误',
-        'desc_out_of_bounds': '第{0}行职能描述不能大于100个字符',
+        'desc_limit_size': '第{0}行职能描述不能大于100个字符',
 
     }
 
@@ -775,7 +775,7 @@ class DepartmentBatchUploadForm(BaseForm):
                 self.update_errors('dept', 'dept_name_empty', str(index+2))
                 return False
             if len(dept_name.strip()) > 30:
-                self.update_errors('dept', 'dept_name_out_of_bounds', str(index+2))
+                self.update_errors('dept', 'dept_name_limit_size', str(index+2))
                 return False
             if dept_name in [dept.name for dept in dept_query_set]:
                 self.update_errors('dept', 'organ_name_exists', str(index+2))
@@ -822,7 +822,7 @@ class DepartmentBatchUploadForm(BaseForm):
                     self.update_errors('desc', 'desc_empty', str(i + 2))
                     return False
                 if len(desc.strip()) > 100:
-                    self.update_errors('desc', 'desc_out_of_bounds', str(i + 2))
+                    self.update_errors('desc', 'desc_limit_size', str(i + 2))
                     return False
         return True
 
@@ -853,7 +853,7 @@ class RoleCreateForm(BaseForm):
         self.ERR_CODES.update({
             'role_name_error': '角色名称为空或数据错误',
             'role_name_exists': '角色已存在',
-            'role_name_out_of_bounds': '角色名称不能大于30个字符',
+            'role_name_limit_size': '角色名称不能大于30个字符',
             'permission_error': '权限数据为空或错误',
             'permission_not_exists': '数据中含有不存在的权限'
         })
@@ -875,7 +875,7 @@ class RoleCreateForm(BaseForm):
             self.update_errors('name', 'role_name_error')
             return False
         if len(name.strip()) > 30:
-            self.update_errors('name', 'role_name_out_of_bounds')
+            self.update_errors('name', 'role_name_limit_size')
             return False
         db_role = Role.objects.filter(name=name.strip())
         if db_role:
@@ -918,7 +918,7 @@ class RoleUpdateForm(BaseForm):
         self.ERR_CODES.update({
             'role_name_error': '角色名称为空或数据错误',
             'role_name_exists': '角色已存在',
-            'role_name_out_of_bounds': '角色名称不能大于30个字符',
+            'role_name_limit_size': '角色名称不能大于30个字符',
             'permission_error': '权限数据为空或错误',
             'permission_not_exists': '数据中含有不存在的权限'
         })
@@ -938,7 +938,7 @@ class RoleUpdateForm(BaseForm):
             self.update_errors('name', 'role_name_error')
             return False
         if len(name.strip()) > 30:
-            self.update_errors('name', 'role_name_out_of_bounds')
+            self.update_errors('name', 'role_name_limit_size')
             return False
         db_role = Role.objects.filter(name=name.strip()).first()
         if db_role and not name.strip() == self.old_role.name and name.strip() == db_role.name:

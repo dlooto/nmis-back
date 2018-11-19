@@ -483,7 +483,6 @@ class AssertDevicesMixin(object):
         }
         medical_device_cate = MedicalDeviceSix8Cate.objects.create(
             creator=creator, **medical_cate_parent_data)
-        logger.info(medical_device_cate)
         return MedicalDeviceSix8Cate.objects.create(
             parent=medical_device_cate, creator=creator, **medical_cate_data)
 
