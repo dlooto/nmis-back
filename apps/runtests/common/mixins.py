@@ -495,12 +495,14 @@ class AssertDevicesMixin(object):
         """
         创建资产设备维护计划
         """
+        start_date = times.now().strftime('%Y-%m-%d')
+        expired_date = times.after_days(20).strftime('%Y-%m-%d')
         m_plan_data = {
             "plan_no": "",
             "title": title,
             "type": type,
-            "start_date": "2018-10-31",
-            "expired_date": "2018-11-10",
+            "start_date": start_date,
+            "expired_date": expired_date,
             "executor_id": executor.id,
             "creator_id": creator.id
         }
