@@ -233,7 +233,7 @@ class ProjectPlanUpdateForm(BaseForm):
                         )
                         return False
 
-                    if not re.match('^[0-9]+(.[0-9]{2})*$', str(device.get('planned_price'))):
+                    if not re.match('^[0-9]+(.[0-9]{1,2})*$', str(device.get('planned_price'))):
                         self.update_errors(
                             'planned_price', 'planned_price_format_err', device.get('name', '').strip()
                         )
@@ -256,7 +256,7 @@ class ProjectPlanUpdateForm(BaseForm):
                         self.update_errors('planned_price', 'planned_price_null_err')
                         return False
 
-                    if not re.match('^[0-9]+(.[0-9]{2})*$', str(device.get('planned_price'))):
+                    if not re.match('^[0-9]+(.[0-9]{1,2})*$', str(device.get('planned_price'))):
                         self.update_errors('planned_price', 'planned_price_format_err')
                         return False
 
@@ -354,7 +354,7 @@ def check_hardware_devices_list(baseForm, devices_list):
                 'planned_price', 'device_planned_price_null_error',
                 device.get('planned_price', '').strip())
             return False
-        if not re.match('^[0-9]+(.[0-9]{2})*$', str(device_planned_price)):
+        if not re.match('^[0-9]+(.[0-9]{1,2})*$', str(device_planned_price)):
             baseForm.update_errors(
                 'planned_price', 'device_planned_price_error',
                 device.get('name', '').strip())
@@ -777,7 +777,7 @@ class PurchaseContractCreateForm(BaseForm):
                         device.get('name', '').strip())
                 return False
             import re
-            if not re.match('^[0-9]+(.[0-9]{2})*$', str(device.get('planned_price'))):
+            if not re.match('^[0-9]+(.[0-9]{1,2})*$', str(device.get('planned_price'))):
                 self.update_errors(
                     'device_planned_price', 'device_planned_price_type_err',
                     device.get('name', '').strip())

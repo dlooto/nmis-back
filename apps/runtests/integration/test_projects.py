@@ -142,8 +142,8 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertIsNotNone(new_project)
         self.assertEquals(new_project.get('title'), project_base_data['project_title'])
         self.assertEqual(new_project.get('handing_type'), project_base_data['handing_type'])
-        self.assertEquals(new_project.get('performer_id'), new_project.get('creator_id'))
-        devices = new_project['hardware_devices']
+        self.assertEquals
+        devices = new_project.get('hardware_devices')
         self.assertIsNotNone(devices)
         for item in devices:
             for im in hardware_updated_devices:
@@ -1402,6 +1402,7 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                     "name": "测试系统1",
                     "producer": "厂商1",
                     "supplier": "供应商",
+                    "planned_price": 123000.0,
                     "real_price": 123000,
                     "num": 2,
                     "real_total_amount": 246000
@@ -1411,6 +1412,7 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                     "name": "测试系统2",
                     "producer": "厂商2",
                     "supplier": "供应商",
+                    "planned_price": 123000.0,
                     "real_price": 12000,
                     "num": 2,
                     "real_total_amount": 24000

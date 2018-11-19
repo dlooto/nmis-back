@@ -272,9 +272,9 @@ class ProjectPlanView(BaseAPIView):
         new_project_queryset = ProjectPlanSerializer.setup_eager_loading(
             ProjectPlan.objects.filter(id=project_id)
         ).first()
-        return resp.serialize_response(
-            new_project_queryset, results_name='project'
-        )
+        return resp.serialize_response(new_project_queryset, results_name='project',
+                                       srl_cls_name='ChunkProjectPlanSerializer'
+                                       )
 
     @permission_classes((
             IsHospSuperAdmin, ProjectDispatcherPermission,
