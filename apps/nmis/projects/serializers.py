@@ -438,7 +438,6 @@ class ChunkProjectPlanSerializer(BaseModelSerializer):
         # return resp.serialize_data(states, srl_cls_name='ProjectMilestoneStateSerializer') if states else []
         return states
 
-
     def _get_projects_operation(self, obj):
 
         project_operation_record = ProjectOperationRecord.objects.get_reason(project_id=obj.id, status=obj.status)
