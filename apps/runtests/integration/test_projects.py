@@ -1485,8 +1485,6 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         """
         API测试: 到货项目里程碑操作API接口测试
         """
-        logger.info('$$$------------$$-----$$$----------$$$------------$$$')
-        logger.info(self.user.get_roles())
         api = '/api/v1/projects/{}/project_milestone_states/{}/save-take-delivery-info'
         self.login_with_username(self.user)
         project = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='测试项目')

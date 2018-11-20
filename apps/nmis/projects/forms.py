@@ -37,22 +37,33 @@ class ProjectPlanCreateForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'project_title_error':              '项目名称输入错误',
+            'project_title_error':              '项目名称为空或数据错误',
+            'project_title_limit_size':         '项目名称长度不能超过30个字符',
             'handing_type_error':               '办理方式为空或数据错误',
             'software_name_error':              '软件名称为空或数据错误',
-            'software_purpose_error':           '软件用途字符过长，20个字符以内',
+            'software_name_limit_size':         '软件名称长度不能超过30个字符',
+            'hardware_name_limit_size':         '硬件设备名称长度不能超过30个字符',
+            'software_purpose_limit_size':      '软件用途字符过长，50个字符以内',
+            'hardware_purpose_limit_size':      '硬件设备用途字符过长，50个字符以内',
             'hardware_devices_error':           '硬件设备为空或格式错误',
             'software_devices_error':           '软件设备为空或格式错误',
             'devices_error':                    '硬件设备和软件设备不可同时为空',
             'planned_price_null_err':           '软件预估单价为空',
             'planned_price_format_err':         '软件预估单价数据类型错误',
             'pre_amount_null_err':              '项目总价为空',
-            'pre_amount_format_err':            '项目总价数据类型错误'
+            'pre_amount_format_err':            '项目总价数据类型错误',
+            'project_introduce_err':            '项目介绍为空或数据错误',
+            'project_purpose_err':              '项目申请原因为空或数据错误',
+            'project_introduce_limit_size':     '项目介绍长度不能超过100个字符',
+            'project_purpose_limit_size':       '项目申请原因长度不能超过100个字符',
         })
 
     def is_valid(self):
-        return self.check_project_title() and self.check_devices() and\
-               self.check_handing_type() and self.check_pre_amount()
+        if not self.check_project_title() or not self.check_devices() or not self.check_handing_type()\
+                and not self.check_pre_amount() or not self.check_project_purpose() \
+                and not self.check_project_introduce():
+            return False
+        return True
 
     def check_pre_amount(self):
 
@@ -70,8 +81,46 @@ class ProjectPlanCreateForm(BaseForm):
 
     def check_project_title(self):
         project_title = self.data.get('project_title')
-        if not project_title:
+        if not project_title or not isinstance(project_title, str):
             self.update_errors('project_title', 'project_title_error')
+            return False
+        if not project_title.strip():
+            self.update_errors('project_title', 'project_title_error')
+            return False
+        if len(project_title.strip()) > 30:
+            self.update_errors('project_title', 'project_title_limit_size')
+            return False
+        return True
+
+    def check_project_purpose(self):
+        purpose = self.data.get('purpose')
+        if not purpose:
+            self.update_errors('project_purpose', 'project_purpose_err')
+            return True
+        if not isinstance(purpose, str):
+            self.update_errors('project_purpose', 'project_purpose_err')
+            return False
+        if not purpose.strip():
+            self.update_errors('project_purpose', 'project_purpose_err')
+            return True
+        if len(purpose.strip()) > 100:
+            self.update_errors('project_purpose', 'project_purpose_limit_size')
+            return False
+        return True
+
+    def check_project_introduce(self):
+        project_introduce = self.data.get('project_introduce')
+        if not project_introduce:
+            self.update_errors('project_introduce', 'project_introduce_err')
+            return True
+        if not isinstance(project_introduce, str):
+            self.update_errors('project_introduce', 'project_introduce_err')
+            return False
+        if not project_introduce.strip():
+            self.update_errors('project_introduce', 'project_introduce_err')
+            return True
+        if len(project_introduce.strip()) > 100:
+            self.update_errors('project_introduce', 'project_introduce_limit_size')
             return False
         return True
 
@@ -104,23 +153,29 @@ class ProjectPlanCreateForm(BaseForm):
             # 信息化项目存在软件设备申请需对软件设备字段进行校验
             if software_devices:
                 for item in software_devices:
-                    if not item.get('name'):
+                    software_name = item.get('name')
+                    if not software_name or not isinstance(software_name, str):
                         self.update_errors('software_name', 'software_name_error')
                         return False
-                    if item.get('purpose'):
-                        if len(item.get('purpose')) >= 20:
-                            self.update_errors('software_purpose', 'software_purpose_error')
+                    if not software_name.strip():
+                        self.update_errors('software_name', 'software_name_error')
+                        return False
+                    if len(software_name.strip()) > 30:
+                        self.update_errors('software_name', 'software_name_limit_size')
+                        return False
+                    purpose = item.get('purpose')
+                    if purpose and isinstance(purpose, str) and purpose.strip():
+                        if len(purpose.strip()) >= 50:
+                            self.update_errors('software_purpose', 'software_purpose_limit_size')
                             return False
-
-                    if not item.get('planned_price'):
+                    planned_price = item.get('planned_price')
+                    if not planned_price:
                         self.update_errors('planned_price', 'planned_price_null_err')
                         return False
-
                     try:
-                        if not isinstance(float(item.get('planned_price')), float):
-                            self.update_errors('planned_price', 'planned_price_format_err')
-                            return False
-                    except ValueError:
+                        float(planned_price)
+                    except ValueError as e:
+                        logger.exception(e)
                         self.update_errors('planned_price', 'planned_price_format_err')
                         return False
             # 信息化项目存在硬件设备申请需对硬件设备字段进行校验
@@ -130,15 +185,19 @@ class ProjectPlanCreateForm(BaseForm):
 
     def save(self):
         data = {
-            'title': self.data.get('project_title'),
-            'handing_type': self.data.get('handing_type'),
-            'purpose': self.data.get('purpose'),
+            'title': self.data.get('project_title', '').strip(),
+            'handing_type': self.data.get('handing_type', '').strip(),
             'creator': self.creator,
             'related_dept': self.related_dept,
-            'project_cate': self.data.get('pro_type'),
-            'project_introduce': self.data.get('project_introduce'),
+            'project_cate': self.data.get('pro_type', '').strip(),
             'pre_amount': float(self.data.get('pre_amount'))
         }
+        if self.data.get('purpose'):
+            data['purpose'] = self.data.get('purpose').strip()
+
+        if self.data.get('project_introduce'):
+            data['project_introduce'] = self.data.get('project_introduce').strip()
+
         if data.get('handing_type') == PRO_HANDING_TYPE_SELF:
             data["performer"] = self.creator
 
@@ -171,14 +230,28 @@ class ProjectPlanUpdateForm(BaseForm):
             'planned_price_null_err':   '{}: 预估单价为空',
             'planned_price_format_err': '{}: 预估单价数据类型错误',
             'pre_amount_null_err':      '项目总价为空',
-            'pre_amount_format_err':    '项目总价数据类型错误'
+            'pre_amount_format_err':    '项目总价数据类型错误',
+
+            'project_title_limit_size':     '项目名称长度不能超过30个字符',
+            'software_name_limit_size':     '软件名称长度不能超过30个字符',
+            'hardware_name_limit_size':     '硬件设备名称长度不能超过30个字符',
+            'software_purpose_limit_size':  '软件用途字符过长，50个字符以内',
+            'hardware_purpose_limit_size':  '硬件设备用途字符过长，50个字符以内',
+            'hardware_devices_error':       '硬件设备为空或格式错误',
+            'software_devices_error':       '软件设备为空或格式错误',
+            'devices_error':                '硬件设备和软件设备不可同时为空',
+            'project_introduce_err':        '项目介绍为空或数据错误',
+            'project_purpose_err':          '项目申请原因为空或数据错误',
+            'project_introduce_limit_size': '项目介绍长度不能超过100个字符',
+            'project_purpose_limit_size':   '项目申请原因长度不能超过100个字符',
         })
 
     def is_valid(self):
-        if self.check_project_title() and self.check_devices()\
-                and self.check_handing_type() and self.check_pre_amount():
-            return True
-        return False
+        if not self.check_project_title() or not self.check_devices() \
+                or not self.check_handing_type() or not self.check_pre_amount() \
+                or not self.check_project_purpose() or not self.check_project_introduce():
+            return False
+        return True
 
     def check_pre_amount(self):
         if self.data.get('pre_amount'):
@@ -188,18 +261,59 @@ class ProjectPlanUpdateForm(BaseForm):
         return True
 
     def check_project_title(self):
+        project_title = self.data.get('project_title')
+        if not project_title or not isinstance(project_title, str):
+            self.update_errors('project_title', 'project_title_error')
+            return False
+        if not project_title.strip():
+            self.update_errors('project_title', 'project_title_error')
+            return False
+        if len(project_title.strip()) > 30:
+            self.update_errors('project_title', 'project_title_limit_size')
+            return False
+        return True
+
+    def check_project_purpose(self):
+        purpose = self.data.get('purpose')
+        if not purpose:
+            self.update_errors('project_purpose', 'project_purpose_err')
+            return True
+        if not isinstance(purpose, str):
+            self.update_errors('project_purpose', 'project_purpose_err')
+            return False
+        if not purpose.strip():
+            self.update_errors('project_purpose', 'project_purpose_err')
+            return True
+        if len(purpose.strip()) > 100:
+            self.update_errors('project_purpose', 'project_purpose_limit_size')
+            return False
+        return True
+
+    def check_project_introduce(self):
+        project_introduce = self.data.get('project_introduce')
+        if not project_introduce:
+            self.update_errors('project_introduce', 'project_introduce_err')
+            return True
+        if not isinstance(project_introduce, str):
+            self.update_errors('project_introduce', 'project_introduce_err')
+            return False
+        if not project_introduce.strip():
+            self.update_errors('project_introduce', 'project_introduce_err')
+            return True
+        if len(project_introduce.strip()) > 100:
+            self.update_errors('project_introduce', 'project_introduce_limit_size')
+            return False
         return True
 
     def check_handing_type(self):
-        handing_type = self.data.get('handing_type', '').strip()
+        handing_type = self.data.get('handing_type')
         if not handing_type:
             self.update_errors('handing_type', 'handing_type_error')
             return False
 
-        if handing_type not in dict(PROJECT_HANDING_TYPE_CHOICES):
+        if not (handing_type in dict(PROJECT_HANDING_TYPE_CHOICES).keys()):
             self.update_errors('handing_type', 'handing_type_error')
             return False
-
         return True
 
     def check_devices(self):
@@ -224,8 +338,8 @@ class ProjectPlanUpdateForm(BaseForm):
                         self.update_errors('software_name', 'software_name_error')
                         return False
                     if device.get('purpose', '').strip():
-                        if len(device.get('purpose')) >= 20:
-                            self.update_errors('software_purpose', 'software_purpose_error')
+                        if len(device.get('purpose')) >= 50:
+                            self.update_errors('software_purpose', 'software_purpose_limit_size')
                             return False
                     if not device.get('planned_price'):
                         self.update_errors(
@@ -248,7 +362,7 @@ class ProjectPlanUpdateForm(BaseForm):
                         self.update_errors('software_name', 'software_name_error')
                         return False
                     if device.get('purpose'):
-                        if len(device.get('purpose')) >= 20:
+                        if len(device.get('purpose')) >= 50:
                             self.update_errors('software_purpose', 'software_purpose_error')
                             return False
 
@@ -264,16 +378,16 @@ class ProjectPlanUpdateForm(BaseForm):
 
     def save(self):
         pro_data = {}
-        if self.data.get('project_title', '').strip():
+        if self.data.get('project_title') and self.data.get('project_title').strip():
             pro_data['title'] = self.data.get('project_title').strip()
 
-        if self.data.get('purpose', '').strip():
+        if self.data.get('purpose') and self.data.get('purpose').strip():
             pro_data['purpose'] = self.data.get('purpose').strip()
 
-        if self.data.get('project_introduce', '').strip():
+        if self.data.get('project_introduce') and self.data.get('project_introduce').strip():
             pro_data['project_introduce'] = self.data.get('project_introduce').strip()
 
-        if self.data.get('handing_type', '').strip():
+        if self.data.get('handing_type') and self.data.get('handing_type').strip():
             pro_data['handing_type'] = self.data.get('handing_type').strip()
 
         if self.data.get('hardware_added_devices'):
@@ -307,13 +421,16 @@ def check_hardware_devices_list(baseForm, devices_list):
     """
     baseForm.ERR_CODES.update({
         'devices_empty':                    '硬件设备列表不能为空或数据错误',
-        'device_name_error':                '硬件设备名为空或格式错误',
+        'device_name_error':                '硬件设备名称为空或格式错误',
+        'device_name_limit_size':           '硬件设备名称长度不能超过30个字符',
         'device_num_error':                 '硬件设备购买数量为空或格式错误',
         'device_planned_price_error':       '{}: 预估单价数据类型错误',
         'device_planned_price_null_error':  '{}: 预估价格为空',
         'device_measure_error':             '硬件设备度量单位为空或数据错误',
+        'device_measure_limit_size':        '硬件设备度量单位长度不能超过10个字符',
         'device_type_spec_error':           '硬件设备规格/型号为空或数据错误',
-        'device_purpose_error':             '硬件用途字符串过长，20个字符以内',
+        'device_type_spec_limit_size':      '硬件设备规格/型号长度不能超过30个字符',
+        'device_purpose_limit_size':        '硬件用途字符串过长，50个字符以内',
         'updated_device_not_exist':         '硬件更新的设备不存在',
         'updated_device_id_error':          '硬件更新的设备ID数据错误',
     })
@@ -329,16 +446,21 @@ def check_hardware_devices_list(baseForm, devices_list):
             except ValueError:
                 baseForm.update_errors('num', 'updated_device_id_error')
                 return False
-
-        if not device.get('name', '').strip():
+        name = device.get('name')
+        if not name or not isinstance(name, str):
             baseForm.update_errors('name', 'device_name_error')
+            return False
+        if not name.strip():
+            baseForm.update_errors('name', 'device_name_error')
+            return False
+        if len(name.strip()) > 30:
+            baseForm.update_errors('name', 'device_name_limit_size')
             return False
 
         device_num = device.get('num')
         if not device_num:
             baseForm.update_errors('num', 'device_num_error')
             return False
-
         try:
             int(device_num)
             if isinstance(device_num, float):
@@ -360,20 +482,32 @@ def check_hardware_devices_list(baseForm, devices_list):
                 device.get('name', '').strip())
             return False
 
-        if device.get('purpose', '').strip():
-            if len(device.get('purpose', '').strip()) >= 20:
-                baseForm.update_errors('purpose', 'device_purpose_error')
+        if device.get('purpose') and isinstance(device.get('purpose'), str) and device.get('purpose', '').strip():
+            if len(device.get('purpose', '').strip()) > 50:
+                baseForm.update_errors('purpose', 'device_purpose_limit_size')
                 return False
 
-        if not device.get('measure', '').strip():
+        measure = device.get('measure')
+        if not measure or not isinstance(measure, str):
             baseForm.update_errors('measure', 'device_measure_error')
             return False
+        if not measure.strip():
+            baseForm.update_errors('measure', 'device_measure_error')
+            return False
+        if len(measure.strip()) > 10:
+            baseForm.update_errors('measure', 'device_measure_limit_size')
+            return False
 
-        if not device.get('type_spec', '').strip():
+        type_spec = device.get('type_spec')
+        if not type_spec or not isinstance(type_spec, str):
             baseForm.update_errors('type_spec', 'device_type_spec_error')
             return False
-        if not device.get('purpose', '').strip():
-            pass
+        if not type_spec.strip():
+            baseForm.update_errors('type_spec', 'device_type_spec_error')
+            return False
+        if len(type_spec.strip()) > 30:
+            baseForm.update_errors('type_spec', 'device_type_spec_limit_size')
+            return False
     return True
 
 
@@ -382,8 +516,114 @@ class BaseOrderedDeviceForm(BaseForm):
     def __init__(self, project, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.project = project
+        self.init_error_codes()
+
+    def init_error_codes(self):
+        self.ERR_CODES.update({
+            'device_name_error':                '设备名称为空或格式错误',
+            'device_name_limit_size':           '设备名称长度不能超过30个字符',
+            'device_num_error':                 '设备购买数量为空或格式错误',
+            'device_planned_price_error':       '预估单价数据类型错误',
+            'device_planned_price_null_error':  '预估价格为空',
+            'device_measure_error':             '设备度量单位为空或数据错误',
+            'device_measure_limit_size':        '设备度量单位长度不能超过10个字符',
+            'device_type_spec_error':           '设备规格/型号为空或数据错误',
+            'device_type_spec_limit_size':      '设备规格/型号长度不能超过30个字符',
+            'device_purpose_limit_size':        '用途字符串过长，50个字符以内',
+            'device_not_exist':                 '设备不存在',
+            'device_id_error':                  '设备ID为空或数据错误',
+        })
 
     def is_valid(self):
+        return True
+
+
+    def check_device_id(self):
+        device_id = self.data.get('id')
+        if device_id:
+            try:
+                int(device_id)
+                order_device = OrderedDevice.objects.filter(id=device_id)
+                if not order_device:
+                    self.update_errors('num', 'device_not_exist')
+                    return False
+            except ValueError:
+                self.update_errors('num', 'device_id_error')
+                return False
+        return True
+
+    def check_name(self):
+        name = self.data.get('name')
+        if not name or not isinstance(name, str):
+            self.update_errors('name', 'device_name_error')
+            return False
+        if not name.strip():
+            self.update_errors('name', 'device_name_error')
+            return False
+        if len(name.strip()) > 30:
+            self.update_errors('name', 'device_name_limit_size')
+            return False
+        return True
+
+    def check_num(self):
+        device_num = self.data.get('num')
+        if not device_num:
+            self.update_errors('num', 'device_num_error')
+            return False
+        try:
+            int(device_num)
+            if isinstance(device_num, float):
+                self.update_errors('num', 'device_num_error')
+                return False
+        except ValueError:
+            self.update_errors('num', 'device_num_error')
+            return False
+        return True
+
+    def check_planed_price(self):
+        device_planned_price = self.data.get('planned_price')
+        if not device_planned_price:
+            self.update_errors(
+                'planned_price', 'device_planned_price_null_error',
+                self.get('planned_price', '').strip())
+            return False
+        if not re.match('^[0-9]+(.[0-9]{1,2})*$', str(device_planned_price)):
+            self.update_errors(
+                'planned_price', 'device_planned_price_error')
+            return False
+        return True
+
+    def check_purpose(self):
+        if self.data.get('purpose') and isinstance(self.data.get('purpose'), str) and self.data.get('purpose', '').strip():
+            if len(self.data.get('purpose', '').strip()) > 50:
+                self.update_errors('purpose', 'device_purpose_limit_size')
+                return False
+        return True
+
+    def check_measure(self):
+        measure = self.data.get('measure')
+        if not measure or not isinstance(measure, str):
+            self.update_errors('measure', 'device_measure_error')
+            return False
+        if not measure.strip():
+            self.update_errors('measure', 'device_measure_error')
+            return False
+        if len(measure.strip()) > 10:
+            self.update_errors('measure', 'device_measure_limit_size')
+            return False
+        return True
+
+    def check_type_spec(self):
+        type_spec = self.data.get('type_spec')
+        if not type_spec or not isinstance(type_spec, str):
+            self.update_errors('type_spec', 'device_type_spec_error')
+            return False
+        if not type_spec.strip():
+            self.update_errors('type_spec', 'device_type_spec_error')
+            return False
+        if len(type_spec.strip()) > 30:
+            self.update_errors('type_spec', 'device_type_spec_limit_size')
+            return False
         return True
 
     def save(self):
@@ -391,6 +631,13 @@ class BaseOrderedDeviceForm(BaseForm):
 
 
 class OrderedDeviceCreateForm(BaseOrderedDeviceForm):
+
+    def is_valid(self):
+        if not self.check_name() or not self.check_num() or not self.check_measure() \
+                or not self.check_planed_price() or not self.check_type_spec() \
+                or not self.check_purpose():
+            return False
+        return True
 
     def save(self):
         data = {
@@ -409,6 +656,13 @@ class OrderedDeviceUpdateForm(BaseOrderedDeviceForm):
     def __init__(self, device, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.device = device
+
+    def is_valid(self):
+        if not self.check_name() or not self.check_num() or not self.check_measure() \
+                or not self.check_planed_price() or not self.check_type_spec() \
+                or not self.check_purpose():
+            return False
+        return True
 
     def save(self):
         data = {
@@ -437,22 +691,46 @@ class ProjectFlowCreateForm(BaseForm):
         self.organ = organ
 
         self.ERR_CODES.update({
-            "err_flow_title":       "流程标题错误",
-            "err_milestone_title":  "里程碑项标题错误",
+            "err_flow_title":       "流程标题为空或数据错误",
+            "err_milestones":       "里程碑项不能为空",
+            "err_milestone_title":  "里程碑项标题为空或数据错误",
+            "flow_title_limit_size":       "流程标题长度不能超过30个字符",
+            "milestone_title_limit_size": "里程碑项标题长度不能超过30个字符",
         })
 
     def is_valid(self):
+        if not self.check_flow_title() or not self.check_milestones():
+            return False
         return True
 
     def check_flow_title(self):
-        title = self.data.get('flow_title', '').strip()
-        if not title:
+        title = self.data.get('flow_title')
+        if not title or not isinstance(title, str):
             self.update_errors('flow_title', 'err_flow_title')
+            return False
+        if not title.strip():
+            self.update_errors('flow_title', 'err_flow_title')
+            return False
+        if len(title.strip()) > 30:
+            self.update_errors('flow_title', 'flow_title_limit_size')
             return False
         return True
 
     def check_milestones(self):
         milestones = self.data.get("milestones")
+        if not milestones:
+            self.update_errors('milestones', 'err_milestones')
+            return False
+        for milestone in milestones:
+            if not milestone.get('title') or not isinstance(milestone.get('title') , str):
+                self.update_errors('milestone_title', 'err_milestone_title')
+                return False
+            if not milestone.get('title') .strip():
+                self.update_errors('milestone_title', 'err_milestone_title')
+                return False
+            if len(milestone.get('title').strip()) > 30:
+                self.update_errors('milestone_title', 'milestone_title_limit_size')
+                return False
         return True
 
     def save(self):
@@ -471,23 +749,48 @@ class ProjectFlowUpdateForm(BaseForm):
         self.old_flow = old_flow
 
         self.ERR_CODES.update({
-            "flow_is_used":     "流程已经在使用中，不能修改",
-            "err_flow_title":   "流程标题错误",
+            "flow_is_used":                 "流程已经在使用中，不能修改",
+            "err_flow_title":               "流程标题为空或数据错误",
+            "err_milestones":               "里程碑项不能为空",
+            "err_milestone_title":          "里程碑项标题为空或数据错误",
+            "flow_title_limit_size":        "流程标题长度不能超过30个字符",
+            "milestone_title_limit_size":   "里程碑项标题长度不能超过30个字符",
         })
 
     def is_valid(self):
-        if not self.check_flow_used():
-            return False
-        if not self.check_flow_title():
+        if not self.check_flow_used() or not self.check_flow_title():
             return False
         return True
 
     def check_flow_title(self):
-        title = self.data.get('flow_title', '').strip()
-        if not title:
+        title = self.data.get('flow_title')
+        if not title or not isinstance(title, str):
             self.update_errors('flow_title', 'err_flow_title')
             return False
+        if not title.strip():
+            self.update_errors('flow_title', 'err_flow_title')
+            return False
+        if len(title.strip()) > 30:
+            self.update_errors('flow_title', 'flow_title_limit_size')
+            return False
         return True
+
+    # def check_milestones(self):
+    #     milestones = self.data.get("milestones")
+    #     if not milestones:
+    #         self.update_errors('milestones', 'err_milestones')
+    #         return False
+    #     for milestone in milestones:
+    #         if not milestone.get('title') or not isinstance(milestone.get('title') , str):
+    #             self.update_errors('milestone_title', 'err_milestone_title')
+    #             return False
+    #         if not milestone.get('title') .strip():
+    #             self.update_errors('milestone_title', 'err_milestone_title')
+    #             return False
+    #         if len(milestone.get('title').strip()) > 30:
+    #             self.update_errors('milestone_title', 'milestone_title_limit_size')
+    #             return False
+    #     return True
 
     def check_flow_used(self):
         if self.old_flow.is_used():
@@ -723,20 +1026,156 @@ class PurchaseContractCreateForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'seller_tel_err': '乙方电话错误',
-            'device_num_err': '设备数量错误',
-            'device_name_err': '设备名称错误',
-            'device_producer_err': '{}: 厂商为空',
-            'device_amount_err': '{}: 总价为空',
-            'device_amount_type_err': '{}: 总价类型错误',
-            'device_supplier_null_err': '{}: 供应商为空',
-            'device_planned_price_null_err': '{}: 单价为空',
-            'device_planned_price_err': '{}: 单价不能为0',
-            'device_planned_price_type_err': '{}: 单价数据类型错误'
+            'contract_no_error':                '合同编号为空或数据错误',
+            'contract_no_limit_size':           '合同编号不能超过30个字符',
+            'title_error':                      '合同名称为空或数据错误',
+            'title_limit_size':                 '合同名称不能超过30个字符',
+            'signed_date_error':                '签订时间为空或数据错误',
+            'delivery_date_error':              '交货时间为空或数据错误',
+            'buyer_error':                      '甲方单位为空或数据错误',
+            'buyer_limit_size':                 '甲方单位长度不能超过30个字符',
+            'buyer_contact_error':              '甲方联系人为空或数据错误',
+            'buyer_contact_limit_size':         '甲方联系人为空或数据错误',
+            'seller_error':                     '乙方单位为空或数据错误',
+            'seller_limit_size':                '乙方单位长度不能超过30个字符',
+            'seller_contact_error':             '乙方联系人为空或数据错误',
+            'seller_contact_limit_size':        '乙方联系人为空或数据错误',
+            'seller_tel_error':                 '乙方联系电话为空或数据错误',
+            'total_amount_error':               '合同总金额为空或数据错误',
+            'contract_devices_err':             '设备列表为空或数据错误',
+            'device_num_err':                   '设备数量为空或数据错误',
+            'device_name_err':                  '设备名称为空或数据错误',
+            'device_name_limit_size':           '设备名称长度不能超过30个字符',
+            'device_producer_err':              '{}: 厂商为空或数据错误',
+            'device_producer_limit_size':       '{}: 厂商长度不能超过30个字符',
+            'device_amount_err':                '{}: 为空或数据错误',
+            'device_supplier_err':              '{}: 为空或数据错误',
+            'device_planned_price_null_err':    '{}: 为空或数据错误',
+            'device_planned_price_err':         '{}: 单价不能为0',
         })
 
     def is_valid(self):
-        if not self.check_seller_tel() or not self.check_device():
+        if not self.check_contract_no() or not self.check_title() or not self.check_buyer_contact() \
+                or not self.check_signed_date() or not self.check_delivery_date() \
+                or not self.check_total_amount() or not self.check_seller() \
+                or not self.check_seller_contact() or not self.check_seller_tel() or not self.check_device():
+            return False
+        return True
+
+    def check_contract_no(self):
+        contract_no = self.data.get('contract_no')
+        if not contract_no or not isinstance(contract_no, str):
+            self.update_errors('contract_no', 'contract_no_error')
+            return False
+        if not contract_no.strip():
+            self.update_errors('contract_no', 'contract_no_error')
+            return False
+        if len(contract_no.strip()) > 30:
+            self.update_errors('contract_no', 'contract_no_limit_size')
+            return False
+        return True
+
+    def check_title(self):
+        title = self.data.get('title')
+        if not title or not isinstance(title, str):
+            self.update_errors('title', 'title_error')
+            return False
+        if not title.strip():
+            self.update_errors('title', 'title_error')
+            return False
+        if len(title.strip()) > 30:
+            self.update_errors('title', 'title_limit_size')
+            return False
+        return True
+
+    def check_signed_date(self):
+        signed_date = self.data.get('signed_date')
+        if not signed_date or not isinstance(signed_date, str):
+            self.update_errors('signed_date', 'signed_date_error')
+            return False
+        if not signed_date.strip():
+            self.update_errors('signed_date', 'signed_date_error')
+            return False
+        if not eggs.check_day(signed_date.strip()):
+            self.update_errors('signed_date', 'signed_date_error')
+            return False
+        return True
+
+    def check_delivery_date(self):
+        delivery_date = self.data.get('delivery_date')
+        if not delivery_date or not isinstance(delivery_date, str):
+            self.update_errors('delivery_date', 'delivery_date_error')
+            return False
+        if not delivery_date.strip():
+            self.update_errors('delivery_date', 'delivery_date_error')
+            return False
+        if not eggs.check_day(delivery_date.strip()):
+            self.update_errors('delivery_date', 'delivery_date_error')
+            return False
+        return True
+
+    def check_buyer_contact(self):
+        buyer_contact = self.data.get('buyer_contact')
+        if not buyer_contact or not isinstance(buyer_contact, str):
+            self.update_errors('buyer_contact', 'buyer_contact_error')
+            return False
+        if not buyer_contact.strip():
+            self.update_errors('buyer_contact', 'buyer_contact_error')
+            return False
+        if len(buyer_contact.strip()) > 30:
+            self.update_errors('buyer_contact', 'buyer_contact_limit_size')
+            return False
+        return True
+
+    def check_seller_contact(self):
+        seller_contact = self.data.get('seller_contact')
+        if not seller_contact or not isinstance(seller_contact, str):
+            self.update_errors('seller_contact', 'seller_contact_error')
+            return False
+        if not seller_contact.strip():
+            self.update_errors('seller_contact', 'seller_contact_error')
+            return False
+        if len(seller_contact.strip()) > 30:
+            self.update_errors('seller_contact', 'seller_contact_limit_size')
+            return False
+        return True
+
+    def check_seller(self):
+        seller = self.data.get('seller')
+        if not seller or not isinstance(seller, str):
+            self.update_errors('seller', 'seller_error')
+            return False
+        if not seller.strip():
+            self.update_errors('seller', 'seller_error')
+            return False
+        if len(seller.strip()) > 30:
+            self.update_errors('seller', 'seller_limit_size')
+            return False
+        return True
+
+    def check_total_amount(self):
+        total_amount = self.data.get('total_amount')
+        if not total_amount:
+            self.update_errors('total_amount', 'total_amount_error')
+            return False
+        try:
+            float(total_amount)
+        except ValueError as e:
+            logger.exception(e)
+            self.update_errors('total_amount', 'total_amount_error')
+            return False
+        return True
+
+    def check_seller_tel(self):
+        """
+        校验乙方联系人手机号
+        """
+        contact_phone = self.data.get('seller_tel')
+        if not contact_phone:
+            self.update_errors('seller_tel', 'seller_tel_err')
+            return False
+        if not eggs.is_phone_valid(contact_phone.strip()):
+            self.update_errors('seller_tel', 'seller_tel_err')
             return False
         return True
 
@@ -745,8 +1184,10 @@ class PurchaseContractCreateForm(BaseForm):
         校验设备信息
         """
         contract_device_list = self.data.get('contract_devices')
+        if not contract_device_list:
+            self.update_errors('contract_devices', 'contract_devices_err')
+            return False
         for device in contract_device_list:
-            logger.info(device)
             if not device.get('num'):
                 self.update_errors('device_num', 'device_num_err')
                 return False
@@ -754,12 +1195,26 @@ class PurchaseContractCreateForm(BaseForm):
                 if not isinstance(device.get('num'), int):
                     self.update_errors('device_num', 'device_num_err')
                     return False
-
-            if not device.get('name') or not device.get('name', '').strip():
+            name = device.get('name')
+            if not name or not isinstance(name, str):
                 self.update_errors('device_name', 'device_name_err')
                 return False
+            if not name.strip():
+                self.update_errors('device_name', 'device_name_err')
+                return False
+            if len(name.strip()) > 30:
+                self.update_errors('device_name', 'device_name_limit_size')
+                return False
+
             # 检查供应商是否为选定的供应商
-            if not device.get('supplier') or not device.get('supplier', '').strip():
+            supplier = device.get('supplier')
+            if not supplier or not isinstance(supplier, str):
+                self.update_errors(
+                    'device_supplier', 'device_supplier_null_err',
+                    device.get('name', ).strip()
+                )
+                return False
+            if not supplier.strip():
                 self.update_errors(
                     'device_supplier', 'device_supplier_null_err',
                     device.get('name', ).strip()
@@ -773,7 +1228,7 @@ class PurchaseContractCreateForm(BaseForm):
                         device.get('name', '').strip())
                 else:
                     self.update_errors(
-                        'device_planned_price', 'device_planned_price_null_err',
+                        'device_planned_price', 'device_planned_price_err',
                         device.get('name', '').strip())
                 return False
             import re
@@ -798,16 +1253,6 @@ class PurchaseContractCreateForm(BaseForm):
                 self.update_errors('device_producer', 'device_producer_err',
                                    device.get('name', '').strip())
                 return False
-        return True
-
-    def check_seller_tel(self):
-        """
-        校验乙方联系人手机号
-        """
-        contact_phone = self.data.get('seller_tel', '').strip()
-        if not eggs.is_phone_valid(contact_phone):
-            self.update_errors('seller_tel', 'seller_tel_err')
-            return False
         return True
 
     def save(self):
@@ -843,10 +1288,27 @@ class ProjectMilestoneStateUpdateForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
+            'summary_error': '说明信息数据错误',
+            'summary_limit_size': '说明信息长度不能超过100个字符',
         })
 
     def is_valid(self):
-        pass
+        if not self.check_summary():
+            return False
+        return True
+
+    def check_summary(self):
+        if not self.summary:
+            return True
+        if not isinstance(self.summary, str):
+            self.update_errors('summary', 'summary_error')
+            return False
+        if not self.summary.strip():
+            return True
+        if len(self.summary.strip()) > 100:
+            self.update_errors('summary', 'summary_limit_size')
+            return False
+        return True
 
     def save(self):
         pro_milestone_state_data = {}
@@ -878,14 +1340,16 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'plan_list_err': 'plan_list为空或数据异常',
-            'id_err': 'id数据异常',
-            'supplier_name_err': '供应商名称为空或数据异常',
-            'total_amount_err': '方案总价为空数据异常',
-            'remark_err': '备注数据异常',
-            'plan_files_err': '方案附件不能为空',
-            'file_name_err': '文档名称为空或数据异常',
-            'file_path_err': '文档路径为空或数据异常',
+            'plan_list_err':                '方案列表为空或数据异常',
+            'id_err':                       'ID数据异常',
+            'supplier_name_err':            '供应商名称为空或数据异常',
+            'supplier_name_limit_size':     '供应商名称备注长度不能超过30个字符',
+            'total_amount_err':             '方案总价为空数据异常',
+            'remark_err':                   '备注数据异常',
+            'remark_limit_size':            '备注长度不能超过100个字符',
+            'plan_files_err':               '方案附件不能为空',
+            'file_name_err':                '文档名称为空或数据异常',
+            'file_path_err':                '文档路径为空或数据异常',
 
         })
 
@@ -920,8 +1384,15 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
     def check_supplier_name(self):
         plan_list = self.data.get('plan_list')
         for plan in plan_list:
-            if not plan.get("supplier_name"):
+            supplier_name = plan.get("supplier_name")
+            if not supplier_name or not isinstance(supplier_name, str):
                 self.update_errors('supplier_name', 'supplier_name_err')
+                return False
+            if not supplier_name.strip():
+                self.update_errors('supplier_name', 'supplier_name_err')
+                return False
+            if len(supplier_name.strip()) > 30:
+                self.update_errors('supplier_name', 'supplier_name_limit_size')
                 return False
         return True
 
@@ -941,11 +1412,19 @@ class SupplierSelectionPlanBatchSaveForm(BaseForm):
         return True
 
     def check_remark(self):
-        # plan_list = self.data.get('plan_list')
-        # for plan in plan_list:
-        #     if plan.get('remark') is not None:
-        #         self.update_errors('remark', 'remark_err')
-        #         return False
+        plan_list = self.data.get('plan_list')
+        for plan in plan_list:
+            remark = plan.get('remark')
+            if not remark:
+                pass
+            if isinstance(remark, str):
+                self.update_errors('remark', 'remark_err')
+                return False
+            if not remark.strip():
+                pass
+            if len(remark.strip()) > 100:
+                self.update_errors('remark', 'remark_limit_size')
+                return False
         return True
 
     def check_files(self):
@@ -1064,26 +1543,56 @@ class ReceiptCreateOrUpdateForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'contact_phone_err': '乙方电话错误',
+            'served_date_error':                  '到货时间为空或数据错误',
+            'contact_phone_error':                '联系电话格式错误',
+            'delivery_man_error':                 '送货人员数据错误',
+            'delivery_man_limit_size':            '送货人员长度不能超过30个字符',
+
         })
 
     def is_valid(self):
-        if not self.check_contact_phone():
+        if not self.check_served_date() or not self.check_delivery_man() or not self.check_contact_phone():
+            return False
+        return True
+
+    def check_served_date(self):
+        served_date = self.data.get('served_date')
+        if not served_date or not isinstance(served_date, str):
+            self.update_errors('served_date', 'served_date_error')
+            return False
+        if not eggs.check_day(served_date.strip()):
+            self.update_errors('served_date', 'served_date_error')
+            return False
+        return True
+
+    def check_delivery_man(self):
+        delivery_man = self.data.get('delivery_man')
+        if not delivery_man:
+            return True
+        if not isinstance(delivery_man, str):
+            self.update_errors('delivery_man', 'delivery_man_error')
+            return False
+        if not delivery_man.strip():
+            return True
+        if len(delivery_man.strip()) > 30:
+            self.update_errors('delivery_man', 'delivery_man_limit_size')
             return False
         return True
 
     def check_contact_phone(self):
-        contact_phone = self.data.get('contact_phone', '').strip()
+        contact_phone = self.data.get('contact_phone', 'served_date_error').strip()
         if not eggs.is_phone_valid(contact_phone):
-            self.update_errors('contact_phone', 'contact_phone_err')
+            self.update_errors('contact_phone', 'contact_phone_error')
             return False
         return True
 
     def save(self):
-        delivery_data = {
-            'served_date': self.data.get('served_date', '').strip(),
-            'delivery_man': self.data.get('delivery_man', '').strip(),
-            'contact_phone': self.data.get('contact_phone', '').strip()
-        }
+        delivery_data = {}
+        if self.data.get('served_date') and self.data.get('served_date').strip():
+            delivery_data['served_date'] = self.data.get('served_date').strip()
+        if self.data.get('delivery_man') and self.data.get('delivery_man').strip():
+            delivery_data['delivery_man'] = self.data.get('delivery_man').strip()
+        if self.data.get('contact_phone') and self.data.get('contact_phone').strip():
+            delivery_data['contact_phone'] = self.data.get('contact_phone').strip()
 
         return Receipt.objects.create_update_receipt(self.project_milestone_state, **delivery_data)
