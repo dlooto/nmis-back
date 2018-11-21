@@ -1057,6 +1057,9 @@ class DefaultCommonProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
             new_doc_list, milestone_state.doc_list, req.data.get('summary'), milestone_state,
             req.user.get_profile(), project
         )
+        if not pro_milestone_state_form.is_valid():
+            return resp.form_err(pro_milestone_state_form.errors)
+
         new_milestone_state = pro_milestone_state_form.save()
         if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD):
             purchase_method = req.data.get('purchase_method', '').strip()
@@ -1485,6 +1488,8 @@ class MilestoneRecordPurchaseCreateView(BaseAPIView):
             new_doc_list, old_doc_list, req.data.get('summary'),
             pro_milestone_state, req.user.get_profile(), project
         )
+        if not pro_milestone_state_form.is_valid():
+            return resp.form_err(pro_milestone_state_form.errors)
         new_pro_milestone_state = pro_milestone_state_form.save()
 
         if not new_pro_milestone_state:
@@ -1550,6 +1555,9 @@ class MilestoneStartUpPurchaseCreateView(BaseAPIView):
             doc_list, old_doc_list, req.data.get('summary'), pro_milestone_state,
             req.user.get_profile(), project
         )
+        if not pro_milestone_state_form.is_valid():
+            return resp.form_err(pro_milestone_state_form.errors)
+
         new_pro_milestone_state = pro_milestone_state_form.save()
 
         if not new_pro_milestone_state:
@@ -1630,6 +1638,9 @@ class MilestonePurchaseContractCreateView(BaseAPIView):
             doc_list, old_doc_list, req.data.get('summary'), pro_milestone_state,
             req.user.get_profile(), project
         )
+        if not pro_milestone_state_form.is_valid():
+            return resp.form_err(pro_milestone_state_form.errors)
+
         new_pro_milestone_state = pro_milestone_state_form.save()
 
         if not new_pro_milestone_state:
@@ -1731,6 +1742,8 @@ class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
             doc_list, old_doc_list, req.data.get('summary'), project_milestone_state,
             req.user.get_profile(), project
         )
+        if not pro_milestone_state_form.is_valid():
+            return resp.form_err(pro_milestone_state_form.errors)
         new_pro_milestone_state = pro_milestone_state_form.save()
 
         if not new_pro_milestone_state:

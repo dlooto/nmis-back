@@ -362,29 +362,29 @@ class AssertDeviceUpdateForm(BaseForm):
 
         self.ERR_CODES.update(
             {
-                'assert_no_err': '资产编号为空或数据错误',
-                'assert_no_exists': '资产编号已存在',
-                'assert_no_limit_size': '资产编号长度不能超过30个字符',
-                'title_err': '资产名称为空或数据错误',
-                'title_limit_size': '资产名称长度不能超过30个字符',
-                'serial_no_err': '资产序列号为空或数据错误',
-                'serial_no_exists': '资产序列号已存在',
-                'serial_no_limit_size': '资产序列号长度不能超过30个字符',
-                'service_life_err': '预计使用年限为空或数据错误',
-                'status_err': '资产状态数据错误',
-                'type_spec_err': '规格型为空或数据错误',
-                'type_spec_limit_size': '规格型长度不能超过30个字符',
-                'bar_code_err': '设备条形码为空或数据错误',
-                'bar_code_exists': '设备条形码已存在',
-                'bar_code_limit_size': '设备条形码不能超过40个字符',
-                'cate_err': '资产设备类型错误',
+                'assert_no_err':                '资产编号为空或数据错误',
+                'assert_no_exists':             '资产编号已存在',
+                'assert_no_limit_size':         '资产编号长度不能超过30个字符',
+                'title_err':                    '资产名称为空或数据错误',
+                'title_limit_size':             '资产名称长度不能超过30个字符',
+                'serial_no_err':                '资产序列号为空或数据错误',
+                'serial_no_exists':             '资产序列号已存在',
+                'serial_no_limit_size':         '资产序列号长度不能超过30个字符',
+                'service_life_err':             '预计使用年限为空或数据错误',
+                'status_err':                   '资产状态数据错误',
+                'type_spec_err':                '规格型为空或数据错误',
+                'type_spec_limit_size':         '规格型长度不能超过30个字符',
+                'bar_code_err':                 '设备条形码为空或数据错误',
+                'bar_code_exists':              '设备条形码已存在',
+                'bar_code_limit_size':          '设备条形码不能超过40个字符',
+                'cate_err':                     '资产设备类型错误',
                 'medical_device_cate_null_err': '医疗设备分类为空',
-                'production_date_err': '出厂日期为空或数据异常',
-                'production_date_gt_now': '出厂日期{}: 不能大于当前日期',
-                'performer_err': '资产负责人数据错误',
-                'responsible_dept_err': '负责科室数据错误',
-                'use_dept_err': '使用科室数据错误',
-                'storage_place_err': '存放地点为空或数据错误',
+                'production_date_err':          '出厂日期为空或数据异常',
+                'production_date_gt_now':       '出厂日期{}: 不能大于当前日期',
+                'performer_err':                '资产负责人数据错误',
+                'responsible_dept_err':         '负责科室数据错误',
+                'use_dept_err':                 '使用科室数据错误',
+                'storage_place_err':            '存放地点为空或数据错误',
             }
         )
 
@@ -1028,12 +1028,12 @@ class MaintenancePlanCreateForm(BaseForm):
 
         self.ERR_CODES.update(
             {
-                'type_err': '维护类型错误',
-                'date_err': '开始日期大于了结束日期',
-                'expired_date_format_err': '{}: 日期格式错误',
-                'start_date_format_err': '{}: 日期格式错误',
-                'start_date_err': '{}: 小于当前日期',
-                'expired_date_err': '{}: 小于当前日期'
+                'type_err':                         '维护类型错误',
+                'start_date_gt_expired_date':       '开始日期不能大于结束日期',
+                'start_date_format_err':            '{}: 日期为空或日期格式错误',
+                'expired_date_format_err':          '{}: 日期为空或格式错误',
+                'start_date_lt_current_date':       '{}: 不能小于当前日期',
+                'expired_date_lt_current_date':     '{}: 不能小于当前日期',
             }
         )
 
@@ -1053,22 +1053,30 @@ class MaintenancePlanCreateForm(BaseForm):
         """
         校验维护计划的开始日期和结束日期
         """
-        start_date = self.data.get('start_date', '').strip()
-        expired_date = self.data.get('expired_date', '').strip()
-        if not eggs.check_day(start_date):
-            self.update_errors('date_err', 'start_date_format_err', start_date)
+        start_date = self.data.get('start_date')
+        expired_date = self.data.get('expired_date')
+
+        if not start_date or not isinstance(start_date, str):
+            self.update_errors('start_date', 'start_date_format_err')
             return False
-        if not eggs.check_day(expired_date):
-            self.update_errors('date_err', 'expired_date_format_err', expired_date)
+        if not eggs.check_day(start_date.strip()):
+            self.update_errors('start_date', 'start_date_format_err', start_date.strip())
             return False
-        if start_date < now().strftime('%Y-%m-%d'):
-            self.update_errors('date_err', 'start_date_err', start_date)
+        if not expired_date or not isinstance(expired_date, str):
+            self.update_errors('expired_date', 'expired_date_format_err')
             return False
-        if expired_date < now().strftime('%Y-%m-%d'):
-            self.update_errors('date_err', 'expired_date_err', expired_date)
+        if not eggs.check_day(expired_date.strip()):
+            self.update_errors('expired_date', 'expired_date_format_err', expired_date.strip())
             return False
-        if start_date > expired_date:
-            self.update_errors('date', 'date_err')
+
+        if start_date.strip() < now().strftime('%Y-%m-%d'):
+            self.update_errors('date_err', 'start_date_lt_current_date', start_date.strip())
+            return False
+        if expired_date.strip() < now().strftime('%Y-%m-%d'):
+            self.update_errors('date_err', 'expired_date_lt_current_date', expired_date.strip())
+            return False
+        if start_date.strip() > expired_date:
+            self.update_errors('start_date > expired_date', 'start_date_gt_expired_date')
             return False
 
         return True
@@ -1098,12 +1106,12 @@ class FaultSolutionCreateForm(BaseForm):
         self.ERR_CODES.update({
             'title_error':                  '标题为空或数据错误',
             'title_exists':                 '已存在相同标题数据',
-            'title_limit_size':          '标题不能大于30个字符',
+            'title_limit_size':             '标题不能大于30个字符',
             'fault_type_error':             '故障类型为空或数据错误',
             'solution_error':               '解决方案为空或数据错误',
-            'solution_limit_size':       '解决方案不能大于1000个字符',
+            'solution_limit_size':          '解决方案不能大于1000个字符',
             'desc_error':                   '详情描述为空或数据错误',
-            'desc_limit_size':           '详情描述解决方案不能大于1000个字符',
+            'desc_limit_size':              '详情描述解决方案不能大于1000个字符',
 
         })
 
@@ -1213,9 +1221,9 @@ class FaultSolutionUpdateForm(BaseForm):
             'fault_type_error':             '故障类型为空或数据错误',
             'solution_error':               '解决方案为空或数据错误',
             'desc_error':                   '详情描述为空或数据错误',
-            'title_limit_size':          '标题不能大于30个字符',
-            'solution_limit_size':       '解决方案不能大于1000个字符',
-            'desc_limit_size':           '详情描述解决方案不能大于1000个字符',
+            'title_limit_size':             '标题不能大于30个字符',
+            'solution_limit_size':          '解决方案不能大于1000个字符',
+            'desc_limit_size':              '详情描述解决方案不能大于1000个字符',
         })
 
     def is_valid(self):
@@ -1329,12 +1337,16 @@ class AssertDeviceBatchUploadForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'assert_no_err':                '{}: 已存在系统中',
+            'assert_no_exists':             '{}: 已存在系统中',
             'assert_no_repeat_err':         '表中存在相同项的资产设备编号',
-            'assert_no_null_err':           '{}行: 资产设别编号为空',
-            'serial_no_err':                '{}: 已存在系统中',
+            'assert_no_null_err':           '{}行: 资产设备编号为空或数据错误',
+            'assert_no_limit_size':         '{}行: 资产设备编号长度不能大于30个字符',
+            'assert_title_err':             '{}行: 资产设备名称为空',
+            'assert_title_limit_size':      '{}行: 资产设备名称长度不能大于30个字符',
+            'serial_no_exists':             '{}: 已存在系统中',
             'serial_no_repeat_err':         '表中存在相同项的资产设备序列号',
             'serial_no_null_err':           '{}: 资产设备序列号为空',
+            'serial_no_limit_size':         '{}行: 资产设备序列号长度不能大于30个字符',
             'use_dept_err':                 '{}: 系统不存在此使用部门信息',
             'performer_err':                '{}: 系统不存在此负责人信息',
             'resp_dept_err':                '{}: 系统不存在此负责部门信息',
@@ -1342,14 +1354,19 @@ class AssertDeviceBatchUploadForm(BaseForm):
             'medical_code_err':             '{}: 系统不存在此医疗分类编号信息',
             'medical_code_null_err':        '医疗分类编号不能为空值',
             'medical_device_cate_err':      '医疗设备分类不能为空',
-            'type_spec_null_err':           '资产设备规格型号不能为空',
-            'production_date_null_err':     '资产设备出厂日期不能为空',
-            'purchase_date_err':            '资产设备购入日期不能为空',
+            'type_spec_err':                '资产设备规格型号为空或数据错误',
+            'type_spec_limit_size':         '资产设备规格型长度不能超过30个字符',
+            'bar_code_err':                 '设备条形码数据错误',
+            'bar_code_exists':              '设备条形码已存在',
+            'bar_code_repeat_err':          '存在相同的设备条形码',
+            'bar_code_limit_size':          '设备条形码不能超过40个字符',
+            'production_date_err':          '资产设备出厂日期为空或数据错误',
+            'purchase_date_err':            '资产设备购入日期为空或数据错误',
             'status_err':                   '{}: 和定义的资产设备状态不一致',
             'status_null_err':              '资产设备状态不能为空',
             'service_life_null_err':        '使用年限不能为空',
             'service_life_data_type_err':   '使用年限数据类型错误',
-            'assert_title_err':             '{}行: 资产设备名称为空'
+
         })
 
     def is_valid(self):
@@ -1359,27 +1376,40 @@ class AssertDeviceBatchUploadForm(BaseForm):
                 or not self.check_storage_place() or not self.check_assert_no()\
                 or not self.check_type_spec() or not self.check_production_date()\
                 or not self.check_purchase_date() or not self.check_status()\
-                or not self.check_service_life() or not self.check_assert_title():
+                or not self.check_service_life() or not self.check_assert_title()\
+                or not self.check_bar_code():
             return False
         return True
 
     def check_assert_title(self):
 
         for row_data in self.data:
-
-            if not row_data.get('title', '').strip():
+            title = row_data.get('title')
+            if not title or not isinstance(title, str):
                 self.update_errors('assert_title', 'assert_title_err', self.data.index(row_data)+2)
+                return False
+            if not title.strip():
+                self.update_errors('assert_title', 'assert_title_err', self.data.index(row_data)+2)
+                return False
+            if len(title.strip()) > 30:
+                self.update_errors('assert_title', 'assert_title_limit_size', self.data.index(row_data)+2)
                 return False
         return True
 
     def check_assert_no(self):
         assert_no_list = []
         for row_data in self.data:
-            assert_no = row_data.get('assert_no', '').strip()
-            if not assert_no:
+            assert_no = row_data.get('assert_no')
+            if not assert_no or not isinstance(assert_no, str):
                 self.update_errors('assert_no', 'assert_no_null_err', self.data.index(row_data)+2)
                 return False
-            assert_no_list.append(assert_no)
+            if not assert_no.strip():
+                self.update_errors('assert_no', 'assert_no_null_err', self.data.index(row_data)+2)
+                return False
+            if len(assert_no.strip()) > 30:
+                self.update_errors('assert_no', 'assert_no_limit_size', self.data.index(row_data)+2)
+                return False
+            assert_no_list.append(assert_no.strip())
 
         if not len(set(assert_no_list)) == len(assert_no_list):
             self.update_errors('assert_no', 'assert_no_repeat_err')
@@ -1390,17 +1420,25 @@ class AssertDeviceBatchUploadForm(BaseForm):
 
         for assert_no in assert_no_list:
             if assert_no in assert_no_db_list:
-                self.update_errors('assert_no', 'assert_no_err', assert_no)
+                self.update_errors('assert_no', 'assert_no_exists', assert_no)
                 return False
         return True
 
     def check_serial_no(self):
         serial_no_list = []
         for row_data in self.data:
-            if not row_data.get('serial_no', '').strip():
+            serial_no = row_data.get('serial_no')
+            if not serial_no or not isinstance(serial_no, str):
                 self.update_errors('serial_no', 'serial_no_null_err', self.data.index(row_data)+2)
                 return False
-            serial_no_list.append(row_data.get('serial_no'))
+            if not serial_no.strip():
+                self.update_errors('serial_no', 'serial_no_null_err', self.data.index(row_data)+2)
+                return False
+            logger.info(len(serial_no.strip()))
+            if len(serial_no.strip()) > 30:
+                self.update_errors('serial_no', 'serial_no_limit_size', self.data.index(row_data)+2)
+                return False
+            serial_no_list.append(serial_no.strip())
 
         if not len(set(serial_no_list)) == len(serial_no_list):
             self.update_errors('serial_no', 'serial_no_repeat_err')
@@ -1411,8 +1449,38 @@ class AssertDeviceBatchUploadForm(BaseForm):
 
         for serial_no in serial_no_list:
             if serial_no in assert_device_serial_no:
-                self.update_errors('serial_no', 'serial_no_err', serial_no)
+                self.update_errors('serial_no', 'serial_no_exists', serial_no)
                 return False
+        return True
+
+    def check_bar_code(self):
+        bar_code_list = []
+        for row_data in self.data:
+            bar_code = row_data.get('bar_code')
+            if not bar_code:
+                continue
+            if not isinstance(bar_code, str):
+                self.update_errors('bar_code', 'bar_code_err', self.data.index(row_data)+2)
+                return False
+            if not bar_code.strip():
+                self.update_errors('bar_code', 'bar_code_err', self.data.index(row_data)+2)
+                continue
+            if len(bar_code.strip()) > 30:
+                self.update_errors('bar_code', 'bar_code_limit_size', self.data.index(row_data)+2)
+                return False
+            bar_code_list.append(bar_code.strip())
+
+        # if not len(set(bar_code_list)) == len(bar_code_list):
+        #     self.update_errors('bar_code', 'bar_code_repeat_err')
+        #     return False
+
+        # assert_devices = AssertDevice.objects.filter(bar_code__in=bar_code_list)
+        # assert_device_bar_codes = [assert_device.bar_code for assert_device in assert_devices]
+        #
+        # for bar_code in bar_code_list:
+        #     if bar_code in assert_device_bar_codes:
+        #         self.update_errors('bar_code', 'bar_code_exists', bar_code)
+        #         return False
         return True
 
     def check_use_dept(self):
@@ -1519,21 +1587,42 @@ class AssertDeviceBatchUploadForm(BaseForm):
 
     def check_type_spec(self):
         for row_data in self.data:
-            if not row_data.get('type_spec', '').strip():
-                self.update_errors('type_spec', 'type_spec_null_err')
+            type_spec = row_data.get('type_spec')
+            if not type_spec or not isinstance(type_spec, str):
+                self.update_errors('type_spec', 'type_spec_err')
+                return False
+            if not type_spec.strip():
+                self.update_errors('type_spec', 'type_spec_err')
+                return False
+            if len(type_spec.strip()) > 30:
+                self.update_errors('type_spec', 'type_spec_limit_size')
                 return False
         return True
 
     def check_production_date(self):
         for row_data in self.data:
-            if not row_data.get('production_date', '').strip():
-                self.update_errors('production_date', 'production_date_null_err')
+            production_date = row_data.get('production_date')
+            if not production_date or not isinstance(production_date, str):
+                self.update_errors('production_date', 'production_date_err')
+                return False
+            if not production_date.strip():
+                self.update_errors('production_date', 'production_date_err')
+                return False
+            if not eggs.check_day(production_date.strip()):
+                self.update_errors('production_date', 'production_date_err')
                 return False
         return True
 
     def check_purchase_date(self):
         for row_data in self.data:
-            if not row_data.get('purchase_date', '').strip():
+            purchase_date = row_data.get('purchase_date')
+            if not purchase_date or not isinstance(purchase_date, str):
+                self.update_errors('purchase_date', 'purchase_date_err')
+                return False
+            if not purchase_date.strip():
+                self.update_errors('purchase_date', 'purchase_date_err')
+                return False
+            if not eggs.check_day(purchase_date.strip()):
                 self.update_errors('purchase_date', 'purchase_date_err')
                 return False
         return True
@@ -1541,23 +1630,27 @@ class AssertDeviceBatchUploadForm(BaseForm):
     def check_status(self):
 
         for row_data in self.data:
-            status = row_data.get('status', '').strip()
-            if not status:
+            status = row_data.get('status')
+            if not status or not isinstance(status, str):
                 self.update_errors('status', 'status_null_err')
                 return False
-            if status not in dict(ASSERT_DEVICE_STATUS_CHOICES).values():
-                self.update_errors('status', 'status_err', status)
+            if not status.strip():
+                self.update_errors('status', 'status_null_err')
+                return False
+            if status.strip() not in dict(ASSERT_DEVICE_STATUS_CHOICES).values():
+                self.update_errors('status', 'status_err', status.strip())
                 return False
         return True
 
     def check_service_life(self):
         for row_data in self.data:
-            if not row_data.get('service_life'):
+            service_life = row_data.get('service_life')
+            if not service_life:
                 self.update_errors('service_life', 'service_life_null_err')
                 return False
-            # if not isinstance(row_data.get('service_life'), int):
-            #     self.update_errors('service_life', 'service_life_data_type_err')
-            #     return False
+            if not isinstance(row_data.get('service_life'), int):
+                self.update_errors('service_life', 'service_life_data_type_err')
+                return False
         return True
 
     def save(self):
@@ -1606,17 +1699,17 @@ class FaultSolutionsImportForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'title_error': '第{0}行: 标题为空或数据错误',
-            'title_exists': '第{0}行: 已存在相同标题',
-            'title_duplicate': '第{0}行和第{1}行: 标题重复',
-            'fault_type_error': '第{0}行: 故障类型为空或数据错误',
-            'fault_type_not_exists': '第{0}行: 故障类型不存在，请检查',
-            'fault_type_not_in_setting':  '系统尚未设置故障类型，请联系管理员',
-            'solution_error': '第{0}行: 解决方案为空或数据错误',
-            'title_fault_type_exists': '第{0}行: 已存在相同故障类型的标题',
-            'title_limit_size': '第{0}行: 标题不能大于30个字符',
-            'solution_limit_size': '第{0}行: 解决方案不能大于1000个字符',
-            'fault_type_limit_size': '第{0}行: 故障类型不能大于30个字符',
+            'title_error':                  '第{0}行: 标题为空或数据错误',
+            'title_exists':                 '第{0}行: 已存在相同标题',
+            'title_duplicate':              '第{0}行和第{1}行: 标题重复',
+            'fault_type_error':             '第{0}行: 故障类型为空或数据错误',
+            'fault_type_not_exists':        '第{0}行: 故障类型不存在，请检查',
+            'fault_type_not_been_set':      '系统尚未设置故障类型，请联系管理员',
+            'solution_error':               '第{0}行: 解决方案为空或数据错误',
+            'title_fault_type_exists':      '第{0}行: 已存在相同故障类型的标题',
+            'title_limit_size':             '第{0}行: 标题不能大于30个字符',
+            'solution_limit_size':          '第{0}行: 解决方案不能大于1000个字符',
+            'fault_type_limit_size':        '第{0}行: 故障类型不能大于30个字符',
         })
 
     def init_check_data(self):
@@ -1671,7 +1764,7 @@ class FaultSolutionsImportForm(BaseForm):
         if self.pre_data.get('fault_type_titles'):
             queryset = FaultType.objects.all()
             if not queryset:
-                self.update_errors('fault_type', 'fault_type_not_in_setting')
+                self.update_errors('fault_type', 'fault_type_not_been_set')
                 return False
             fault_type_list = [item.get('title') for item in queryset.values('title')]
 
