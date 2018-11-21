@@ -142,7 +142,6 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertIsNotNone(new_project)
         self.assertEquals(new_project.get('title'), project_base_data['project_title'])
         self.assertEqual(new_project.get('handing_type'), project_base_data['handing_type'])
-        self.assertEquals
         devices = new_project.get('hardware_devices')
         self.assertIsNotNone(devices)
         for item in devices:
