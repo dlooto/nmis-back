@@ -9,9 +9,8 @@ import settings
 import base64
 from math import sin
 import uuid, random, re, hashlib, importlib, time, string, inspect
-
-from django.core.paginator import Paginator, EmptyPage, Page
-
+from types import DynamicClassAttribute
+from enum import Enum
 
 # 用于求字符串长度，中文汉字计算为两个英文字母长度
 ecode = lambda s: s.encode('gb18030')
@@ -262,3 +261,38 @@ def included_in(a, b):
     :return: 交集等于a, 则a包括于b
     """
     return set(a).intersection(set(b)) == set(a)  # 求交集后判断是否与相等
+
+
+class BaseEnum(Enum):
+    """
+        自定义枚举类型
+        基于python enum.Enum类型
+        定义枚举成员时可将二元元祖对象赋值给枚举成员
+        .e.g:
+        GenderEnum(BaseEnum):
+            FEMALE = ('F', '女')
+            MALE = ('M', ‘男’)
+    """
+    @DynamicClassAttribute
+    def value(self):
+        """The value of the Enum member."""
+        if isinstance(self._value_, tuple):
+            return self._value_[0]
+        return self._value_
+
+    @DynamicClassAttribute
+    def value_name(self):
+        """The value_name of the Enum member. 枚举值显示名称"""
+        return self._value_[0] if isinstance(self._value_, tuple) else ''
+
+    @classmethod
+    def members(cls):
+        return cls.__members__.items()
+
+    @classmethod
+    def values(cls):
+        return tuple([item.value for name, item in cls.members()])
+
+    @classmethod
+    def value_names(cls):
+        return tuple([item.value_name for name, item in cls.members()])

@@ -422,7 +422,8 @@ class ProjectPlan(BaseModel):
 
                     if not stone.get('parent_id'):
                         main_milestone_states.append(stone_state)
-                if stone_state.get('milestone_id') == stone.get('parent_id') and stone_state not in parent_milestone_states:
+                if stone_state.get('milestone_id') == stone.get('parent_id') \
+                        and stone_state not in parent_milestone_states:
                         parent_milestone_states.append(stone_state)
 
         for item in all_milestone_states:

@@ -200,10 +200,27 @@ class ProjectPlanCreateForm(BaseForm):
 
         if data.get('handing_type') == PRO_HANDING_TYPE_SELF:
             data["performer"] = self.creator
+        software_devices = []
+        for item in self.data.get('software_devices'):
+            device = dict()
+            device['name'] = item.get('name', '').strip()
+            device['planned_price'] = item.get('planned_price')
+            device['purpose'] = item.get('purpose', '').strip()
+            software_devices.append(device)
+        hardware_devices = []
+        for item in self.data.get('hardware_devices'):
+            device = dict()
+            device['name'] = item.get('name', '').strip()
+            device['planned_price'] = item.get('planned_price')
+            device['purpose'] = item.get('purpose', '').strip()
+            device['measure'] = item.get('measure', '').strip()
+            device['num'] = item.get('num')
+            device['type_spec'] = item.get('type_spec', '').strip()
+            hardware_devices.append(device)
 
         return ProjectPlan.objects.create_project(
-            software_devices=self.data.get('software_devices'),     # 软件设备明细
-            hardware_devices=self.data.get('hardware_devices'),     # 硬件设备明细
+            software_devices=software_devices,     # 软件设备明细
+            hardware_devices=hardware_devices,     # 硬件设备明细
             **data                                                  # 新建项目属性列表
         )
 

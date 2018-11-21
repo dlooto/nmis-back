@@ -751,12 +751,14 @@ class RepairOrderCreateForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'applicant_error': '申请人为空或数据错误',
-            'fault_type_error': '故障类型为空或数据错误'
+            'applicant_error':      '申请人为空或数据错误',
+            'fault_type_error':     '故障类型为空或数据错误',
+            'desc_error':           '故障描述数据错误',
+            'desc_limit_size':      '故障描述长度不能超过100个字符'
         })
 
     def is_valid(self):
-        if not self.check_applicant() or not self.check_fault_type():
+        if not self.check_applicant() or not self.check_fault_type() or not self.check_desc():
             return False
         return True
 
@@ -794,13 +796,29 @@ class RepairOrderCreateForm(BaseForm):
             return False
         return True
 
+    def check_desc(self):
+        desc = self.data.get('desc')
+        if not desc:
+            return True
+        if isinstance(desc, str) and not desc.strip():
+            return True
+        if not isinstance(desc, str):
+            self.update_errors('desc', 'desc_error')
+            return False
+        if len(desc.strip()) > 100:
+            self.update_errors('desc', 'desc_limit_size')
+            return False
+        return True
+
     def save(self):
         applicant_id = self.data.get('applicant_id')
         fault_type_id = self.data.get('fault_type_id')
-        desc = self.data.get('desc', '').strip()
+        not_required_data = {}
+        if self.data.get('desc') and isinstance(self.data.get('desc'), str):
+            not_required_data['desc'] = self.data.get('desc', '').strip()
         applicant = Staff.objects.get_by_id(applicant_id)
         fault_type = FaultType.objects.get_by_id(fault_type_id)
-        return RepairOrder.objects.create_order(applicant, fault_type, desc, self.user_profile)
+        return RepairOrder.objects.create_order(applicant, fault_type, self.user_profile, **not_required_data)
 
 
 class RepairOrderDispatchForm(BaseForm):
@@ -874,13 +892,13 @@ class RepairOrderHandleForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'result_error': '处理结果为空或数据错误',
-            'expenses_error': '维修费用为空或数据错误',
-            'files_error': '文件名和文件路径不能为空',
-            'solution_error': '解决方案为空或数据错误',
-            'repair_devices_error': '设备id为空或异常',
-            'result_limit_size': '处理结果长度不能超过100个字符',
-            'solution_limit_size': '解决方案长度不能超过100个字符',
+            'result_error':             '处理结果为空或数据错误',
+            'expenses_error':           '维修费用为空或数据错误',
+            'files_error':              '文件名和文件路径不能为空',
+            'solution_error':           '解决方案为空或数据错误',
+            'repair_devices_error':     '设备id为空或异常',
+            'result_limit_size':        '处理结果长度不能超过100个字符',
+            'solution_limit_size':      '解决方案长度不能超过100个字符',
         })
 
     def is_valid(self):
@@ -938,17 +956,17 @@ class RepairOrderHandleForm(BaseForm):
 
     def save(self):
         result = self.data.get('result', '').strip()
-        update_data = dict()
+        not_required_data = dict()
         if self.data.get('expenses'):
-            update_data['expenses'] = self.data.get('expenses')
+            not_required_data['expenses'] = self.data.get('expenses')
         if self.files:
             files_ids_str = ','.join('%d' % file.id for file in self.files)
-            update_data['files'] = files_ids_str
+            not_required_data['files'] = files_ids_str
         repair_devices_data = self.data.get('repair_devices')
         if repair_devices_data:
             repair_devices = AssertDevice.objects.filter(id__in=[item.get('id') for item in repair_devices_data]).all()
-            update_data['repair_devices'] = repair_devices
-        return RepairOrder.objects.handle_repair_order(self.repair_order, self.user_profile, result, **update_data)
+            not_required_data['repair_devices'] = repair_devices
+        return RepairOrder.objects.handle_repair_order(self.repair_order, self.user_profile, result, **not_required_data)
 
 
 class RepairOrderCommentForm(BaseForm):
@@ -962,9 +980,9 @@ class RepairOrderCommentForm(BaseForm):
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'comment_grade_error': '评论等级为空或数据错误',
-            'comment_content_error': '评论内容为空或数据错误',
-            'comment_content_limit_size': '评论内容长度不能超过100个字符',
+            'comment_grade_error':          '评论等级为空或数据错误',
+            'comment_content_error':        '评论内容为空或数据错误',
+            'comment_content_limit_size':   '评论内容长度不能超过100个字符',
         })
 
     def is_valid(self):
@@ -994,10 +1012,9 @@ class RepairOrderCommentForm(BaseForm):
         comment_content = self.data.get('comment_content', '').strip()
         if not comment_content:
             return True
+        if isinstance(comment_content, str) and not comment_content.strip():
+            return True
         if not isinstance(comment_content, str):
-            self.update_errors('comment_content', 'comment_content_error')
-            return False
-        if not comment_content.strip():
             self.update_errors('comment_content', 'comment_content_error')
             return False
         if len(comment_content.strip()) > 100:

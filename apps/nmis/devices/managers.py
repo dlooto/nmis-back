@@ -161,7 +161,7 @@ class FaultTypeManager(BaseManager):
 
 class RepairOrderManager(BaseManager):
 
-    def create_order(self, applicant, fault_type, desc, creator):
+    def create_order(self, applicant, fault_type, creator, *args, **kwargs):
         """
         创建报修单
         :param applicant: 申请人
@@ -186,7 +186,7 @@ class RepairOrderManager(BaseManager):
                     return False, '生成编号异常'
                 repair_order = self.create(
                     order_no=order_no, applicant=applicant, fault_type=fault_type,
-                    desc=desc, creator=creator
+                    creator=creator, **kwargs
                 )
                 seq.seq_value = next_value
                 seq.save()

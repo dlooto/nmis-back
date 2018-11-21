@@ -7,7 +7,6 @@ import logging
 
 from django.db import transaction
 from rest_framework.decorators import permission_classes
-from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q, Count, F
 
 import settings
@@ -37,17 +36,16 @@ from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder
 from nmis.devices.permissions import AssertDeviceAdminPermission, RepairOrderCreatorPermission, \
     MaintenancePlanExecutePermission, RepairOrderHandlePermission, RepairOrderDispatchPermission, \
     KnowledgeManagePermission
-from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR, DOC_UPLOAD_BASE_DIR
+from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.documents.models import File
-from nmis.hospitals.consts import ARCHIVE, ROLE_CODE_HOSP_SUPER_ADMIN, \
-    ROLE_CODE_NORMAL_STAFF, ROLE_CODE_ASSERT_DEVICE_ADMIN
+from nmis.hospitals.consts import ARCHIVE, ROLE_CODE_HOSP_SUPER_ADMIN, ROLE_CODE_ASSERT_DEVICE_ADMIN
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer, \
     AssertDeviceSerializer
 from nmis.hospitals.permissions import IsHospSuperAdmin, SystemManagePermission, HospGlobalReportAssessPermission, \
     HospitalStaffPermission
-from utils import times, files
+from utils import times
 from utils.files import ExcelBasedOXL, file_read_iterator, remove, is_file_exist
 
 logger = logging.getLogger(__name__)
@@ -470,7 +468,6 @@ class RepairOrderView(BaseAPIView):
         repair_order = self.get_object_or_404(order_id, RepairOrder)
         self.check_object_any_permissions(req, repair_order)
         repair_order_queryset = RepairOrderSerializer.setup_eager_loading(RepairOrder.objects.filter(id=order_id))
-
         return resp.serialize_response(repair_order_queryset.first(), results_name='repair_order',
                                        srl_cls_name='RepairOrderSerializer')
 

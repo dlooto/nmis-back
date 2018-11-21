@@ -6,8 +6,10 @@
 # 设备模块常量配置
 
 import logging
+from enum import Enum
 
 from nmis.hospitals.consts import SEQ_REPAIR_ORDER_NO, SEQ_MAINTAIN_PLAN_NO
+from utils.eggs import BaseEnum
 
 logger = logging.getLogger(__name__)
 
@@ -219,3 +221,12 @@ UPLOADED_FS_EXCEL_HEAD_DICT = {
     'fault_type_title':        '故障类型',
     'solution':          '解决方案',
 }
+
+
+class OrderPriorityEnum(BaseEnum):
+    LOW = ("L", "低")
+    MEDIUM = ("M", "中")
+    HIGH = ("H", "高")
+    EMERGENCY = ("E", "紧急")
+    URGENT = ("U", "非常紧急")
+
