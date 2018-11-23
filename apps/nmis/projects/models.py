@@ -1109,7 +1109,6 @@ class ProjectMilestoneState(BaseModel):
         :return: 返回True/False; 已完结返回True, 否则返回False
 
         """
-        logger.info(self.status)
         return True if self.status == PRO_MILESTONE_DONE else False
 
     def is_unstarted(self):

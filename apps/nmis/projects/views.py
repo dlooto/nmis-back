@@ -4,16 +4,12 @@
 #
 
 #
-import json
 import logging
 import os
 
 from django.db.models import Count, Sum, F, DateTimeField, CharField
 from django.db.models.functions import ExtractMonth, ExtractYear, Cast, TruncSecond
-from django.http import HttpResponseRedirect
-from django.views.generic import RedirectView
 from rest_framework.decorators import permission_classes
-from rest_framework.reverse import reverse
 
 import settings
 
@@ -61,9 +57,12 @@ from nmis.projects.consts import (
     PRO_OPERATION_PAUSE,
     PROJECT_PURCHASE_METHOD_CHOICES, PRO_MILESTONE_DONE,
     PRO_MILESTONE_TODO, DEFAULT_MILESTONE_DICT, DEFAULT_MILESTONE_RESEARCH,
-    DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING, DEFAULT_MILESTONE_PROJECT_CHECK, DEFAULT_MILESTONE_STARTUP_PURCHASE,
-    DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD, DEFAULT_MILESTONE_PLAN_GATHERED, DEFAULT_MILESTONE_PLAN_ARGUMENT,
-    DEFAULT_MILESTONE_CONTRACT_MANAGEMENT, DEFAULT_MILESTONE_CONFIRM_DELIVERY)
+    DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING, DEFAULT_MILESTONE_PROJECT_CHECK,
+    DEFAULT_MILESTONE_STARTUP_PURCHASE,
+    DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD, DEFAULT_MILESTONE_PLAN_GATHERED,
+    DEFAULT_MILESTONE_PLAN_ARGUMENT,
+    DEFAULT_MILESTONE_CONTRACT_MANAGEMENT, DEFAULT_MILESTONE_CONFIRM_DELIVERY,
+    ProjectStatusEnum, DEFAULT_MILESTONE_REQUIREMENT_ARGUMENT)
 from utils import times
 from utils.files import remove, is_file_exist
 
@@ -857,7 +856,7 @@ class ProjectFlowView(BaseAPIView):
         try:
             flow.delete()
         except Exception as e:
-            logger.info(e)
+            logger.exception(e)
             return resp.failed('操作失败')
         return resp.ok('操作成功')
 
@@ -974,57 +973,26 @@ def check_project_milestone_state(project, project_milestone_state, milestone_ti
     if not project.contains_project_milestone_state(project_milestone_state):
         return False, '操作失败, 请求数据异常'
     if isinstance(milestone_titles, str) and not project_milestone_state.milestone.title == milestone_titles:
-        # return False, '操作失败，当前里程碑不是[%s]里程碑' % (milestone_titles, )
-        return False, '操作失败, 请求数据异常'
+        return False, '操作失败，当前里程碑不是[%s]里程碑' % (milestone_titles, )
+        # return False, '操作失败, 请求数据异常'
     if isinstance(milestone_titles, list) and project_milestone_state.milestone.title not in milestone_titles:
-        # return False, '操作失败，当前里程碑在%s里程碑' % (milestone_titles, )
-        return False, '操作失败, 请求数据异常'
+        return False, '操作失败，当前里程碑不在%s里程碑' % (milestone_titles, )
+        # return False, '操作失败, 请求数据异常'
     if request_method == 'GET':
         if project_milestone_state.is_unstarted():
-            # 操作失败，当前里程碑尚未开始
-            return False, '操作失败, 当前里程碑状态异常'
+            return False, '操作失败，当前里程碑尚未开始'
+            # return False, '操作失败, 当前里程碑状态异常'
     else:
         if project_milestone_state.is_unstarted() or project_milestone_state.is_finished():
-            # 操作失败，当前里程碑尚未开始或已完结
-            return False, '操作失败，当前里程碑状态异常'
+            return False, '操作失败，当前里程碑尚未开始或已完结'
+            # return False, '操作失败，当前里程碑状态异常'
     return True, '数据正常'
 
 
-class DefaultCommonCreateOrUpdateView(RedirectView, BaseAPIView):
-    permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
-
-    def post(self, req, project_id, project_milestone_state_id, *args, **kwargs):
-        project = self.get_object_or_404(project_id, ProjectPlan)
-        self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
-        milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
-        common_milestone_tiles = [
-            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_RESEARCH),
-            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD),
-            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_STARTUP_PURCHASE),
-            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_IMPLEMENTATION_DEBUGGING),
-            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
-        ]
-        post_data_json = req.data
-        path_data = {'project_id': project_id, 'project_milestone_state_id': project_milestone_state_id}
-        req.session['data'] = req.data
-        if milestone_state.milestone.title in common_milestone_tiles:
-            response = HttpResponseRedirect(
-                reverse('nmis.projects:default_common_project_milestone_state_data_create_or_update'),
-                args=post_data_json
-            )
-            return response
-        if milestone_state.milestone.title == DEFAULT_MILESTONE_PLAN_GATHERED:
-            response = HttpResponseRedirect(
-                reverse('nmis.projects:project_milestone_state_plan_gathered_create_or_update',
-                        kwargs=json.dumps(post_data_json))
-            )
-        return response
-
-
-class DefaultCommonProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
+class PrefabProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
     """
-    通用项目里程碑节点下的数据保存/修改, 包含【调研】【实施调试】【启动采购】【项目验收】
-    仅对默认项目流程有效
+    预制项目里程碑节点下的数据保存/修改, 包含【调研】【实施调试】【启动采购】【项目验收】
+    仅对预制项目流程有效
 
     """
     permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
@@ -1043,25 +1011,65 @@ class DefaultCommonProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PROJECT_CHECK),
         ]
         success, msg = check_project_milestone_state(
-            project, milestone_state, common_milestone_tiles, request_method="POST"
+            project, milestone_state, DEFAULT_MILESTONE_DICT.values(), request_method="POST"
         )
         if not success:
             return resp.failed(msg)
-        new_doc_list = ''
+
+        if milestone_state.milestone.title in common_milestone_tiles:
+            return PrefabMilestoneStateDataHandler.common_save(self, req, project, milestone_state)
+
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_GATHERED):
+            return PrefabMilestoneStateDataHandler.plan_gathered_save(self, req, project, milestone_state)
+
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_PLAN_ARGUMENT):
+            return PrefabMilestoneStateDataHandler.plan_argument_save(self, req, project, milestone_state)
+
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONTRACT_MANAGEMENT):
+            return PrefabMilestoneStateDataHandler.purchase_contract_save(self, req, project, milestone_state)
+
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_CONFIRM_DELIVERY):
+            return PrefabMilestoneStateDataHandler.take_delivery_save(self, req, project, milestone_state)
+
+
+class PrefabMilestoneStateDataHandler(object):
+
+    @staticmethod
+    def save_milestone_state(view, req, project, milestone_state):
+        new_doc_list = []
         if req.data.get('cate_documents'):
-            form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
-            if not form.is_valid():
-                return resp.form_err(form.errors)
-            new_doc_list = form.save()
-        pro_milestone_state_form = ProjectMilestoneStateUpdateForm(
-            new_doc_list, milestone_state.doc_list, req.data.get('summary'), milestone_state,
+            doc_form = ProjectDocumentBulkCreateOrUpdateForm(req.data.get('cate_documents'))
+            if not doc_form.is_valid():
+                return resp.form_err(doc_form.errors)
+            new_doc_list = doc_form.save()
+
+        state_form = ProjectMilestoneStateUpdateForm(
+            new_doc_list, milestone_state.doc_list, req.data.get('summary'),
+            milestone_state,
             req.user.get_profile(), project
         )
-        if not pro_milestone_state_form.is_valid():
-            return resp.form_err(pro_milestone_state_form.errors)
+        if not state_form.is_valid():
+            return resp.form_err(state_form.errors)
 
-        new_milestone_state = pro_milestone_state_form.save()
-        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD):
+        new_milestone_state = state_form.save()
+        return new_milestone_state
+
+    @staticmethod
+    @check_params_not_null(['cate_documents'])
+    def common_save(view, req, project, milestone_state):
+        """
+        预制项目里程碑项数据保存
+        :param req: HttpRequest对象
+        :param project: ProjectPlan对象
+        :param milestone_state: ProjectMilestoneState对象
+        :return: ProjectMilestoneState对象
+        """
+
+        new_milestone_state = PrefabMilestoneStateDataHandler.save_milestone_state(
+            view, req, project, milestone_state
+        )
+        if milestone_state.milestone.title == DEFAULT_MILESTONE_DICT.get(
+                DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD):
             purchase_method = req.data.get('purchase_method', '').strip()
             if not purchase_method:
                 return resp.failed('请选择采购方式')
@@ -1075,19 +1083,157 @@ class DefaultCommonProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
             srl_cls_name='ChunkProjectMilestoneStateSerializer'
         )
 
+    @staticmethod
+    @check_params_not_null(['plan_list'])
+    def plan_gathered_save(view, req, project, milestone_state):
+        """保存【方案收集】里程碑下的信息"""
+        success, msg = check_project_milestone_state(project, milestone_state, '方案收集',
+                                                     request_method="POST")
+        if not success:
+            return resp.failed(msg)
+        if req.data.get('cate_documents'):
+            req.data.pop('cate_documents')
+        milestone_state = PrefabMilestoneStateDataHandler.save_milestone_state(view, req, project, milestone_state)
 
-class DefaultCommonProjectMilestoneStateDataView(BaseAPIView):
+        form = SupplierSelectionPlanBatchSaveForm(milestone_state, req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        milestone_state = form.save()
+        if not milestone_state:
+            return resp.failed("操作失败")
+        milestone_state.modified_time = times.now()
+        milestone_state.save()
+        milestone_state.cache()
+        return resp.serialize_response(
+            milestone_state, results_name='project_milestone_state',
+            srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSerializer'
+        )
+
+    @staticmethod
+    @check_params_not_null(['selected_plan_id'])
+    def plan_argument_save(view, req, project, milestone_state):
+        """
+        保存【方案论证】里程碑下的信息
+        圈定选择的供应商待选方案
+        添加等
+        :param req: Request对象
+        :param project: 当前项目
+        :param milestone_state: 当前里程碑
+        :return: 返回当前项目里程碑下信息，包括供应商选择方案，文档资料附件等
+        """
+        success, msg = check_project_milestone_state(project, milestone_state, '方案论证',
+                                                     request_method="POST")
+        if not success:
+            return resp.failed(msg)
+
+        selected_plan = view.get_object_or_404(req.data.get('selected_plan_id'),
+                                               SupplierSelectionPlan)
+        selected_plan.selected = True
+        selected_plan.save()
+        selected_plan.cache()
+        others_plans = SupplierSelectionPlan.objects.filter(
+            project_milestone_state=selected_plan.project_milestone_state
+        ).exclude(id=selected_plan.id).all()
+        if others_plans:
+            others_plans.update(selected=False)
+            SupplierSelectionPlan.objects.clear_cache(others_plans)
+
+        milestone_state = PrefabMilestoneStateDataHandler.save_milestone_state(
+            view, req, project, milestone_state
+        )
+
+        plans = SupplierSelectionPlan.objects.filter(
+            project_milestone_state=selected_plan.project_milestone_state)
+        milestone_state.supplier_selection_plans = plans
+        return resp.serialize_response(
+            milestone_state, results_name='project_milestone_state',
+            srl_cls_name='ProjectMilestoneStateWithSupplierSelectionPlanSelectedSerializer'
+        )
+
+    @staticmethod
+    @check_params_not_null(['contract_no', 'title', 'signed_date', 'buyer_contact',
+                            'seller_contact', 'seller', 'seller_tel', 'total_amount',
+                            'delivery_date', 'contract_devices'])
+    def purchase_contract_save(view, req, project, milestone_state):
+
+        """
+        合同管理里程碑操作（保存合同信息、合同中设备信息、附件地址、说明信息）
+        """
+        success, msg = check_project_milestone_state(
+            project, milestone_state, '合同管理', request_method="POST"
+        )
+        if not success:
+            return resp.failed(msg)
+        purchase_contract_form = PurchaseContractCreateForm(milestone_state, req.data)
+        if not purchase_contract_form.is_valid():
+            return resp.form_err(purchase_contract_form.errors)
+        purchase_contract = purchase_contract_form.save()
+
+        if not purchase_contract:
+            return resp.failed('保存失败')
+
+        new_pro_milestone_state = PrefabMilestoneStateDataHandler.save_milestone_state(
+            view, req, project, milestone_state)
+
+        if not new_pro_milestone_state:
+            return resp.failed('保存失败')
+
+        return resp.serialize_response(
+            new_pro_milestone_state,
+            results_name='project_milestone_state',
+            srl_cls_name='ProjectMilestoneStateAndPurchaseContractSerializer',
+        )
+
+    @staticmethod
+    @check_params_not_null(['served_date', 'delivery_man', 'contact_phone'])
+    def take_delivery_save(view, req, project, milestone_state):
+        """
+        到货项目里程碑的保存/修改操作
+        """
+        success, msg = check_project_milestone_state(
+            project, milestone_state, '到货', request_method="POST"
+        )
+        if not success:
+            return resp.failed(msg)
+
+        form = ReceiptCreateOrUpdateForm(req.data, milestone_state)
+
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        receipt = form.save()
+        if not receipt:
+            return resp.failed('保存失败')
+
+        new_pro_milestone_state = PrefabMilestoneStateDataHandler.save_milestone_state(
+            view, req, project, milestone_state
+        )
+
+        if not new_pro_milestone_state:
+            return resp.failed('保存失败')
+
+        return resp.serialize_response(
+            new_pro_milestone_state, results_name='project_milestone_state',
+            srl_cls_name='ProjectMilestoneStateAndReceiptSerializer',
+        )
+
+
+class PrefabProjectMilestoneStateDataView(BaseAPIView):
+    """
+        查看预制项目里程碑节点下的数据
+    """
     permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     def get(self, req, project_id, project_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
         self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
         milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        print(milestone_state.milestone.title)
         all_stone_titles = DEFAULT_MILESTONE_DICT.values()
         success, msg = check_project_milestone_state(project, milestone_state, all_stone_titles, request_method="GET")
         if not success:
             return resp.failed(msg)
         common_milestone_tiles = [
+            DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_REQUIREMENT_ARGUMENT),
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_RESEARCH),
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD),
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_STARTUP_PURCHASE),
@@ -1126,6 +1272,8 @@ class DefaultCommonProjectMilestoneStateDataView(BaseAPIView):
                 milestone_state, results_name='project_milestone_state',
                 srl_cls_name='ProjectMilestoneStateAndReceiptSerializer'
             )
+
+        return resp.failed('请求数据异常')
 
 
 class ProjectMilestoneStateResearchInfoCreateView(BaseAPIView):

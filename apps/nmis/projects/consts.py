@@ -4,10 +4,24 @@
 #
 
 # 项目管理模块组常量配置
-
+import enum
 import logging
 
+from utils import eggs
+from utils.eggs import BaseEnum
+
 logger = logging.getLogger(__name__)
+
+
+@eggs.unique_enum
+# @enum.unique
+class ProjectStatusEnum(BaseEnum):
+    PENDING = ('PE',  '未开始')
+    STARTED = ('SD', '已启动')
+    DONE = ('DO', '已完成')
+    OVERRULE = ('OR', '已驳回')
+    PAUSE = ('PA', '已挂起')
+    p = ('PA', '已挂起')
 
 
 # 项目申请状态

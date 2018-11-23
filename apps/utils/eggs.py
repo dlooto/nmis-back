@@ -269,6 +269,8 @@ class BaseEnum(Enum):
         基于python enum.Enum类型
         定义枚举成员时可将二元元祖对象赋值给枚举成员
         .e.g:
+        index 0: 枚举值
+        index 1: 枚举值显示名称
         GenderEnum(BaseEnum):
             FEMALE = ('F', '女')
             MALE = ('M', ‘男’)
@@ -282,8 +284,8 @@ class BaseEnum(Enum):
 
     @DynamicClassAttribute
     def value_name(self):
-        """The value_name of the Enum member. 枚举值显示名称"""
-        return self._value_[0] if isinstance(self._value_, tuple) else ''
+        """The value_name of the Enum member. 枚举成员显示名称"""
+        return self._value_[1] if isinstance(self._value_, tuple) else ''
 
     @classmethod
     def members(cls):
@@ -296,3 +298,33 @@ class BaseEnum(Enum):
     @classmethod
     def value_names(cls):
         return tuple([item.value_name for name, item in cls.members()])
+
+    @classmethod
+    def to_choices(cls):
+        """ 将枚举成员转换为Django choice"""
+        return tuple([(item.value, item.value_name) for name, item in cls.members()])
+
+
+def unique_enum(enumeration):
+    """Class decorator for enumerations ensuring unique member values."""
+    duplicates = []
+    items = enumeration.__members__.items()
+
+    values = [member.value for name, member in items]
+    duplicate_values = []
+    for value in values:
+        if values.count(value) > 1:
+            duplicate_values.append(value)
+    for name, member in items:
+        # if name != member.name:
+        #     duplicates.append((name, member.value))
+        #     print(duplicates)
+        if member.value in duplicate_values:
+            duplicates.append((name, member.value))
+            print(duplicates)
+
+    if duplicates:
+        alias_details = ', '.join(
+                ["%s -> %s" % (alias, name) for (alias, name) in duplicates])
+        raise ValueError('duplicate values found in %r: %s' % (enumeration, alias_details))
+    return enumeration

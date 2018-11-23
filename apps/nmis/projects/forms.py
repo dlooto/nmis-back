@@ -9,7 +9,7 @@ import re
 import time
 
 from base.forms import BaseForm
-from nmis.devices.models import OrderedDevice, SoftwareDevice
+from nmis.devices.models import OrderedDevice, SoftwareDevice, ContractDevice
 from nmis.hospitals.consts import ARCHIVE
 from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectDocument, \
     PurchaseContract, ProjectMilestoneState, SupplierSelectionPlan, Supplier, Receipt
@@ -995,7 +995,6 @@ class ProjectDocumentBulkCreateOrUpdateForm(BaseForm):
     def __init__(self, documents, *args, **kwargs):
         BaseForm.__init__(self, documents, *args, **kwargs)
         self.documents = documents
-
         self.init_err_codes()
 
     def init_err_codes(self):
@@ -1028,8 +1027,11 @@ class ProjectDocumentBulkCreateOrUpdateForm(BaseForm):
                             'name': file.get('name')
                         }
                         project_documents.append(project_document)
-        return ProjectDocument.objects.bulk_save_or_update_project_doc(
-            project_documents) if project_documents else None
+        docs = ProjectDocument.objects.bulk_save_or_update_project_doc(project_documents)
+        logger.info('----------')
+        logger.info(project_documents)
+        logger.info(docs)
+        return docs
 
 
 class PurchaseContractCreateForm(BaseForm):
@@ -1069,6 +1071,8 @@ class PurchaseContractCreateForm(BaseForm):
             'device_supplier_err':              '{}: 为空或数据错误',
             'device_planned_price_null_err':    '{}: 为空或数据错误',
             'device_planned_price_err':         '{}: 单价不能为0',
+            'device_id_error':                  '设备ID数据异常',
+
         })
 
     def is_valid(self):
@@ -1205,6 +1209,20 @@ class PurchaseContractCreateForm(BaseForm):
             self.update_errors('contract_devices', 'contract_devices_err')
             return False
         for device in contract_device_list:
+            if device.get('id') is not None:
+                try:
+                    device_id = int(device.get('id'))
+                    if device_id == 0:
+                        self.update_errors('device.id', 'device_id_error')
+                        return False
+                except ValueError as e:
+                    logger.exception(e)
+                    self.update_errors('device.id', 'device_id_error')
+                    return False
+                db_device = ContractDevice.objects.filter(id=device.get('id')).filter()
+                if not db_device:
+                    self.update_errors('device.id', 'device_id_error')
+                    return False
             if not device.get('num'):
                 self.update_errors('device_num', 'device_num_err')
                 return False
