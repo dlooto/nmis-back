@@ -228,7 +228,7 @@ class ProjectPlan(BaseModel):
                     self.assistant = assistant
                 default_flow = ProjectFlow.objects.get_default_flow()
                 if not default_flow:
-                    logger.warn('default flow not been set')
+                    logger.warning('default flow not been set')
                     return False, "系统尚未设置默认流程，请联系管理员"
                 self.attached_flow = default_flow
 
@@ -302,7 +302,6 @@ class ProjectPlan(BaseModel):
                     get_pro_milestone_state_by_project_milestone(project=self,
                                                                  milestone=milestone)
                 self.current_stone = project_milestone_state
-                self.add_milestone_state(self.current_stone)
                 self.save()
                 self.cache()
             return True
@@ -317,9 +316,15 @@ class ProjectPlan(BaseModel):
         :param milestone: Milestone object
         :return: True or False
         """
+        if not milestone:
+            raise Warning("parameter 'milestone' is None.")
+            return False, "添加失败"
+        if not isinstance(milestone, Milestone):
+            raise Warning("parameter 'milestone' is Milestone instance.")
+            return False, "添加失败"
         try:
             pro_milestone_state = ProjectMilestoneState.objects.create(project=self, milestone=milestone)
-            if not milestone.has_children():
+            if milestone and not milestone.has_children():
                 return True, [pro_milestone_state, ]
             first_child = milestone.flow.get_first_child(milestone=milestone)
             child_milestone_state = ProjectMilestoneState.objects.create(project=self, milestone=first_child)
@@ -499,7 +504,6 @@ class ProjectPlan(BaseModel):
 
         if not self.attached_flow.contains(curr_stone_state.milestone):
             return False, "操作失败，该项目里程碑项不属于该项目流程, 请检查数据是否异常。"
-        logger.info(curr_stone_state)
         if curr_stone_state.is_finished():
             return False, '操作失败，当前里程碑已完结。'
 

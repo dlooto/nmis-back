@@ -38,7 +38,7 @@ class BaseManager(Manager):
         except self.model.DoesNotExist:
             return None
         except Exception as e:
-            logger.warn(e)
+            logger.warning(e)
             return None
 
     def get_cached(self, obj_id):

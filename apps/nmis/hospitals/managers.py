@@ -48,7 +48,7 @@ class StaffManager(BaseManager):
                 from nmis.hospitals.models import Role
                 role = Role.objects.get_role_by_keyword(codename=ROLE_CODE_NORMAL_STAFF)
                 if not role:
-                    logger.warn('Error: normal staff role not exists')
+                    logger.warning('Error: normal staff role not exists')
                     return None
                 user.set_roles([role, ])
                 return self.create(organ=organ, dept=dept, user=user, **data)
@@ -132,10 +132,10 @@ class RoleManager(BaseManager):
         desc = data.get('desc', '')
         permissions = data.get('permissions', [])
         if not name or not codename or not permissions:
-            logger.warn('Parameter Error: name, codename or permissions required')
+            logger.warning('Parameter Error: name, codename or permissions required')
             return None
         if self.filter(Q(codename=codename) | Q(name=name)):
-            logger.warn('Create Error: role existed')
+            logger.warning('Create Error: role existed')
             return None
         role = self.model(name=name, codename=codename, desc=desc, **kwargs)
         try:
@@ -157,10 +157,10 @@ class RoleManager(BaseManager):
         创建角色
         """
         if not kwargs.get('name') or not kwargs.get('codename'):
-            logger.warn('Parameter Error: name or codename required')
+            logger.warning('Parameter Error: name or codename required')
             return None
         if self.filter(Q(name=kwargs.get('name')) | Q(codename=kwargs.get('codename'))):
-            logger.warn('Create Error: role existed')
+            logger.warning('Create Error: role existed')
             return None
         try:
             return self.create(**kwargs)
@@ -204,7 +204,7 @@ class RoleManager(BaseManager):
     def create_super_admin(self):
         """创建超级管理员角色"""
         if self.get_super_admin():
-            logger.warn('Create Error:  super admin role existed')
+            logger.warning('Create Error:  super admin role existed')
             return None
         role_data = ROLES.get(ROLE_CODE_HOSP_SUPER_ADMIN)
         return self.create_role(**role_data)
@@ -217,7 +217,7 @@ class RoleManager(BaseManager):
         role = self.filter(codename=ROLE_CODE_HOSP_SUPER_ADMIN)
 
         if not role:
-            logger.warn('Error: super admin role not existed')
+            logger.warning('Error: super admin role not existed')
             return None
         return role
 

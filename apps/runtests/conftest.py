@@ -3,7 +3,9 @@
 import os
 import django
 from django.conf import settings
+
 from settings import configure_logging_params
+
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 

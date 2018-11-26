@@ -1028,9 +1028,6 @@ class ProjectDocumentBulkCreateOrUpdateForm(BaseForm):
                         }
                         project_documents.append(project_document)
         docs = ProjectDocument.objects.bulk_save_or_update_project_doc(project_documents)
-        logger.info('----------')
-        logger.info(project_documents)
-        logger.info(docs)
         return docs
 
 

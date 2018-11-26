@@ -500,7 +500,6 @@ class PurchaseContractManager(BaseManager):
         try:
             with transaction.atomic():
                 purchase_contract = self.filter(project_milestone_state=project_milestone_state).first()
-                logger.info(purchase_contract)
                 if not purchase_contract:
                     # 不存在合同的情况下创建合同
                     purchase_contract = self.model(project_milestone_state=project_milestone_state, **data)
@@ -511,7 +510,6 @@ class PurchaseContractManager(BaseManager):
                 # 创建合同设备信息
                 contract_device_add_list = []   # 存放待添加的设备
                 contract_device_update_list = []  # 存放待更新的设备
-                logger.info(contract_devices)
                 for device_data in contract_devices:
                     if not device_data.get('id'):
                         contract_device_add_list.append(

@@ -75,7 +75,7 @@ class OrderDeviceApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         result_device = response.get("device")
         self.assertIsNotNone(result_device)
-        self.assertNotEquals(result_device.get('name'), old_device.name)
+        self.assertNotEqual(result_device.get('name'), old_device.name)
 
     def test_ordered_device_delete(self):
         """

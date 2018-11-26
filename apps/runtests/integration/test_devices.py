@@ -565,7 +565,7 @@ class RepairOrderTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         response = self.get(api.format())
         self.assert_response_success(response)
         fault_types_get = response.get('fault_types')
-        self.assertTrue(len(fault_types_get) >= len(fault_types))
+        self.assertTrue(len(fault_types_get) == len(fault_types))
 
     def test_repair_order_create_or_get(self):
         """
@@ -610,10 +610,9 @@ class RepairOrderTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         response = self.get(api_get_list.format(1, 10, 'TDO'), )
         self.assert_response_success(response)
         repair_orders = response.get('repair_orders')
-        self.assertTrue(len(repair_orders) >= 2)
+        self.assertTrue(len(repair_orders) == 2)
         # 测试分派
         order = repair_orders[0]
-        logger.info(order['status'])
         dispatch_data = {
             'action': 'DSP',
             'maintainer_id': self.admin_staff.id,
@@ -765,7 +764,7 @@ class FaultSolutionsTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assert_response_success(response)
         fault_solutions = response.get('fault_solutions')
         self.assertIsNotNone(fault_solutions)
-        self.assertTrue(len(fault_solutions) >= 1)
+        self.assertTrue(len(fault_solutions) == 1)
 
     def test_fault_solution_info(self):
 

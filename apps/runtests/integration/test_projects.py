@@ -1213,7 +1213,6 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         for cate_document in cate_documents:
             files = []
             for file in cate_document.get('files'):
-                logger.info(file)
                 file_data = {
                     "name": file.get('name'),
                     "path": file.get('path')
@@ -1329,7 +1328,6 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         for cate_document in cate_documents:
             files = []
             for file in cate_document.get('files'):
-                logger.info(file)
                 file_data = {
                     "name": file.get('name'),
                     "path": file.get('path')
@@ -1358,7 +1356,6 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
             self.create_flow(self.organ)
         self.assertTrue(project.dispatch(self.admin_staff))
         milestone = Milestone.objects.filter(title='启动采购', flow__default_flow=True).first()
-        logger.info(milestone)
         self.assertIsNotNone(milestone)
         project_milestone_state = ProjectMilestoneState.objects.filter(project=project, milestone=milestone).first()
         self.assertIsNotNone(project_milestone_state)

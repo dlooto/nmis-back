@@ -1451,7 +1451,6 @@ class AssertDeviceBatchUploadForm(BaseForm):
             if not serial_no.strip():
                 self.update_errors('serial_no', 'serial_no_null_err', self.data.index(row_data)+2)
                 return False
-            logger.info(len(serial_no.strip()))
             if len(serial_no.strip()) > 30:
                 self.update_errors('serial_no', 'serial_no_limit_size', self.data.index(row_data)+2)
                 return False

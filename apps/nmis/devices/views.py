@@ -76,7 +76,6 @@ class AssertDeviceListView(BaseAPIView):
         status_list = None
         if str_status:
             status_list = list(set([status.strip() for status in str_status.split(',')]))
-            logger.info(status_list)
             for status in status_list:
                 if status not in dict(ASSERT_DEVICE_STATUS_CHOICES):
                     return resp.failed('资产设备状态错误')

@@ -120,7 +120,7 @@ class SmsCodeManager(models.Manager):
         # 若当天该手机号已请求了MAX_SMS_LIMIT次验证码, 则直接返回并警告
         if k.filter(created_time__year=today.year, created_time__month=today.month,
                     created_time__day=today.day, is_valid=False).count() >= code_max_limit:
-            logger.warn(u'该手机号(%s)一天之内已获取%s次验证码' % (phone, code_max_limit))
+            logger.warning(u'该手机号(%s)一天之内已获取%s次验证码' % (phone, code_max_limit))
             return False, -1  # 请求验证码次数超过限制
 
         if re_gen:  # 若要重新生成验证码, 则将之前生成的验证码置为无效状态

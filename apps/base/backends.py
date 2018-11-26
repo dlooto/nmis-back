@@ -19,7 +19,7 @@ class CustomizedModelBackend(ModelBackend):
     重写authenticate方法, 使得可以使用phone/email/username任一账号类型登录
     """
 
-    def authenticate(self, password=None, **kwargs):
+    def authenticate(self, request, password=None, **kwargs):
         user_model = get_user_model()
         authkey = kwargs.get('authkey')
         if authkey not in user_model.VALID_AUTH_FIELDS:
