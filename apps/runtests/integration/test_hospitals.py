@@ -7,6 +7,7 @@ import logging
 import random
 from unittest import skip
 
+import pytest
 
 from runtests import BaseTestCase
 
@@ -40,7 +41,7 @@ class DepartmentApiTestCase(BaseTestCase):
         )
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('dept'))
-        self.assertEquals(dept_data['name'], response.get('dept').get('name'))
+        self.assertEqual(dept_data['name'], response.get('dept').get('name'))
 
     def test_department_create(self):
         """
@@ -88,7 +89,7 @@ class DepartmentApiTestCase(BaseTestCase):
         )
 
         self.assert_response_success(resp)
-        self.assertEquals(resp.get('code'), 10000)
+        self.assertEqual(resp.get('code'), 10000)
 
         # 测试科室存在员工不能删除
         dept = self.create_department(self.organ, dept_name='存在员工科室')
@@ -104,8 +105,8 @@ class DepartmentApiTestCase(BaseTestCase):
             self.dept_single_operation_api.format(self.organ.id, dept.id)
         )
         self.assert_response_failure(response)
-        self.assertEquals(staff.dept.id, dept.id)
-        self.assertEquals(response.get('code'), 0)
+        self.assertEqual(staff.dept.id, dept.id)
+        self.assertEqual(response.get('code'), 0)
 
     def test_departments_list(self):
         """
@@ -127,7 +128,7 @@ class DepartmentApiTestCase(BaseTestCase):
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('depts'))
-        self.assertEquals(len(response.get('depts')), data.get('size'))
+        self.assertEqual(len(response.get('depts')), data.get('size'))
 
     def test_hospital_global_data(self):
         """
@@ -191,7 +192,7 @@ class StaffAPITestCase(BaseTestCase):
         # self.assert_response_failure(response)  #暴露数据
         self.assertIsNotNone(response.get("staff"))
         self.assertIsNotNone(response.get("staff").get('staff_name'))
-        self.assertEquals(response.get('staff').get('staff_name'), new_staff_data['staff_name'])
+        self.assertEqual(response.get('staff').get('staff_name'), new_staff_data['staff_name'])
 
     def test_staff_get(self):
         """
@@ -212,7 +213,7 @@ class StaffAPITestCase(BaseTestCase):
         # self.assert_response_failure(response)
         self.assertIsNotNone(response.get('staff'), '没获取到员工信息')
         self.assertIsNotNone(response.get('staff').get('staff_name'), '没获取到员工姓名')
-        self.assertEquals(response.get('staff').get('staff_name'), self.admin_staff.name)
+        self.assertEqual(response.get('staff').get('staff_name'), self.admin_staff.name)
 
     def test_staff_update(self):
         """
@@ -323,7 +324,7 @@ class StaffAPITestCase(BaseTestCase):
             response = self.raw_post(api.format(self.organ.id), {'staff_excel_file': file})
             self.assert_response_form_errors(response)
 
-            self.create_department(self.organ, dept_name='信息科')
+            # self.create_department(self.organ, dept_name='信息科')
             self.create_department(self.organ, dept_name='测试部门')
         with open(curr_path + '/data/staff-normal-test.xlsx', 'rb') as file:
             response = self.raw_post(api.format(self.organ.id), {'staff_excel_file': file})

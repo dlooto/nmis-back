@@ -50,7 +50,7 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         redispatch_success = self.project.redispatch(self.admin_staff)
         self.assertTrue(redispatch_success)
         self.assertFalse(self.project.is_unstarted())
-        self.assertEquals(self.admin_staff, self.project.performer)
+        self.assertEqual(self.admin_staff, self.project.performer)
 
     def test_change_milestone(self):
         """
@@ -81,7 +81,7 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         success, msg = self.project.change_project_milestone_state(first_main_milestone_state)
         self.assertFalse(success)
 
-        # self.assertEquals(self.project.current_stone, self.flow.get_first_main_milestone())
+        # self.assertEqual(self.project.current_stone, self.flow.get_first_main_milestone())
         #
         # # new_milestone = self.project.current_stone
         # # success, msg = self.project.change_milestone(new_milestone)
@@ -90,7 +90,7 @@ class ProjectTestCase(BaseTestCase, ProjectPlanMixin):
         # new_milestone = self.project.current_stone.next()
         # success, msg = self.project.change_milestone(new_milestone, done_sign='UN')
         # self.assertTrue(success)
-        # self.assertEquals(self.project.current_stone, new_milestone)
+        # self.assertEqual(self.project.current_stone, new_milestone)
         # self.assertTrue(self.project.contains_project_milestone_state(new_milestone))
 
 

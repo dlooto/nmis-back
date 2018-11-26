@@ -21,6 +21,7 @@ MYSQL_DB = {
     'user': 'root',
     'password': 'xxx',
     'port': '3306',
+    'conn_max_age': 120,
 }
 
 REDIS_DB = {
@@ -41,6 +42,7 @@ DATABASES = {
         "PASSWORD": MYSQL_DB['password'],
         "HOST":     MYSQL_DB['host'],
         "PORT":     MYSQL_DB['port'],
+        "CONN_MAX_AGE": MYSQL_DB['conn_max_age'],
         "OPTIONS": {
             'sql_mode': 'STRICT_TRANS_TABLES',
         },

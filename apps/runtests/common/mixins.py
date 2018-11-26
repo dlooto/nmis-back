@@ -532,8 +532,8 @@ class AssertDevicesMixin(object):
     def init_repair_orders(self, creator, applicant, fault_types=None):
         if not fault_types:
             fault_types = self.init_fault_types(creator)
-        order_one = RepairOrder.objects.create_order(applicant, fault_types[0], 'office无法使用', creator)
-        order_two = RepairOrder.objects.create_order(applicant, fault_types[1], '呼吸机无法使用', creator)
+        order_one = RepairOrder.objects.create_order(applicant, fault_types[0], creator, **{'desc': 'office无法使用'})
+        order_two = RepairOrder.objects.create_order(applicant, fault_types[1], creator, **{'desc': '呼吸机无法使用'})
         return [order_one, order_two]
 
     def create_repair_order(self, applicant, fault_type, desc, creator, order_no):

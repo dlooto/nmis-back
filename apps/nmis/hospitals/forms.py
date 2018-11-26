@@ -473,7 +473,6 @@ class StaffBatchUploadForm(BaseForm):
             self.update_errors('dept', 'empty_dept_name', str(2))
             return False
         db_dept_names = Department.objects.values_list('name')
-
         for i, item in enumerate(dept_names):
             if not item:
                 self.update_errors('dept', 'empty_dept_name', str(i + 2))

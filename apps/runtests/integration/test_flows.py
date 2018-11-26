@@ -35,7 +35,7 @@ class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):
         response = self.post(api, data=flow_data)
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('flow'))
-        self.assertEquals(len(response.get('flow').get("milestones")), len(MILESTONES))
+        self.assertEqual(len(response.get('flow').get("milestones")), len(MILESTONES))
 
     # def test_project_milestone_change(self):
     #     """
@@ -72,7 +72,7 @@ class ProjectFlowTestCase(BaseTestCase, ProjectPlanMixin):
     #     self.assert_response_success(response)
     #
     #     result_project = response.get("project")
-    #     self.assertEquals(new_milestone.id, result_project.get("current_stone_id"))
+    #     self.assertEqual(new_milestone.id, result_project.get("current_stone_id"))
     #     self.assertTrue(project.contains_project_milestone_state(new_milestone))
     #
     #     # clear data

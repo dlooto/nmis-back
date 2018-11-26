@@ -21,7 +21,6 @@ class ProjectStatusEnum(BaseEnum):
     DONE = ('DO', '已完成')
     OVERRULE = ('OR', '已驳回')
     PAUSE = ('PA', '已挂起')
-    p = ('PA', '已挂起')
 
 
 # 项目申请状态

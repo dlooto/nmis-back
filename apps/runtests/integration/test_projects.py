@@ -49,7 +49,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         response = self.get(self.single_project_api.format(project.id), data=data)
         self.assert_response_success(response)
         self.assertIsNotNone(response.get("project"))
-        self.assertEquals(response.get("project").get('title'), project.title)
+        self.assertEqual(response.get("project").get('title'), project.title)
 
     def test_project_update(self):
         """
@@ -140,7 +140,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         new_project = response.get('project')
         self.assertIsNotNone(new_project)
-        self.assertEquals(new_project.get('title'), project_base_data['project_title'])
+        self.assertEqual(new_project.get('title'), project_base_data['project_title'])
         self.assertEqual(new_project.get('handing_type'), project_base_data['handing_type'])
         devices = new_project.get('hardware_devices')
         self.assertIsNotNone(devices)
@@ -175,8 +175,8 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         software_devices = project.get('software_devices')
         self.assertIsNotNone(hardware_devices)
         self.assertIsNotNone(software_devices)
-        self.assertEquals(len(hardware_devices), 4)
-        self.assertEquals(len(software_devices), 4)
+        self.assertEqual(len(hardware_devices), 4)
+        self.assertEqual(len(software_devices), 4)
 
         for i in range(len(software_added_devices)):
             self.assert_object_in_results(software_added_devices[i], software_devices)
@@ -203,7 +203,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         )
 
         self.assert_response_success(response)
-        self.assertEquals(response.get('code'), 10000)
+        self.assertEqual(response.get('code'), 10000)
 
         # 测试项目被使用，不能删除
         new_project = self.create_project(self.admin_staff, self.dept, title='新的测试项目')
@@ -215,8 +215,8 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         )
 
         self.assert_response_failure(response2)
-        self.assertEquals(response2.get('code'), 0)
-        self.assertEquals(response2.get('msg'), '项目已被分配，无法删除')
+        self.assertEqual(response2.get('code'), 0)
+        self.assertEqual(response2.get('msg'), '项目已被分配，无法删除')
 
     def test_project_create(self):
         """
@@ -267,18 +267,18 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         result_project = response.get('project')
         self.assertIsNotNone(result_project)
-        self.assertEquals(project_data['project_title'], result_project.get('title'))
-        self.assertEquals(project_data['handing_type'], result_project.get('handing_type'))
+        self.assertEqual(project_data['project_title'], result_project.get('title'))
+        self.assertEqual(project_data['handing_type'], result_project.get('handing_type'))
 
-        self.assertEquals(
+        self.assertEqual(
             len(result_project.get('hardware_devices')), len(project_data.get('hardware_devices'))
         )
-        self.assertEquals(
+        self.assertEqual(
             len(result_project.get('software_devices')), len(project_data.get('software_devices'))
         )
         self.assert_object_in_results(project_data.get('hardware_devices')[0],
                                       result_project.get('hardware_devices'))
-        self.assertEquals(project_data.get('pro_type'), result_project.get('project_cate'))
+        self.assertEqual(project_data.get('pro_type'), result_project.get('project_cate'))
 
         # 测试转交办理、医疗器械设备项目申请
         pro2_data = project_data
@@ -289,11 +289,11 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(resp2)
         pro2 = resp2.get('project')
         self.assertIsNotNone(pro2)
-        self.assertEquals(pro2_data['handing_type'], pro2.get('handing_type'))
+        self.assertEqual(pro2_data['handing_type'], pro2.get('handing_type'))
         self.assertIsNone(pro2.get('performer_id'))
-        self.assertEquals(pro2_data.get('pro_type'), pro2.get('project_cate'))
-        self.assertEquals(len(pro2_data.get('hardware_devices')), len(pro2.get('hardware_devices')))
-        self.assertEquals(len(pro2.get('software_devices')), 0)
+        self.assertEqual(pro2_data.get('pro_type'), pro2.get('project_cate'))
+        self.assertEqual(len(pro2_data.get('hardware_devices')), len(pro2.get('hardware_devices')))
+        self.assertEqual(len(pro2.get('software_devices')), 0)
 
     def test_my_project_list(self):
         """
@@ -318,7 +318,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('projects'))
-        self.assertEquals(len(response.get('projects')), 4)
+        self.assertEqual(len(response.get('projects')), 4)
         self.assert_object_in_results(
             {'creator_id': self.admin_staff.id}, response.get('projects')
         )
@@ -339,7 +339,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         results = response.get('projects')
         self.assertIsNotNone(results)
-        self.assertEquals(len(results), 2)
+        self.assertEqual(len(results), 2)
         self.assert_object_in_results({'title': project1.title}, results)
 
     def test_performed_list(self):
@@ -369,7 +369,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         response = self.get(api, data=data)
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('projects'))
-        self.assertEquals(len(response.get('projects')), 5)
+        self.assertEqual(len(response.get('projects')), 5)
         self.assert_object_in_results({'performer_name': self.admin_staff.name}, response.get('projects'))
 
     def test_applied_projects(self):
@@ -394,7 +394,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('projects'))
-        self.assertEquals(len(response.get('projects')), 5)
+        self.assertEqual(len(response.get('projects')), 5)
         self.assert_object_in_results(
             {'creator_name': self.admin_staff.name}, response.get('projects')
         )
@@ -412,7 +412,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         success = project_plan.dispatch(self.admin_staff)
         self.assertTrue(success)
         self.assertIsNotNone(project_plan.performer)
-        self.assertEquals(self.admin_staff.id, project_plan.performer.id)
+        self.assertEqual(self.admin_staff.id, project_plan.performer.id)
 
         # 重新分配项目
         # 初始化staff相应数据
@@ -431,7 +431,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         project = response.get('project')
         self.assertIsNotNone(project.get('performer_id'))
-        self.assertEquals(staff.id, project.get('performer_id'))
+        self.assertEqual(staff.id, project.get('performer_id'))
 
     def test_project_dispatch(self):
         """
@@ -454,8 +454,8 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         project = response.get('project')
         self.assertIsNotNone(project.get('performer_id'))
-        self.assertEquals(project_plan.id, project.get('id'))
-        self.assertEquals(self.admin_staff.id, project.get('performer_id'))
+        self.assertEqual(project_plan.id, project.get('id'))
+        self.assertEqual(self.admin_staff.id, project.get('performer_id'))
         # 同时分配项目负责人和项目协助办理人
         project_plan2 = self.create_project(self.admin_staff, self.dept, project_cate='SW', title='新建项目申请2')
         # 创建项目协助人
@@ -474,10 +474,10 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response2)
         project2 = response2.get('project')
         self.assertIsNotNone(project2.get('performer_id'))
-        self.assertEquals(project_plan2.id, project2.get('id'))
-        self.assertEquals(self.admin_staff.id, project2.get('performer_id'))
+        self.assertEqual(project_plan2.id, project2.get('id'))
+        self.assertEqual(self.admin_staff.id, project2.get('performer_id'))
         self.assertIsNotNone(project2.get('assistant_id'))
-        self.assertEquals(assistant.id, project2.get('assistant_id'))
+        self.assertEqual(assistant.id, project2.get('assistant_id'))
 
     def test_project_startup(self):
         """
@@ -542,7 +542,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         projects = response.get('projects')
         self.assertIsNotNone(projects)
-        self.assertEquals(len(projects), 3)
+        self.assertEqual(len(projects), 3)
         self.assert_object_in_results({'creator_id': self.admin_staff.id}, projects)
 
     def test_projects_my_performer(self):
@@ -571,7 +571,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assert_response_success(response)
         projects = response.get('projects')
         self.assertIsNotNone(projects)
-        self.assertEquals(len(projects), 3)
+        self.assertEqual(len(projects), 3)
 
     def test_projects_overrule(self):
         """
@@ -590,7 +590,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('project'))
-        self.assertEquals(response.get('project').get('status'), PRO_STATUS_OVERRULE)
+        self.assertEqual(response.get('project').get('status'), PRO_STATUS_OVERRULE)
 
     def test_dispatched_project_list(self):
         """
@@ -622,7 +622,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('projects'))
-        self.assertEquals(len(response.get('projects')), 4)
+        self.assertEqual(len(response.get('projects')), 4)
 
     def test_pause_project(self):
         """
@@ -647,7 +647,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('project'))
-        self.assertEquals(response.get('project').get('status'), PRO_STATUS_PAUSE)
+        self.assertEqual(response.get('project').get('status'), PRO_STATUS_PAUSE)
 
     def test_cancel_pause_project(self):
         """
@@ -667,7 +667,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('project'))
-        self.assertEquals(response.get('project').get('status'), PRO_STATUS_STARTED)
+        self.assertEqual(response.get('project').get('status'), PRO_STATUS_STARTED)
 
     def test_dispatched_assistant(self):
         """
@@ -696,7 +696,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         response = self.put(api.format(project.id), data=data)
 
         self.assert_response_success(response)
-        self.assertEquals(response.get('code'), 10000)
+        self.assertEqual(response.get('code'), 10000)
 
     def test_assisted_projects(self):
         """
@@ -727,7 +727,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         response = self.get(api)
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('projects'))
-        self.assertEquals(response.get('projects')[0].get('assistant_id'), self.admin_staff.id)
+        self.assertEqual(response.get('projects')[0].get('assistant_id'), self.admin_staff.id)
 
     # def test_single_upload_file(self):
     #     """
@@ -750,7 +750,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
     #     self.assertIsNotNone(response.get('file_url'))
     #
     #     upload_path = '%s%s%s%s' % (PROJECT_DOCUMENT_DIR, str(project.id), '/', 'upload_file_test.xlsx')
-    #     self.assertEquals(upload_path, response.get('file_url'))
+    #     self.assertEqual(upload_path, response.get('file_url'))
     #     file_obj.close()
 
     def test_deleted_single_file(self):
@@ -774,7 +774,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         self.assertTrue(project.dispatch(self.admin_staff))
 
         new_project = ProjectPlan.objects.filter(id=project.id).first()
-        self.assertEquals(new_project.attached_flow, default_flow)
+        self.assertEqual(new_project.attached_flow, default_flow)
         # 获取第一个主里程碑
         first_main_milestone = default_flow.get_first_main_milestone()
 
@@ -796,7 +796,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
             PROJECT_DOCUMENT_DIR, str(project.id), '/', 'upload_file_test.xlsx')
         success_upload_file_path = upload_response.get('file_url')  # 获取上传成功后的路径
 
-        self.assertEquals(upload_path, success_upload_file_path)
+        self.assertEqual(upload_path, success_upload_file_path)
         file_obj.close()    # 关闭文件流
         project_document_data = {
             'name': 'upload_file_test.xlsx',
@@ -819,7 +819,7 @@ class ProjectApiTestCase(BaseTestCase, ProjectPlanMixin):
         delete_file_response = self.post(
             delete_file_api.format(doc_id), data={'project_milestone_state_id': first_pro_mil_state.id})
         self.assert_response_success(delete_file_response)
-        self.assertEquals(10000, delete_file_response.get('code'))
+        self.assertEqual(10000, delete_file_response.get('code'))
         pro_mil_state = ProjectMilestoneState.objects.get_pro_milestone_state_by_project_milestone(
             project=project, milestone=first_main_milestone)
         # 断言删除附件后，当前ProjectDocument是否在ProjectMilestoneState中
@@ -1207,8 +1207,8 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         self.assertIsNotNone(project_milestone_state)
         self.assertTrue(project_milestone_state.get('is_saved'))
         self.assertIsNotNone(project_milestone_state.get('cate_documents'))
-        self.assertEquals(project_milestone_state.get('purchase_method'), init_data.get('purchase_method'))
-        self.assertEquals(project_milestone_state.get('summary'), init_data.get('summary'))
+        self.assertEqual(project_milestone_state.get('purchase_method'), init_data.get('purchase_method'))
+        self.assertEqual(project_milestone_state.get('summary'), init_data.get('summary'))
         cate_documents = project_milestone_state.get('cate_documents')
         for cate_document in cate_documents:
             files = []
@@ -1225,7 +1225,7 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                 }
             self.assert_object_in_results(document, init_data.get('cate_documents'))
 
-        self.assertEquals(len(project_milestone_state.get('cate_documents')),
+        self.assertEqual(len(project_milestone_state.get('cate_documents')),
                           len(init_data.get('cate_documents')))
 
     def test_get_confirm_purchase(self):
@@ -1341,7 +1341,7 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
                 }
             self.assert_object_in_results(document, init_data.get('cate_documents'))
 
-        self.assertEquals(len(project_milestone_state.get('cate_documents')), len(init_data.get('cate_documents')))
+        self.assertEqual(len(project_milestone_state.get('cate_documents')), len(init_data.get('cate_documents')))
 
     def test_get_startup_purchase_info(self):
         """
@@ -1451,15 +1451,15 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         self.assertTrue(project_milestone_state.get('is_saved'))
         self.assertIsNotNone(project_milestone_state.get('purchase_contract'))
         self.assertIsNotNone(project_milestone_state.get('purchase_contract').get('contract_devices'))
-        self.assertEquals(len(project_milestone_state.get('purchase_contract').get('contract_devices')), 2)
+        self.assertEqual(len(project_milestone_state.get('purchase_contract').get('contract_devices')), 2)
         self.assertIsNotNone(project_milestone_state.get('cate_documents'))
-        self.assertEquals(len(project_milestone_state.get('cate_documents')), 2)
+        self.assertEqual(len(project_milestone_state.get('cate_documents')), 2)
         for cate_document in project_milestone_state.get('cate_documents'):
             self.assertIsNotNone(cate_document)
             if cate_document.get('category') == 'contract':
-                self.assertEquals(len(cate_document.get('files')), 1)
+                self.assertEqual(len(cate_document.get('files')), 1)
             if cate_document.get('category') == 'others':
-                self.assertEquals(len(cate_document.get('files')), 2)
+                self.assertEqual(len(cate_document.get('files')), 2)
 
     def test_get_purchase_contract_info(self):
         """
@@ -1522,17 +1522,17 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         self.assertTrue(project_milestone_state.get('is_saved'))
         cate_documents = project_milestone_state.get('cate_documents')
         self.assertIsNotNone(cate_documents)
-        self.assertEquals(len(cate_documents), len(init_data.get('cate_documents')))
-        self.assertEquals(len(cate_documents), 1)
+        self.assertEqual(len(cate_documents), len(init_data.get('cate_documents')))
+        self.assertEqual(len(cate_documents), 1)
         cate_document = cate_documents[0]
         self.assertIsNotNone(cate_document)
-        self.assertEquals(cate_document.get('category'), "delivery_note")
+        self.assertEqual(cate_document.get('category'), "delivery_note")
         self.assertIsNotNone(cate_document.get('files'))
-        self.assertEquals(len(cate_document.get('files')), 1)
+        self.assertEqual(len(cate_document.get('files')), 1)
         file = cate_document.get('files')[0]
         self.assertIsNotNone(file)
-        self.assertEquals(file.get('name'), "送货单")
-        self.assertEquals(file.get('path'), "%s%s%s" % ("upload/project/document/", project.id, "/送货单"))
+        self.assertEqual(file.get('name'), "送货单")
+        self.assertEqual(file.get('path'), "%s%s%s" % ("upload/project/document/", project.id, "/送货单"))
 
     def test_get_take_delivery_info(self):
         """
@@ -1577,6 +1577,6 @@ class ProjectMilestoneStateTest(BaseTestCase, ProjectPlanMixin):
         self.assertIsNotNone(contract_device)
         response = self.delete(api.format(project.id, purchase_contract.id, contract_device.id))
         self.assert_response_success(response)
-        self.assertEquals(response.get('code'), 10000)
+        self.assertEqual(response.get('code'), 10000)
         new_contract_devices = purchase_contract.contract_devices.all()
         self.assert_object_not_in_results(contract_device, new_contract_devices)

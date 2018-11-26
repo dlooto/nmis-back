@@ -33,5 +33,5 @@ class StaffCreateTestCase(BaseTestCase):
         staff = Staff.objects.create_staff(self.organ, self.dept, user_data, **data)
         self.assertIsNotNone(staff)
         self.assertIsNotNone(staff.user)
-        self.assertEquals(staff.user.username, user_data.get('username'))
-        self.assertEquals(staff.name, data.get('name'))
+        self.assertEqual(staff.user.username, user_data.get('username'))
+        self.assertEqual(staff.name, data.get('name'))

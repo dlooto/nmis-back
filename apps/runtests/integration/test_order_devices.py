@@ -49,8 +49,8 @@ class OrderDeviceApiTestCase(BaseTestCase, ProjectPlanMixin):
 
         result_device = response.get("device")
         self.assertIsNotNone(result_device)
-        self.assertEquals(device_count+1, len(project.get_hardware_devices()))
-        self.assertEquals(result_device.get('name'), data.get('name'))
+        self.assertEqual(device_count+1, len(project.get_hardware_devices()))
+        self.assertEqual(result_device.get('name'), data.get('name'))
 
     def test_ordered_device_update(self):
         """
@@ -92,4 +92,4 @@ class OrderDeviceApiTestCase(BaseTestCase, ProjectPlanMixin):
             self.one_device_api.format(project.id, old_device.id), data=device_type
         )
         self.assert_response_success(response)
-        self.assertEquals(devices_count-1, len(project.get_hardware_devices()))
+        self.assertEqual(devices_count-1, len(project.get_hardware_devices()))

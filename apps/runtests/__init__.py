@@ -113,6 +113,7 @@ class TestCaseDataUtils(object):
 
     def init_sequence(self):
         from nmis.hospitals.models import Sequence
+        sequences = []
         if not Sequence.objects.all():
             sequences = Sequence.objects.init_default_sequences()
         return sequences
@@ -136,6 +137,8 @@ class BaseTestCase(TestCase, TestCaseDataUtils):
         self.organ.clear_cache()
         self.user.clear_cache()
         self.admin_staff.clear_cache()
+        from django_redis import get_redis_connection
+        get_redis_connection("default").flushall()
 
     def login(self, user):
         return self.request_login('email', user.email, user.raw_password)

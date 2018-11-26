@@ -8,5 +8,11 @@
 """
 
 import logging
+from django_redis import get_redis_connection
+
 
 logger = logging.getLogger(__name__)
+
+cache_conn = get_redis_connection('default')
+if cache_conn:
+    cache_conn.flushall()

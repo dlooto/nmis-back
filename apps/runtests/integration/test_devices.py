@@ -46,7 +46,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_place = self.create_storage_place(dept=self.dept, parent=hospital_address,
                                                   title='信息设备存储室_{}'.format(self.get_random_suffix()))
@@ -92,14 +92,14 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         medical_assert_device = response.get('assert_device')
         self.assertIsNotNone(medical_assert_device)
         for key, value in medical_assert_device_data.items():
-            self.assertEquals(value, medical_assert_device.get(key))
+            self.assertEqual(value, medical_assert_device.get(key))
         # 创建信息化资产设备
         resp = self.post(api, data=information_assert_device_data)
         self.assert_response_success(resp)
         information_assert_device = resp.get('assert_device')
         self.assertIsNotNone(information_assert_device)
         for key, value in information_assert_device_data.items():
-            self.assertEquals(value, information_assert_device.get(key))
+            self.assertEqual(value, information_assert_device.get(key))
 
     def test_assert_device_detail(self):
         """
@@ -113,7 +113,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_place = self.create_storage_place(dept=self.dept, parent=hospital_address, title='信息设备存储室_{}'.format(self.get_random_suffix()))
         self.assertIsNotNone(storage_place)
@@ -129,7 +129,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         response = self.get(api.format(assert_device.id))
         self.assert_response_success(response)
         self.assertIsNotNone(response.get('assert_device'))
-        self.assertEquals(response.get('assert_device').get('id'), assert_device.id)
+        self.assertEqual(response.get('assert_device').get('id'), assert_device.id)
 
     def test_assert_device_scrap(self):
         """
@@ -142,7 +142,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_place = self.create_storage_place(dept=self.dept, parent=hospital_address,
                                                   title='信息设备存储室_{}'.format(
@@ -161,8 +161,8 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assert_response_success(response)
         update_assert_device = response.get('assert_device')
         self.assertIsNotNone(update_assert_device)
-        self.assertEquals(update_assert_device.get('id'), assert_device.id)
-        self.assertEquals(update_assert_device.get('status', '').strip(), ASSERT_DEVICE_STATUS_SCRAPPED)
+        self.assertEqual(update_assert_device.get('id'), assert_device.id)
+        self.assertEqual(update_assert_device.get('status', '').strip(), ASSERT_DEVICE_STATUS_SCRAPPED)
 
     def test_assert_devices(self):
         """
@@ -175,7 +175,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_place = self.create_storage_place(
             dept=self.dept, parent=hospital_address, title='信息设备存储室_{}'.format(self.get_random_suffix())
@@ -192,7 +192,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
                 )
             )
         self.assertIsNotNone(assert_device_list)
-        self.assertEquals(len(assert_device_list), 5)
+        self.assertEqual(len(assert_device_list), 5)
         data = {
             'cate': 'IN',
             'search_key': '电脑',
@@ -206,11 +206,11 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assert_response_success(response)
         assert_devices = response.get('assert_devices')
         self.assertIsNotNone(assert_devices)
-        self.assertEquals(len(assert_devices), 3)
+        self.assertEqual(len(assert_devices), 3)
         for assert_device in assert_devices:
-            self.assertEquals(assert_device.get('cate'), 'IN')
-            self.assertEquals(assert_device.get('status'), 'US')
-            self.assertEquals(assert_device.get('storage_place_id'), storage_place.id)
+            self.assertEqual(assert_device.get('cate'), 'IN')
+            self.assertEqual(assert_device.get('status'), 'US')
+            self.assertEqual(assert_device.get('storage_place_id'), storage_place.id)
 
     def test_update_assert_device(self):
         """
@@ -224,7 +224,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_place = self.create_storage_place(dept=self.dept, parent=hospital_address,
                                                   title='信息设备存储室_{}'.format(
@@ -254,9 +254,9 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assert_response_success(response)
         update_assert_device = response.get('assert_device')
         self.assertIsNotNone(update_assert_device)
-        self.assertEquals(update_assert_device.get('id'), assert_device.id)
-        self.assertNotEquals(assert_device.title, update_assert_device.get('title'))
-        self.assertEquals(update_assert_device.get('title'), update_data.get('title'))
+        self.assertEqual(update_assert_device.get('id'), assert_device.id)
+        self.assertNotEqual(assert_device.title, update_assert_device.get('title'))
+        self.assertEqual(update_assert_device.get('title'), update_data.get('title'))
 
     def test_delete_assert_device(self):
         """
@@ -270,7 +270,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_place = self.create_storage_place(dept=self.dept, parent=hospital_address,
                                                   title='信息设备存储室_{}'.format(
@@ -287,7 +287,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
 
         response = self.delete(api.format(assert_device.id))
         self.assert_response_success(response)
-        self.assertEquals(response.get('code'), 10000)
+        self.assertEqual(response.get('code'), 10000)
 
         device = self.get_assert_device(assert_device.id)
         self.assertIsNone(device)
@@ -304,7 +304,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_place = self.create_storage_place(
             dept=self.dept, parent=hospital_address, title='信息设备存储室_{}'.format(self.get_random_suffix())
@@ -321,7 +321,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
                 )
             )
         self.assertIsNotNone(assert_devices)
-        self.assertEquals(len(assert_devices), 5)
+        self.assertEqual(len(assert_devices), 5)
         # 创建使用科室
         department = self.create_department(self.organ, dept_name='很吊的科室_{}'.format(self.get_random_suffix()))
 
@@ -334,11 +334,11 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assert_response_success(response)
         assert_device_list = response.get('assert_devices')
         self.assertIsNotNone(assert_device_list)
-        self.assertEquals(len(assert_device_list), 5)
+        self.assertEqual(len(assert_device_list), 5)
 
         for assert_device in assert_device_list:
             self.assertIsNotNone(assert_device.get('use_dept_id'))
-            self.assertEquals(assert_device.get('use_dept_id'), department.id)
+            self.assertEqual(assert_device.get('use_dept_id'), department.id)
 
     def test_assert_device_batch_upload(self):
         """
@@ -360,14 +360,14 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_place = self.create_storage_place(
             dept=self.dept, parent=hospital_address,
             title='信息设备存储室'
         )
         self.assertIsNotNone(storage_place)
-        self.assertEquals(storage_place.parent.id, hospital_address.id)
+        self.assertEqual(storage_place.parent.id, hospital_address.id)
         # 创建医疗器械68分类数据
         medical_devices_six8_cate = self.create_medical_device_cate(
             creator=self.user.get_profile())
@@ -382,7 +382,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
                     'cate': 'ME'
                 })
         self.assert_response_success(response)
-        self.assertEquals(response.get('code'), 10000)
+        self.assertEqual(response.get('code'), 10000)
 
 
 class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
@@ -398,7 +398,7 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_place = self.create_storage_place(
             dept=self.dept, parent=hospital_address,
@@ -430,9 +430,9 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assert_response_success(response)
         maintenance_plan = response.get('maintenance_plan')
         self.assertIsNotNone(maintenance_plan)
-        self.assertEquals(maintenance_plan.get('title'), data.get('title'))
-        self.assertEquals(maintenance_plan.get('status'), 'NW')
-        self.assertEquals(
+        self.assertEqual(maintenance_plan.get('title'), data.get('title'))
+        self.assertEqual(maintenance_plan.get('status'), 'NW')
+        self.assertEqual(
             len(maintenance_plan.get('assert_devices')),
             len(data.get('assert_device_ids').strip(',').split(','))
         )
@@ -449,7 +449,7 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_places = []
         for i in range(2):
@@ -460,7 +460,7 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
                 )
             )
         self.assertIsNotNone(storage_places)
-        self.assertEquals(len(storage_places), 2)
+        self.assertEqual(len(storage_places), 2)
 
         assert_devices = []
         for storage_place in storage_places:
@@ -476,7 +476,7 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
                     )
                 )
         self.assertIsNotNone(assert_devices)
-        self.assertEquals(len(assert_devices), 6)
+        self.assertEqual(len(assert_devices), 6)
         maintenance_plans = []
         for j in range(5):
             maintenance_plans.append(
@@ -488,7 +488,7 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
                 )
             )
         self.assertIsNotNone(maintenance_plans)
-        self.assertEquals(len(maintenance_plans), 5)
+        self.assertEqual(len(maintenance_plans), 5)
         query_data = {
             'search_key': '维护',
             'period': 'OM',
@@ -500,9 +500,9 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assert_response_success(response)
         maintenance_plan_list = response.get('maintenance_plans')
         self.assertIsNotNone(maintenance_plan_list)
-        self.assertEquals(len(maintenance_plan_list), 3)
+        self.assertEqual(len(maintenance_plan_list), 3)
         for maintenance_plan in maintenance_plan_list:
-            self.assertEquals(maintenance_plan.get('status'), 'NW')
+            self.assertEqual(maintenance_plan.get('status'), 'NW')
 
     def test_maintenance_plan_detail(self):
         """
@@ -516,14 +516,14 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         title = '信息综合大楼'
         hospital_address = self.create_hospital_address(title=title)
         self.assertIsNotNone(hospital_address)
-        self.assertEquals(hospital_address.title, title)
+        self.assertEqual(hospital_address.title, title)
         # 创建大楼中的存储地点
         storage_place = self.create_storage_place(
                     dept=self.dept, parent=hospital_address,
                     title='信息设备存储室_{}'.format(self.get_random_suffix())
                 )
         self.assertIsNotNone(storage_place)
-        self.assertEquals(storage_place.parent.id, hospital_address.id)
+        self.assertEqual(storage_place.parent.id, hospital_address.id)
         assert_devices = []
         for i in range(3):
             assert_devices.append(
@@ -537,7 +537,7 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
                 )
             )
         self.assertIsNotNone(assert_devices)
-        self.assertEquals(len(assert_devices), 3)
+        self.assertEqual(len(assert_devices), 3)
 
         maintenance_plan = self.create_maintenance_plan(
                     title="资产设备维护计划_{}".format(self.get_random_suffix()),
@@ -551,7 +551,7 @@ class MaintenancePlanTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assert_response_success(response)
         m_plan = response.get('maintenance_plan')
         self.assertIsNotNone(m_plan)
-        self.assertEquals(m_plan.get('id'), maintenance_plan.id)
+        self.assertEqual(m_plan.get('id'), maintenance_plan.id)
 
 
 class RepairOrderTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
@@ -613,6 +613,7 @@ class RepairOrderTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assertTrue(len(repair_orders) >= 2)
         # 测试分派
         order = repair_orders[0]
+        logger.info(order['status'])
         dispatch_data = {
             'action': 'DSP',
             'maintainer_id': self.admin_staff.id,
