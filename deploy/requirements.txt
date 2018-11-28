@@ -44,3 +44,5 @@ djangorestframework-composed-permissions==0.2
 openpyxl==2.5.4
 django-bulk-update==2.2.0
 python-dateutil==2.7.3
+channels==2.1.5
+channels-redis==2.3.1
