@@ -1233,7 +1233,6 @@ class SupplierSelectionPlan(BaseModel):
     selected = models.BooleanField('是否为最终选定方案', default=False)
     modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
-
     objects = SupplierSelectionPlanManager()
 
     class Meta:

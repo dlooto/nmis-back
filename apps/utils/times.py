@@ -76,6 +76,7 @@ def before_days(atime, interval):
 
 # #time handling. 时间的操作, 其本上常用的类有：datetime和timedelta
 
+
 DEFAULT_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
@@ -87,11 +88,13 @@ def str_to_datetime(timestr, format=DEFAULT_TIME_FORMAT):
     """
     return datetime.datetime.strptime(timestr, format)
 
+
 def str_to_time(timestr, format=DEFAULT_TIME_FORMAT):
     """
     将时间字符串转为对应的时间对象
     """
     return time.strptime(timestr, format)
+
 
 def datetime_to_str(a_datetime, format=DEFAULT_TIME_FORMAT):
     """
@@ -99,6 +102,14 @@ def datetime_to_str(a_datetime, format=DEFAULT_TIME_FORMAT):
     如 datetime.datetime(2015, 7, 23, 16, 12, 39) 转为 "2015-07-23 16:12:39"
     """
     return a_datetime.strftime(format)
+
+
+def datetime_strftime(format=DEFAULT_TIME_FORMAT):
+    """
+    如 datetime.datetime.now(2015-07-23 16:12:39.130297) 转为 "2015-07-23 16:12:39"
+    :return:
+    """
+    return datetime.datetime.strftime(now(), format)
 
 
 def incr(a_datetime, hours=0):

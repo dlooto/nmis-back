@@ -28,6 +28,7 @@ from nmis.hospitals.models import Hospital, Staff, Department, Role
 from nmis.hospitals.permissions import (
     HospitalStaffPermission, IsHospSuperAdmin, ProjectDispatcherPermission,
     HospGlobalReportAssessPermission, SystemManagePermission)
+from nmis.notices.models import Notice
 from nmis.projects.forms import (
     ProjectPlanCreateForm,
     ProjectPlanUpdateForm,
@@ -62,7 +63,7 @@ from nmis.projects.consts import (
     DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD, DEFAULT_MILESTONE_PLAN_GATHERED,
     DEFAULT_MILESTONE_PLAN_ARGUMENT,
     DEFAULT_MILESTONE_CONTRACT_MANAGEMENT, DEFAULT_MILESTONE_CONFIRM_DELIVERY,
-    ProjectStatusEnum, DEFAULT_MILESTONE_REQUIREMENT_ARGUMENT)
+    ProjectStatusEnum, DEFAULT_MILESTONE_REQUIREMENT_ARGUMENT, PRO_STATUS_PENDING)
 from utils import times
 from utils.files import remove, is_file_exist
 
@@ -212,6 +213,11 @@ class ProjectPlanCreateView(BaseAPIView):
         if not project:
             return resp.failed('项目申请提交异常')
 
+        # 生成消息，给项目分配者推送消息
+        staffs = Staff.objects.filter(user__role__codename=ROLE_CODE_PRO_DISPATCHER)
+        message = "%s于%s: 提交项目申请,请尽快处理!" % (req.user.get_profile().name, times.datetime_strftime())
+        Notice.objects.create_notice(staffs, message)
+
         return resp.serialize_response(
             project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
         )
@@ -324,6 +330,15 @@ class ProjectPlanDispatchView(BaseAPIView):
                 return resp.failed(result)
         else:
             return resp.failed('操作失败')
+
+        # 分配成功后向项目申请者/负责人/协助人发送项目被挂起消息
+        message = "%s于%s: 分配 '%s' 申请" % (
+            req.user.get_profile().name, times.datetime_strftime(), project.title)
+        if assistant:
+            Notice.objects.create_notice([project.creator, assistant, performer], message)
+        else:
+            Notice.objects.create_notice([project.creator, performer], message)
+
         project_queryset = ProjectPlanSerializer.setup_eager_loading(ProjectPlan.objects.filter(id=project_id)).first()
         return resp.serialize_response(
             project_queryset,
@@ -374,14 +389,16 @@ class ProjectPlanOverruleView(BaseAPIView):
         """
         self.check_object_any_permissions(req, req.user.get_profile().organ)
         project = self.get_object_or_404(project_id, ProjectPlan)
-        if project.status == PRO_STATUS_OVERRULE:
-            return resp.failed('项目已驳回')
-        if project.status == PRO_STATUS_DONE:
-            return resp.failed('项目以完成，无法驳回')
-        if project.status == PRO_STATUS_PAUSE:
-            return resp.failed('项目已挂起，无法驳回')
-        if project.status == PRO_STATUS_STARTED:
-            return resp.failed('项目已开始，无法驳回')
+        # if project.status == PRO_STATUS_OVERRULE:
+        #     return resp.failed('项目已驳回')
+        # if project.status == PRO_STATUS_DONE:
+        #     return resp.failed('项目以完成，无法驳回')
+        # if project.status == PRO_STATUS_PAUSE:
+        #     return resp.failed('项目已挂起，无法驳回')
+        # if project.status == PRO_STATUS_STARTED:
+        #     return resp.failed('项目已开始，无法驳回')
+        if not project.status == PRO_STATUS_PENDING:
+            return resp.failed('项目状态不为待分配状态,无法驳回')
         operation_record_data = {
             'project': project_id,
             'reason': req.data.get('reason', '').strip(),
@@ -391,6 +408,12 @@ class ProjectPlanOverruleView(BaseAPIView):
 
             project_queryset = ProjectPlanSerializer.setup_eager_loading(
                 ProjectPlan.objects.filter(id=project_id)).first()
+
+            # 驳回成功后向项目申请者发送项目被驳回消息
+            message = "%s于%s:驳回 '%s'" % (
+                req.user.get_profile().name, times.datetime_strftime(), project.title)
+            Notice.objects.create_notice([project.creator], message)
+
             return resp.serialize_response(project_queryset, results_name='project')
         else:
             return resp.failed("操作失败")
@@ -416,6 +439,12 @@ class ProjectPlanPauseView(BaseAPIView):
         if project.change_status(status=PRO_STATUS_PAUSE, **operation_record_data):
             project_queryset = ProjectPlanSerializer.setup_eager_loading(
                 ProjectPlan.objects.filter(id=project_id)).first()
+
+            # 挂起成功后向项目申请者发送项目被挂起消息
+            message = "%s于%s: 挂起 '%s'" % (
+                req.user.get_profile().name, times.datetime_strftime(), project.title)
+            Notice.objects.create_notice([project.creator], message)
+
             return resp.serialize_response(project_queryset, results_name='project')
         else:
             return resp.failed("操作失败")
