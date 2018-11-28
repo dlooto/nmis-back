@@ -14,8 +14,7 @@ from django.db import models, transaction
 
 from base.models import BaseModel
 from nmis.hospitals.consts import HOSP_GRADE_CHOICES, DPT_ATTRI_MEDICAL, DPT_ATTRI_CHOICES, \
-    DOCTOR_TITLE_CHOICES, ROLE_CATE_CHOICES, ROLE_CATE_NORMAL, \
-    HOSPITAL_AREA_TYPE_CHOICES, ROLE_CODE_HOSP_SUPER_ADMIN
+    DOCTOR_TITLE_CHOICES, ROLE_CATE_CHOICES, ROLE_CATE_NORMAL, ROLE_CODE_HOSP_SUPER_ADMIN
 from nmis.hospitals.managers import RoleManager, SequenceManager, \
     HospitalAddressManager
 
@@ -377,13 +376,14 @@ class HospitalAddress(BaseModel):
     医院内部地址
     """
     title = models.CharField('名称', max_length=128)
-    type = models.CharField('类型', choices=HOSPITAL_AREA_TYPE_CHOICES, max_length=10)
+    is_storage_place = models.BooleanField('是否存储地点', default=False)
     parent = models.ForeignKey('self', verbose_name='父级地址', on_delete=models.PROTECT, null=True, blank=True)
     # 祖节点到当节点的父节点最短路径, 由各节点id的字符串组成，每个id,之间用‘-’进行分隔
     parent_path = models.CharField('父地址路径', max_length=255, default='', null=False, blank=False)
     level = models.SmallIntegerField('层级')
     sort = models.SmallIntegerField('排序')
     disabled = models.BooleanField('是否禁用', default=False,)
+    # 当且is_storage_place=True, dept有值
     dept = models.ForeignKey(
         'hospitals.Department', verbose_name='所属科室', on_delete=models.PROTECT,
         null=True, blank=True
@@ -398,11 +398,11 @@ class HospitalAddress(BaseModel):
         verbose_name_plural = verbose_name
         db_table = 'hosp_hospital_address'
         permissions = (
-            ('view_hospital_address', 'can view hospital address'),    # 查看医院地址
+            ('view_hospital_address', 'can view hospital address'),    # 查看医院内部地址
         )
 
     VALID_ATTRS = [
-        'title', 'type', 'parent', 'parent_path', 'level', 'sort', 'disabled', 'dept', 'desc',
+        'title', 'is_storage_place', 'parent', 'parent_path', 'level', 'sort', 'disabled', 'dept', 'desc',
     ]
 
     def __str__(self):

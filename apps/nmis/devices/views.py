@@ -31,7 +31,7 @@ from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderDispatchForm, FaultSolutionCreateForm, FaultSolutionsImportForm, \
     AssertDeviceBatchUploadForm, FaultSolutionUpdateForm
 
-from nmis.devices.models import AssertDevice, MedicalDeviceSix8Cate, RepairOrder, \
+from nmis.devices.models import AssertDevice, MedicalDeviceCate, RepairOrder, \
     FaultType, FaultSolution, MaintenancePlan
 from nmis.devices.permissions import AssertDeviceAdminPermission, RepairOrderCreatorPermission, \
     MaintenancePlanExecutePermission, RepairOrderHandlePermission, RepairOrderDispatchPermission, \
@@ -107,7 +107,7 @@ class AssertDeviceCreateView(BaseAPIView):
         if req.data.get('use_dept_id'):
             self.get_object_or_404(req.data.get('use_dept_id'), Department)
         if req.data.get('medical_device_cate_id'):
-            self.get_object_or_404(req.data.get('medical_device_cate_id'), MedicalDeviceSix8Cate)
+            self.get_object_or_404(req.data.get('medical_device_cate_id'), MedicalDeviceCate)
         self.get_object_or_404(req.data.get('storage_place_id'), HospitalAddress)
         creator = req.user.get_profile()
         form = AssertDeviceCreateForm(creator, req.data)
@@ -119,7 +119,7 @@ class AssertDeviceCreateView(BaseAPIView):
         return resp.serialize_response(assert_device, results_name='assert_device')
 
 
-class MedicalDeviceSix8CateListView(BaseAPIView):
+class MedicalDeviceCateListView(BaseAPIView):
 
     permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
 
@@ -129,10 +129,10 @@ class MedicalDeviceSix8CateListView(BaseAPIView):
         """
         self.check_object_any_permissions(req, req.user)
 
-        medical_device_six8_cate_list = MedicalDeviceSix8Cate.objects.get_medical_device_six8_cates()
+        medical_device_cate_list = MedicalDeviceCate.objects.get_medical_device_cates()
 
         return resp.serialize_response(
-            medical_device_six8_cate_list, results_name='medical_device_six8_cates')
+            medical_device_cate_list, results_name='medical_device_cates')
 
 
 class AssertDeviceView(BaseAPIView):
@@ -158,7 +158,7 @@ class AssertDeviceView(BaseAPIView):
         if assert_device.cate == ASSERT_DEVICE_CATE_MEDICAL:
             if not req.data.get('medical_device_cate_id'):
                 return resp.failed('医疗设备分类不能为空')
-            self.get_object_or_404(req.data.get('medical_device_cate_id'), MedicalDeviceSix8Cate)
+            self.get_object_or_404(req.data.get('medical_device_cate_id'), MedicalDeviceCate)
 
         modifier = req.user.get_profile()
         form = AssertDeviceUpdateForm(req.data, modifier, assert_device)

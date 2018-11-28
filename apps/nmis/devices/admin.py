@@ -11,7 +11,7 @@ import logging
 
 from django.contrib import admin
 
-from nmis.devices.models import OrderedDevice, SoftwareDevice, ContractDevice, MedicalDeviceSix8Cate, AssertDevice, \
+from nmis.devices.models import OrderedDevice, SoftwareDevice, ContractDevice, MedicalDeviceCate, AssertDevice, \
     AssertDeviceRecord, FaultType, RepairOrder, RepairOrderRecord, MaintenancePlan, FaultSolution
 
 logger = logging.getLogger(__name__)
@@ -39,9 +39,9 @@ class ContractDeviceAdmin(admin.ModelAdmin):
     )
 
 
-class MedicalDeviceSix8CateAdmin(admin.ModelAdmin):
+class MedicalDeviceCateAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'code', 'title', 'parent', 'mgt_cate', 'level',
+        'id', 'code', 'title', 'level_code', 'parent', 'mgt_cate', 'level',
     )
     search_fields = ()
     list_display_links = ()
@@ -109,7 +109,7 @@ class FaultSolutionAdmin(admin.ModelAdmin):
 admin.site.register(OrderedDevice, OrderedDeviceAdmin)
 admin.site.register(SoftwareDevice, SoftwareDeviceAdmin)
 admin.site.register(ContractDevice, ContractDeviceAdmin)
-admin.site.register(MedicalDeviceSix8Cate, MedicalDeviceSix8CateAdmin)
+admin.site.register(MedicalDeviceCate, MedicalDeviceCateAdmin)
 admin.site.register(AssertDevice, AssertDeviceAdmin)
 admin.site.register(AssertDeviceRecord, AssertDeviceRecordAdmin)
 admin.site.register(FaultType, FaultTypeAdmin)

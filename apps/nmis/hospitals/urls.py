@@ -65,7 +65,13 @@ urlpatterns = [
     path("roles", views.RoleListView.as_view(), ),
 
     # 获取医院机构下资产设备存储地点列表
-    path('<int:hid>/hospital-address', views.HospitalAddressListView.as_view()),
+    path('<int:hid>/storage-places', views.StoragePlaceListView.as_view()),
+
+    # 获取医院机构下资产设备存储地点列表
+    path('<int:hid>/hospital-addresses', views.HospitalAddressListView.as_view()),
+
+    # 创建或修改医院机构下资产设备存储地点
+    path('<int:hid>/hospital-addresses/create', views.HospitalAddressCreateView.as_view()),
 
     # 获取用户列表（供下拉菜单使用）
     path('<int:organ_id>/simple-staffs',    views.SimpleStaffView.as_view(),),

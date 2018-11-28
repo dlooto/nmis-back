@@ -13,7 +13,7 @@ from base import resp
 from base.serializers import BaseModelSerializer
 from nmis.documents.models import File
 from .models import OrderedDevice, SoftwareDevice, ContractDevice, AssertDevice, \
-    MedicalDeviceSix8Cate, MaintenancePlan
+    MedicalDeviceCate, MaintenancePlan
 from nmis.devices.models import RepairOrder, FaultType, FaultSolution, RepairOrderRecord
 from nmis.hospitals.serializers import StaffSerializer, HospitalAddressSerializer
 
@@ -118,9 +118,9 @@ class AssertDeviceBriefSerializer(BaseModelSerializer):
         pass
 
 
-class MedicalDeviceSix8CateSerializer(BaseModelSerializer):
+class MedicalDeviceCateSerializer(BaseModelSerializer):
     class Meta:
-        model = MedicalDeviceSix8Cate
+        model = MedicalDeviceCate
         fields = ('id', 'title')
 
     @staticmethod

@@ -26,7 +26,8 @@ from utils.files import ExcelBasedOXL
 from base import resp
 from base.views import BaseAPIView
 from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
-    DepartmentBatchUploadForm, RoleCreateForm, RoleUpdateForm
+    DepartmentBatchUploadForm, RoleCreateForm, RoleUpdateForm, \
+    HospitalAddressCreateForm
 from nmis.hospitals.permissions import IsHospSuperAdmin, HospitalStaffPermission, \
     ProjectDispatcherPermission, IsSuperAdmin, SystemManagePermission
 from nmis.hospitals.models import Hospital, Department, Staff, Role, HospitalAddress
@@ -635,6 +636,39 @@ class HospitalAddressListView(BaseAPIView):
         self.get_object_or_404(hid, Hospital)
         hospital_address_list = HospitalAddress.objects.get_hospital_address_list()
         return resp.serialize_response(hospital_address_list, results_name='hospital_address')
+
+
+class StoragePlaceListView(BaseAPIView):
+
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission, AssertDeviceAdminPermission)
+
+    def get(self, req, hid):
+        """
+        获取医疗机构下资产设备存储地点列表
+        """
+        self.check_object_any_permissions(req, None)
+        self.get_object_or_404(hid, Hospital)
+        storage_places = HospitalAddress.objects.get_storage_places()
+        return resp.serialize_response(storage_places, results_name='storage_places')
+
+
+class HospitalAddressCreateView(BaseAPIView):
+
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission, AssertDeviceAdminPermission)
+
+    def post(self, req, hid):
+        """
+        创建医院内部地址
+        """
+        self.check_object_any_permissions(req, None)
+        self.get_object_or_404(hid, Hospital)
+        form = HospitalAddressCreateForm(req.user.get_profile(), req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        success, msg = form.save()
+        if not success:
+            return resp.failed(msg)
+        return resp.serialize_response(msg, results_name='hosp_address', srl_cls_name='HospitalAddressSerializer')
 
 
 class SimpleStaffView(BaseAPIView):
