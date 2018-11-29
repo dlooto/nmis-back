@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 class AssertDeviceListView(BaseAPIView):
 
-    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin)
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, HospitalStaffPermission)
 
     def get(self, req):
         """
@@ -62,9 +62,17 @@ class AssertDeviceListView(BaseAPIView):
         ）
         """
         self.check_object_any_permissions(req, req.user)
-        search_key = req.GET.get('search_key')
-        str_status = req.GET.get('status')
-        cate = req.GET.get('cate')
+        search_key = req.GET.get('search_key', '').strip()
+        str_status = req.GET.get('status', '').strip()
+        cate = req.GET.get('cate', '').strip()
+        # 获取列表类型（total: 代表获取资产设备总览）
+        devices_type = req.GET.get('type', '').strip()
+        if not devices_type:
+            return resp.failed('不存在type值')
+        else:
+            if devices_type not in ('TL', 'PF'):
+                return resp.failed('不合法的type值')
+
         storage_place_ids = get_id_list(req.GET.get('storage_place_ids', '').strip())
         if cate:
             if cate not in dict(ASSERT_DEVICE_CATE_CHOICES):
@@ -83,6 +91,13 @@ class AssertDeviceListView(BaseAPIView):
         assert_devices = AssertDevice.objects.get_assert_devices(
             cate=cate, search_key=search_key, status=status_list, storage_places=storage_places)
         assert_devices = AssertDeviceSerializer.setup_eager_loading(assert_devices)
+
+        for role in req.user.get_roles():
+            if role.codename in (ROLE_CODE_ASSERT_DEVICE_ADMIN, ROLE_CODE_HOSP_SUPER_ADMIN):
+                if devices_type == 'TL':
+                    return self.get_pages(assert_devices, results_name='assert_devices')
+
+        assert_devices = assert_devices.filter(performer=req.user.get_profile())
         return self.get_pages(assert_devices, results_name='assert_devices')
 
 
