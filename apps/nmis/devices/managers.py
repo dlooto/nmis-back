@@ -23,12 +23,12 @@ from utils import times
 logger = logging.getLogger(__name__)
 
 
-class MedicalDeviceSix8CateManager(BaseManager):
+class MedicalDeviceCateManager(BaseManager):
 
-    def create_medical_device_six8_cate(self, creator, medical_device_six8_cate):
+    def create_medical_device_cate(self, creator, medical_device_cate):
         pass
 
-    def get_medical_device_six8_cates(self):
+    def get_medical_device_cates(self):
         """
         获取医疗器械分类列表
         """

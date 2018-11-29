@@ -13,7 +13,7 @@ import re
 from django.contrib.auth.models import Permission
 from django.db import transaction
 from utils import eggs
-from nmis.hospitals.models import Hospital, Department, Staff, Role
+from nmis.hospitals.models import Hospital, Department, Staff, Role, HospitalAddress
 from organs.forms import OrganSignupForm
 from base.forms import BaseForm
 from nmis.hospitals.consts import ROLE_CATE_NORMAL, ROLE_CODE_NORMAL_STAFF, DPT_ATTRI_OTHER
@@ -976,3 +976,57 @@ class RoleUpdateForm(BaseForm):
             logger.exception(e)
             return None
 
+
+class HospitalAddressCreateForm(BaseForm):
+
+    def __init__(self, user_profile, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.user_profile = user_profile
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'id_error': 'id数据异常',
+            'title_error': '地址名称为空或数据错误',
+            'title_limit_size': '地址名称不能超过100个字符',
+            'parent_error': '父地址数据异常',
+            'is_storage_place_error': '是否存储地点为空或数据异常',
+        })
+
+    def is_valid(self):
+        return True
+
+    def check_id(self, id):
+        return True
+
+    def check_title(self):
+        return True
+
+    def check_parent(self):
+        return True
+
+    def check_is_storage_place(self):
+        return True
+
+    def save(self):
+        save_data = dict()
+        save_data['title'] = self.data.get('title', '').strip()
+        save_data['is_storage_place'] = self.data.get('is_storage_place')
+        parent_id = self.data.get('parent_id')
+        parent = HospitalAddress.objects.get_by_id(parent_id)
+        dept_id = self.data.get('dept_id')
+        dept = Department.objects.get_by_id(dept_id)
+        not_required_data = {}
+        if dept:
+            not_required_data['dept'] = dept
+        save_data['parent'] = parent
+        if self.data.get('desc') and isinstance(self.data.get('desc'), str):
+            not_required_data['desc'] = self.data.get('desc').strip()
+
+        return HospitalAddress.objects.create_address(
+            self.user_profile,
+            save_data.get('title'),
+            save_data.get('is_storage_place'),
+            save_data.get('parent'),
+            **not_required_data
+        )

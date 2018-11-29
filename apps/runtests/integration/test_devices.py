@@ -39,8 +39,8 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         # 创建使用部门
         use_department = self.create_department(self.organ, dept_name='测试科室')
         # 创建医疗器械68分类数据
-        medical_devices_six8_cate = self.create_medical_device_cate(creator=self.user.get_profile())
-        self.assertIsNotNone(medical_devices_six8_cate)
+        medical_devices_cate = self.create_medical_device_cate(creator=self.user.get_profile())
+        self.assertIsNotNone(medical_devices_cate)
 
         # 创建机构大楼信息
         title = '信息综合大楼'
@@ -55,7 +55,7 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         medical_assert_device_data = {
             "assert_no": "TEST0007_{}".format(self.get_random_suffix()),
             "title": "柳叶刀",
-            "medical_device_cate_id": medical_devices_six8_cate.id,
+            "medical_device_cate_id": medical_devices_cate.id,
             "serial_no": "TEST03420352_{}".format(self.get_random_suffix()),
             "type_spec": "BN3004",
             "service_life": 3,
@@ -369,9 +369,9 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assertIsNotNone(storage_place)
         self.assertEqual(storage_place.parent.id, hospital_address.id)
         # 创建医疗器械68分类数据
-        medical_devices_six8_cate = self.create_medical_device_cate(
+        medical_devices_cate = self.create_medical_device_cate(
             creator=self.user.get_profile())
-        self.assertIsNotNone(medical_devices_six8_cate)
+        self.assertIsNotNone(medical_devices_cate)
 
         import os
         curr_path = os.path.dirname(__file__)

@@ -9,7 +9,7 @@ from base.forms import BaseForm
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
     MAINTENANCE_PLAN_TYPE_CHOICES, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_INFORMATION, \
     ASSERT_DEVICE_CATE_MEDICAL
-from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan, FaultSolution, MedicalDeviceSix8Cate
+from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan, FaultSolution, MedicalDeviceCate
 from utils import eggs
 from utils.times import now, get_day_begin_time
 from nmis.hospitals.models import Staff, Department, HospitalAddress
@@ -1557,7 +1557,7 @@ class AssertDeviceBatchUploadForm(BaseForm):
             self.update_errors('medical_code', 'medical_code_null_err')
             return False
 
-        medical_device_cate_db_list = MedicalDeviceSix8Cate.objects.exclude(parent=None).filter(code__in=set(code_list))
+        medical_device_cate_db_list = MedicalDeviceCate.objects.exclude(parent=None).filter(code__in=set(code_list))
 
         medical_device_cate_db_codes = [
             medical_device_cate.code for medical_device_cate in medical_device_cate_db_list

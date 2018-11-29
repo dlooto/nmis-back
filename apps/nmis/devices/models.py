@@ -23,7 +23,7 @@ from nmis.devices.consts import MGT_CATE_CHOICE, ASSERT_DEVICE_CATE_CHOICES, \
     ASSERT_DEVICE_OPERATION_CHOICES, \
     ASSERT_DEVICE_OPERATION_SUBMIT, FAULT_SOLUTION_STATUS_CHOICES, \
     FAULT_SOLUTION_STATUS_NEW, ASSERT_DEVICE_STATUS_SCRAPPED, MAINTENANCE_PLAN_STATUS_DONE
-from nmis.devices.managers import AssertDeviceManager, MedicalDeviceSix8CateManager, FaultTypeManager, \
+from nmis.devices.managers import AssertDeviceManager, MedicalDeviceCateManager, FaultTypeManager, \
     RepairOrderManager, MaintenancePlanManager, FaultSolutionManager
 
 logger = logging.getLogger(__name__)
@@ -181,42 +181,49 @@ class ContractDevice(Device):
 # ------------------------------ 设备管理 --------------------------- #
 # ------------------------------------------------------------------ #
 
-
-class MedicalDeviceSix8Cate(BaseModel):
+class MedicalDeviceCate(BaseModel):
     """
-    医疗器械分类（68码）
+    医疗器械分类
     """
-    code = models.CharField('分类编号', max_length=16, unique=True)
+    MGT_CATE_CHOICES = (
+        (1, "Ⅱ"),
+        (2, "Ⅲ"),
+        (3, "Ⅲ"),
+    )
+    code = models.CharField('分类编码', max_length=20, unique=True)
     title = models.CharField('分类名称', max_length=128, )
-    level = models.SmallIntegerField('分类等级', default=1)
+    # 同一层级具有唯一性
+    level_code = models.CharField('同级编码', max_length=20)
+    # 根据政策医疗器械分类分3层，0为目录，1为一级产品类别，2为二级级产品类别
+    level = models.SmallIntegerField('分类层级', default=0)
     parent = models.ForeignKey(
-        'self', related_name='child_six8_cate', verbose_name='父级分类', on_delete=models.PROTECT,
+        'self', related_name='cate_children', verbose_name='父级分类', on_delete=models.PROTECT,
         null=True, blank=True
     )
     example = models.TextField('品名举例', max_length=2048, null=True, blank=True)
-    mgt_cate = models.SmallIntegerField('管理类别', null=True)
+    # level2时，该属性才有值
+    mgt_cate = models.SmallIntegerField('管理类别', choices=MGT_CATE_CHOICES, null=True)
     creator = models.ForeignKey(
-        'hospitals.Staff', related_name='created_medical_device_cate', verbose_name='创建人', on_delete=models.PROTECT
+        'hospitals.Staff', related_name='created_medical_device_cates', verbose_name='创建人', on_delete=models.PROTECT
     )
     modifier = models.ForeignKey(
-        'hospitals.Staff', related_name='modified_six8_cates', verbose_name='修改人',
+        'hospitals.Staff', related_name='modified_medical_device_cates', verbose_name='修改人',
         on_delete=models.PROTECT, null=True, blank=True
     )
     modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
-
-    objects = MedicalDeviceSix8CateManager()
+    objects = MedicalDeviceCateManager()
 
     class Meta:
-        verbose_name = ' 医疗器械分类(68码)'
+        verbose_name = ' 医疗器械分类目录'
         verbose_name_plural = verbose_name
-        db_table = 'devices_medical_device_six8_cate'
+        db_table = 'devices_medical_device_cate'
         permissions = (
-            ('view_medical_device_six8_cate', 'can view medical device six8 cate'),
+            ('view_medical_device_cate', 'can view medical device cate'),
         )
 
     VALID_ATTRS = [
-        'code', 'title', 'parent', 'level', 'example', 'mgt_cate',
+        'code', 'title', 'parent', 'level_code', 'level', 'example', 'mgt_cate',
     ]
 
     def __str__(self):
@@ -240,7 +247,7 @@ class AssertDevice(BaseModel):
     title = models.CharField('资产名称', max_length=128, )
     cate = models.CharField('资产设备类型', choices=ASSERT_DEVICE_CATE_CHOICES, max_length=10, default=ASSERT_DEVICE_CATE_MEDICAL, )
     medical_device_cate = models.ForeignKey(
-        'devices.MedicalDeviceSix8Cate', related_name='related_assert_device', verbose_name='医疗器械分类',
+        'devices.MedicalDeviceCate', related_name='related_assert_device', verbose_name='医疗器械分类',
         on_delete=models.PROTECT, null=True
     )
     serial_no = models.CharField('资产序列号', max_length=64, unique=True)

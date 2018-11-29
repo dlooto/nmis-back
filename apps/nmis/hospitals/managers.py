@@ -249,14 +249,44 @@ class HospitalAddressManager(BaseManager):
         """
         获取医疗机构下资产设备存放地点列表（返回room级别的存放地点）
         """
-        return self.exclude(parent=None)
+        try:
+            return self.exclude(parent=None, )
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+    def get_storage_places(self):
+        """
+        获取医疗机构下资产设备存放地点列表
+
+        """
+        try:
+            return self.filter(is_storage_place=True)
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+    def get_storage_place_by_id(self, id):
+        """
+        获取医疗机构下资产设备存放地点列表
+
+        """
+        try:
+            return self.filter(id=id, is_storage_place=True)
+        except Exception as e:
+            logger.exception(e)
+            return None
 
     def get_hospital_address_by_ids(self, ids):
         """
         通过存储地点ID集合查询存储地点
         :param ids: 资产设备存储地点list
         """
-        return self.filter(id__in=ids)
+        try:
+            return self.filter(id__in=ids)
+        except Exception as e:
+            logger.exception(e)
+            return None
 
     def create_storage_place(self, storage_places):
         """
@@ -273,6 +303,47 @@ class HospitalAddressManager(BaseManager):
         except Exception as e:
             logger.exception(e)
             return None
+
+    def create_address(self, operator, title, is_storage_place, parent, *args, **kwargs):
+        data = {
+            'title': title,
+            'is_storage_place': is_storage_place,
+            'parent': parent
+        }
+        if kwargs.get('desc'):
+            data['desc'] = kwargs.get('desc')
+        # data['creator'] = operator
+
+        if is_storage_place:
+            data['dept'] = kwargs.get('dept')
+        siblings = self.filter(parent=parent)
+        if not siblings:
+            data['sort'] = 1
+        else:
+            max_sort_address = siblings.order_by('-sort')[::][0]
+            data['sort'] = max_sort_address.sort + 1
+        if not parent:
+            data['level'] = 1
+            # 相同分支，相同层级的title不能重复
+            if self.filter(title=title, level=1):
+                return False, '已存在相同名称的地址'
+        else:
+            # # 父节点为存储地址时，不能在添加子节点
+            if parent.is_storage_place:
+                return False, '数据异常'
+            data['level'] = parent.level + 1
+            if self.filter(title=title, level=data.get('level')):
+                return False, '已存在相同名称的地址'
+            if parent.parent_path:
+                data['parent_path'] = '-'.join([parent.parent_path, str(parent.id)])
+            else:
+                data['parent_path'] = '-'.join([str(parent.id)])
+        try:
+            address, success = self.update_or_create(**data)
+            return True, address
+        except Exception as e:
+            logger.exception(e)
+            return False, "操作失败"
 
 
 class SequenceManager(BaseManager):

@@ -57,8 +57,8 @@ class UserRoleShipAdmin(admin.ModelAdmin):
 
 
 class HospitalAddressAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'type', 'parent', 'level', 'sort', 'disabled', 'dept')
-    search_fields = ('title', 'type')
+    list_display = ('id', 'title', 'is_storage_place', 'parent', 'level', 'sort', 'disabled', 'dept')
+    search_fields = ('title', 'is_storage_place')
     list_display_links = ('dept', )
 
 

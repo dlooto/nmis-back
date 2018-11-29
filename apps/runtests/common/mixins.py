@@ -7,7 +7,7 @@
 
 import logging
 
-from nmis.devices.models import MedicalDeviceSix8Cate, AssertDevice, MaintenancePlan, \
+from nmis.devices.models import MedicalDeviceCate, AssertDevice, MaintenancePlan, \
     FaultType, RepairOrder, FaultSolution
 from nmis.hospitals.models import HospitalAddress
 from nmis.projects.consts import PRO_HANDING_TYPE_SELF, PRO_CATE_SOFTWARE
@@ -167,7 +167,7 @@ MILESTONES = [
     }
 ]
 
-MEDICAL_DEVICES_SIX8_CATE = [
+MEDICAL_DEVICES_CATE = [
     {
         "id": 60030001,
         "code": "6801",
@@ -220,7 +220,7 @@ STORAGE_PLACE = [
     {
         "id": 50020001,
         "title": "住院大楼A座",
-        "type": "BD",
+        "is_storage_place": False,
         "parent_id": None,
         "parent_path": "",
         "level": 1,
@@ -233,7 +233,7 @@ STORAGE_PLACE = [
     {
         "id": 50020002,
         "title": "综合楼B座",
-        "type": "BD",
+        "is_storage_place": False,
         "parent_id": None,
         "parent_path": "",
         "level": 1,
@@ -246,7 +246,7 @@ STORAGE_PLACE = [
     {
         "id": 50020003,
         "title": "消毒设备库房001",
-        "type": "RM",
+        "is_storage_place": True,
         "parent_id": 50020001,
         "parent_path": "50020001",
         "level": 2,
@@ -258,7 +258,7 @@ STORAGE_PLACE = [
     {
         "id": 50020004,
         "title": "消毒设备库房002",
-        "type": "RM",
+        "is_storage_place": True,
         "parent_id": 50020001,
         "parent_path": "50020001",
         "level": 2,
@@ -270,7 +270,7 @@ STORAGE_PLACE = [
     {
         "id": 50020005,
         "title": "手术器械存放室001",
-        "type": "RM",
+        "is_storage_place": True,
         "parent_id": 50020002,
         "parent_path": "50020002",
         "level": 2,
@@ -481,9 +481,9 @@ class AssertDevicesMixin(object):
             "example": "",
             "created_time": "2018-10-30 15:00"
         }
-        medical_device_cate = MedicalDeviceSix8Cate.objects.create(
+        medical_device_cate = MedicalDeviceCate.objects.create(
             creator=creator, **medical_cate_parent_data)
-        return MedicalDeviceSix8Cate.objects.create(
+        return MedicalDeviceCate.objects.create(
             parent=medical_device_cate, creator=creator, **medical_cate_data)
 
     def get_assert_device(self, assert_device_id):
@@ -577,7 +577,7 @@ class HospitalMixin(object):
 
         try:
             return HospitalAddress.objects.create(
-                dept=dept, parent=parent, title=title, type="RM", level=2, sort=1, disabled=False, created_time=times.now())
+                dept=dept, parent=parent, title=title, is_storage_place=True, level=2, sort=1, disabled=False, created_time=times.now())
         except Exception as e:
             logger.exception(e)
             return None
@@ -589,4 +589,4 @@ class HospitalMixin(object):
         """
         from nmis.hospitals.models import HospitalAddress
         return HospitalAddress.objects.create(
-            title=title, type="RM", level=2, sort=1,  disabled=False, created_time=times.now())
+            title=title, is_storage_place=False, level=0, sort=1,  disabled=False, created_time=times.now())
