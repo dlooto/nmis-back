@@ -230,3 +230,24 @@ class OrderPriorityEnum(BaseEnum):
     EMERGENCY = ("E", "紧急")
     URGENT = ("U", "非常紧急")
 
+
+class MdcManageCateEnum(BaseEnum):
+    """
+    医疗器械管理类别枚举
+    """
+    FIRST = (1, "Ⅰ")
+    SECOND = (2, "Ⅱ")
+    THIRD = (3, "Ⅲ")
+
+
+# 医疗器械分类上传文件表头字典
+UPLOADED_MEDICAL_DEVICE_CATE_EXCEL_HEADER_DICT = {
+    'catalog':                  '目录名称',
+    'first_level_cate':         '一级产品类别',
+    'second_level_cate':        '二级产品类别',
+    'code':                     '分类编码',
+    'desc':                     '产品描述',
+    'purpose':                  '预期用途',
+    'example':                  '品名举例',
+    'mgt_cate':                 '管理类别',
+}

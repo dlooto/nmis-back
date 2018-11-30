@@ -5,10 +5,12 @@
 
 import logging
 
+from django.db import transaction
+
 from base.forms import BaseForm
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
     MAINTENANCE_PLAN_TYPE_CHOICES, PRIORITY_CHOICES, ASSERT_DEVICE_CATE_INFORMATION, \
-    ASSERT_DEVICE_CATE_MEDICAL
+    ASSERT_DEVICE_CATE_MEDICAL, MdcManageCateEnum
 from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan, FaultSolution, MedicalDeviceCate
 from utils import eggs
 from utils.times import now, get_day_begin_time
@@ -95,7 +97,7 @@ class AssertDeviceCreateForm(BaseForm):
         try:
             int(service_life)
         except ValueError as e:
-            logger.info(e)
+            logger.exception(e)
             self.update_errors('service_life', 'service_life_err')
             return False
         return True
@@ -426,7 +428,7 @@ class AssertDeviceUpdateForm(BaseForm):
         try:
             int(service_life)
         except ValueError as e:
-            logger.info(e)
+            logger.exception(e)
             self.update_errors('service_life', 'service_life_err')
             return False
         return True
@@ -1687,7 +1689,6 @@ class AssertDeviceBatchUploadForm(BaseForm):
                     break
 
             for resp_dept in self.res_dept_list:
-                logger.info(row_data.get('responsible_dept'))
                 if row_data.get('responsible_dept', '').strip() == resp_dept.name:
                     row_data['responsible_dept'] = resp_dept
                     break
@@ -1856,6 +1857,108 @@ class FaultSolutionsImportForm(BaseForm):
                 fs['fault_type'] = fault_type_dict[fs['fault_type_title']]
                 del fs['fault_type_title']
         return FaultSolution.objects.bulk_create_fault_solution(fault_solution_data)
+
+
+class MedicalDeviceCateImportForm(BaseForm):
+
+    def __init__(self, user_profile, data, *args, **kwargs):
+        BaseForm.__init__(self, data, args, kwargs)
+        self.user_profile = user_profile
+        self.pre_data = self.init_check_data()
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'title_error':                  '第{0}行: 标题为空或数据错误',
+            'title_exists':                 '第{0}行: 已存在相同标题',
+            'title_duplicate':              '第{0}行和第{1}行: 标题重复',
+            'fault_type_error':             '第{0}行: 故障类型为空或数据错误',
+            'fault_type_not_exists':        '第{0}行: 故障类型不存在，请检查',
+            'fault_type_not_been_set':      '系统尚未设置故障类型，请联系管理员',
+            'solution_error':               '第{0}行: 解决方案为空或数据错误',
+            'title_fault_type_exists':      '第{0}行: 已存在相同故障类型的标题',
+            'title_limit_size':             '第{0}行: 标题不能大于30个字符',
+            'solution_limit_size':          '第{0}行: 解决方案不能大于1000个字符',
+            'fault_type_limit_size':        '第{0}行: 故障类型不能大于30个字符',
+        })
+
+    def init_check_data(self):
+        """
+        封装各列数据, 用以进行数据验证
+        :return:
+        """
+        pre_data = dict()
+        if self.data and self.data[0] and self.data[0][0]:
+            catalogs, first_level_cates, second_level_cates = [], [], []
+            for row_data in self.data[0]:
+                catalogs.append(row_data.get('catalog'))
+                first_level_cates.append(row_data.get('first_level_cate'))
+                second_level_cates.append(row_data.get('second_level_cate'))
+            pre_data['catalogs'] = catalogs
+            pre_data['first_level_cates'] = first_level_cates
+            pre_data['second_level_cates'] = second_level_cates
+        return pre_data
+
+    def is_valid(self):
+        return True
+
+    def save(self):
+        catalog_data = self.pre_data.get('catalogs')
+        catalogs = []
+        for item in set(catalog_data):
+            catalog = dict()
+            catalog['level_code'] = item.strip().split('-')[0]
+            catalog['title'] = item.strip().split('-')[1]
+            catalog['creator'] = self.user_profile
+            catalogs.append(catalog)
+
+        new_catalogs = MedicalDeviceCate.objects.bulk_create_med_dev_cate_catalog(catalogs)
+
+        first_level_cate_data = []
+        for row_data in self.data[0]:
+            catalog_cell = row_data.get('catalog', '').strip().split('-')
+            first_level_cate_cell = row_data.get('first_level_cate', '').strip()
+            for item in new_catalogs:
+                if catalog_cell[0] == item.level_code:
+                    first_level_cate_dict = {
+                        'parent': item,
+                        'code': '-'.join([item.code, first_level_cate_cell[0:2]]),
+                        'level_code': first_level_cate_cell[0:2],
+                        'title': first_level_cate_cell[2:],
+                        'creator': self.user_profile
+
+                    }
+                    if first_level_cate_dict not in first_level_cate_data:
+                        first_level_cate_data.append(first_level_cate_dict)
+        new_first_level_cates = MedicalDeviceCate.objects.bulk_create_med_dev_cate_first(first_level_cate_data)
+        med_dev_cate_data = []
+        for row_data in self.data[0]:
+            first_level_cate_level_code = row_data.get('first_level_cate', '').strip()[0:2]
+            first_level_cate_title = row_data.get('first_level_cate', '').strip()[2:]
+
+            for item in new_first_level_cates:
+                if first_level_cate_level_code == item.level_code:
+                    cate_dict = {
+                        'parent': item,
+                        'code': row_data.get('code').strip(),
+                        'level_code': first_level_cate_level_code,
+                        'title': row_data.get('second_level_cate', '').strip(),
+                        'desc': row_data.get('desc').strip(),
+                        'purpose': row_data.get('purpose').strip(),
+                        'example': row_data.get('example').strip(),
+                        'creator': self.user_profile
+                    }
+                    for member in MdcManageCateEnum.members():
+                        if row_data.get('mgt_cate').strip() == member[1].value_name:
+                            cate_dict['mgt_cate'] = member[1].value
+                    if cate_dict not in med_dev_cate_data:
+                        med_dev_cate_data.append(cate_dict)
+        new_med_dev_cates = MedicalDeviceCate.objects.bulk_create_med_dev_cate(med_dev_cate_data)
+        if new_med_dev_cates:
+            return True
+        return False
+
+
 
 
 

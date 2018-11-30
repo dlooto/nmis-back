@@ -24,12 +24,13 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATU
     MAINTENANCE_PLAN_STATUS_CHOICES, MAINTENANCE_PLAN_EXPIRED_DATE_CHOICES, \
     MAINTENANCE_PLAN_STATUS_DONE, UPLOADED_FS_EXCEL_HEAD_DICT, ASSERT_DEVICE_CATE_MEDICAL, \
     UPLOADED_MEDICAL_ASSERT_DEVICE_EXCEL_HEADER_DICT, \
-    UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT, MAINTENANCE_PLAN_TYPE_CHOICES
+    UPLOADED_INFORMATION_ASSERT_DEVICE_EXCEL_HEADER_DICT, MAINTENANCE_PLAN_TYPE_CHOICES, \
+    UPLOADED_MEDICAL_DEVICE_CATE_EXCEL_HEADER_DICT
 from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, \
     RepairOrderCommentForm, \
     RepairOrderDispatchForm, FaultSolutionCreateForm, FaultSolutionsImportForm, \
-    AssertDeviceBatchUploadForm, FaultSolutionUpdateForm
+    AssertDeviceBatchUploadForm, FaultSolutionUpdateForm, MedicalDeviceCateImportForm
 
 from nmis.devices.models import AssertDevice, MedicalDeviceCate, RepairOrder, \
     FaultType, FaultSolution, MaintenancePlan
@@ -148,6 +149,59 @@ class MedicalDeviceCateListView(BaseAPIView):
 
         return resp.serialize_response(
             medical_device_cate_list, results_name='medical_device_cates')
+
+
+class MedicalDeviceCateCatalogListView(BaseAPIView):
+
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
+
+    def get(self, req):
+        """
+        获取医疗器械分类目录
+        """
+        self.check_object_any_permissions(req, req.user)
+
+        catalog = MedicalDeviceCate.objects.get_med_dev_cate_catalog()
+
+        return resp.serialize_response(catalog, results_name='cate_catalog')
+
+
+class MedicalDeviceCateImportView(BaseAPIView):
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
+
+    @transaction.atomic()
+    def post(self, req):
+        """
+        获取医疗器械分类目录
+        """
+        self.check_object_any_permissions(req, None)
+
+        file_obj = req.FILES.get('file')
+        if not file_obj:
+            return resp.failed('请选择要上传的文件')
+        if file_obj.content_type in (ARCHIVE['.xls-wps'], ARCHIVE['.xls']):
+            return resp.failed('系统不支持.xls格式的excel文件, 请使用正确的模板文件')
+        elif file_obj.content_type not in (ARCHIVE['.xlsx'], ARCHIVE['.xlsx-wps'], ARCHIVE['.rar']):
+            return resp.failed('系统不支持该类型文件，请使用正确的模板文件')
+
+        # 将文件存放到服务器
+        # import os
+        # file_server_path = open(os.path.join('/media/', '', file_obj.name), 'wb')
+        # file = open('file_server_path', 'wb')
+        # file_info = files.upload_file(file_obj, DOC_UPLOAD_BASE_DIR)
+
+        is_success, ret = ExcelBasedOXL.open_excel(file_obj)
+        if not is_success:
+            return resp.failed(ret)
+        success, result = ExcelBasedOXL.read_excel(ret, UPLOADED_MEDICAL_DEVICE_CATE_EXCEL_HEADER_DICT)
+        ExcelBasedOXL.close(ret)
+        if not success:
+            return resp.failed(result)
+
+        form = MedicalDeviceCateImportForm(req.user.get_profile(), result)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        return resp.ok('导入成功') if form.save() else resp.failed('导入失败')
 
 
 class AssertDeviceView(BaseAPIView):

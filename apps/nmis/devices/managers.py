@@ -32,8 +32,81 @@ class MedicalDeviceCateManager(BaseManager):
         """
         获取医疗器械分类列表
         """
-        return self.exclude(parent=None)
+        return self.filter(level=2)
 
+    def get_med_dev_cate_catalog(self):
+        """
+        获取医疗器械分类目录
+        :return:
+        """
+        return self.filter(parent=None)
+
+    def bulk_create_med_dev_cate_catalog(self, catalogs):
+        """
+        获取医疗器械分类目录
+        :return:
+        """
+        try:
+            objs = []
+            for item in catalogs:
+                objs.append(self.model(
+                    title=item.get('title'),
+                    code=item.get('level_code'),
+                    level_code=item.get('level_code'),
+                    level=0,
+                    creator=item.get('creator'),
+                ))
+            new_catalogs = self.bulk_create(objs)
+            return self.filter(code__in=[item.code for item in new_catalogs])
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+    def bulk_create_med_dev_cate_first(self, first_level_cates):
+        """
+        获取医疗器械一级分类
+        :return:
+        """
+        try:
+            objs = []
+            for item in first_level_cates:
+                objs.append(self.model(
+                    title=item.get('title'),
+                    code=item.get('code'),
+                    level_code=item.get('level_code'),
+                    parent=item.get('parent'),
+                    level=1,
+                    creator=item.get('creator'),
+                ))
+            new_first_level_cates = self.bulk_create(objs)
+            return self.filter(code__in=[item.code for item in new_first_level_cates])
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+    def bulk_create_med_dev_cate(self, cates):
+        """
+        获取医疗器械一级分类
+        :return:
+        """
+        try:
+            objs = []
+            for item in cates:
+                objs.append(self.model(
+                    title=item.get('title'),
+                    code=item.get('code'),
+                    level_code=item.get('level_code'),
+                    parent=item.get('parent'),
+                    desc=item.get('desc'),
+                    mgt_cate=item.get('mgt_cate'),
+                    example=item.get('example'),
+                    level=2,
+                    creator=item.get('creator'),
+                ))
+            return self.bulk_create(objs)
+        except Exception as e:
+            logger.exception(e)
+            return None
 
 class AssertDeviceManager(BaseManager):
 
