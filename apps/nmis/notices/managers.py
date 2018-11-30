@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class NoticeManager(BaseManager):
 
-    def create_notice(self, staffs, message):
+    def create_and_send_notice(self, staffs, message):
         """
         生成消息
         :param staffs: 员工集合

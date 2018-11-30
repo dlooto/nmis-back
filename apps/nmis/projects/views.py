@@ -216,7 +216,7 @@ class ProjectPlanCreateView(BaseAPIView):
         # 生成消息，给项目分配者推送消息
         staffs = Staff.objects.filter(user__role__codename=ROLE_CODE_PRO_DISPATCHER)
         message = "%s于%s: 提交项目申请,请尽快处理!" % (req.user.get_profile().name, times.datetime_strftime())
-        Notice.objects.create_notice(staffs, message)
+        Notice.objects.create_and_send_notice(staffs, message)
 
         return resp.serialize_response(
             project, srl_cls_name='ChunkProjectPlanSerializer', results_name='project'
@@ -335,9 +335,9 @@ class ProjectPlanDispatchView(BaseAPIView):
         message = "%s于%s: 分配 '%s' 申请" % (
             req.user.get_profile().name, times.datetime_strftime(), project.title)
         if assistant:
-            Notice.objects.create_notice([project.creator, assistant, performer], message)
+            Notice.objects.create_and_send_notice([project.creator, assistant, performer], message)
         else:
-            Notice.objects.create_notice([project.creator, performer], message)
+            Notice.objects.create_and_send_notice([project.creator, performer], message)
 
         project_queryset = ProjectPlanSerializer.setup_eager_loading(ProjectPlan.objects.filter(id=project_id)).first()
         return resp.serialize_response(
@@ -412,7 +412,7 @@ class ProjectPlanOverruleView(BaseAPIView):
             # 驳回成功后向项目申请者发送项目被驳回消息
             message = "%s于%s:驳回 '%s'" % (
                 req.user.get_profile().name, times.datetime_strftime(), project.title)
-            Notice.objects.create_notice([project.creator], message)
+            Notice.objects.create_and_send_notice([project.creator], message)
 
             return resp.serialize_response(project_queryset, results_name='project')
         else:
@@ -443,7 +443,7 @@ class ProjectPlanPauseView(BaseAPIView):
             # 挂起成功后向项目申请者发送项目被挂起消息
             message = "%s于%s: 挂起 '%s'" % (
                 req.user.get_profile().name, times.datetime_strftime(), project.title)
-            Notice.objects.create_notice([project.creator], message)
+            Notice.objects.create_and_send_notice([project.creator], message)
 
             return resp.serialize_response(project_queryset, results_name='project')
         else:
@@ -696,6 +696,11 @@ class ProjectPlanChangeMilestoneStateView(BaseAPIView):
         success, msg = project.change_project_milestone_state(curr_milestone_state)
         if not success:
             return resp.failed(msg)
+        # 改变里程碑后生成消息，给申请人推送消息
+        message = "你申请的项目-%s 已完成-%s 节点" % (
+            project.title, curr_milestone_state.milestone.title
+        )
+        Notice.objects.create_and_send_notice([project.creator], message)
         return resp.ok("操作成功")
 
 
