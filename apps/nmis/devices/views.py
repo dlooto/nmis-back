@@ -40,12 +40,14 @@ from nmis.devices.permissions import AssertDeviceAdminPermission, RepairOrderCre
 from nmis.documents.consts import FILE_CATE_CHOICES, DOC_DOWNLOAD_BASE_DIR
 from nmis.documents.forms import FileBulkCreateOrUpdateForm
 from nmis.documents.models import File
-from nmis.hospitals.consts import ARCHIVE, ROLE_CODE_HOSP_SUPER_ADMIN, ROLE_CODE_ASSERT_DEVICE_ADMIN
+from nmis.hospitals.consts import ARCHIVE, ROLE_CODE_HOSP_SUPER_ADMIN, \
+    ROLE_CODE_ASSERT_DEVICE_ADMIN, ROLE_CODE_REPAIR_ORDER_DISPATCHER, ROLE_CODE_MAINTAINER
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer, \
     AssertDeviceSerializer
 from nmis.hospitals.permissions import IsHospSuperAdmin, SystemManagePermission, HospGlobalReportAssessPermission, \
     HospitalStaffPermission
+from nmis.notices.models import Notice
 from utils import times
 from utils.files import ExcelBasedOXL, file_read_iterator, remove, is_file_exist
 
@@ -520,6 +522,13 @@ class RepairOrderCreateView(BaseAPIView):
         success, repair_order = form.save()
         if not success:
             return resp.failed("操作失败")
+
+        # 生成消息，给维修任务分配者推送消息
+        staffs = Staff.objects.filter(user__role__codename=ROLE_CODE_REPAIR_ORDER_DISPATCHER)
+        message = "%s于%s: 提交报修申请,请尽快处理!" % (
+            req.user.get_profile().name, times.datetime_strftime()
+        )
+        Notice.objects.create_and_send_notice(staffs, message)
         return resp.serialize_response(repair_order, results_name='repair_order',
                                        srl_cls_name='RepairOrderSerializer')
 
@@ -554,8 +563,20 @@ class RepairOrderView(BaseAPIView):
             if not form.is_valid():
                 return resp.form_err(form.errors)
             new_order = form.save()
+
             if not new_order:
                 return resp.failed('操作失败')
+            # 生成消息，给维修任务分配者推送消息
+            message = "%s于%s: 向你分派了报修单-%s,请尽快处理!" % (
+                req.user.get_profile().name, times.datetime_strftime(), repair_order.order_no
+            )
+            Notice.objects.create_and_send_notice([repair_order.maintainer], message)
+            # 生成消息，给申请者推送消息
+            message = "%s于%s: 报修单-%s 已分配,维修工程师-%s!" % (
+                req.user.get_profile().name, times.datetime_strftime(),
+                repair_order.order_no, repair_order.maintainer.name
+            )
+            Notice.objects.create_and_send_notice([repair_order.creator], message)
 
         """ 维修工处理报修单 """
         if action == REPAIR_ORDER_OPERATION_HANDLE:
@@ -575,6 +596,13 @@ class RepairOrderView(BaseAPIView):
             if not new_order:
                 return resp.failed('操作失败')
 
+            # 处理完成后生成消息，给申请者推送消息
+            message = "%s于%s: 报修单-%s 已处理,维修工程师-%s!" % (
+                req.user.get_profile().name, times.datetime_strftime(),
+                repair_order.order_no, repair_order.maintainer.name
+            )
+            Notice.objects.create_and_send_notice([repair_order.creator], message)
+
         """ 评论此次报修 """
         if action == REPAIR_ORDER_OPERATION_COMMENT:
             if not repair_order.status == REPAIR_ORDER_STATUS_DONE:
@@ -585,6 +613,14 @@ class RepairOrderView(BaseAPIView):
             new_order = form.save()
             if not new_order:
                 return resp.failed('操作失败')
+
+            # 评价完成后生成消息，给维修工程推送消息
+            message = "%s于%s: 评价了单号-%s" % (
+                req.user.get_profile().name, times.datetime_strftime(),
+                repair_order.order_no
+            )
+            Notice.objects.create_and_send_notice([repair_order.maintainer], message)
+
         queryset = RepairOrderSerializer.setup_eager_loading(RepairOrder.objects.filter(id=order_id))
         return resp.serialize_response(
             queryset.first(), results_name='repair_order', srl_cls_name='RepairOrderSerializer'

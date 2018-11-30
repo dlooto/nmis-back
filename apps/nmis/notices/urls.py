@@ -20,8 +20,11 @@ urlpatterns = [
     # 获取消息列表
     path('', views.NoticeListView.as_view(), ),
 
-    # 删除消息（包含批量删除/单个删除）
-    path('delete', views.NoticeView.as_view(), )
+    # 读取消息/删除消息（标记单个/多条消息为删除状态，标记单个/多条消息为已读状态）
+    path('read-or-delete', views.NoticeReadOrDeleteView.as_view(), ),
+
+    # 当前登录用户下的未读消息标记为已读,已读消息标记为删除
+    path('read-or-delete-all', views.NoticeReadOrDeleteAllView.as_view(), ),
 
 
 ]
