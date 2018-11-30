@@ -665,7 +665,10 @@ class StoragePlaceListView(BaseAPIView):
         self.check_object_any_permissions(req, None)
         self.get_object_or_404(hid, Hospital)
         storage_places = HospitalAddress.objects.get_storage_places()
-        return resp.serialize_response(storage_places, results_name='hospital_addresses')
+        return resp.serialize_response(
+            storage_places, results_name='hospital_addresses',
+            srl_cls_name='BriefHospitalAddressSerializer'
+        )
 
 
 class HospitalAddressCreateView(BaseAPIView):
