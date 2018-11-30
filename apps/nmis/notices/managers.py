@@ -47,3 +47,8 @@ class NoticeManager(BaseManager):
         :return:
         """
         pass
+
+
+class UserNoticeManager(BaseManager):
+
+    pass

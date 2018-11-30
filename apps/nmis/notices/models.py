@@ -1,9 +1,14 @@
 from django.db import models
 
 # Create your models here.
+
+import logging
+
 from base.models import BaseModel
 from nmis.notices.consts import NOTICE_TYPE_CHOICES, NOTICE_TYPE_REMIND
 from nmis.notices.managers import NoticeManager
+
+logger = logging.getLogger(__name__)
 
 
 class Notice(BaseModel):
