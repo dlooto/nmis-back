@@ -377,9 +377,16 @@ class HospitalAddress(BaseModel):
     """
     title = models.CharField('名称', max_length=128)
     is_storage_place = models.BooleanField('是否存储地点', default=False)
-    parent = models.ForeignKey('self', verbose_name='父级地址', on_delete=models.PROTECT, null=True, blank=True)
+    hospital = models.ForeignKey(
+        Hospital, verbose_name='所属医院', on_delete=models.PROTECT, null=True, blank=True
+    )
+    parent = models.ForeignKey(
+        'self', verbose_name='父级地址', on_delete=models.PROTECT, null=True, blank=True
+    )
     # 祖节点到当节点的父节点最短路径, 由各节点id的字符串组成，每个id,之间用‘-’进行分隔
-    parent_path = models.CharField('父地址路径', max_length=255, default='', null=False, blank=False)
+    parent_path = models.CharField(
+        '父地址路径', max_length=255, default='', null=False, blank=False
+    )
     level = models.SmallIntegerField('层级')
     sort = models.SmallIntegerField('排序')
     disabled = models.BooleanField('是否禁用', default=False,)
@@ -388,8 +395,17 @@ class HospitalAddress(BaseModel):
         'hospitals.Department', verbose_name='所属科室', on_delete=models.PROTECT,
         null=True, blank=True
     )
-
     desc = models.CharField('描述', max_length=255, null=True, blank=True)
+
+    creator = models.ForeignKey(
+        'hospitals.Staff', related_name='created_addresses', verbose_name='创建人',
+        on_delete=models.PROTECT, null=True, blank=True
+    )
+    modifier = models.ForeignKey(
+        'hospitals.Staff', related_name='modified_addresses', verbose_name='修改人',
+        on_delete=models.PROTECT, null=True, blank=True
+    )
+    modified_time = models.DateTimeField('修改时间', auto_now=True, null=True, blank=True)
 
     objects = HospitalAddressManager()
 
@@ -407,6 +423,14 @@ class HospitalAddress(BaseModel):
 
     def __str__(self):
         return '%d' % (self.id, )
+
+    def children(self):
+        return HospitalAddress.objects.get_children(self)
+
+    def has_children(self):
+        if not self.children():
+            return False
+        return True
 
 
 class Sequence(BaseModel):

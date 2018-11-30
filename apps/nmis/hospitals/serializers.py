@@ -306,10 +306,21 @@ class SimpleRoleSerializer(BaseModelSerializer):
         fields = ('id', 'name', 'codename')
 
 
+class BriefHospitalAddressSerializer(BaseModelSerializer):
+    class Meta:
+        model = HospitalAddress
+        fields = (
+            'id', 'title'
+        )
+
+
 class HospitalAddressSerializer(BaseModelSerializer):
     class Meta:
         model = HospitalAddress
-        fields = ('id', 'title')
+        fields = (
+            'id', 'title', "is_storage_place", "parent_id", "desc", "dept_id",
+            'hospital_id', 'created_time'
+        )
 
 
 
