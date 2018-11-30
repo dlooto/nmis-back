@@ -254,26 +254,29 @@ class AssertDevice(BaseModel):
     type_spec = models.CharField('规格型号', max_length=32, )
     service_life = models.PositiveSmallIntegerField('预计使用年限', default=0)
     performer = models.ForeignKey(
-        'hospitals.Staff', related_name='performed_assert_device', verbose_name='资产负责人',
+        'hospitals.Staff', related_name='performed_assert_devices', verbose_name='资产负责人',
         on_delete=models.PROTECT, null=True, blank=True
     )
     use_dept = models.ForeignKey(
-        'hospitals.Department', related_name='used_assert_device', verbose_name='使用科室',
+        'hospitals.Department', related_name='used_assert_devices', verbose_name='使用科室',
         on_delete=models.PROTECT, null=True, blank=True
     )
     responsible_dept = models.ForeignKey(
-        'hospitals.Department', related_name='responsible_assert_device', verbose_name='负责科室',
+        'hospitals.Department', related_name='responsible_assert_devices', verbose_name='负责科室',
         on_delete=models.PROTECT, null=True, blank=True
     )
     production_date = models.DateField('出厂日期',)
     bar_code = models.CharField('设备条形码', max_length=128, null=True, blank=True)
     producer = models.CharField('厂家', max_length=128, null=True, blank=True)
-    storage_place = models.ForeignKey('hospitals.HospitalAddress', '存放地点', null=True, blank=True)
+    storage_place = models.ForeignKey(
+        'hospitals.HospitalAddress', related_name='storage_assert_devices', verbose_name='存放地点',
+        on_delete=models.PROTECT, null=True, blank=True
+    )
     purchase_date = models.DateField('购入日期')
     status = models.CharField('资产状态', max_length=10, choices=ASSERT_DEVICE_STATUS_CHOICES, default=ASSERT_DEVICE_STATUS_FREE)
     state = models.CharField('数据状态', max_length=10, choices=ASSERT_DEVICE_STATE_CHOICES, default=ASSERT_DEVICE_STATE_NEW)
     creator = models.ForeignKey(
-        'hospitals.Staff', related_name='created_assert_device', verbose_name='创建人',
+        'hospitals.Staff', related_name='created_assert_devices', verbose_name='创建人',
         on_delete=models.PROTECT
     )
     modifier = models.ForeignKey(

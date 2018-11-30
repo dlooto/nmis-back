@@ -14,6 +14,8 @@ from django.db.models import ProtectedError
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from django.conf import settings
 from django.db import transaction
+
+from base.resp import Response
 from nmis.devices.models import RepairOrder
 from nmis.devices.permissions import AssertDeviceAdminPermission
 from nmis.hospitals.serializers import StaffSerializer, RoleSerializer, \
@@ -635,7 +637,21 @@ class HospitalAddressListView(BaseAPIView):
         self.check_object_any_permissions(req, None)
         self.get_object_or_404(hid, Hospital)
         hospital_address_list = HospitalAddress.objects.get_hospital_address_list()
-        return resp.serialize_response(hospital_address_list, results_name='hospital_address')
+        return resp.serialize_response(hospital_address_list, results_name='hospital_addresses')
+
+
+class HospitalAddressTreeView(BaseAPIView):
+
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission, AssertDeviceAdminPermission)
+
+    def get(self, req, hid):
+        """
+        获取医疗机构下资产设备存储地点列表
+        """
+        self.check_object_any_permissions(req, None)
+        self.get_object_or_404(hid, Hospital)
+        address_tree = HospitalAddress.objects.get_tree()
+        return Response(address_tree, results_name='hospital_addresses')
 
 
 class StoragePlaceListView(BaseAPIView):
@@ -649,7 +665,7 @@ class StoragePlaceListView(BaseAPIView):
         self.check_object_any_permissions(req, None)
         self.get_object_or_404(hid, Hospital)
         storage_places = HospitalAddress.objects.get_storage_places()
-        return resp.serialize_response(storage_places, results_name='storage_places')
+        return resp.serialize_response(storage_places, results_name='hospital_addresses')
 
 
 class HospitalAddressCreateView(BaseAPIView):
@@ -661,14 +677,73 @@ class HospitalAddressCreateView(BaseAPIView):
         创建医院内部地址
         """
         self.check_object_any_permissions(req, None)
-        self.get_object_or_404(hid, Hospital)
-        form = HospitalAddressCreateForm(req.user.get_profile(), req.data)
+        hospital = self.get_object_or_404(hid, Hospital)
+        form = HospitalAddressCreateForm(req.user.get_profile(), hospital, req.data)
         if not form.is_valid():
             return resp.form_err(form.errors)
-        success, msg = form.save()
+        success, data = form.save()
         if not success:
-            return resp.failed(msg)
-        return resp.serialize_response(msg, results_name='hosp_address', srl_cls_name='HospitalAddressSerializer')
+            return resp.failed(data)
+        return resp.serialize_response(data, results_name='hosp_address', srl_cls_name='HospitalAddressSerializer')
+
+
+class HospitalAddressView(BaseAPIView):
+    """单个医院内部地址"""
+
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission, AssertDeviceAdminPermission)
+
+    def get(self, req, hid, address_id):
+        """
+        获取医院内部地址详情
+        :param req:
+        :param hid:
+        :param address_id:
+        :return:
+        """
+        self.check_object_any_permissions(req, None)
+        self.get_object_or_404(hid, Hospital)
+        address = self.get_object_or_404(address_id, HospitalAddress)
+        return resp.serialize_response(address, results_name='hospital_address', srl_cls_name='HospitalAddressSerializer')
+
+    def delete(self, req, hid, address_id):
+        """
+        删除单个医院内部地址
+        """
+        self.check_object_any_permissions(req, None)
+        self.get_object_or_404(hid, Hospital)
+        address = self.get_object_or_404(address_id, HospitalAddress)
+        try:
+            if address.has_children():
+                return resp.failed(errors={'error_msg': '操作失败, 该地址下存在其他地址信息'})
+            address.clear_cache()
+            address.delete()
+            return resp.ok('操作成功')
+        except ProtectedError as pe:
+            logger.exception(pe)
+            return resp.failed(errors={'error_msg': '操作失败, 该地址存在业务关联'})
+        except Exception as e:
+            logger.exception(e)
+            return resp.failed(errors={'error_msg': '操作失败'})
+
+
+class HospitalAddressChildrenView(BaseAPIView):
+    """单个医院内部地址"""
+
+    permission_classes = (IsHospSuperAdmin, SystemManagePermission, AssertDeviceAdminPermission)
+
+    def get(self, req, hid, address_id):
+        """
+        获取医院内部地址详情
+        :param req:
+        :param hid:
+        :param address_id:
+        :return:
+        """
+        self.check_object_any_permissions(req, None)
+        self.get_object_or_404(hid, Hospital)
+        address = self.get_object_or_404(address_id, HospitalAddress)
+        children = address.children()
+        return resp.serialize_response(children, results_name='hospital_addresses', srl_cls_name='HospitalAddressSerializer')
 
 
 class SimpleStaffView(BaseAPIView):

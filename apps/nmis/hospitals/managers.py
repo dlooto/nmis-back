@@ -7,7 +7,7 @@
 
 import logging
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, F
 
 from nmis.hospitals.consts import ROLE_CODE_HOSP_SUPER_ADMIN, ROLES, ROLE_CODE_CHOICES, \
     ROLE_CODE_NORMAL_STAFF, SEQ_CODE_CHOICES, SEQUENCES
@@ -304,7 +304,25 @@ class HospitalAddressManager(BaseManager):
             logger.exception(e)
             return None
 
-    def create_address(self, operator, title, is_storage_place, parent, *args, **kwargs):
+    def create_address(self, operator, hospital, title, is_storage_place, parent, *args, **kwargs):
+        """
+        创建存储地址信息
+        默认parent=None时，为根节点地址，即parent=None的地址仅能有一条记录
+        :param operator:
+        :param hospital:
+        :param title:
+        :param is_storage_place:
+        :param parent:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+        root_address_qs = self.filter(parent=None)
+        if not root_address_qs and parent:
+            return False, '未设置归属医院，请联系管理员'
+        if root_address_qs and not parent:
+            return False, '归属医院已存在'
         data = {
             'title': title,
             'is_storage_place': is_storage_place,
@@ -312,7 +330,8 @@ class HospitalAddressManager(BaseManager):
         }
         if kwargs.get('desc'):
             data['desc'] = kwargs.get('desc')
-        # data['creator'] = operator
+        data['creator'] = operator
+        data['hospital'] = hospital
 
         if is_storage_place:
             data['dept'] = kwargs.get('dept')
@@ -344,6 +363,48 @@ class HospitalAddressManager(BaseManager):
         except Exception as e:
             logger.exception(e)
             return False, "操作失败"
+
+    def get_children(self, address):
+        try:
+            return self.filter(parent=address)
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+    def get_tree(self):
+        all_addresses = self.annotate(dept_name=F('dept__name')).values(
+            'id', 'title', 'is_storage_place', 'parent_id', 'level', 'sort', 'disabled',
+            'dept_id', 'dept_name', 'desc', 'hospital_id'
+        )
+        parent_ids = set()
+        root_address = None
+        for address in all_addresses:
+            parent_ids.add(address.get('parent_id'))
+            if not address.get('parent_id'):
+                root_address = address
+        parents = []
+
+        for address in all_addresses:
+            if address.get('id') in parent_ids:
+                parents.append(address)
+                address['has_children'] = True
+            else:
+                address['has_children'] = False
+
+        self.gen_tree(root_address, all_addresses)
+        return root_address
+
+    def gen_tree(self, parent, addresses):
+        if not parent.get('has_children'):
+            parent['children'] = []
+        else:
+            children = []
+            for item in addresses:
+                if item.get('parent_id') == parent.get('id'):
+                    children.append(item)
+                    parent['children'] = children
+            for child in children:
+                self.gen_tree(child, addresses)
 
 
 class SequenceManager(BaseManager):

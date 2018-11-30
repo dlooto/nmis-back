@@ -979,33 +979,114 @@ class RoleUpdateForm(BaseForm):
 
 class HospitalAddressCreateForm(BaseForm):
 
-    def __init__(self, user_profile, data, *args, **kwargs):
+    def __init__(self, user_profile, hospital, data, *args, **kwargs):
         BaseForm.__init__(self, data, *args, **kwargs)
         self.user_profile = user_profile
+        self.hospital = hospital
         self.init_err_codes()
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'id_error': 'id数据异常',
             'title_error': '地址名称为空或数据错误',
-            'title_limit_size': '地址名称不能超过100个字符',
-            'parent_error': '父地址数据异常',
+            'title_exists': '地址名称已存在',
+            'title_limit_size': '地址名称不能超过50个字符',
+            'parent_id_error': '数据异常',
             'is_storage_place_error': '是否存储地点为空或数据异常',
+            'dept_id_error': '部门为空数据异常',
+            'desc_error': '描述数据异常',
+            'desc_limit_size': '描述不能超过100个字符',
+
         })
 
     def is_valid(self):
+        if not self.check_parent():
+            return False
+        if not self.check_title():
+            return False
+        if not self.check_is_storage_place():
+            return False
+        if not self.check_dept():
+            return False
+        if not self.check_desc():
+            return False
         return True
 
-    def check_id(self, id):
+    # def check_id(self):
+    #     addr_id = self.data.get('id')
+    #     if not addr_id:
+    #         return True
+    #     if not isinstance(addr_id, int):
+    #         self.update_errors('id', 'id_error')
+    #         return False
+    #     if not HospitalAddress.objects.get_by_id(addr_id):
+    #         self.update_errors('id', 'id_error')
+    #         return False
+
+    def check_parent(self):
+        parent_id = self.data.get('parent_id')
+        if not parent_id:
+            return True
+        if not isinstance(parent_id, int):
+            self.update_errors('parent_id', 'parent_id_error')
+            return False
+        if not HospitalAddress.objects.get_by_id(parent_id):
+            self.update_errors('parent_id', 'parent_id_error')
+            return False
         return True
 
     def check_title(self):
-        return True
-
-    def check_parent(self):
+        title = self.data.get('title')
+        if not title:
+            self.update_errors('title', 'title_error')
+            return False
+        if not isinstance(title, str):
+            self.update_errors('title', 'title_error')
+            return False
+        if not title.strip():
+            self.update_errors('title', 'title_error')
+            return False
+        if len(title.strip()) > 50:
+            self.update_errors('title', 'title_limit_size')
+            return False
+        addresses = HospitalAddress.objects.filter(title=title.strip(), parent__id=self.data.get('parent_id'))
+        if addresses:
+            self.update_errors('title', 'title_exists')
+            return False
         return True
 
     def check_is_storage_place(self):
+        if not isinstance(self.data.get('is_storage_place'), bool):
+            self.update_errors('is_storage_place', 'is_storage_place_error')
+            return False
+        return True
+
+    def check_dept(self):
+        if self.check_is_storage_place():
+            dept_id = self.data.get('dept_id')
+            if not dept_id:
+                return True
+            if not isinstance(dept_id, int):
+                self.update_errors('dept_id', 'dept_id_error')
+                return False
+            if not Department.objects.get_by_id(dept_id):
+                self.update_errors('dept_id', 'dept_id_error')
+                return False
+        return True
+
+    def check_desc(self):
+        if self.check_is_storage_place():
+            desc = self.data.get('desc')
+            if not desc:
+                return True
+            if not isinstance(desc, str):
+                self.update_errors('desc', 'desc_error')
+                return False
+            if not desc.strip():
+                self.update_errors('desc', 'desc_error')
+                return False
+            if len(desc.strip()) > 100:
+                self.update_errors('desc', 'desc_limit_size')
+                return False
         return True
 
     def save(self):
@@ -1025,6 +1106,7 @@ class HospitalAddressCreateForm(BaseForm):
 
         return HospitalAddress.objects.create_address(
             self.user_profile,
+            self.hospital,
             save_data.get('title'),
             save_data.get('is_storage_place'),
             save_data.get('parent'),
