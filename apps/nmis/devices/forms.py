@@ -1679,23 +1679,29 @@ class AssertDeviceBatchUploadForm(BaseForm):
             for performer in self.performer_list:
                 if row_data.get('performer', '').strip() == performer.name:
                     row_data['performer'] = performer
+                    break
 
             for use_dept in self.use_dept_list:
                 if row_data.get('use_dept', '').strip() == use_dept.name:
                     row_data['use_dept'] = use_dept
+                    break
 
             for resp_dept in self.res_dept_list:
+                logger.info(row_data.get('responsible_dept'))
                 if row_data.get('responsible_dept', '').strip() == resp_dept.name:
                     row_data['responsible_dept'] = resp_dept
+                    break
 
             for storage_place in self.storage_place_list:
                 if row_data.get('storage_place', '').strip() == storage_place.title:
                     row_data['storage_place'] = storage_place
+                    break
 
             if self.cate == ASSERT_DEVICE_CATE_MEDICAL:
                 for medical_device_code in self.medical_device_cate_list:
                     if row_data.get('code', '').strip() == medical_device_code.code:
                         row_data['medical_device_cate'] = medical_device_code
+                        break
                 del row_data['code']
             row_data['creator'] = self.creator
             row_data['cate'] = self.cate
