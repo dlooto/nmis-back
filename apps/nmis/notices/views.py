@@ -30,11 +30,11 @@ class NoticeListView(BaseAPIView):
             if is_read not in ('False', 'True'):
                 return resp.failed('is_read参数异常')
             query_set = UserNoticeSerializer.setup_eager_loading(
-                UserNotice.objects.filter(staff=staff, is_read=is_read, is_delete=False)
+                UserNotice.objects.filter(staff=staff, is_read=is_read, is_delete=False).order_by('-created_time')
             )
         else:
             query_set = UserNoticeSerializer.setup_eager_loading(
-                UserNotice.objects.filter(staff=staff, is_delete=False)
+                UserNotice.objects.filter(staff=staff, is_delete=False).order_by('-created_time')
             )
         return self.get_pages(query_set, results_name='notices')
 
