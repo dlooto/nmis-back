@@ -10,7 +10,7 @@ import logging
 from django.db import models
 
 from base.models import BaseModel
-from nmis.devices.consts import MGT_CATE_CHOICE, ASSERT_DEVICE_CATE_CHOICES, \
+from nmis.devices.consts import ASSERT_DEVICE_CATE_CHOICES, \
     ASSERT_DEVICE_CATE_MEDICAL, \
     ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_STATUS_FREE, ASSERT_DEVICE_STATE_CHOICES, \
     ASSERT_DEVICE_STATE_NEW, \
@@ -22,7 +22,8 @@ from nmis.devices.consts import MGT_CATE_CHOICE, ASSERT_DEVICE_CATE_CHOICES, \
     MAINTENANCE_PLAN_PERIOD_MEASURE_CHOICES, MAINTENANCE_PLAN_PERIOD_MEASURE_DAY, \
     ASSERT_DEVICE_OPERATION_CHOICES, \
     ASSERT_DEVICE_OPERATION_SUBMIT, FAULT_SOLUTION_STATUS_CHOICES, \
-    FAULT_SOLUTION_STATUS_NEW, ASSERT_DEVICE_STATUS_SCRAPPED, MAINTENANCE_PLAN_STATUS_DONE
+    FAULT_SOLUTION_STATUS_NEW, ASSERT_DEVICE_STATUS_SCRAPPED, \
+    MAINTENANCE_PLAN_STATUS_DONE, MdcManageCateEnum
 from nmis.devices.managers import AssertDeviceManager, MedicalDeviceCateManager, FaultTypeManager, \
     RepairOrderManager, MaintenancePlanManager, FaultSolutionManager
 
@@ -185,11 +186,6 @@ class MedicalDeviceCate(BaseModel):
     """
     医疗器械分类
     """
-    MGT_CATE_CHOICES = (
-        (1, "Ⅱ"),
-        (2, "Ⅲ"),
-        (3, "Ⅲ"),
-    )
     code = models.CharField('分类编码', max_length=20, unique=True)
     title = models.CharField('分类名称', max_length=128, )
     # 同一层级具有唯一性
@@ -200,9 +196,12 @@ class MedicalDeviceCate(BaseModel):
         'self', related_name='cate_children', verbose_name='父级分类', on_delete=models.PROTECT,
         null=True, blank=True
     )
+    # level2时，该属性才有值
     example = models.TextField('品名举例', max_length=2048, null=True, blank=True)
     # level2时，该属性才有值
-    mgt_cate = models.SmallIntegerField('管理类别', choices=MGT_CATE_CHOICES, null=True)
+    mgt_cate = models.SmallIntegerField('管理类别', choices=MdcManageCateEnum.to_choices(), null=True)
+    purpose = models.TextField('预期用途', max_length=1024, null=True, blank=True)
+    desc = models.TextField('产品分类描述', max_length=1024, null=True, blank=True)
     creator = models.ForeignKey(
         'hospitals.Staff', related_name='created_medical_device_cates', verbose_name='创建人', on_delete=models.PROTECT
     )

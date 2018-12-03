@@ -26,6 +26,12 @@ urlpatterns = [
     # 医疗器械分类列表
     path('medical-device-cates', views.MedicalDeviceCateListView.as_view(), ),
 
+    # 医疗器械分类列表
+    path('medical-device-cate-catalog', views.MedicalDeviceCateCatalogListView.as_view(), ),
+
+    # 医疗器械分类导入
+    path('medical-device-cates/import', views.MedicalDeviceCateImportView.as_view(), ),
+
     # 资产设备详情/修改/删除
     path('<int:device_id>', views.AssertDeviceView.as_view(), ),
 
