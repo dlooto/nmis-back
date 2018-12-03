@@ -20,15 +20,22 @@ class NoticeListView(BaseAPIView):
 
     def get(self, req):
         """
-        获取消息列表
-        :param req:
-        :return:
+        获取消息列表(筛选调教：已读/未读)
+        is_read: false: 未读, true: 已读 None: 全部
         """
         self.check_object_any_permissions(req, None)
         staff = req.user.get_profile()
-        query_set = UserNoticeSerializer.setup_eager_loading(
-            UserNotice.objects.filter(staff=staff, is_delete=False)
-        )
+        is_read = req.GET.get('is_read', '').strip()
+        if is_read:
+            if is_read not in ('False', 'True'):
+                return resp.failed('is_read参数异常')
+            query_set = UserNoticeSerializer.setup_eager_loading(
+                UserNotice.objects.filter(staff=staff, is_read=is_read, is_delete=False).order_by('-created_time')
+            )
+        else:
+            query_set = UserNoticeSerializer.setup_eager_loading(
+                UserNotice.objects.filter(staff=staff, is_delete=False).order_by('-created_time')
+            )
         return self.get_pages(query_set, results_name='notices')
 
 
