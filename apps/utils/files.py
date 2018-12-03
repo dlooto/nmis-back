@@ -1,4 +1,4 @@
-#coding=utf8
+# coding=utf8
 
 """
 used for file process
@@ -16,6 +16,7 @@ from openpyxl import Workbook, load_workbook
 
 from utils import times, eggs
 from utils.eggs import gen_uuid1
+from utils.times import fn_timer
 
 logger = logging.getLogger('django')
 
@@ -31,7 +32,7 @@ def remove(path, fileName=None):
         fullpath = path
     else:
         fullpath = os.path.join(path, fileName)
-        
+
     try:
         os.remove(fullpath)
         return True
@@ -46,7 +47,7 @@ def save_file(file, base_dir, file_name):
     :param base_dir:
     @param file_name  保存的目标文件名
      """
-    
+
     if not file:
         return ''
     try:
@@ -266,11 +267,92 @@ class ExcelBasedOXL(object):
             logger.exception(e)
             return False, "表头数据和指定的标准不一致或excel解析错误"
 
+    @staticmethod
+    def read_raw_excel(wb, header_dict_list=None):
+        """
+        读取excel文件数据，带表头
+        :param wb: Workbook对象
+        :param header_dict: 表头字典，K:属性名；V:表头单元格数据
+        :return:
+            返回由读取结果（True/False）和读取的数据列表(excel_data)组成的Cuple
+            excel_data是由多个sheet数据组成的List；
+            sheet是由多个行数据组成的List；
+            每行数据则是以header_dict的k作为键，对应单元格数据作为值组成的Dict
+
+        """
+        sheet_header_keys_list = []
+        sheet_data_list = []
+        try:
+            for index, sheet_name in enumerate(wb.sheetnames):
+                header_dict = []
+                if index < len(header_dict_list):
+                    header_dict = header_dict_list[index]
+                header_key_list = ExcelBasedOXL.read_sheet_header(wb[sheet_name],
+                                                                  header_dict)
+                sheet_header_keys_list.append(header_key_list)
+        except Exception as e:
+            logger.exception(e)
+            return False, "表头数据和指定的标准不一致或Excel文件解析错误"
+        try:
+            for index, sheet_name in enumerate(wb.sheetnames):
+                sheet_data = ExcelBasedOXL.read_raw_sheet(wb[sheet_name])
+                if sheet_header_keys_list[index]:
+                    sheet_data[0] = sheet_header_keys_list[index]
+                sheet_data_list.append(sheet_data)
+            return True, sheet_data_list
+        except Exception as e:
+            logger.exception(e)
+            return False, "Excel文件解析异常"
 
     @staticmethod
-    def read_sheet(ws: Worksheet, header_dict=None):
+    def read_sheet_header(ws: Worksheet, header_dict=None):
         """
         读取单个sheet数据，带表头
+        :param ws: Worksheet对象
+        :param header_dict: 表头字典，K:键，一般为model属性；V:对应表头单元格数据
+        :return: 返回一个List对象，该List对象由一组Dictionary对象构成
+        """
+        if not ws or not header_dict:
+            return []
+        # 读取首行数据
+        header_row_data = []
+        for col in range(1, ws.max_column + 1):
+            header_row_data.append(ws.cell(1, col).value)
+
+        header_key_list = []  # 表头顺序对应的关键字列表
+        # 判断首行数据是否和指定的标准一致，如果一致，按顺序封装表头关键字；否则抛出异常
+        for header_cell_data in header_row_data:
+            for item in header_dict.items():
+                if item[1] == header_cell_data:
+                    header_key_list.append(item[0])
+                    break
+        if len(header_key_list) != len(header_dict):
+            # 抛出“表单的表头数据和指定的标准不一致，请检查”异常
+            raise Exception('ExcelHeaderNotMatched')
+        return header_key_list
+
+    @staticmethod
+    def read_raw_sheet(ws: Worksheet):
+        """
+        读取单个sheet数据, 不做任何封装处理
+        :param ws:  Worksheet对象
+        :return:
+        """
+        sheet_data = []
+        if not ws:
+            return sheet_data
+        for row in ws.rows:
+            row_data = []
+            for cell in row:
+                row_data.append(cell.value)
+            sheet_data.append(row_data)
+        return sheet_data
+
+    @staticmethod
+    @fn_timer
+    def read_sheet(ws: Worksheet, header_dict=None):
+        """
+        读取单个sheet数据，带表头并将行数据封装为键值对
         :param ws: Worksheet对象
         :param header_dict: 表头字典，K:键，一般为model属性；V:对应表头单元格数据
         :return: 返回一个List对象，该List对象由一组Dictionary对象构成
@@ -279,30 +361,30 @@ class ExcelBasedOXL(object):
             return []
 
         sheet_data = []
-        ws_rows_len = ws.max_row
-        ws_column_len = ws.max_column
 
         # 读取不带表头的sheet
-        if header_dict is None:
-            for row in range(1, ws_rows_len + 1):
+        if not header_dict:
+            for row in ws.rows:
                 row_data = []
-                for col in range(1, ws_column_len + 1):
-                    row_data.append(ws.cell(row=row, column=col).value)
+                for cell in row:
+                    row_data.append(cell.value)
                 sheet_data.append(row_data)
+            return sheet_data
 
         # 读取带表头的sheet
-        ws_column_len = len(header_dict)
-
         # 读取首行数据
-        header_data = []
-        for col in range(1, ws_column_len+1):
-            header_data.append(ws.cell(1, col).value)
+        header_row_data = []
+
+        for row in ws.rows:
+            for cell in row:
+                header_row_data.append(cell.value)
+            break
 
         header_keys = []  # 表头顺序对应的关键字列表
         # 判断首行数据是否和指定的标准一致，如果一致，按顺序封装表头关键字；否则抛出异常
-        for hdata in header_data:
+        for header_cell_data in header_row_data:
             for item in header_dict.items():
-                if item[1] == hdata:
+                if item[1] == header_cell_data:
                     header_keys.append(item[0])
                     break
 
@@ -311,16 +393,17 @@ class ExcelBasedOXL(object):
             raise Exception('ExcelHeaderNotMatched')
 
         # 读取业务数据
-        for row in range(2, ws_rows_len+1):
+        for row_index, row in enumerate(ws.rows):
             row_data = {}
-            for col in range(1, ws_column_len+1):
-                key = header_keys[col-1]
-                cell = ws.cell(row=row, column=col)
+            if row_index == 0:
+                continue
+            for cell_index, cell in enumerate(row):
+                key = header_keys[cell_index]
                 if cell.value and cell.is_date:
                     value = cell.value.strftime('%Y-%m-%d')
                 else:
-                    value = cell.value
-                row_data[key] = value if value else ''
+                    value = cell.value if cell.value else ''
+                row_data[key] = value
             sheet_data.append(row_data)
 
         return sheet_data
@@ -334,7 +417,7 @@ class ExcelBasedOXL(object):
         return Workbook()
 
     @staticmethod
-    def export_excel(base_dir, file_name, records_list, sheet_names=[], header_rows=[],):
+    def export_excel(base_dir, file_name, records_list, sheet_names=[], header_rows=[], ):
         """
         导出Excel文件
         :param base_dir: 文件存放基本路径
@@ -354,12 +437,12 @@ class ExcelBasedOXL(object):
         wb.remove(wb.active)
         try:
             for index, records in enumerate(records_list):
-                ws = wb.create_sheet(('Sheet' + str(index+1)), index)
+                ws = wb.create_sheet(('Sheet' + str(index + 1)), index)
                 if sheet_names:
-                    if index <= len(sheet_names)-1:
+                    if index <= len(sheet_names) - 1:
                         if sheet_names[index]:
                             ws.title = sheet_names[index]
-                if header_rows and index <= len(header_rows)-1:
+                if header_rows and index <= len(header_rows) - 1:
                     ExcelBasedOXL.write_to_sheet_by_row(ws, records, header_rows[index])
                 else:
                     ExcelBasedOXL.write_to_sheet_by_row(ws, records)
@@ -391,7 +474,7 @@ class ExcelBasedOXL(object):
             raise Exception("Write data to sheet exception!")
 
 
-def gen_filename(file_name, postfix,  date_format='%Y%m%d%H%M%S%f', uuid_first=False):
+def gen_filename(file_name, postfix, date_format='%Y%m%d%H%M%S%f', uuid_first=False):
     """
     生成文件名
     :param file_name: 文件名称（不带后缀）string
@@ -407,8 +490,9 @@ def gen_filename(file_name, postfix,  date_format='%Y%m%d%H%M%S%f', uuid_first=F
         )
     if not date_format:
         return '%{filename}.{postfix}'.format(filename=file_name, postfix=postfix)
-    return '%{filename}_{timestamp}.{postfix}' .format(
-        filename=file_name, timestamp=times.datetime_to_str(times.now(), date_format), postfix=postfix
+    return '%{filename}_{timestamp}.{postfix}'.format(
+        filename=file_name, timestamp=times.datetime_to_str(times.now(), date_format),
+        postfix=postfix
     )
 
 

@@ -5,6 +5,7 @@
 import calendar
 import datetime
 import time
+from functools import wraps
 
 ##################################################
 #  date and time processing utils
@@ -240,6 +241,24 @@ def month_range(begin_date, end_date, format='%Y-%m-%d'):
     for month in month_set:
         month_list.append(month)
     return sorted(month_list)
+
+
+def fn_timer(function):
+    """
+    打印函数方法执行时长
+    装饰器
+    :param function:
+    :return:
+    """
+    @wraps(function)
+    def function_timer(*args, **kwargs):
+        begin_time = time.time()
+        result = function(*args, **kwargs)
+        end_time = time.time()
+        print("Total time running %s: %s seconds" % (function.__name__, str(end_time-begin_time)))
+        return result
+    return function_timer
+
 
 
 if __name__ == '__main__':

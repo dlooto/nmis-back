@@ -2,10 +2,8 @@
 #
 # Created by gong, on 2018-10-16
 #
-
+import copy
 import logging
-
-from django.db import transaction
 
 from base.forms import BaseForm
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE_CHOICES, \
@@ -13,7 +11,7 @@ from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, ASSERT_DEVICE_CATE
     ASSERT_DEVICE_CATE_MEDICAL, MdcManageCateEnum
 from nmis.devices.models import AssertDevice, FaultType, RepairOrder, MaintenancePlan, FaultSolution, MedicalDeviceCate
 from utils import eggs
-from utils.times import now, get_day_begin_time
+from utils.times import now
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 
 from collections import defaultdict
@@ -1864,100 +1862,274 @@ class MedicalDeviceCateImportForm(BaseForm):
     def __init__(self, user_profile, data, *args, **kwargs):
         BaseForm.__init__(self, data, args, kwargs)
         self.user_profile = user_profile
-        self.pre_data = self.init_check_data()
         self.init_err_codes()
 
     def init_err_codes(self):
         self.ERR_CODES.update({
-            'title_error':                  '第{0}行: 标题为空或数据错误',
-            'title_exists':                 '第{0}行: 已存在相同标题',
-            'title_duplicate':              '第{0}行和第{1}行: 标题重复',
-            'fault_type_error':             '第{0}行: 故障类型为空或数据错误',
-            'fault_type_not_exists':        '第{0}行: 故障类型不存在，请检查',
-            'fault_type_not_been_set':      '系统尚未设置故障类型，请联系管理员',
-            'solution_error':               '第{0}行: 解决方案为空或数据错误',
-            'title_fault_type_exists':      '第{0}行: 已存在相同故障类型的标题',
-            'title_limit_size':             '第{0}行: 标题不能大于30个字符',
-            'solution_limit_size':          '第{0}行: 解决方案不能大于1000个字符',
-            'fault_type_limit_size':        '第{0}行: 故障类型不能大于30个字符',
+            'table_data_null_error':           '表格没有数据，请检查',
+            'catalog_null_error':           '第{0}行: 分类目录名称为空或数据错误',
+            'catalog_format_error':         "第{0}行: 分类目录名称非‘01-有源手术器械’格式",
+            'catalog_limit_size':           "第{0}行: 分类目录名称长度不能超过50个字符",
+            'first_grade_cate_error':           '第{0}行: 一级产品分类为空或数据错误',
+            'first_grade_cate_limit_size':      '第{0}行: 一级产品分类长度不能超过50个字符',
+            'first_grade_cate_format_error':    "第{0}行: 一级产品分类非‘01超声手术设备及附件’格式",
+            'second_grade_cate_error':           '第{0}行: 二级级产品为空或数据错误',
+            'second_grade_cate_limit_size':      '第{0}行: 二级级产品长度不能超过50个字符',
+            'second_grade_cate_format_error':    "第{0}行: 二级产品分类非‘01超声手术设备’格式",
+            'code_null_error':              '第{0}行: 分类编码为空或数据错误',
+            'code_duplicate':               '第{0}行和第{1}行: 分类编码重复',
+            'code_limit_size':              '第{0}行: 分类编码长度不能超过20个字符',
+            'purpose_error':                '第{0}行: 预期用途数据错误',
+            'purpose_limit_size':           '第{0}行: 预期用途长度不能超过1000个字符',
+            'example_error':                '第{0}行: 品名举例数据错误',
+            'example_limit_size':           '第{0}行: 品名举例长度不能超过1000个字符',
+            'desc_error':                   '第{0}行: 产品描述数据错误',
+            'desc_limit_size':              '第{0}行: 产品描述长度不能超过1000个字符',
+            'mgt_cate_null_error':          '第{0}行: 管理类别为空或数据错误',
+            'mgt_cate_error':               "第{0}行: 管理类别不在【‘Ⅰ’，‘Ⅱ’，‘Ⅲ’，‘Ⅲ（药械组合产品’】中",
         })
 
-    def init_check_data(self):
-        """
-        封装各列数据, 用以进行数据验证
-        :return:
-        """
-        pre_data = dict()
-        if self.data and self.data[0] and self.data[0][0]:
-            catalogs, first_level_cates, second_level_cates = [], [], []
-            for row_data in self.data[0]:
-                catalogs.append(row_data.get('catalog'))
-                first_level_cates.append(row_data.get('first_level_cate'))
-                second_level_cates.append(row_data.get('second_level_cate'))
-            pre_data['catalogs'] = catalogs
-            pre_data['first_level_cates'] = first_level_cates
-            pre_data['second_level_cates'] = second_level_cates
-        return pre_data
-
     def is_valid(self):
+        if not self.check_data_not_null():
+            return False
+        if not self.check_catalog():
+            return False
+        if not self.check_first_grade_cate() or not self.check_second_grade_cate() or not self.check_code() \
+                or not self.check_example() or not self.check_purpose() or not self.check_desc() \
+                or not self.check_mgt_cate():
+            return False
+        return True
+
+    def check_data_not_null(self):
+        if not self.data:
+            self.update_errors('table', 'table_data_null_error')
+            return False
+        if not self.data[0]:
+            self.update_errors('table', 'table_data_null_error')
+            return False
+        if not self.data[0][0]:
+            self.update_errors('table', 'table_data_null_error')
+            return False
+        return True
+
+    def check_catalog(self):
+
+        for index, row_data in enumerate(self.data[0]):
+            catalog = row_data.get('cate_catalog')
+            if not catalog:
+                self.update_errors('catalog', 'catalog_null_error', index+2)
+                return False
+            if not isinstance(catalog, str):
+                self.update_errors('catalog', 'catalog_null_error', index+2)
+                return False
+            if not catalog.strip():
+                self.update_errors('catalog', 'catalog_null_error', index+2)
+                return False
+            catalog_strip = catalog.strip().split('-')
+            if len(catalog_strip) < 2:
+                self.update_errors('catalog', 'catalog_format_error', index+2)
+                return False
+            if not len(catalog_strip[0]) == 2:
+                self.update_errors('catalog', 'catalog_format_error', index+2)
+                return False
+            if len(catalog_strip[1]) > 50:
+                self.update_errors('catalog', 'catalog_limit_size', index+2)
+                return False
+        return True
+
+    def check_first_grade_cate(self):
+        for index, row_data in enumerate(self.data[0]):
+            first_grade_cate = row_data.get('first_grade_cate')
+            if not first_grade_cate:
+                self.update_errors('first_grade_cate', 'first_grade_cate_error', index+2)
+                return False
+            if not isinstance(first_grade_cate, str):
+                self.update_errors('first_grade_cate', 'first_grade_cate_error', index+2)
+                return False
+            if not first_grade_cate.strip():
+                self.update_errors('first_grade_cate', 'first_grade_cate_error', index+2)
+                return False
+            try:
+                int(first_grade_cate.strip()[0:2])
+            except ValueError as e:
+                self.update_errors('first_grade_cate', 'first_grade_cate_format_error', index+2)
+                return False
+            if len(first_grade_cate.strip()[2:]) > 50:
+                self.update_errors('first_grade_cate', 'first_grade_cate_limit_size', index+2)
+                return False
+        return True
+
+    def check_second_grade_cate(self):
+        for index, row_data in enumerate(self.data[0]):
+            second_grade_cate = row_data.get('second_grade_cate')
+            if not second_grade_cate:
+                self.update_errors('second_grade_cate', 'second_grade_cate_error', index+2)
+                return False
+            if not isinstance(second_grade_cate, str):
+                self.update_errors('second_grade_cate', 'second_grade_cate_error', index+2)
+                return False
+            if not second_grade_cate.strip():
+                self.update_errors('second_grade_cate', 'second_grade_cate_error', index+2)
+                return False
+            try:
+                int(second_grade_cate.strip()[0:2])
+            except ValueError as e:
+                self.update_errors('first_grade_cate', 'second_grade_cate_format_error', index+2)
+                return False
+            if len(second_grade_cate.strip()[2:]) > 50:
+                self.update_errors('second_grade_cate', 'second_grade_cate_limit_size', index+2)
+                return False
+        return True
+
+    def check_code(self):
+        code_list = []
+        for index, row_data in enumerate(self.data[0]):
+            code = row_data.get('code')
+            if not code:
+                self.update_errors('code', 'code_null_error', index+2)
+                return False
+            if not isinstance(code, str):
+                self.update_errors('code', 'code_null_error', index+2)
+                return False
+            if not code.strip():
+                self.update_errors('code', 'code_null_error', index+2)
+                return False
+            if len(code.strip()) > 20:
+                self.update_errors('code', 'code_limit_size', index+2)
+                return False
+            code_list.append(code.strip())
+        for i, code in enumerate(code_list):
+            for j, code_cp in enumerate(copy.copy(code_list)):
+                if not i == j and code == code_cp:
+                    self.update_errors('code', 'code_duplicate', i+2, j+2)
+                    return False
+        return True
+
+    def check_purpose(self):
+        for index, row_data in enumerate(self.data[0]):
+            purpose = row_data.get('purpose')
+            if not purpose:
+                return True
+            if not isinstance(purpose, str):
+                self.update_errors('purpose', 'purpose_error', index+2)
+                return False
+            if not purpose.strip():
+                return True
+            if len(purpose.strip()) > 1000:
+                self.update_errors('purpose', 'purpose_limit_size', index+2)
+                return False
+        return True
+
+    def check_example(self):
+        for index, row_data in enumerate(self.data[0]):
+            example = row_data.get('example')
+            if not example:
+                return True
+            if not isinstance(example, str):
+                self.update_errors('example', 'example_error', index+2)
+                return False
+            if not example.strip():
+                return True
+            if len(example.strip()) > 1000:
+                self.update_errors('example', 'example_limit_size', index+2)
+                return False
+        return True
+
+    def check_desc(self):
+        for index, row_data in enumerate(self.data[0]):
+            desc = row_data.get('desc')
+            if not desc:
+                return True
+            if not isinstance(desc, str):
+                self.update_errors('desc', 'desc_error', index+2)
+                return False
+            if not desc.strip():
+                return True
+            if len(desc.strip()) > 1000:
+                self.update_errors('desc', 'desc_limit_size', index+2)
+                return False
+        return True
+
+    def check_mgt_cate(self):
+        for index, row_data in enumerate(self.data[0]):
+            mgt_cate = row_data.get('mgt_cate')
+            if not mgt_cate:
+                self.update_errors('mgt_cate', 'mgt_cate_null_error', index+2)
+                return False
+            if not isinstance(mgt_cate, str):
+                self.update_errors('mgt_cate', 'mgt_cate_null_error', index+2)
+                return False
+            if not mgt_cate.strip():
+                self.update_errors('mgt_cate', 'mgt_cate_null_error', index+2)
+                return False
+            if mgt_cate.strip() not in  MdcManageCateEnum.value_names():
+                self.update_errors('catalog', 'mgt_cate_error', index+2)
+                return False
         return True
 
     def save(self):
-        catalog_data = self.pre_data.get('catalogs')
-        catalogs = []
-        for item in set(catalog_data):
-            catalog = dict()
-            catalog['level_code'] = item.strip().split('-')[0]
-            catalog['title'] = item.strip().split('-')[1]
-            catalog['creator'] = self.user_profile
-            catalogs.append(catalog)
-
-        new_catalogs = MedicalDeviceCate.objects.bulk_create_med_dev_cate_catalog(catalogs)
-
-        first_level_cate_data = []
+        # 封装并创建医疗器械分类目录
+        catalog_data = []
         for row_data in self.data[0]:
-            catalog_cell = row_data.get('catalog', '').strip().split('-')
-            first_level_cate_cell = row_data.get('first_level_cate', '').strip()
+            catalog_cell = row_data.get('cate_catalog', '').strip().split('-')
+            catalog_dict = {
+                'level_code': catalog_cell[0],
+                'title': catalog_cell[1],
+                'creator': self.user_profile
+            }
+            if catalog_dict not in catalog_data:
+                catalog_data.append(catalog_dict)
+        new_catalogs = MedicalDeviceCate.objects.bulk_create_med_dev_cate(0, catalog_data)
+
+        # 封装并创建医疗器械一级产品分类
+        first_grade_cate_data = []
+        for row_data in self.data[0]:
+            catalog_cell = row_data.get('cate_catalog', '').strip().split('-')
+            first_grade_cate_cell = row_data.get('first_grade_cate', '').strip()
             for item in new_catalogs:
                 if catalog_cell[0] == item.level_code:
-                    first_level_cate_dict = {
+                    first_grade_cate_dict = {
                         'parent': item,
-                        'code': '-'.join([item.code, first_level_cate_cell[0:2]]),
-                        'level_code': first_level_cate_cell[0:2],
-                        'title': first_level_cate_cell[2:],
+                        'code': '-'.join([item.code, first_grade_cate_cell[0:2]]),
+                        'level_code': first_grade_cate_cell[0:2],
+                        'title': first_grade_cate_cell[2:],
                         'creator': self.user_profile
 
                     }
-                    if first_level_cate_dict not in first_level_cate_data:
-                        first_level_cate_data.append(first_level_cate_dict)
-        new_first_level_cates = MedicalDeviceCate.objects.bulk_create_med_dev_cate_first(first_level_cate_data)
-        med_dev_cate_data = []
-        for row_data in self.data[0]:
-            first_level_cate_level_code = row_data.get('first_level_cate', '').strip()[0:2]
-            first_level_cate_title = row_data.get('first_level_cate', '').strip()[2:]
+                    if first_grade_cate_dict not in first_grade_cate_data:
+                        first_grade_cate_data.append(first_grade_cate_dict)
+        new_first_grade_cates = MedicalDeviceCate.objects.bulk_create_med_dev_cate(1, first_grade_cate_data)
 
-            for item in new_first_level_cates:
-                if first_level_cate_level_code == item.level_code:
+        # 封装并创建医疗器械二级产品分类
+        second_grade_cate_data = []
+        for row_data in self.data[0]:
+            catalog_code = row_data.get('cate_catalog', '').strip().split('-')[0]
+
+            first_grade_cate_level_code = row_data.get('first_grade_cate', '').strip()[0:2]
+            second_grade_cate_level_code = row_data.get('second_grade_cate', '').strip()[0:2]
+            second_grade_cate_title = row_data.get('second_grade_cate', '').strip()[2:]
+
+            for item in new_first_grade_cates:
+                if '-'.join([catalog_code, first_grade_cate_level_code]) == item.code:
                     cate_dict = {
                         'parent': item,
-                        'code': row_data.get('code').strip(),
-                        'level_code': first_level_cate_level_code,
-                        'title': row_data.get('second_level_cate', '').strip(),
-                        'desc': row_data.get('desc').strip(),
-                        'purpose': row_data.get('purpose').strip(),
-                        'example': row_data.get('example').strip(),
+                        'code': row_data.get('code', '').strip(),
+                        'level_code': second_grade_cate_level_code,
+                        'title': second_grade_cate_title,
+                        'desc': row_data.get('desc', '').strip(),
+                        'purpose': row_data.get('purpose', '').strip(),
+                        'example': row_data.get('example', '').strip(),
                         'creator': self.user_profile
                     }
                     for member in MdcManageCateEnum.members():
                         if row_data.get('mgt_cate').strip() == member[1].value_name:
                             cate_dict['mgt_cate'] = member[1].value
-                    if cate_dict not in med_dev_cate_data:
-                        med_dev_cate_data.append(cate_dict)
-        new_med_dev_cates = MedicalDeviceCate.objects.bulk_create_med_dev_cate(med_dev_cate_data)
-        if new_med_dev_cates:
+                    if cate_dict not in second_grade_cate_data:
+                        second_grade_cate_data.append(cate_dict)
+        new_second_grade_cates = MedicalDeviceCate.objects.bulk_create_med_dev_cate(2, second_grade_cate_data)
+        if new_second_grade_cates:
             return True
         return False
-
 
 
 

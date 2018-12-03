@@ -51,6 +51,8 @@ from nmis.notices.models import Notice
 from utils import times
 from utils.files import ExcelBasedOXL, file_read_iterator, remove, is_file_exist
 
+from utils.times import fn_timer
+
 logger = logging.getLogger(__name__)
 
 
@@ -137,20 +139,41 @@ class AssertDeviceCreateView(BaseAPIView):
         return resp.serialize_response(assert_device, results_name='assert_device')
 
 
-class MedicalDeviceCateListView(BaseAPIView):
+class MedicalDeviceSecondGradeCateListView(BaseAPIView):
 
     permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
 
+    @fn_timer
     def get(self, req):
         """
-        获取医疗器械类型列表
+        通过目录ID获取医疗器械二级产品类型列表
+        """
+        self.check_object_any_permissions(req, req.user)
+        med_dev_cates = MedicalDeviceCate.objects.get_medical_device_second_grade_cates()
+        # med_dev_cates = MedicalDeviceCateSerializer.setup_eager_loading(med_dev_cates)
+        return resp.serialize_response(
+            med_dev_cates, results_name='med_dev_second_grade_cates',
+            srl_cls_name='MedicalDeviceSecondGradeCateSerializer'
+        )
+
+
+class MedicalDeviceSecondGradeCateByCatalogView(BaseAPIView):
+
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
+
+    @fn_timer
+    def get(self, req, catalog_id):
+        """
+        通过目录ID获取医疗器械二级产品类型列表
         """
         self.check_object_any_permissions(req, req.user)
 
-        medical_device_cate_list = MedicalDeviceCate.objects.get_medical_device_cates()
+        medical_device_cate_list = MedicalDeviceCate.objects.get_med_dev_second_grade_cates_by_catalog(catalog_id)
 
         return resp.serialize_response(
-            medical_device_cate_list, results_name='medical_device_cates')
+            medical_device_cate_list, results_name='med_dev_second_grade_cates',
+            srl_cls_name='MedicalDeviceSecondGradeCateDetailSerializer'
+        )
 
 
 class MedicalDeviceCateCatalogListView(BaseAPIView):
@@ -163,15 +186,18 @@ class MedicalDeviceCateCatalogListView(BaseAPIView):
         """
         self.check_object_any_permissions(req, req.user)
 
-        catalog = MedicalDeviceCate.objects.get_med_dev_cate_catalog()
+        catalog = MedicalDeviceCate.objects.get_med_dev_cate_catalogs()
 
-        return resp.serialize_response(catalog, results_name='cate_catalog')
+        return resp.serialize_response(
+            catalog, results_name='cate_catalogs', srl_cls_name='MedicalDeviceCateCatalogSerializer'
+        )
 
 
 class MedicalDeviceCateImportView(BaseAPIView):
     permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
 
     @transaction.atomic()
+    @times.fn_timer
     def post(self, req):
         """
         获取医疗器械分类目录
@@ -193,13 +219,10 @@ class MedicalDeviceCateImportView(BaseAPIView):
         # file_info = files.upload_file(file_obj, DOC_UPLOAD_BASE_DIR)
 
         is_success, ret = ExcelBasedOXL.open_excel(file_obj)
-        if not is_success:
-            return resp.failed(ret)
         success, result = ExcelBasedOXL.read_excel(ret, UPLOADED_MEDICAL_DEVICE_CATE_EXCEL_HEADER_DICT)
         ExcelBasedOXL.close(ret)
         if not success:
             return resp.failed(result)
-
         form = MedicalDeviceCateImportForm(req.user.get_profile(), result)
         if not form.is_valid():
             return resp.form_err(form.errors)
@@ -988,4 +1011,3 @@ class OperationMaintenanceReportView(BaseAPIView):
             'rp_order_nums_top_dept': list(rp_order_nums_top_dept_queryset),
         }
         return resp.ok('ok', data)
-

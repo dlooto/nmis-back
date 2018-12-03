@@ -24,10 +24,11 @@ urlpatterns = [
     path("assert-devices", views.AssertDeviceListView.as_view()),
 
     # 医疗器械分类列表
-    path('medical-device-cates', views.MedicalDeviceCateListView.as_view(), ),
+    path('medical-device-cates', views.MedicalDeviceSecondGradeCateListView.as_view(), ),
 
     # 医疗器械分类列表
-    path('medical-device-cate-catalog', views.MedicalDeviceCateCatalogListView.as_view(), ),
+    path('medical-device-cate-catalogs', views.MedicalDeviceCateCatalogListView.as_view(), ),
+    path('medical-device-cate-catalogs/<int:catalog_id>/medical-device-cates', views.MedicalDeviceSecondGradeCateByCatalogView.as_view(), ),
 
     # 医疗器械分类导入
     path('medical-device-cates/import', views.MedicalDeviceCateImportView.as_view(), ),

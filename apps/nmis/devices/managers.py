@@ -28,85 +28,87 @@ class MedicalDeviceCateManager(BaseManager):
     def create_medical_device_cate(self, creator, medical_device_cate):
         pass
 
-    def get_medical_device_cates(self):
+    def get_medical_device_second_grade_cates(self):
         """
-        获取医疗器械分类列表
+        获取所有医疗器械二级产品分类列表
         """
-        return self.filter(level=2)
+        return self.filter(level=2).order_by('code')
 
-    def get_med_dev_cate_catalog(self):
+    def get_med_dev_second_grade_cates_by_catalog(self, catalog_id):
+        """
+        根据分类目录ID获取医疗器械分类目录
+        :return:
+        """
+        return self.select_related('parent__parent').filter(parent__parent__id=catalog_id, level=2).order_by('code')
+
+    def get_med_dev_cate_catalogs(self):
         """
         获取医疗器械分类目录
         :return:
         """
-        return self.filter(parent=None)
+        return self.filter(parent=None, level=0).order_by('code')
 
-    def bulk_create_med_dev_cate_catalog(self, catalogs):
+    def bulk_create_med_dev_cate(self, level, cates):
         """
-        获取医疗器械分类目录
+        获取医疗器械一级分类
+
         :return:
         """
-        try:
-            objs = []
-            for item in catalogs:
+        # 0: 分类目录;1: 一级产品分类; 2: 二级产品分类
+        if level not in [0, 1, 2]:
+            return None
+        objs = []
+
+        if level == 0:
+            for item in cates:
                 objs.append(self.model(
                     title=item.get('title'),
                     code=item.get('level_code'),
                     level_code=item.get('level_code'),
                     level=0,
+                    parent=None,
                     creator=item.get('creator'),
                 ))
-            new_catalogs = self.bulk_create(objs)
-            return self.filter(code__in=[item.code for item in new_catalogs])
-        except Exception as e:
-            logger.exception(e)
-            return None
-
-    def bulk_create_med_dev_cate_first(self, first_level_cates):
-        """
-        获取医疗器械一级分类
-        :return:
-        """
-        try:
-            objs = []
-            for item in first_level_cates:
-                objs.append(self.model(
-                    title=item.get('title'),
-                    code=item.get('code'),
-                    level_code=item.get('level_code'),
-                    parent=item.get('parent'),
-                    level=1,
-                    creator=item.get('creator'),
-                ))
-            new_first_level_cates = self.bulk_create(objs)
-            return self.filter(code__in=[item.code for item in new_first_level_cates])
-        except Exception as e:
-            logger.exception(e)
-            return None
-
-    def bulk_create_med_dev_cate(self, cates):
-        """
-        获取医疗器械一级分类
-        :return:
-        """
-        try:
-            objs = []
+        if level == 1:
             for item in cates:
                 objs.append(self.model(
                     title=item.get('title'),
                     code=item.get('code'),
                     level_code=item.get('level_code'),
+                    level=1,
                     parent=item.get('parent'),
-                    desc=item.get('desc'),
-                    mgt_cate=item.get('mgt_cate'),
-                    example=item.get('example'),
-                    level=2,
                     creator=item.get('creator'),
                 ))
-            return self.bulk_create(objs)
+        if level == 2:
+            for item in cates:
+                objs.append(self.model(
+                    title=item.get('title'),
+                    code=item.get('code'),
+                    level_code=item.get('level_code'),
+                    level=2,
+                    parent=item.get('parent'),
+                    mgt_cate=item.get('mgt_cate'),
+                    desc=item.get('desc'),
+                    example=item.get('example'),
+                    purpose=item.get('purpose'),
+                    creator=item.get('creator'),
+                ))
+        db_catalogs = self.filter(code__in=[obj.code for obj in objs])
+        if db_catalogs:
+            for obj in objs[:]:
+                if obj.code in [item.code for item in db_catalogs]:
+                    objs.remove(obj)
+        if not objs:
+            return db_catalogs
+        try:
+            new_cates = self.bulk_create(objs)
+            if level == 2:
+                return cates
+            return self.filter(code__in=[item.code for item in new_cates])
         except Exception as e:
             logger.exception(e)
             return None
+
 
 class AssertDeviceManager(BaseManager):
 
@@ -558,5 +560,4 @@ class FaultSolutionManager(BaseManager):
         except Exception as e:
             logger.info(e)
             return None
-
 

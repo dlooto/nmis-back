@@ -118,14 +118,55 @@ class AssertDeviceBriefSerializer(BaseModelSerializer):
         pass
 
 
-class MedicalDeviceCateSerializer(BaseModelSerializer):
+class MedicalDeviceCateCatalogSerializer(BaseModelSerializer):
+    name_display = serializers.SerializerMethodField()
+
     class Meta:
         model = MedicalDeviceCate
-        fields = ('id', 'title')
+        fields = ('id', 'title', 'code', 'name_display')
+
+    def get_name_display(self, obj):
+        return '{} {}'.format(obj.code, obj.title)
+
+
+class MedicalDeviceSecondGradeCateSerializer(BaseModelSerializer):
+    """二级产品分类简要信息"""
+    name_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MedicalDeviceCate
+        fields = ('id', 'title', 'code', 'name_display')
+
+    def get_name_display(self, obj):
+        return '{} {}'.format(obj.code, obj.title)
+
+
+class MedicalDeviceSecondGradeCateDetailSerializer(BaseModelSerializer):
+    """二级产品分类详情"""
+
+    first_grade_cate = serializers.SerializerMethodField()
+    name_display = serializers.SerializerMethodField()
+    mgt_cate_title = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MedicalDeviceCate
+        fields = (
+            'id', 'title', 'code', 'name_display', 'desc', 'example',
+            'purpose', 'mgt_cate_title', 'first_grade_cate'
+        )
 
     @staticmethod
     def setup_eager_loading(queryset):
-        pass
+        return queryset.select_related('parent')
+
+    def get_name_display(self, obj):
+        return '{} {}'.format(obj.code, obj.title)
+
+    def get_first_grade_cate(self, obj):
+        return '{} {}'.format(obj.parent.level_code, obj.parent.title)if obj.parent and obj.parent.title else ''
+
+    def get_mgt_cate_title(self, obj):
+        return obj.get_mgt_cate_display()
 
 
 class FaultTypeSerializer(BaseModelSerializer):

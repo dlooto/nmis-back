@@ -235,16 +235,17 @@ class MdcManageCateEnum(BaseEnum):
     """
     医疗器械管理类别枚举
     """
-    FIRST = (1, "Ⅰ")
-    SECOND = (2, "Ⅱ")
-    THIRD = (3, "Ⅲ")
+    FIRST = (10, "Ⅰ")
+    SECOND = (20, "Ⅱ")
+    THIRD = (30, "Ⅲ")
+    THIRD_ONE = (31, "Ⅲ（药械组合产品）")
 
 
 # 医疗器械分类上传文件表头字典
 UPLOADED_MEDICAL_DEVICE_CATE_EXCEL_HEADER_DICT = {
-    'catalog':                  '目录名称',
-    'first_level_cate':         '一级产品类别',
-    'second_level_cate':        '二级产品类别',
+    'cate_catalog':              '目录名称',
+    'first_grade_cate':         '一级产品类别',
+    'second_grade_cate':        '二级产品类别',
     'code':                     '分类编码',
     'desc':                     '产品描述',
     'purpose':                  '预期用途',
