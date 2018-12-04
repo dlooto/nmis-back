@@ -151,7 +151,7 @@ class MedicalDeviceSecondGradeCateListView(BaseAPIView):
         self.check_object_any_permissions(req, req.user)
         med_dev_cates = MedicalDeviceCate.objects.get_medical_device_second_grade_cates()
         return resp.serialize_response(
-            med_dev_cates_qs, results_name='medical_device_cates',
+            med_dev_cates, results_name='medical_device_cates',
             srl_cls_name='MedicalDeviceSecondGradeCateSerializer'
         )
 

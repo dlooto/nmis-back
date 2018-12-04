@@ -80,12 +80,12 @@ urlpatterns = [
 
     # 保存/修改项目里程碑节点下的数据(通用接口)，仅对默认项目流程有效
     path(
-        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>/create-or-update',
+        '<int:project_id>/pre_pro_milestone_states/<int:pro_milestone_state_id>/save',
         views.PrefabProjectMilestoneStateDataCreateOrUpdateView.as_view(),
     ),
     # 查看项目里程碑节点下的数据（通用接口），仅对默认项目流程有效
     path(
-        '<int:project_id>/project_milestone_states/<int:project_milestone_state_id>',
+        '<int:project_id>/pre_pro_milestone_states/<int:pro_milestone_state_id>',
         views.PrefabProjectMilestoneStateDataView.as_view(),
     ),
     # 保存项目中【调研】里程碑下的信息
