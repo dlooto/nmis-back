@@ -50,6 +50,8 @@ class AssertDeviceCreateForm(BaseForm):
             'medical_device_cate_null_err':     '医疗设备分类为空',
             'production_date_err':              '出厂日期为空或数据异常',
             'production_date_gt_now':           '出厂日期{}: 不能大于当前日期',
+            'purchase_date_err':                '购买日期为空或数据异常',
+            'purchase_date_gt_now':             '购买日期{}: 不能小于出厂日期',
             'performer_err':                    '资产负责人数据错误',
             'responsible_dept_err':             '负责科室数据错误',
             'use_dept_err':                     '使用科室数据错误',
@@ -265,7 +267,7 @@ class AssertDeviceCreateForm(BaseForm):
         if not purchase_date.strip():
             self.update_errors('purchase_date', 'purchase_date_err')
             return False
-        if purchase_date.strip() > now().strftime('%Y-%m-%d'):
+        if purchase_date.strip() < self.data.get('production_date', '').strip():
             self.update_errors('purchase_date', 'purchase_date_gt_now', purchase_date.strip())
             return False
         return True
@@ -381,6 +383,8 @@ class AssertDeviceUpdateForm(BaseForm):
                 'medical_device_cate_null_err': '医疗设备分类为空',
                 'production_date_err':          '出厂日期为空或数据异常',
                 'production_date_gt_now':       '出厂日期{}: 不能大于当前日期',
+                'purchase_date_err':            '购买日期为空或数据异常',
+                'purchase_date_gt_now':         '购买日期{}: 不能小于出厂日期',
                 'performer_err':                '资产负责人数据错误',
                 'responsible_dept_err':         '负责科室数据错误',
                 'use_dept_err':                 '使用科室数据错误',
@@ -596,7 +600,7 @@ class AssertDeviceUpdateForm(BaseForm):
         if not purchase_date.strip():
             self.update_errors('purchase_date', 'purchase_date_err')
             return False
-        if purchase_date.strip() > now().strftime('%Y-%m-%d'):
+        if purchase_date.strip() < self.data.get('production_date', '').strip():
             self.update_errors('purchase_date', 'purchase_date_gt_now', purchase_date.strip())
             return False
         return True

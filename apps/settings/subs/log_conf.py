@@ -11,6 +11,15 @@
 import os
 import channels.apps
 
+"""
+    import channels.apps用于解决channels和raven导致的服务启动警告
+    UserWarning: Something has already installed a non-asyncio Twisted reactor. 
+    Attempting to uninstall it; 
+    you can fix this warning by importing daphne.server early in your codebase 
+    or finding the package that imports Twisted and importing it later on.
+    UserWarning
+"""
+
 # 系统日志参数设置函数
 def configure_logging_params(**kwargs):
     return {

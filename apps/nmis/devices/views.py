@@ -44,7 +44,7 @@ from nmis.hospitals.consts import ARCHIVE, ROLE_CODE_HOSP_SUPER_ADMIN, \
     ROLE_CODE_ASSERT_DEVICE_ADMIN, ROLE_CODE_REPAIR_ORDER_DISPATCHER, ROLE_CODE_MAINTAINER
 from nmis.hospitals.models import Staff, Department, HospitalAddress
 from nmis.devices.serializers import RepairOrderSerializer, FaultSolutionSerializer, \
-    AssertDeviceSerializer
+    AssertDeviceSerializer, MedicalDeviceSecondGradeCateSerializer
 from nmis.hospitals.permissions import IsHospSuperAdmin, SystemManagePermission, HospGlobalReportAssessPermission, \
     HospitalStaffPermission
 from nmis.notices.models import Notice
@@ -150,9 +150,8 @@ class MedicalDeviceSecondGradeCateListView(BaseAPIView):
         """
         self.check_object_any_permissions(req, req.user)
         med_dev_cates = MedicalDeviceCate.objects.get_medical_device_second_grade_cates()
-        # med_dev_cates = MedicalDeviceCateSerializer.setup_eager_loading(med_dev_cates)
         return resp.serialize_response(
-            med_dev_cates, results_name='med_dev_second_grade_cates',
+            med_dev_cates, results_name='medical_device_cates',
             srl_cls_name='MedicalDeviceSecondGradeCateSerializer'
         )
 
@@ -161,35 +160,36 @@ class MedicalDeviceSecondGradeCateByCatalogView(BaseAPIView):
 
     permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
 
-    @fn_timer
     def get(self, req, catalog_id):
         """
         通过目录ID获取医疗器械二级产品类型列表
         """
         self.check_object_any_permissions(req, req.user)
 
-        medical_device_cate_list = MedicalDeviceCate.objects.get_med_dev_second_grade_cates_by_catalog(catalog_id)
+        med_dev_cates = MedicalDeviceCate.objects.get_med_dev_second_grade_cates_by_catalog(catalog_id)
+        med_dev_cate_qs = MedicalDeviceSecondGradeCateSerializer.setup_eager_loading(med_dev_cates)
 
         return resp.serialize_response(
-            medical_device_cate_list, results_name='med_dev_second_grade_cates',
+            med_dev_cate_qs, results_name='medical_device_cates',
             srl_cls_name='MedicalDeviceSecondGradeCateDetailSerializer'
         )
 
 
 class MedicalDeviceCateCatalogListView(BaseAPIView):
+    """医疗器械分类目录"""
 
     permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
 
     def get(self, req):
         """
-        获取医疗器械分类目录
+        获取医疗器械分类目录列表
         """
         self.check_object_any_permissions(req, req.user)
 
-        catalog = MedicalDeviceCate.objects.get_med_dev_cate_catalogs()
+        catalogs = MedicalDeviceCate.objects.get_med_dev_cate_catalogs()
 
         return resp.serialize_response(
-            catalog, results_name='cate_catalogs', srl_cls_name='MedicalDeviceCateCatalogSerializer'
+            catalogs, results_name='cate_catalogs', srl_cls_name='MedicalDeviceCateCatalogSerializer'
         )
 
 

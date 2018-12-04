@@ -1037,10 +1037,10 @@ class PrefabProjectMilestoneStateDataCreateOrUpdateView(BaseAPIView):
 
     @check_params_not_all_null(['cate_documents', 'summary'])
     @transaction.atomic
-    def post(self, req, project_id, project_milestone_state_id, ):
+    def post(self, req, project_id, pro_milestone_state_id, ):
         project = self.get_object_or_404(project_id, ProjectPlan)
         self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
-        milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        milestone_state = self.get_object_or_404(pro_milestone_state_id, ProjectMilestoneState)
         common_milestone_tiles = [
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_RESEARCH),
             DEFAULT_MILESTONE_DICT.get(DEFAULT_MILESTONE_DETERMINE_PURCHASE_METHOD),
@@ -1261,10 +1261,10 @@ class PrefabProjectMilestoneStateDataView(BaseAPIView):
     """
     permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
-    def get(self, req, project_id, project_milestone_state_id):
+    def get(self, req, project_id, pro_milestone_state_id):
         project = self.get_object_or_404(project_id, ProjectPlan)
         self.check_objects_any_permissions(req, [req.user.get_profile().organ, project])
-        milestone_state = self.get_object_or_404(project_milestone_state_id, ProjectMilestoneState)
+        milestone_state = self.get_object_or_404(pro_milestone_state_id, ProjectMilestoneState)
         print(milestone_state.milestone.title)
         all_stone_titles = DEFAULT_MILESTONE_DICT.values()
         success, msg = check_project_milestone_state(project, milestone_state, all_stone_titles, request_method="GET")

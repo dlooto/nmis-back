@@ -199,9 +199,9 @@ class AssertDevicesApiTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
             'status': 'US',
             'storage': str(storage_place.id),
             'page': 1,
-            'size': 3
+            'size': 3,
+            'type': 'TL'
         }
-
         response = self.get(api, data=data)
         self.assert_response_success(response)
         assert_devices = response.get('assert_devices')
