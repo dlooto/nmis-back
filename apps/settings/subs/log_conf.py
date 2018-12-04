@@ -9,6 +9,7 @@
 
 
 import os
+import channels.apps
 
 # 系统日志参数设置函数
 def configure_logging_params(**kwargs):

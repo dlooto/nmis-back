@@ -6,10 +6,12 @@
 # 
 
 import logging
+import datetime
 
 from rest_framework import serializers
 from base.serializers import BaseModelSerializer
 from nmis.notices.models import Notice, UserNotice
+from utils import times
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +42,7 @@ class UserNoticeSerializer(BaseModelSerializer):
         return obj.notice.id
 
     def _get_created_time(self, obj):
-        return obj.notice.created_time
+        return times.datetime_strftime(d_date=obj.notice.created_time)
 
     def _get_type(self, obj):
         return obj.notice.type
