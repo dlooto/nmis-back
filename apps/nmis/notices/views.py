@@ -64,9 +64,10 @@ class NoticeReadOrDeleteView(BaseAPIView):
             return resp.failed('检查是否存在不匹配的消息')
         try:
             if operation_type == 'RE':
-                if not user_notices.filter(is_read=False):
+                user_notices = user_notices.filter(is_read=False)
+                if not user_notices:
                     return resp.failed('当前页不存在未读消息')
-                user_notices.filter(is_read=False).update(is_read=True, read_time=times.now())
+                user_notices.update(is_read=True, read_time=times.now())
             else:
                 # 选中的消息存在未读的情况下未考虑，直接标记成删除状态，如需考虑，后续改进
                 user_notices.update(is_delete=True, delete_time=times.now())
@@ -95,12 +96,14 @@ class NoticeReadOrDeleteAllView(BaseAPIView):
 
         try:
             if operation_type == 'ARE':
-                query_set = UserNotice.objects.filter(staff=staff, is_read=False)
+                query_set = UserNotice.objects.filter(staff=staff, is_read=False, is_delete=False)
                 if not query_set:
                     return resp.failed('不存在未读消息')
                 query_set.update(is_read=True, read_time=times.now())
             else:
-                query_set = UserNotice.objects.filter(staff=staff, is_read=True)
+                query_set = UserNotice.objects.filter(staff=staff, is_read=True, is_delete=False)
+                if not query_set:
+                    return resp.failed('当前用户不存在可删除的消息')
                 query_set.update(is_delete=True, delete_time=times.now())
             return resp.ok('操作成功')
         except Exception as e:
