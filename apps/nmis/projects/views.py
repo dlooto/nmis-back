@@ -1889,7 +1889,7 @@ class MilestoneTakeDeliveryCreateOrUpdateView(BaseAPIView):
     permission_classes = (IsHospSuperAdmin, ProjectPerformerPermission, ProjectAssistantPermission)
 
     @transaction.atomic
-    @check_params_not_null(['served_date', 'delivery_man', 'contact_phone'])
+    @check_params_not_null(['served_date',])
     def post(self, req, project_id, project_milestone_state_id):
         """
         到货项目里程碑的保存/修改操作
