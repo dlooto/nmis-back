@@ -105,12 +105,12 @@ def datetime_to_str(a_datetime, format=DEFAULT_TIME_FORMAT):
     return a_datetime.strftime(format)
 
 
-def datetime_strftime(format=DEFAULT_TIME_FORMAT):
+def datetime_strftime(d_date, format=DEFAULT_TIME_FORMAT):
     """
+    :param d_date: datetime.datetime类型，如：2015-07-23 16:12:39.130297
     如 datetime.datetime.now(2015-07-23 16:12:39.130297) 转为 "2015-07-23 16:12:39"
-    :return:
     """
-    return datetime.datetime.strftime(now(), format)
+    return datetime.datetime.strftime(d_date, format)
 
 
 def incr(a_datetime, hours=0):

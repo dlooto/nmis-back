@@ -121,6 +121,7 @@ class ProjectPlanCreateView(BaseAPIView):
     """
     permission_classes = (HospitalStaffPermission, )
 
+    @transaction.atomic
     @check_id_list(["organ_id", "creator_id", "related_dept_id"])
     @check_params_not_null(['project_title', 'handing_type', 'pro_type', 'pre_amount'])
     def post(self, req):
@@ -215,7 +216,10 @@ class ProjectPlanCreateView(BaseAPIView):
 
         # 生成消息，给项目分配者推送消息
         staffs = Staff.objects.filter(user__role__codename=ROLE_CODE_PRO_DISPATCHER)
-        message = "%s于%s: 提交项目申请,请尽快处理!" % (req.user.get_profile().name, times.datetime_strftime())
+        message = "%s于%s: 提交项目申请-%s,请尽快处理!" % (
+            req.user.get_profile().name, times.datetime_strftime(d_date=times.now()), project.title
+        )
+
         Notice.objects.create_and_send_notice(staffs, message)
 
         return resp.serialize_response(
@@ -333,7 +337,7 @@ class ProjectPlanDispatchView(BaseAPIView):
 
         # 分配成功后向项目申请者/负责人/协助人发送项目被挂起消息
         message = "%s于%s: 分配 '%s' 申请" % (
-            req.user.get_profile().name, times.datetime_strftime(), project.title)
+            req.user.get_profile().name, times.datetime_strftime(d_date=times.now()), project.title)
         if assistant:
             Notice.objects.create_and_send_notice([project.creator, assistant, performer], message)
         else:
@@ -411,7 +415,7 @@ class ProjectPlanOverruleView(BaseAPIView):
 
             # 驳回成功后向项目申请者发送项目被驳回消息
             message = "%s于%s:驳回 '%s'" % (
-                req.user.get_profile().name, times.datetime_strftime(), project.title)
+                req.user.get_profile().name, times.datetime_strftime(d_date=times.now()), project.title)
             Notice.objects.create_and_send_notice([project.creator], message)
 
             return resp.serialize_response(project_queryset, results_name='project')
@@ -442,7 +446,7 @@ class ProjectPlanPauseView(BaseAPIView):
 
             # 挂起成功后向项目申请者发送项目被挂起消息
             message = "%s于%s: 挂起 '%s'" % (
-                req.user.get_profile().name, times.datetime_strftime(), project.title)
+                req.user.get_profile().name, times.datetime_strftime(d_date=times.now()), project.title)
             Notice.objects.create_and_send_notice([project.creator], message)
 
             return resp.serialize_response(project_queryset, results_name='project')

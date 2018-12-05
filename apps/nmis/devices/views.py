@@ -549,7 +549,7 @@ class RepairOrderCreateView(BaseAPIView):
         # 生成消息，给维修任务分配者推送消息
         staffs = Staff.objects.filter(user__role__codename=ROLE_CODE_REPAIR_ORDER_DISPATCHER)
         message = "%s于%s: 提交报修申请,请尽快处理!" % (
-            req.user.get_profile().name, times.datetime_strftime()
+            req.user.get_profile().name, times.datetime_strftime(d_date=times.now())
         )
         Notice.objects.create_and_send_notice(staffs, message)
         return resp.serialize_response(repair_order, results_name='repair_order',
@@ -591,12 +591,12 @@ class RepairOrderView(BaseAPIView):
                 return resp.failed('操作失败')
             # 生成消息，给维修任务分配者推送消息
             message = "%s于%s: 向你分派了报修单-%s,请尽快处理!" % (
-                req.user.get_profile().name, times.datetime_strftime(), repair_order.order_no
+                req.user.get_profile().name, times.datetime_strftime(d_date=times.now()), repair_order.order_no
             )
             Notice.objects.create_and_send_notice([repair_order.maintainer], message)
             # 生成消息，给申请者推送消息
             message = "%s于%s: 报修单-%s 已分配,维修工程师-%s!" % (
-                req.user.get_profile().name, times.datetime_strftime(),
+                req.user.get_profile().name, times.datetime_strftime(d_date=times.now()),
                 repair_order.order_no, repair_order.maintainer.name
             )
             Notice.objects.create_and_send_notice([repair_order.creator], message)
@@ -621,7 +621,7 @@ class RepairOrderView(BaseAPIView):
 
             # 处理完成后生成消息，给申请者推送消息
             message = "%s于%s: 报修单-%s 已处理,维修工程师-%s!" % (
-                req.user.get_profile().name, times.datetime_strftime(),
+                req.user.get_profile().name, times.datetime_strftime(d_date=times.now()),
                 repair_order.order_no, repair_order.maintainer.name
             )
             Notice.objects.create_and_send_notice([repair_order.creator], message)
@@ -639,7 +639,7 @@ class RepairOrderView(BaseAPIView):
 
             # 评价完成后生成消息，给维修工程推送消息
             message = "%s于%s: 评价了单号-%s" % (
-                req.user.get_profile().name, times.datetime_strftime(),
+                req.user.get_profile().name, times.datetime_strftime(d_date=times.now()),
                 repair_order.order_no
             )
             Notice.objects.create_and_send_notice([repair_order.maintainer], message)

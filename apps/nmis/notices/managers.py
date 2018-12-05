@@ -36,10 +36,9 @@ class NoticeManager(BaseManager):
                     )
                 UserNotice.objects.bulk_create(user_notice_list)
                 send_messages(staffs, message)
-                return True
+
         except Exception as e:
             logger.exception(e)
-            return False
 
     def delete_notice(self):
         """
