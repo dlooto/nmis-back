@@ -7,9 +7,12 @@
 
 import logging
 
+from django.db import transaction
+
 from nmis.devices.models import MedicalDeviceCate, AssertDevice, MaintenancePlan, \
     FaultType, RepairOrder, FaultSolution
 from nmis.hospitals.models import HospitalAddress
+from nmis.notices.models import Notice, UserNotice
 from nmis.projects.consts import PRO_HANDING_TYPE_SELF, PRO_CATE_SOFTWARE
 from nmis.projects.models import ProjectPlan, ProjectFlow, ProjectMilestoneState, \
     Milestone, PurchaseContract
@@ -645,3 +648,35 @@ class HospitalMixin(object):
         from nmis.hospitals.models import HospitalAddress
         return HospitalAddress.objects.create(
             title=title, is_storage_place=False, level=0, sort=1,  disabled=False, created_time=times.now())
+
+
+class NoticeMixin(object):
+
+    def create_notice(self, staff, message='收到一条新的消息'):
+        """
+        创建消息
+        :param staff: 员工对象
+        :param message: 消息内容
+        :return:
+        """
+
+        try:
+            with transaction.atomic():
+                notice_data = {'content': message}
+                notice = Notice.objects.create(**notice_data)
+                u_notice_data = {
+                    'staff': staff,
+                    'notice': notice
+                }
+                UserNotice.objects.create(**u_notice_data)
+                return True
+        except Exception as e:
+            logger.exception(e)
+            return False
+
+    def get_notices(self, staff):
+        """
+        获取消息列表
+        """
+        return UserNotice.objects.filter(staff=staff)
+

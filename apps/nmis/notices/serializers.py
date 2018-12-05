@@ -31,7 +31,8 @@ class UserNoticeSerializer(BaseModelSerializer):
 
     class Meta:
         model = UserNotice
-        fields = ('id', 'type', 'created_time', 'content', 'is_read', 'is_delete')
+        fields = ('id', 'type', 'created_time', 'content', 'is_read', 'is_delete',
+                  'read_time', 'delete_time')
 
     @staticmethod
     def setup_eager_loading(queryset):
