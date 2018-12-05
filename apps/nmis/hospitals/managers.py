@@ -364,6 +364,18 @@ class HospitalAddressManager(BaseManager):
             logger.exception(e)
             return False, "操作失败"
 
+    def update_address(self, address, *args, **kwargs):
+        if not isinstance(address, self.model):
+            return None
+        try:
+            address.save()
+            address.clear_cache()
+            return address
+        except Exception as e:
+            logger.exception(e)
+            return None
+
+
     def get_children(self, address):
         try:
             return self.filter(parent=address)

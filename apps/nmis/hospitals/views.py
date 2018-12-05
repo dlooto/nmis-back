@@ -29,7 +29,7 @@ from base import resp
 from base.views import BaseAPIView
 from nmis.hospitals.forms import StaffUpdateForm, StaffBatchUploadForm, \
     DepartmentBatchUploadForm, RoleCreateForm, RoleUpdateForm, \
-    HospitalAddressCreateForm
+    HospitalAddressCreateForm, HospitalAddressUpdateForm
 from nmis.hospitals.permissions import IsHospSuperAdmin, HospitalStaffPermission, \
     ProjectDispatcherPermission, IsSuperAdmin, SystemManagePermission
 from nmis.hospitals.models import Hospital, Department, Staff, Role, HospitalAddress
@@ -707,6 +707,19 @@ class HospitalAddressView(BaseAPIView):
         self.get_object_or_404(hid, Hospital)
         address = self.get_object_or_404(address_id, HospitalAddress)
         return resp.serialize_response(address, results_name='hospital_address', srl_cls_name='HospitalAddressSerializer')
+
+    def put(self, req, hid, address_id):
+        """修改暂时仅修改详情,不修改地址的层级关系"""
+        self.check_object_any_permissions(req, None)
+        self.get_object_or_404(hid, Hospital)
+        old_address = self.get_object_or_404(address_id, HospitalAddress)
+        form = HospitalAddressUpdateForm(req.user.get_profile(), old_address, req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        new_address = form.save()
+        if not new_address:
+            return resp.failed('操作失败')
+        return resp.serialize_response(new_address, results_name='hospital_address', srl_cls_name='HospitalAddressSerializer')
 
     def delete(self, req, hid, address_id):
         """

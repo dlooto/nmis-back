@@ -1011,17 +1011,6 @@ class HospitalAddressCreateForm(BaseForm):
             return False
         return True
 
-    # def check_id(self):
-    #     addr_id = self.data.get('id')
-    #     if not addr_id:
-    #         return True
-    #     if not isinstance(addr_id, int):
-    #         self.update_errors('id', 'id_error')
-    #         return False
-    #     if not HospitalAddress.objects.get_by_id(addr_id):
-    #         self.update_errors('id', 'id_error')
-    #         return False
-
     def check_parent(self):
         parent_id = self.data.get('parent_id')
         if not parent_id:
@@ -1112,3 +1101,126 @@ class HospitalAddressCreateForm(BaseForm):
             save_data.get('parent'),
             **not_required_data
         )
+
+
+class HospitalAddressUpdateForm(BaseForm):
+
+    def __init__(self, user_profile, old_address, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.user_profile = user_profile
+        self.old_address = old_address
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'title_error': '地址名称为空或数据错误',
+            'title_exists': '地址名称已存在',
+            'title_limit_size': '地址名称不能超过50个字符',
+            'parent_id_error': '数据异常',
+            'is_storage_place_error': '是否存储地点为空或数据异常',
+            'dept_id_error': '部门为空数据异常',
+            'desc_error': '描述数据异常',
+            'desc_limit_size': '描述不能超过100个字符',
+            'id_not_exists': '地址不存在',
+
+        })
+
+    def is_valid(self):
+        if not self.check_title():
+            return False
+        if not self.check_dept():
+            return False
+        if not self.check_desc():
+            return False
+        return True
+
+    # def check_id(self):
+    #     addr_id = self.data.get('id')
+    #     if not addr_id:
+    #         return True
+    #     if not isinstance(addr_id, int):
+    #         self.update_errors('id', 'id_error')
+    #         return False
+    #     if not HospitalAddress.objects.get_by_id(addr_id):
+    #         self.update_errors('id', 'id_not_exists')
+    #         return False
+    #     return True
+
+    # def check_parent(self):
+    #     parent_id = self.data.get('parent_id')
+    #     if not parent_id:
+    #         return True
+    #     if not isinstance(parent_id, int):
+    #         self.update_errors('parent_id', 'parent_id_error')
+    #         return False
+    #     if not HospitalAddress.objects.get_by_id(parent_id):
+    #         self.update_errors('parent_id', 'parent_id_error')
+    #         return False
+    #     return True
+
+    def check_title(self):
+        title = self.data.get('title')
+        if not title:
+            self.update_errors('title', 'title_error')
+            return False
+        if not isinstance(title, str):
+            self.update_errors('title', 'title_error')
+            return False
+        if not title.strip():
+            self.update_errors('title', 'title_error')
+            return False
+        if len(title.strip()) > 50:
+            self.update_errors('title', 'title_limit_size')
+            return False
+        address = HospitalAddress.objects.filter(title=title.strip(), parent=self.old_address.parent).first()
+        if address and not address == self.old_address:
+            self.update_errors('title', 'title_exists')
+            return False
+        return True
+
+    # def check_is_storage_place(self):
+    #     if not isinstance(self.data.get('is_storage_place'), bool):
+    #         self.update_errors('is_storage_place', 'is_storage_place_error')
+    #         return False
+    #     return True
+
+    def check_dept(self):
+        if self.old_address.is_storage_place:
+            dept_id = self.data.get('dept_id')
+            if not dept_id:
+                return True
+            if not isinstance(dept_id, int):
+                self.update_errors('dept_id', 'dept_id_error')
+                return False
+            if not Department.objects.get_by_id(dept_id):
+                self.update_errors('dept_id', 'dept_id_error')
+                return False
+        return True
+
+    def check_desc(self):
+        if self.old_address.is_storage_place:
+            desc = self.data.get('desc')
+            if not desc:
+                return True
+            if not isinstance(desc, str):
+                self.update_errors('desc', 'desc_error')
+                return False
+            if not desc.strip():
+                self.update_errors('desc', 'desc_error')
+                return True
+            if len(desc.strip()) > 100:
+                self.update_errors('desc', 'desc_limit_size')
+                return False
+        return True
+
+    def save(self):
+        self.old_address.title = self.data.get('title', '').strip()
+        dept_id = self.data.get('dept_id')
+        dept = Department.objects.get_by_id(dept_id)
+        if self.old_address.is_storage_place:
+            if dept:
+                self.old_address.dept = dept
+        if self.data.get('desc') is not None and isinstance(self.data.get('desc'), str):
+            self.old_address.desc = self.data.get('desc').strip()
+
+        return HospitalAddress.objects.update_address(self.old_address)
