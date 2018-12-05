@@ -812,7 +812,46 @@ class FaultSolutionsTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         self.assert_response_success(response)
 
 
+class MedicalDeviceCateTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
 
+    def test_get_med_dev_cate_catalog(self):
+
+        api = '/api/v1/devices/medical-device-cate-catalogs'
+
+        init_cates = self.init_medical_device_cates(self.admin_staff)
+        self.login_with_username(self.user)
+        resp = self.get(api)
+        self.assert_response_success(resp)
+
+
+    def test_get_all_med_dev_cates(self):
+
+        api = '/api/v1/devices/medical-device-cates'
+
+        init_cates = self.init_medical_device_cates(self.admin_staff)
+        self.login_with_username(self.user)
+        resp = self.get(api)
+        self.assert_response_success(resp)
+
+
+    def test_get_med_dev_cates_by_catalog(self):
+
+        api = '/api/v1/devices/medical-device-cate-catalogs/{}/medical-device-cates'
+
+        init_cates = self.init_medical_device_cates(self.admin_staff)
+        self.login_with_username(self.user)
+        catalogs = [item for item in init_cates if item.parent is None]
+        resp = self.get(api.format(catalogs[0]))
+        self.assert_response_success(resp)
+
+
+    def test_upload_med_dev_cates(self):
+
+        api = '/api/v1/devices/medical-device-cates/import'
+
+        import os
+        curr_path = os.path.dirname(__file__)
+        self.login_with_username(self.user)
 
 
 

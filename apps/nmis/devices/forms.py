@@ -473,7 +473,7 @@ class AssertDeviceUpdateForm(BaseForm):
             self.update_errors('assert_no', 'assert_no_limit_size')
             return False
         assert_device = AssertDevice.objects.get_assert_device_by_assert_no(assert_no.strip())
-        if assert_device:
+        if assert_device and not assert_no.strip() == self.assert_device.assert_no:
             self.update_errors('assert_no', 'assert_no_exists')
             return False
         return True
@@ -496,7 +496,7 @@ class AssertDeviceUpdateForm(BaseForm):
             self.update_errors('serial_no', 'serial_no_limit_size')
             return False
         assert_device = AssertDevice.objects.get_assert_device_by_serial_no(serial_no.strip())
-        if assert_device:
+        if assert_device and not serial_no.strip() == self.assert_device.serial_no:
             self.update_errors('serial_no', 'serial_no_exists')
             return False
         return True
@@ -506,20 +506,20 @@ class AssertDeviceUpdateForm(BaseForm):
         存在设备条形码时，校验是否存在相同的设备条形码
         """
         bar_code = self.data.get('bar_code')
-        if not bar_code:
+        if bar_code is None:
             return True
         if not isinstance(bar_code, str):
             self.update_errors('bar_code', 'bar_code_err')
             return False
         if not bar_code.strip():
             self.update_errors('bar_code', 'bar_code_err')
-            return False
+            return True
         if len(bar_code.strip()) > 40:
             self.update_errors('bar_code', 'bar_code_limit_size')
             return False
         if bar_code:
             assert_device = AssertDevice.objects.get_assert_device_by_bar_code(bar_code.strip())
-            if assert_device:
+            if assert_device and not bar_code.strip() == self.assert_device.bar_code:
                 self.update_errors('bar_code', 'bar_code_exists')
                 return False
         return True
@@ -654,60 +654,6 @@ class AssertDeviceUpdateForm(BaseForm):
             return False
         return True
 
-    # def is_valid(self):
-    #     if not self.check_service_life() or not self.check_status()\
-    #             or not self.check_assert_no() or not self.check_serial_no():
-    #         return False
-    #     return True
-    #
-    # def check_service_life(self):
-    #     """
-    #     校验资产设备预计使用年限数据类型
-    #     """
-    #     service_life = self.data.get('service_life')
-    #
-    #     if service_life:
-    #         if not isinstance(service_life, int):
-    #             self.update_errors('service_life', 'service_life_err')
-    #             return False
-    #     return True
-    #
-    # def check_status(self):
-    #     """
-    #     校验资产设备状态
-    #     """
-    #     status = self.data.get('status', '').strip()
-    #     if status:
-    #         if status not in dict(ASSERT_DEVICE_STATUS_CHOICES):
-    #             self.update_errors('status', 'status_err')
-    #             return False
-    #     return True
-    #
-    # def check_assert_no(self):
-    #     """
-    #     校验是否存在相同的资产编号
-    #     :return:
-    #     """
-    #     assert_no = self.data.get('assert_no', '').strip()
-    #     if assert_no:
-    #         assert_device = AssertDevice.objects.get_assert_device_by_assert_no(assert_no)
-    #         if assert_device and not self.assert_device == assert_device:
-    #             self.update_errors('assert_no', 'assert_no_exists')
-    #             return False
-    #     return True
-    #
-    # def check_serial_no(self):
-    #     """
-    #     校验是否存在相同的资产序列号
-    #     """
-    #     serial_no = self.data.get('serial_no', '').strip()
-    #     if serial_no:
-    #         assert_device = AssertDevice.objects.get_assert_device_by_serial_no(serial_no)
-    #         if assert_device and not self.assert_device == assert_device:
-    #             self.update_errors('serial_no', 'serial_no_err')
-    #             return False
-    #     return True
-
     def save(self):
         update_data = {
             'modifier': self.modifier,
@@ -715,9 +661,9 @@ class AssertDeviceUpdateForm(BaseForm):
             'use_dept_id': self.data.get('use_dept_id'),
             'performer_id': self.data.get('performer_id'),
             'responsible_dept_id': self.data.get('responsible_dept_id'),
-            'bar_code': self.data.get('bar_code', '').strip()
-
         }
+        if self.data.get('bar_code') is not None:
+            update_data['bar_code'] = self.data.get('bar_code').strip()
         if self.data.get('assert_no', '').strip():
             update_data['assert_no'] = self.data.get('assert_no')
         if self.data.get('title', '').strip():
@@ -1490,17 +1436,17 @@ class AssertDeviceBatchUploadForm(BaseForm):
                 return False
             bar_code_list.append(bar_code.strip())
 
-        # if not len(set(bar_code_list)) == len(bar_code_list):
-        #     self.update_errors('bar_code', 'bar_code_repeat_err')
-        #     return False
+        if not len(set(bar_code_list)) == len(bar_code_list):
+            self.update_errors('bar_code', 'bar_code_repeat_err')
+            return False
 
-        # assert_devices = AssertDevice.objects.filter(bar_code__in=bar_code_list)
-        # assert_device_bar_codes = [assert_device.bar_code for assert_device in assert_devices]
-        #
-        # for bar_code in bar_code_list:
-        #     if bar_code in assert_device_bar_codes:
-        #         self.update_errors('bar_code', 'bar_code_exists', bar_code)
-        #         return False
+        assert_devices = AssertDevice.objects.filter(bar_code__in=bar_code_list)
+        assert_device_bar_codes = [assert_device.bar_code for assert_device in assert_devices]
+
+        for bar_code in bar_code_list:
+            if bar_code in assert_device_bar_codes:
+                self.update_errors('bar_code', 'bar_code_exists', bar_code)
+                return False
         return True
 
     def check_use_dept(self):

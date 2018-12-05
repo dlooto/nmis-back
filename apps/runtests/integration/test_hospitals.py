@@ -10,6 +10,7 @@ from unittest import skip
 import pytest
 
 from runtests import BaseTestCase
+from runtests.common.mixins import HospitalMixin
 
 logger = logging.getLogger('runtests')
 
@@ -390,6 +391,84 @@ class RoleAPITestCase(BaseTestCase):
             role_names.append(role['name'])
 
         self.assertTrue((data1['name'] in role_names or data2['name'] in role_names))
+
+
+class HospitalAddressApiTestCase(BaseTestCase, HospitalMixin):
+
+    def test_get_storage_places(self):
+        """测试获取存储地址列表"""
+        api = '/api/v1/hospitals/{}/storage-places'
+
+        self.login_with_username(self.user)
+        init_addresses = self.init_hospital_address(self.dept)
+        self.assertIsNotNone(init_addresses)
+        self.assertTrue(len(init_addresses) > 2)
+        storage_places = [item for item in init_addresses if item.is_storage_place]
+        self.assertIsNotNone(storage_places)
+        self.assertTrue(len(storage_places) > 2)
+        response = self.get(api.format(self.organ.id))
+        self.assert_response_success(response)
+        addresses = response.get('hospital_addresses')
+        self.assertIsNotNone(addresses)
+        self.assertEqual(len(addresses), len(storage_places))
+
+    def test_get_hospital_address_tree(self):
+        """测试获取医院内部地址树形结构"""
+        api = '/api/v1/hospitals/{}/hospital-address-tree'
+
+        self.login_with_username(self.user)
+        init_addresses = self.init_hospital_address(self.dept)
+        self.assertIsNotNone(init_addresses)
+        self.assertTrue(len(init_addresses) > 2)
+        root_addresses = [item for item in init_addresses if not item.parent]
+        self.assertTrue(len(root_addresses) == 1)
+        root_address = root_addresses[0]
+        storage_places = [item for item in init_addresses if item.is_storage_place]
+        self.assertTrue(len(storage_places) > 0)
+        response = self.get(api.format(self.organ.id))
+        self.assert_response_success(response)
+        address_tree = response.get('hospital_addresses')
+        self.assertIsNotNone(address_tree)
+        self.assertEqual(address_tree.get('id'), root_address.id)
+        self.assertIsNotNone(address_tree.get('children'))
+
+    def test_create_hospital_address(self):
+        """测试创建医院内部地址"""
+        api = '/api/v1/hospitals/{}/hospital-addresses/create'
+
+        self.login_with_username(self.user)
+        root_address_data = {
+            'title': 'XX医院',
+            'is_storage_place': False,
+            'parent_id': None,
+            'desc': ''
+        }
+        resp_root = self.post(api.format(self.organ.id), data=root_address_data)
+        self.assert_response_success(resp_root)
+        root_address = resp_root.get('hosp_address')
+        self.assertIsNotNone(root_address)
+        self.assertIsNotNone(root_address.get('id'))
+        self.assertEqual(root_address.get('title'), root_address_data.get('title'))
+        self.assertEqual(root_address.get('is_storage_place'), root_address_data.get('is_storage_place'))
+        self.assertEqual(root_address.get('parent_id'), root_address_data.get('parent_id'))
+        self.assertEqual(root_address.get('desc'), root_address_data.get('desc'))
+
+        storage_place_data = {
+            'title': 'A仓库',
+            'is_storage_place': True,
+            'parent_id': root_address.get('id'),
+            'desc': ''
+        }
+        resp_sp = self.post(api.format(self.organ.id), data=storage_place_data)
+        self.assert_response_success(resp_sp)
+        storage_place = resp_sp.get('hosp_address')
+        self.assertIsNotNone(storage_place)
+        self.assertIsNotNone(storage_place.get('id'))
+        self.assertEqual(storage_place.get('title'), storage_place_data.get('title'))
+        self.assertEqual(storage_place.get('is_storage_place'), storage_place_data.get('is_storage_place'))
+        self.assertEqual(storage_place.get('parent_id'), storage_place_data.get('parent_id'))
+        self.assertEqual(storage_place.get('desc'), storage_place_data.get('desc'))
+
 
 
 

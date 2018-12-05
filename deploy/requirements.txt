@@ -24,7 +24,7 @@ kombu==3.0.37
 more-itertools==4.1.0
 paramiko==2.4.1
 Pillow==5.1.0
-pluggy==0.6.0
+pluggy==0.8.0
 py==1.5.3
 pyasn1==0.4.2
 pycparser==2.18
