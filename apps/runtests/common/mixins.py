@@ -172,48 +172,68 @@ MILESTONES = [
 
 MEDICAL_DEVICES_CATE = [
     {
+        "id": 60029999,
+        "code": "01",
+        "title": "有源手术器械",
+        "level": 0,
+        "level_code": '01',
+        "mgt_cate": None,
+        "parent_id": None,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
+        "id": 60030000,
+        "code": "02",
+        "title": "无源手术器械",
+        "level": 0,
+        "level_code": '02',
+        "mgt_cate": None,
+        "parent_id": None,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
         "id": 60030001,
-        "code": "6801",
-        "title": "基础外科手术器械",
+        "code": "01-01",
+        "title": "超声手术设备及附件",
         "level": 1,
-        "mgt_cate": 2,
+        "level_code": '01',
+        "parent_id": 60029999,
+        "mgt_cate": None,
         "created_time": "2018-10-30 15:00"
     },
     {
         "id": 60030002,
-        "code": "6830",
-        "title": "医用X射线设备",
+        "code": "01-02",
+        "title": "激光手术设备及附件",
         "level": 1,
-        "mgt_cate": 3,
+        "level_code": '02',
+        "parent_id": 60029999,
+        "mgt_cate": None,
         "created_time": "2018-10-30 15:00"
     },
     {
         "id": 60030003,
-        "code": "6801-02",
-        "title": "基础外科用刀",
+        "code": "01-01-01.1",
+        "title": "超声手术设备",
         "level": 2,
+        "level_code": '01',
         "parent_id": 60030001,
-        "example": "手术刀柄和刀片、皮片刀、疣体剥离刀、柳叶刀、铲刀、剃毛刀、皮屑刮刀、挑刀、锋刀、修脚刀、修甲刀、解剖刀",
-        "mgt_cate": 1,
+        'desc': '通常由超声波发生器和带有外科尖端的手持部件组成，手持部件通常由一个换能器、一个连接构件和一个治疗头尖端组成。',
+        'purpose': '用于软组织的切割、止血、整形。',
+        "example": "软组织超声手术仪、外科超声手术系统、超声手术系统、超声切割止血刀系统、软组织超声手术系统、超声手术刀、超声刀系统",
+        "mgt_cate": 3,
         "created_time": "2018-10-30 15:00"
     },
     {
         "id": 60030004,
-        "code": "6801-03",
-        "title": "基础外科用剪",
+        "code": "01-02-01",
+        "title": "激光手术设备",
         "level": 2,
-        "parent_id": 60030001,
-        "example": "普通手术剪、组织剪、综合组织剪、拆线剪、石膏剪、解剖剪、纱布绷带剪、教育用手术剪",
-        "mgt_cate": 1,
-        "created_time": "2018-10-30 15:00"
-    },
-    {
-        "id": 60030005,
-        "code": "6830-03",
-        "title": "X射线手术影像设备",
-        "level": 2,
+        "level_code": '02',
         "parent_id": 60030002,
-        "example": "介入治疗X射线机",
+        'desc': '通常由激光器、冷却装置、传输装置、目标指示装置、控制装置、防护装置等部分组成。利用激光与生物组织的相互作用机理进行手术治疗。',
+        'purpose': '用于对机体组织进行汽化、碳化、凝固，以达到手术治疗的目的',
+        "example": "钬（Ho:YAG）激光治疗机、掺钕钇铝石榴石激光治疗机、掺铥光纤激光治疗仪、半导体激光治疗机、二氧化碳激光治疗机",
         "mgt_cate": 3,
         "created_time": "2018-10-30 15:00"
     }
@@ -221,12 +241,25 @@ MEDICAL_DEVICES_CATE = [
 
 STORAGE_PLACE = [
     {
-        "id": 50020001,
-        "title": "住院大楼A座",
+        "id": 50020000,
+        "title": "XX市第一人民医院",
         "is_storage_place": False,
         "parent_id": None,
         "parent_path": "",
         "level": 1,
+        "sort": 1,
+        "dept": None,
+        "desc": "简介XX市第一人民医院",
+        "disabled": False,
+        "created_time": "2018-10-30 15:00"
+    },
+    {
+        "id": 50020001,
+        "title": "住院大楼A座",
+        "is_storage_place": False,
+        "parent_id": 50020000,
+        "parent_path": "50020000",
+        "level": 2,
         "sort": 1,
         "dept": None,
         "desc": "简介住院大楼A座",
@@ -237,9 +270,9 @@ STORAGE_PLACE = [
         "id": 50020002,
         "title": "综合楼B座",
         "is_storage_place": False,
-        "parent_id": None,
-        "parent_path": "",
-        "level": 1,
+        "parent_id": 50020000,
+        "parent_path": "50020000",
+        "level": 2,
         "sort": 2,
         "dept": None,
         "desc": "简介综合楼B座",
@@ -251,8 +284,8 @@ STORAGE_PLACE = [
         "title": "消毒设备库房001",
         "is_storage_place": True,
         "parent_id": 50020001,
-        "parent_path": "50020001",
-        "level": 2,
+        "parent_path": "50020000-50020001",
+        "level": 3,
         "sort": 1,
         "desc": "简介消毒设备库房001",
         "disabled": False,
@@ -263,8 +296,8 @@ STORAGE_PLACE = [
         "title": "消毒设备库房002",
         "is_storage_place": True,
         "parent_id": 50020001,
-        "parent_path": "50020001",
-        "level": 2,
+        "parent_path": "50020000-50020001",
+        "level": 3,
         "sort": 2,
         "desc": "简介消毒设备库房002",
         "disabled": False,
@@ -275,8 +308,8 @@ STORAGE_PLACE = [
         "title": "手术器械存放室001",
         "is_storage_place": True,
         "parent_id": 50020002,
-        "parent_path": "50020002",
-        "level": 2,
+        "parent_path": "50020000-50020002",
+        "level": 3,
         "sort": 1,
         "desc": "简介手术器械存放室001",
         "disabled": False,
@@ -556,18 +589,40 @@ class AssertDevicesMixin(object):
         }
         return FaultSolution.objects.create(**data)
 
+    def init_medical_device_cates(self, creator, cates=MEDICAL_DEVICES_CATE):
+        from nmis.devices.models import MedicalDeviceCate
+        cates_data = []
+        for cate in cates:
+            cates_data.append(
+                MedicalDeviceCate(
+                    id=cate.get('id'),
+                    code=cate.get('code'),
+                    title=cate.get('title'),
+                    level=cate.get('level'),
+                    level_code=cate.get('level_code'),
+                    parent_id=cate.get('parent_id'),
+                    desc=cate.get('desc'),
+                    purpose=cate.get('purpose'),
+                    example=cate.get('example'),
+                    mgt_cate=cate.get('mgt_cate'),
+                    creator=creator,
+                )
+            )
+        return MedicalDeviceCate.objects.bulk_create(cates_data)
+
 
 class HospitalMixin(object):
 
-    def create_storage_places(self, dept, storage_places=STORAGE_PLACE):
+    def init_hospital_address(self, dept, storage_places=STORAGE_PLACE):
         """
-        创建资产设备存储地点集
+        初始化医院内部地址包括存储地点集
         :param dept:
         :param storage_places:
         :return:
         """
         for sp in storage_places:
-            sp['dept'] = sp.get('dept', dept)
+            if sp.get('is_storage_place'):
+                sp['dept'] = dept
         return HospitalAddress.objects.create_storage_place(storage_places)
 
     def create_storage_place(self, dept, parent, title):

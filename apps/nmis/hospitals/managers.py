@@ -328,7 +328,7 @@ class HospitalAddressManager(BaseManager):
             'is_storage_place': is_storage_place,
             'parent': parent
         }
-        if kwargs.get('desc'):
+        if kwargs.get('desc') is not None:
             data['desc'] = kwargs.get('desc')
         data['creator'] = operator
         data['hospital'] = hospital

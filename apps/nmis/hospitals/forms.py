@@ -1065,14 +1065,14 @@ class HospitalAddressCreateForm(BaseForm):
     def check_desc(self):
         if self.check_is_storage_place():
             desc = self.data.get('desc')
-            if not desc:
+            if desc is None:
                 return True
             if not isinstance(desc, str):
                 self.update_errors('desc', 'desc_error')
                 return False
             if not desc.strip():
                 self.update_errors('desc', 'desc_error')
-                return False
+                return True
             if len(desc.strip()) > 100:
                 self.update_errors('desc', 'desc_limit_size')
                 return False
@@ -1090,9 +1090,8 @@ class HospitalAddressCreateForm(BaseForm):
         if dept:
             not_required_data['dept'] = dept
         save_data['parent'] = parent
-        if self.data.get('desc') and isinstance(self.data.get('desc'), str):
+        if self.data.get('desc') is not None and isinstance(self.data.get('desc'), str):
             not_required_data['desc'] = self.data.get('desc').strip()
-
         return HospitalAddress.objects.create_address(
             self.user_profile,
             self.hospital,
