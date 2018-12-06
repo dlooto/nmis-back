@@ -469,6 +469,29 @@ class HospitalAddressApiTestCase(BaseTestCase, HospitalMixin):
         self.assertEqual(storage_place.get('parent_id'), storage_place_data.get('parent_id'))
         self.assertEqual(storage_place.get('desc'), storage_place_data.get('desc'))
 
+    def test_update_hospital_address(self):
+        """测试修改医院内部地址"""
+        """测试获取医院内部地址树形结构"""
+        api = '/api/v1/hospitals/{}/hospital-addresses/{}'
+
+        self.login_with_username(self.user)
+        init_addresses = self.init_hospital_address(self.dept)
+        self.assertIsNotNone(init_addresses)
+        index = random.randrange(0, len(init_addresses))
+        data = {
+            'title': 'test{}'.format(index),
+            'desc': 'test_desc'
+        }
+        response = self.put(api.format(self.organ.id, init_addresses[index].id), data=data)
+        self.assert_response_success(response)
+        address = response.get('hospital_address')
+        self.assertIsNotNone(address)
+        self.assertEqual(address.get('title'), data.get('title'))
+        self.assertEqual(address.get('desc'), data.get('desc'))
+
+
+
+
 
 
 

@@ -687,7 +687,7 @@ class HospitalAddressCreateView(BaseAPIView):
         success, data = form.save()
         if not success:
             return resp.failed(data)
-        return resp.serialize_response(data, results_name='hosp_address', srl_cls_name='HospitalAddressSerializer')
+        return resp.serialize_response(data, results_name='hospital_address', srl_cls_name='HospitalAddressSerializer')
 
 
 class HospitalAddressView(BaseAPIView):

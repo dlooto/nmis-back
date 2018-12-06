@@ -815,44 +815,76 @@ class FaultSolutionsTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
 class MedicalDeviceCateTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
 
     def test_get_med_dev_cate_catalog(self):
+        """测试获取医疗器械分类目录"""
 
         api = '/api/v1/devices/medical-device-cate-catalogs'
 
         init_cates = self.init_medical_device_cates(self.admin_staff)
+        init_catalogs = [cate for cate in init_cates if not cate.parent]
+        self.assertIsNotNone(init_catalogs)
         self.login_with_username(self.user)
         resp = self.get(api)
         self.assert_response_success(resp)
-
+        catalogs = resp.get('cate_catalogs')
+        self.assertIsNotNone(catalogs)
+        self.assertEqual(len(catalogs), len(init_catalogs))
 
     def test_get_all_med_dev_cates(self):
-
+        """测试获取所有医疗器械二级分类"""
         api = '/api/v1/devices/medical-device-cates'
 
         init_cates = self.init_medical_device_cates(self.admin_staff)
+        init_second_cates = [cate for cate in init_cates if cate.level==2]
+        self.assertIsNotNone(init_second_cates)
         self.login_with_username(self.user)
         resp = self.get(api)
         self.assert_response_success(resp)
-
+        medical_device_cates = resp.get('medical_device_cates')
+        self.assertIsNotNone(medical_device_cates)
+        self.assertEqual(len(init_second_cates), len(medical_device_cates))
 
     def test_get_med_dev_cates_by_catalog(self):
+        """测试根据目录ID获取医疗器械二级分类"""
 
         api = '/api/v1/devices/medical-device-cate-catalogs/{}/medical-device-cates'
 
         init_cates = self.init_medical_device_cates(self.admin_staff)
+        init_catalogs = [cate for cate in init_cates if not cate.parent]
+        self.assertIsNotNone(init_catalogs)
+        init_catalog_second_cates = [
+            cate for cate in init_cates
+            if cate.parent and cate.parent.parent and cate.parent.parent == init_catalogs[0]
+        ]
+        self.assertIsNotNone(init_catalog_second_cates)
         self.login_with_username(self.user)
-        catalogs = [item for item in init_cates if item.parent is None]
-        resp = self.get(api.format(catalogs[0]))
+        resp = self.get(api.format(init_catalogs[0]))
         self.assert_response_success(resp)
-
+        medical_device_cates = resp.get('medical_device_cates')
+        self.assertIsNotNone(medical_device_cates)
+        self.assertEqual(len(init_catalog_second_cates), len(medical_device_cates))
 
     def test_upload_med_dev_cates(self):
+        """测试上传医疗器械分类"""
 
         api = '/api/v1/devices/medical-device-cates/import'
+        api_get_catlogs = '/api/v1/devices/medical-device-cate-catalogs'
+        api_get_cates = '/api/v1/devices/medical-device-cates'
 
+        self.login_with_username(self.user)
         import os
         curr_path = os.path.dirname(__file__)
-        self.login_with_username(self.user)
+        with open(curr_path+'/data/med_dev_cate_test.xlsx', 'rb') as file:
+            response = self.raw_post(api.format(self.organ.id), {'file': file})
+            self.assert_response_success(response)
+        response = self.get(api_get_catlogs)
+        self.assert_response_success(response)
+        catalogs = response.get('cate_catalogs')
+        self.assertIsNotNone(catalogs)
 
+        response = self.get(api_get_cates)
+        self.assert_response_success(response)
+        medical_device_cates = response.get('medical_device_cates')
+        self.assertIsNotNone(medical_device_cates)
 
 
 
