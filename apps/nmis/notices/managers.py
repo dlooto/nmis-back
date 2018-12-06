@@ -30,7 +30,7 @@ class NoticeManager(BaseManager):
                 notice = self.create(**notice_data)
                 from .models import UserNotice
                 user_notice_list = []
-                for staff in staffs:
+                for staff in set(staffs):
                     user_notice_list.append(
                         UserNotice(staff=staff, notice=notice)
                     )

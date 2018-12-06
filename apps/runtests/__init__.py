@@ -4,11 +4,14 @@
 #
 
 import logging
+import os
+import shutil
 import uuid
 import json
 from django.urls import reverse
 
 from django.test import TestCase
+from settings import MEDIA_ROOT
 
 
 class TestCaseDataUtils(object):
@@ -16,6 +19,7 @@ class TestCaseDataUtils(object):
     FROM_EMAIL_FOR_TEST = 'test@nmis.com'
     EMAIL_PASSWORD = 'xxxx_123456'
     EMAIL_HOST = 'pop.exmail.qq.com'
+    DOC_TEST_DIR = 'upload/test/'
 
     def create_user(self, email=None, password=None, active=False, **kwargs):
         from users.models import User
@@ -118,6 +122,20 @@ class TestCaseDataUtils(object):
             sequences = Sequence.objects.init_default_sequences()
         return sequences
 
+    def delete_files(self, path_dir):
+        if not os.path.isdir(path_dir):
+            return
+        if not os.path.exists(path_dir):
+            return
+        # os.chdir(self.path_dir)
+        # file_list = list(os.listdir())
+        # for file in file_list:
+        #     if os.path.isfile(file):
+        #         os.remove(file)
+        #     else:
+        #         shutil.rmtree(file)
+        shutil.rmtree(path_dir)
+
 
 class BaseTestCase(TestCase, TestCaseDataUtils):
     logger = logging.getLogger('django.test')
@@ -137,6 +155,7 @@ class BaseTestCase(TestCase, TestCaseDataUtils):
         self.organ.clear_cache()
         self.user.clear_cache()
         self.admin_staff.clear_cache()
+        self.delete_files(os.path.join(MEDIA_ROOT, self.DOC_TEST_DIR))
         from django_redis import get_redis_connection
         get_redis_connection("default").flushall()
 
