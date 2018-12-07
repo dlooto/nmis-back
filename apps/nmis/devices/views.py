@@ -146,10 +146,11 @@ class MedicalDeviceSecondGradeCateListView(BaseAPIView):
     @fn_timer
     def get(self, req):
         """
-        通过目录ID获取医疗器械二级产品类型列表
+        获取所有医疗器械二级产品类型列表
+        支持关键字搜索
         """
         self.check_object_any_permissions(req, req.user)
-        med_dev_cates = MedicalDeviceCate.objects.get_medical_device_second_grade_cates()
+        med_dev_cates = MedicalDeviceCate.objects.get_medical_device_second_grade_cates(search=req.GET.get('search'))
         return resp.serialize_response(
             med_dev_cates, results_name='medical_device_cates',
             srl_cls_name='MedicalDeviceSecondGradeCateSerializer'

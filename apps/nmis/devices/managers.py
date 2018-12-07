@@ -7,6 +7,7 @@ import logging
 import threading
 
 from django.db import transaction
+from django.db.models import Q
 
 from base.models import BaseManager
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_USING, MAINTENANCE_PLAN_NO_PREFIX, \
@@ -28,11 +29,16 @@ class MedicalDeviceCateManager(BaseManager):
     def create_medical_device_cate(self, creator, medical_device_cate):
         pass
 
-    def get_medical_device_second_grade_cates(self):
+    def get_medical_device_second_grade_cates(self, *args, **kwargs):
         """
         获取所有医疗器械二级产品分类列表
         """
-        return self.filter(level=2).order_by('code')
+        qs = self.filter(level=2)
+        search = kwargs.get('search')
+        if search is not None and isinstance(search, str):
+            qs = qs.filter(Q(title__contains=search.strip()) | Q(code__contains=search.strip()))
+
+        return qs.order_by('code')
 
     def get_med_dev_second_grade_cates_by_catalog(self, catalog_id):
         """
