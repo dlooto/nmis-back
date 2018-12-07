@@ -56,7 +56,7 @@ class MedicalDeviceCateManager(BaseManager):
 
     def bulk_create_med_dev_cate(self, level, cates):
         """
-        获取医疗器械一级分类
+        批量创建医疗器械分类
 
         :return:
         """

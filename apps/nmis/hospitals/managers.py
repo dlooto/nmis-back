@@ -344,14 +344,14 @@ class HospitalAddressManager(BaseManager):
         if not parent:
             data['level'] = 1
             # 相同分支，相同层级的title不能重复
-            if self.filter(title=title, level=1):
+            if self.filter(title=title, parent=parent):
                 return False, '已存在相同名称的地址'
         else:
             # # 父节点为存储地址时，不能在添加子节点
             if parent.is_storage_place:
                 return False, '数据异常'
             data['level'] = parent.level + 1
-            if self.filter(title=title, level=data.get('level')):
+            if self.filter(title=title, parent=parent):
                 return False, '已存在相同名称的地址'
             if parent.parent_path:
                 data['parent_path'] = '-'.join([parent.parent_path, str(parent.id)])

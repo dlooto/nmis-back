@@ -432,6 +432,19 @@ class HospitalAddress(BaseModel):
             return False
         return True
 
+    def display(self):
+        if not self.parent_path:
+            return self.title
+        parents = self.parent_path.split('-')
+        if len(parents) == 1:
+            return self.title
+        ids = [int(item) for item in parents][1:]
+        addresses = HospitalAddress.objects.filter(id__in=ids).order_by('level').values_list('title')
+        title = ''
+        for item in addresses:
+            title = '{}{}'.format(title, item[0])
+        return '{}{}'.format(title, self.title)
+
 
 class Sequence(BaseModel):
     """

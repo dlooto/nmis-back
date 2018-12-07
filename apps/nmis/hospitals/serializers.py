@@ -8,6 +8,7 @@
 import logging
 
 from django.contrib.auth.models import Permission
+from django.db.models import QuerySet
 from rest_framework import serializers
 
 from base import resp
@@ -307,20 +308,32 @@ class SimpleRoleSerializer(BaseModelSerializer):
 
 
 class BriefHospitalAddressSerializer(BaseModelSerializer):
+    title_display = serializers.SerializerMethodField()
+
     class Meta:
         model = HospitalAddress
         fields = (
-            'id', 'title'
+            'id', 'title', 'title_display'
         )
+
+    def setup_eager_loading(self, queryset):
+        queryset.select_related('parent', 'parent__parent')
+
+    def get_title_display(self, obj):
+        return obj.display()
 
 
 class HospitalAddressSerializer(BaseModelSerializer):
+    display = serializers.SerializerMethodField()
+
     class Meta:
         model = HospitalAddress
         fields = (
             'id', 'title', "is_storage_place", "parent_id", "desc", "dept_id",
-            'hospital_id', 'created_time'
+            'hospital_id', 'created_time', 'display'
         )
 
+    def get_display(self, obj):
+        return obj.display()
 
 
