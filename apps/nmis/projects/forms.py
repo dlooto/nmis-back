@@ -982,7 +982,7 @@ class SingleUploadFileForm(BaseForm):
     def save(self):
         for tag in self.req.FILES.keys():
             file = self.req.FILES.get(tag)
-            result = single_upload_file(file, PROJECT_DOCUMENT_DIR + str(self.project_id) + '/',
+            result = single_upload_file(file, PROJECT_DOCUMENT_DIR,
                                         file.name)
             if not result:
                 return '%s%s' % (file.name, '上传失败'), False

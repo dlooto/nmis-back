@@ -445,7 +445,7 @@ class HospitalAddressApiTestCase(BaseTestCase, HospitalMixin):
         }
         resp_root = self.post(api.format(self.organ.id), data=root_address_data)
         self.assert_response_success(resp_root)
-        root_address = resp_root.get('hosp_address')
+        root_address = resp_root.get('hospital_address')
         self.assertIsNotNone(root_address)
         self.assertIsNotNone(root_address.get('id'))
         self.assertEqual(root_address.get('title'), root_address_data.get('title'))
@@ -461,7 +461,7 @@ class HospitalAddressApiTestCase(BaseTestCase, HospitalMixin):
         }
         resp_sp = self.post(api.format(self.organ.id), data=storage_place_data)
         self.assert_response_success(resp_sp)
-        storage_place = resp_sp.get('hosp_address')
+        storage_place = resp_sp.get('hospital_address')
         self.assertIsNotNone(storage_place)
         self.assertIsNotNone(storage_place.get('id'))
         self.assertEqual(storage_place.get('title'), storage_place_data.get('title'))

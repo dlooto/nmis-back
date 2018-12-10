@@ -101,6 +101,7 @@ def single_upload_file(file, base_dir, stored_file_name):
         path = os.path.join(settings.MEDIA_ROOT, base_dir)
         if not os.path.exists(path):
             os.makedirs(path)
+        stored_file_name = '%s%s' % (gen_uuid1(), os.path.splitext(file.name)[1])
         file_path = '%s%s' % (path, stored_file_name)
         destination = open(file_path, 'wb+')
 

@@ -11,7 +11,6 @@ from django.core.files.uploadedfile import UploadedFile
 
 import settings
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_SCRAPPED
-from nmis.documents.consts import DOC_UPLOAD_BASE_DIR
 from runtests import BaseTestCase
 from runtests.common.mixins import AssertDevicesMixin, HospitalMixin
 from utils.files import remove, upload_file
@@ -691,7 +690,7 @@ class FaultSolutionsTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
 
         with open(curr_path + '/data/upload_file_test.xlsx', 'wb+') as file_io:
             try:
-                upload_result = upload_file(UploadedFile(file_io), DOC_UPLOAD_BASE_DIR)
+                upload_result = upload_file(UploadedFile(file_io), self.DOC_TEST_DIR)
                 file_name = upload_result.get('name')
                 file_path = upload_result.get('path')
                 file = {'name': file_name, 'path': file_path, 'cate': "UNKNOWN"}
