@@ -10,11 +10,13 @@
 import logging
 
 from django.db.models import ProtectedError
+from django.db.models.query import QuerySet
 
 from base.common.decorators import check_params_not_all_null, check_params_not_null
 from django.conf import settings
 from django.db import transaction
 
+from base.common.param_utils import get_id_list
 from base.resp import Response
 from nmis.devices.models import RepairOrder
 from nmis.devices.permissions import AssertDeviceAdminPermission
@@ -263,12 +265,16 @@ class StaffView(BaseAPIView):
         if req.user.get_profile().id == staff_id:
             return resp.failed("无权删除当前登录用户")
         user = staff.user
-        staff.clear_cache()
-        user.clear_cache()
+        # staff.clear_cache()
+        # user.clear_cache()
         try:
             with transaction.atomic():
-                staff.delete()
-                user.delete()
+                staff.is_deleted = True
+                staff.save()
+                staff.cache()
+                user.is_active = False
+                user.save()
+                user.cache()
                 return resp.ok('删除成功')
         except Exception as e:
             logging.exception(e)
@@ -279,6 +285,7 @@ class StaffBatchDeleteView(BaseAPIView):
 
     permission_classes = (IsHospSuperAdmin, SystemManagePermission, )
 
+    @check_params_not_null(['staff_ids'])
     def delete(self, req, organ_id):
         """
         批量删除员工，同时删除员工账号
@@ -286,8 +293,7 @@ class StaffBatchDeleteView(BaseAPIView):
         organ = self.get_object_or_404(organ_id, Hospital)
         self.check_object_any_permissions(req, organ)
 
-        staff_ids = self.get_id_list(str(req.data.get('staff_ids', '')).strip())
-
+        staff_ids = get_id_list(str(req.data.get('staff_ids', '')).strip())
         staffs = Staff.objects.filter(id__in=staff_ids)
         if not len(staffs) == len(staff_ids):
             return resp.failed('请确认是否有不存在员工')
@@ -298,8 +304,8 @@ class StaffBatchDeleteView(BaseAPIView):
             with transaction.atomic():
                 Staff.objects.clear_cache(staffs)
                 User.objects.clear_cache(users)
-                staffs.delete()
-                users.delete()
+                staffs.update(is_deleted=True)
+                users.update(is_active=False)
                 return resp.ok('删除成功')
         except ProtectedError as pe:
             logger.exception(pe)
@@ -319,7 +325,7 @@ class StaffListView(BaseAPIView):
 
     def get(self, req, hid):
         """
-        查询某机构下员工列表
+        查询某机构下员工列表(获取正常状态的员工)
         """
         # permission_codes = ('s', )
         # self.check_object_permissions(req, {'permission_codes': permission_codes})

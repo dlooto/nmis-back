@@ -88,7 +88,8 @@ class StaffSerializer(BaseModelSerializer):
             'dept_id', 'dept_name',
             'staff_name', 'staff_title',
             'user_id', 'username',
-            'contact_phone', 'email', 'created_time', # 'roles'
+            'contact_phone', 'email', 'created_time', 'is_deleted'
+            # 'roles'
         )
 
     @staticmethod

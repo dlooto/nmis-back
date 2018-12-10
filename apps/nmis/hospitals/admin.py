@@ -27,14 +27,14 @@ class HospitalAdmin(admin.ModelAdmin):
 
 
 class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'organ', 'name', 'contact', 'attri','created_time')
+    list_display = ('id', 'organ', 'name', 'contact', 'attri', 'created_time')
     search_fields = ('id', 'name', 'desc')
     # list_filter = ('',)
     # actions = (,)
 
 
 class StaffAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'email', 'organ', 'dept', 'title', 'contact')
+    list_display = ('id', 'name', 'email', 'organ', 'dept', 'title', 'contact', 'status', 'is_deleted')
     search_fields = ('id', 'name', 'contact', 'title', 'email', 'organ__organ_name')
     list_display_links = ('name', 'email', )
     # list_filter = ('',)

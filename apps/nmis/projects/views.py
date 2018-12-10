@@ -216,7 +216,7 @@ class ProjectPlanCreateView(BaseAPIView):
             return resp.failed('项目申请提交异常')
 
         # 生成消息，给项目分配者推送消息
-        staffs = Staff.objects.filter(user__role__codename=ROLE_CODE_PRO_DISPATCHER)
+        staffs = Staff.objects.filter(user__role__codename=ROLE_CODE_PRO_DISPATCHER, is_deleted=False)
         message = "%s于%s: 提交项目申请-%s,请尽快处理!" % (
             req.user.get_profile().name, times.datetime_strftime(d_date=times.now()), project.title
         )
