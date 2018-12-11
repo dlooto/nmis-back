@@ -107,7 +107,7 @@ class Hospital(BaseOrgan):
         :param dept: 科室, Department object
         :param search_key: 员工名字关键字
         """
-        staffs_queryset = Staff.objects.filter(organ=self).order_by('id')
+        staffs_queryset = Staff.objects.filter(organ=self, is_deleted=False).order_by('id')
         if search_key:
             staffs_queryset = staffs_queryset.filter(name__contains=search_key)
         return staffs_queryset.filter(dept=dept) if dept else staffs_queryset

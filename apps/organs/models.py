@@ -217,7 +217,7 @@ class BaseStaff(BaseModel):
     # # 一个staff仅可以加入一个权限group
     # group = models.ForeignKey('organs.Group', verbose_name=u'权限组', null=True, blank=True, on_delete=models.SET_NULL)
 
-    status = models.CharField(u'员工状态', max_length=1, default=NORMAL_STATUS)
+    status = models.CharField(u'员工状态', max_length=1, choices=STAFF_STATUS, default=NORMAL_STATUS)
 
     objects = StaffManager()
 
@@ -292,7 +292,7 @@ class BaseStaff(BaseModel):
         return self.user.generate_secure_record(StaffSecureRecord, expire_hours=7*24).key
 
     def set_delete(self):
-        """删除员工,标记未已删除"""
+        """删除员工,标记为已删除"""
         self.user.is_active = False
         self.user.save()
         self.status = self.DELETE_STATUS
