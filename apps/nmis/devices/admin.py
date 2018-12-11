@@ -22,12 +22,16 @@ class OrderedDeviceAdmin(admin.ModelAdmin):
         'id', 'name', 'project', 'type_spec', 'num', 'measure', 'planned_price',
         'real_price', 'purpose',
     )
+    list_display_links = ('id', 'name')
+    search_fields = ('id', 'name', )
 
 
 class SoftwareDeviceAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'name', 'cate', 'purpose', 'producer',
     )
+    list_display_links = ('id', 'name')
+    search_fields = ('id', 'name', )
 
 
 class ContractDeviceAdmin(admin.ModelAdmin):
@@ -37,21 +41,28 @@ class ContractDeviceAdmin(admin.ModelAdmin):
         'purpose', 'producer',
         'type_spec', 'measure', 'planned_price',
     )
+    list_display_links = ('id', 'name')
+    search_fields = ('id', 'name', )
 
 
 class MedicalDeviceCateAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'code', 'title', 'level_code', 'parent', 'mgt_cate', 'level',
+        'id', 'title', 'code', 'level_code', 'parent', 'mgt_cate', 'level',
     )
-    search_fields = ()
-    list_display_links = ()
+    list_display_links = ('id', 'title', 'code')
+    search_fields = ('id', 'title', 'code')
+    list_filter = ('level', 'mgt_cate')
 
 
 class AssertDeviceAdmin(admin.ModelAdmin):
+
     list_display = (
         'id', 'assert_no', 'title', 'cate', 'medical_device_cate',
         'use_dept', 'responsible_dept', 'storage_place',  'status', 'state',
     )
+    list_display_links = ('id', 'title', 'assert_no')
+    search_fields = ('id', 'title', 'assert_no')
+    list_filter = ('cate', 'medical_device_cate__title', 'status', 'state')
 
 
 class AssertDeviceRecordAdmin(admin.ModelAdmin):
@@ -59,25 +70,25 @@ class AssertDeviceRecordAdmin(admin.ModelAdmin):
         'id', 'assert_device', 'operation', 'msg_content', 'reason'
 
     )
-    search_fields = ()
-    list_display_links = ()
+    list_display_links = ('id', 'assert_device')
+    search_fields = ('id', 'assert_device', )
 
 
 class FaultTypeAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'title', 'parent', 'level', 'sort',
     )
-    search_fields = ()
-    list_display_links = ()
+    list_display_links = ('id', 'title')
+    search_fields = ('id', 'title', )
 
 
 class RepairOrderAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'applicant', 'fault_type', 'maintainer',
+        'id', 'order_no', 'applicant', 'fault_type', 'maintainer',
         'priority', 'status',
     )
-    search_fields = ()
-    list_display_links = ()
+    list_display_links = ('id', 'order_no')
+    search_fields = ('id', 'order_no', )
 
 
 class RepairOrderRecordAdmin(admin.ModelAdmin):
@@ -85,8 +96,8 @@ class RepairOrderRecordAdmin(admin.ModelAdmin):
         'id', 'repair_order', 'operation', 'msg_content', 'reason'
 
     )
-    search_fields = ()
-    list_display_links = ()
+    list_display_links = ('id', 'repair_order')
+    search_fields = ('id', 'repair_order', )
 
 
 class MaintenancePlanAdmin(admin.ModelAdmin):
@@ -94,16 +105,16 @@ class MaintenancePlanAdmin(admin.ModelAdmin):
         'id', 'title', 'type', 'start_date', 'expired_date',
         'status', 'period_measure', 'period_num',
     )
-    search_fields = ()
-    list_display_links = ()
+    list_display_links = ('id', 'title')
+    search_fields = ('id', 'title', )
 
 
 class FaultSolutionAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'title', 'fault_type', 'status', 'modified_time'
     )
-    search_fields = ()
-    list_display_links = ()
+    list_display_links = ('id', 'title')
+    search_fields = ('id', 'title', )
 
 
 admin.site.register(OrderedDevice, OrderedDeviceAdmin)

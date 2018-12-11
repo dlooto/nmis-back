@@ -169,11 +169,22 @@ class MedicalDeviceSecondGradeCateDetailSerializer(BaseModelSerializer):
         return obj.get_mgt_cate_display()
 
 
-class FaultTypeSerializer(BaseModelSerializer):
+class FaultTypeBriefSerializer(BaseModelSerializer):
 
     class Meta:
         model = FaultType
         fields = ('id', 'title')
+
+    @staticmethod
+    def setup_eager_loading(queryset):
+        pass
+
+
+class FaultTypeSerializer(BaseModelSerializer):
+
+    class Meta:
+        model = FaultType
+        fields = ('id', 'title', 'parent_id', 'desc')
 
     @staticmethod
     def setup_eager_loading(queryset):

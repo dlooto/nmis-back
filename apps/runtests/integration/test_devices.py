@@ -564,7 +564,7 @@ class RepairOrderTestCase(BaseTestCase, AssertDevicesMixin, HospitalMixin):
         response = self.get(api.format())
         self.assert_response_success(response)
         fault_types_get = response.get('fault_types')
-        self.assertTrue(len(fault_types_get) == len(fault_types))
+        self.assertTrue(len(fault_types_get) == len(fault_types)-1)
 
     def test_repair_order_create_or_get(self):
         """

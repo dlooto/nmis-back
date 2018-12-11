@@ -29,7 +29,15 @@
         "created_time": "2018-6-6 15:00"
       }
     },
-      {
+    {
+      "model": "hospitals.userRoleShip",
+      "fields": {
+        "user": 10010001,
+        "role": 20010002,
+        "created_time": "2018-6-6 15:00"
+      }
+    },
+    {
       "model": "hospitals.userRoleShip",
       "fields": {
         "user": 10010001,
@@ -100,7 +108,7 @@
         "level": 1,
         "sort": 1,
         "dept": null,
-        "desc": "简介综合楼B座",
+        "desc": "B座",
         "disabled": false,
         "created_time": "2018-6-6 15:00"
       }
@@ -109,13 +117,13 @@
       "pk": 50010002,
       "model": "hospitals.hospitalAddress",
       "fields": {
-        "title": "综合楼B座3层",
-        "is_storage_place": true,
+        "title": "3层",
+        "is_storage_place": false,
         "parent": 50010001,
         "parent_path": "50010000-50010001",
         "level": 2,
         "sort": 1,
-        "dept": 30030001,
+        "dept": null,
         "desc": "简介消毒设备库房001",
         "disabled": false,
         "created_time": "2018-6-6 15:00"
@@ -145,8 +153,8 @@
         "is_storage_place": true,
         "parent": 50010002,
         "parent_path": "50010000-50010001-50010002",
-        "level": 2,
-        "sort": 1,
+        "level": 3,
+        "sort": 2,
         "dept": 30030001,
         "desc": "简介手术器械存放室001",
         "disabled": false,

@@ -1,75 +1,14 @@
 [
     {
-      "pk": 60020001,
-      "model": "devices.MedicalDeviceCate",
+      "pk": 80010000,
+      "model": "devices.FaultType",
       "fields": {
-        "code": "6857",
-        "title": "消毒和灭菌设备及器具",
-        "level": 1,
-        "level_code": "6857",
+        "title": "故障分类",
+        "desc": "用于对故障进行分门别类",
         "parent": null,
-        "example": "",
-        "mgt_cate": 1,
-        "creator": 40040001,
-        "created_time": "2018-6-6 15:00"
-      }
-    },
-    {
-      "pk": 60020002,
-      "model": "devices.MedicalDeviceCate",
-      "fields": {
-        "code": "6858",
-        "title": "医用冷疗、低温、冷藏设备及器具",
-        "level": 1,
-        "level_code": "6858",
-        "parent": null,
-        "example": "",
-        "mgt_cate": 1,
-        "creator": 40040001,
-        "created_time": "2018-6-6 15:00"
-      }
-    },
-    {
-      "pk": 60020003,
-      "model": "devices.MedicalDeviceCate",
-      "fields": {
-        "code": "6857-06.1",
-        "title": "专用消毒设备",
-        "level": 2,
-        "level_code": "06.1",
-        "parent": 60020001,
-        "example": "超声消毒设备、口腔科消毒设备",
-        "mgt_cate": 2,
-        "creator": 40040001,
-        "created_time": "2018-6-6 15:00"
-      }
-    },
-    {
-      "pk": 60020004,
-      "model": "devices.MedicalDeviceCate",
-      "fields": {
-        "code": "6857-06.2",
-        "title": "专用消毒设备",
-        "level": 2,
-        "level_code": "06.2",
-        "parent": 60020001,
-        "example": "超声清洗器、超声干燥脱水设备",
-        "mgt_cate": 1,
-        "creator": 40040001,
-        "created_time": "2018-6-6 15:00"
-      }
-    },
-    {
-      "pk": 60020005,
-      "model": "devices.MedicalDeviceCate",
-      "fields": {
-        "code": "6858-02",
-        "title": "医用低温设备",
-        "level": 2,
-        "level_code": "02",
-        "parent": 60020002,
-        "example": "医用低温箱（-20℃、-40℃、-60℃、-80℃）、低温生物降温仪",
-        "mgt_cate": 3,
+        "parent_path": "",
+        "level": 0,
+        "sort": 1,
         "creator": 40040001,
         "created_time": "2018-6-6 15:00"
       }
@@ -80,8 +19,8 @@
       "fields": {
         "title": "个人电脑类",
         "desc": "用于个人电脑类",
-        "parent": null,
-        "parent_path": "",
+        "parent": 80010000,
+        "parent_path": "80010000",
         "level": 1,
         "sort": 1,
         "creator": 40040001,
@@ -94,8 +33,8 @@
       "fields": {
         "title": "打印机类",
         "desc": "用于打印机类",
-        "parent": null,
-        "parent_path": "",
+        "parent": 80010000,
+        "parent_path": "80010000",
         "level": 1,
         "sort": 2,
         "creator": 40040001,
@@ -109,7 +48,7 @@
         "title": "鼠标类",
         "desc": "用于鼠标类",
         "parent": 80010001,
-        "parent_path": "",
+        "parent_path": "80010000-80010001",
         "level": 2,
         "sort": 1,
         "creator": 40040001,
@@ -123,7 +62,7 @@
         "title": "键盘类",
         "desc": "用于键盘类",
         "parent": 80010001,
-        "parent_path": "",
+        "parent_path": "80010000-80010001",
         "level": 2,
         "sort": 2,
         "creator": 40040001,

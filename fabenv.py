@@ -59,7 +59,7 @@ INIT_JSON_DATA = [
     'users.json',
     'roles.json',
     'hospitals.json',
-    'project_flows.json',
+    'project_flow.json',
     'devices.json',
 ]
 

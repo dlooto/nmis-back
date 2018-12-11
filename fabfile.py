@@ -99,9 +99,7 @@ def runtests(ctx, test_suite='', test_module=''):
 def deploy(ctx, branch, remote='origin'):
     """
     发布更新: fab bsite deploy <branch> <remote>(更新代码, 安装lib, migrate, 刷新缓存, 重启server, runtests)
-    其中 branch为分支名, remote为远端仓库名, 命令示例如:
-        >>>fab bsite deploy v0.1.0 origin
-
+    其中 branch为分支名, remote为远端仓库名, 命令示例如: fab bsite deploy v0.1.0 origin
     :param remote: 远程中心仓库在部署环境上的别名, 默认为 origin
     :param branch: 部署发布用到的代码分支
     """
@@ -121,8 +119,7 @@ def deploy(ctx, branch, remote='origin'):
 def lean_deploy(ctx, branch, remote="origin"):
     """
     轻量部署: fab bsite lean-deploy <branch> <remote> (更新代码, migrate, 刷新缓存, 重启server, runtests)
-    其中 branch为分支名, remote为远端仓库名, 命令示例如:
-        >>>fab bsite lean_deploy v0.1.0 origin
+    其中 branch为分支名, remote为远端仓库名, 命令示例如: fab bsite lean_deploy v0.1.0 origin
 
     :param remote: 远程代码仓库名, 默认origin
     :param branch: 远程代码仓库分支, 默认master
@@ -201,6 +198,8 @@ def _update_code(c, remote, branch):
     :return:
     """
     if not branch == 'master':  # 不是master分支则执行git fetch取下新分支
+        # c.run('git fetch %s %s:%s' % (remote, branch, branch))
+        c.run('git checkout master')
         c.run('git fetch %s %s:%s' % (remote, branch, branch))
         c.run('git checkout %s' % branch)
     else:
@@ -223,11 +222,13 @@ def _migrate_data(c):
             c.run('python apps/manage.py migrate')   # 注: migrate中会加载初始数据
             c.run('python apps/manage.py collectstatic --noinput')
 
+
 def _load_init_data(c):
     """ 加载fixtures中的初始数据 """
     with c.prefix("source %s" % ACTIVATE_PATH):
         with c.cd(CODE_ROOT):
             c.run('python apps/manage.py loaddata %s' % ' '.join(INIT_JSON_DATA))
+
 
 def _restart_server(c):
     """ 重启web服务 """

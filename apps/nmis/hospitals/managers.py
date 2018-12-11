@@ -375,7 +375,6 @@ class HospitalAddressManager(BaseManager):
             logger.exception(e)
             return None
 
-
     def get_children(self, address):
         try:
             return self.filter(parent=address)
@@ -388,14 +387,20 @@ class HospitalAddressManager(BaseManager):
             'id', 'title', 'is_storage_place', 'parent_id', 'level', 'sort', 'disabled',
             'dept_id', 'dept_name', 'desc', 'hospital_id'
         )
+        if not all_addresses:
+            return None
+
         parent_ids = set()
         root_address = None
         for address in all_addresses:
             parent_ids.add(address.get('parent_id'))
             if not address.get('parent_id'):
                 root_address = address
-        parents = []
+        if not root_address:
+            logger.warning('root address not been set')
+            return None
 
+        parents = []
         for address in all_addresses:
             if address.get('id') in parent_ids:
                 parents.append(address)
@@ -407,6 +412,8 @@ class HospitalAddressManager(BaseManager):
         return root_address
 
     def gen_tree(self, parent, addresses):
+        if not parent:
+            return None
         if not parent.get('has_children'):
             parent['children'] = []
         else:

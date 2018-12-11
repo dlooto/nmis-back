@@ -59,6 +59,12 @@ urlpatterns = [
     # 故障类型列表
     path('fault_types', views.FaultTypeListView.as_view()),
 
+    # 故障类型列表
+    path('fault-type-tree', views.FaultTypeTreeView.as_view()),
+
+    # 创建故障类型
+    path('fault-types/create', views.FaultTypeCreateView.as_view()),
+
     # 提交/新建报修单
     path('repair_orders/create', views.RepairOrderCreateView.as_view(), ),
     # 单个报修单详情/修改/删除/分派/处理/评价

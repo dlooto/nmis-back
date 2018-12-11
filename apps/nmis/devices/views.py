@@ -13,6 +13,7 @@ import settings
 from base import resp
 from base.common.decorators import check_params_not_null, check_id
 from base.common.param_utils import get_id_list
+from base.resp import Response
 from base.views import BaseAPIView
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_CHOICES, REPAIR_ORDER_STATUS_CHOICES, \
     REPAIR_ORDER_OPERATION_CHOICES, REPAIR_ORDER_OPERATION_DISPATCH, \
@@ -30,7 +31,8 @@ from nmis.devices.forms import AssertDeviceCreateForm, AssertDeviceUpdateForm, \
     RepairOrderCreateForm, MaintenancePlanCreateForm, RepairOrderHandleForm, \
     RepairOrderCommentForm, \
     RepairOrderDispatchForm, FaultSolutionCreateForm, FaultSolutionsImportForm, \
-    AssertDeviceBatchUploadForm, FaultSolutionUpdateForm, MedicalDeviceCateImportForm
+    AssertDeviceBatchUploadForm, FaultSolutionUpdateForm, MedicalDeviceCateImportForm, \
+    FaultTypeCreateForm
 
 from nmis.devices.models import AssertDevice, MedicalDeviceCate, RepairOrder, \
     FaultType, FaultSolution, MaintenancePlan
@@ -521,15 +523,54 @@ class FaultTypeListView(BaseAPIView):
 
     def get(self, req):
         search = req.GET.get('search')
-        queryset = FaultType.objects.all()
         try:
+            queryset = FaultType.objects.exclude(parent=None)
             if search:
                 queryset = queryset.filter(title__contains=search)
         except Exception as e:
             logger.exception(e)
             resp.failed('操作失败')
 
-        return resp.serialize_response(queryset, srl_cls_name='FaultTypeSerializer', results_name='fault_types')
+        return resp.serialize_response(queryset, results_name='fault_types', srl_cls_name='FaultTypeBriefSerializer', )
+
+
+class FaultTypeTreeView(BaseAPIView):
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
+
+    def get(self, req):
+        self.check_object_any_permissions(req, None)
+        fts = FaultType.objects.get_tree()
+        return Response(fts, results_name='fault_type_tree')
+
+
+class FaultTypeCreateView(BaseAPIView):
+
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
+
+    def post(self, req):
+
+        self.check_object_any_permissions(req, None)
+        form = FaultTypeCreateForm(req.user.get_profile(), req.data)
+        if not form.is_valid():
+            return resp.form_err(form.errors)
+        success, data = form.save()
+        if not success:
+            return resp.failed('操作失败')
+        return resp.serialize_response(data, results_name='fault_type', srl_cls_name='FaultTypeSerializer')
+
+
+class FaultTypeView(BaseAPIView):
+    permission_classes = (AssertDeviceAdminPermission, IsHospSuperAdmin, SystemManagePermission)
+
+    def get(self, req, fault_type_id):
+        ft = self.get_object_or_404(fault_type_id, FaultType)
+        return resp.serialize_response(ft, results_name='fault_type', srl_cls_name='FaultTypeSerializer')
+
+    def put(self, req):
+        pass
+
+    def delete(self, req):
+        pass
 
 
 class RepairOrderCreateView(BaseAPIView):

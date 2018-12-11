@@ -22,23 +22,21 @@ class HospitalAdmin(admin.ModelAdmin):
         'id', 'organ_name', 'industry', 'address', 'contact', 'auth_status', 'creator',
         'created_time', 'parent', 'grade'
     )
-    list_display_links = ('id', 'organ_name', 'creator')
-    search_fields = ('id', 'organ_name', 'contact')
+    list_display_links = ('id', 'organ_name')
+    search_fields = ('id', 'organ_name')
 
 
 class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'organ', 'name', 'contact', 'attri','created_time')
-    search_fields = ('id', 'name', 'desc')
-    # list_filter = ('',)
-    # actions = (,)
+    list_display = ('id', 'name', 'contact', 'attri', 'organ', 'created_time')
+    list_display_links = ('id', 'name')
+    search_fields = ('id', 'name')
 
 
 class StaffAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'email', 'organ', 'dept', 'title', 'contact')
+    list_display_links = ('id', 'name', )
+    list_filter = ('dept__name', )
     search_fields = ('id', 'name', 'contact', 'title', 'email', 'organ__organ_name')
-    list_display_links = ('name', 'email', )
-    # list_filter = ('',)
-    # actions = (,)
 
     def save_model(self, request, obj, form, change):
         super(StaffAdmin, self).save_model(request, obj, form, change)
@@ -47,23 +45,26 @@ class StaffAdmin(admin.ModelAdmin):
 
 class RoleAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'codename', 'desc')
+    list_display_links = ('id', 'name', 'codename')
     search_fields = ('name', 'codename', 'desc')
-    list_display_links = ('name', 'codename')
 
 
 class UserRoleShipAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'role', )
-    list_display_links = ('user', 'role',)
+    list_display_links = ('id', 'user', 'role',)
+    search_fields = ('id', 'user', 'role',)
 
 
 class HospitalAddressAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'is_storage_place', 'parent', 'level', 'sort', 'disabled', 'dept')
-    search_fields = ('title', 'is_storage_place')
-    list_display_links = ('dept', )
+    list_display_links = ('id', 'title')
+    search_fields = ('id', 'title', 'is_storage_place')
 
 
 class SequenceAdmin(admin.ModelAdmin):
     list_display = ('id', 'seq_code', 'seq_name', 'seq_value', 'increment', 'remark')
+    list_display_links = ('id', 'seq_code', 'seq_name')
+    search_fields = ('id', 'seq_code', 'seq_name')
 
 
 admin.site.register(Hospital, HospitalAdmin)

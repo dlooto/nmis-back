@@ -7,7 +7,7 @@ import logging
 import threading
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, F
 
 from base.models import BaseManager
 from nmis.devices.consts import ASSERT_DEVICE_STATUS_USING, MAINTENANCE_PLAN_NO_PREFIX, \
@@ -236,9 +236,65 @@ class AssertDeviceManager(BaseManager):
 
 class FaultTypeManager(BaseManager):
 
-    def create(self):
-        pass
+    def create_fault_type(self, title, parent, creator, **not_required_data):
+        ft_db = self.filter(parent=None).first()
+        if not ft_db:
+            logger.warning('init root node data not been set')
+            return False, None
+        if (not ft_db and parent) or (ft_db and not parent):
+            return False, None
 
+        try:
+            new_ft = self.create(
+                title=title, parent=parent, creator=creator, **not_required_data
+            )
+            return True, new_ft
+        except Exception as e:
+            logger.exception(e)
+            return False, None
+
+    def get_tree(self):
+        all_fault_types = self.values(
+            'id', 'title', 'desc', 'parent_id', 'sort', 'level',
+        )
+        if not all_fault_types:
+            return None
+
+        parent_ids = set()
+        root_fault_type = None
+
+        for ft in all_fault_types:
+            parent_ids.add(ft.get('parent_id'))
+            if not ft.get('parent_id'):
+                root_fault_type = ft
+        if not root_fault_type:
+            logger.warning('root fault type not been set.')
+            return None
+        parents = []
+
+        for ft in all_fault_types:
+            if ft.get('id') in parent_ids:
+                parents.append(ft)
+                ft['has_children'] = True
+            else:
+                ft['has_children'] = False
+
+        self.gen_tree(root_fault_type, all_fault_types)
+        return root_fault_type
+
+    def gen_tree(self, parent, fault_types):
+        if not parent:
+            return None
+        if not parent.get('has_children'):
+            parent['children'] = []
+        else:
+            children = []
+            for item in fault_types:
+                if item.get('parent_id') == parent.get('id'):
+                    children.append(item)
+                    parent['children'] = children
+            for child in children:
+                self.gen_tree(child, fault_types)
 
 class RepairOrderManager(BaseManager):
 

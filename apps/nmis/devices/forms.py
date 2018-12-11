@@ -2082,5 +2082,88 @@ class MedicalDeviceCateImportForm(BaseForm):
         return False
 
 
+class FaultTypeCreateForm(BaseForm):
+
+    def __init__(self, user_profile, data, *args, **kwargs):
+        BaseForm.__init__(self, data, *args, **kwargs)
+        self.user_profile = user_profile
+        self.init_err_codes()
+
+    def init_err_codes(self):
+        self.ERR_CODES.update({
+            'title_error':              '故障类型名称为空或数据错误',
+            'title_exists':             '故障类型名称已存在',
+            'title_limit_size':         "故障类型名称长度不能超过30个字符",
+            'parent_error':             "请求数据错误",
+            'parent_not_exists':        "父故障类型不存在",
+            'desc_error':               '描述为空或数据错误',
+            'desc_limit_size':          '描述长度不能超过100个字符',
+        })
+
+    def is_valid(self):
+        if not self.check_title() or not self.check_parent() or not self.check_desc():
+            return False
+        return True
+
+    def check_title(self):
+        title = self.data.get('title')
+        if title is None:
+            self.update_errors('title', 'title_error')
+            return False
+        if not isinstance(title, str):
+            self.update_errors('title', 'title_error')
+            return False
+        if not title.strip():
+            self.update_errors('title', 'title_error')
+            return False
+        ft = FaultType.objects.filter(title=title.strip()).first()
+        if ft:
+            self.update_errors('title', 'title_exists')
+            return False
+        if len(title.strip()) > 100:
+            self.update_errors('title', 'title_limit_size')
+            return False
+        return True
+
+    def check_parent(self):
+        parent_id = self.data.get('parent_id')
+        if parent_id is None:
+            self.update_errors('parent_id', 'parent_error')
+            return False
+        if not isinstance(parent_id, int):
+            self.update_errors('parent_id', 'parent_error')
+            return False
+        ft = FaultType.objects.filter(id=parent_id).first()
+        if not ft:
+            self.update_errors('parent_id', 'parent_not_exists')
+            return False
+        return True
+
+    def check_desc(self):
+        desc = self.data.get('desc')
+        if desc is None:
+            self.update_errors('desc', 'desc_error')
+            return True
+        if not isinstance(desc, str):
+            self.update_errors('desc', 'desc_error')
+            return False
+        if not desc.strip():
+            self.update_errors('desc', 'desc_error')
+            return True
+        if len(desc.strip()) > 100:
+            self.update_errors('desc', 'desc_limit_size')
+            return False
+        return True
+
+    def save(self):
+        not_required_data = dict()
+        title = self.data.get('title', '').strip()
+        parent_id = self.data.get('parent_id')
+        parent = FaultType.objects.get_by_id(parent_id)
+        if self.data.get('desc') is not None and isinstance(self.data.get('desc'), str):
+            not_required_data['desc'] = self.data.get('desc').strip()
+
+        return FaultType.objects.create_fault_type(title, parent, self.user_profile, **not_required_data)
+
 
 
