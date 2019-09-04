@@ -1,7 +1,8 @@
 # NMIS(The Next Medical Industry Solution):  新一代医疗行业解决方案系统
 
 ## 功能简介
-- 项目管理
+- 医疗设备采购
+- 设备状态监控
 - 医疗资产管理
 
 ## 代码工程结构
