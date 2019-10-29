@@ -28,7 +28,7 @@
     >>> sudo apt install 
 - pip install virtualenvwrapper
 - 创建virtualenv环境(指定Python版本)
-- git clone ssh://git@gitee.com:juyangtech/nmis.git
+- git clone ssh://git@gitee.com:dlooto/nmis.git
 - cd <work_dir>/nmis-back
 - 创建本地logs, logs/nmis-back, media目录, 修改local.py文件
 - pip install -r deploy/requirements.txt
